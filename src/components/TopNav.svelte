@@ -36,7 +36,7 @@
           <a class={"nav-link" + ('/roadmap' === path ? ' active' : '')} href="/roadmap">Roadmap</a>
         </li>
       </ul>
-      <PrimaryBtn link="https://forms.gle/yJjj42ooRk9NeB5J6" external>Sign up!</PrimaryBtn>
+      <PrimaryBtn link="https://forms.gle/yJjj42ooRk9NeB5J6">Sign up!</PrimaryBtn>
     </div>
   </div>
 </nav>

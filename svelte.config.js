@@ -1,4 +1,4 @@
-// you may need to run `npm i -D @sveltejs/adapter-static` to install the adapter first
+// you may need to run `npm i -D @sveltejs/adapter-static` locally to install the adapter first
 import adapter from '@sveltejs/adapter-static';
 
 export default {

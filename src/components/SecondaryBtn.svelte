@@ -1,8 +1,8 @@
 <script>
-  export let link, external = '';
+  export let link = '';
 </script>
 
-<a href={link} class="btn secondary-btn m-0 mx-lg-2 px-lg-2" target={external ? '_blank' : null}>
+<a href={link} class="btn secondary-btn m-0 mx-lg-2 px-lg-2">
   <slot></slot>
 </a>
 
