@@ -1,5 +1,5 @@
 <svelte:head>
-  <meta name="description" content="Welcome to the Marianopolis Programming Club!">
+  <meta name="description" content="Programming resources recommended by our club execs">
   <title>Resources | Programming Club</title>
 </svelte:head>
 
