@@ -1,7 +1,7 @@
 <script>
   export let path = '';
 
-  import PrimaryBtn from "./PrimaryBtn.svelte";
+  import NavBtn from "./buttons/NavBtn.svelte";
 </script>
 
 <nav class="navbar navbar-expand-lg topnav text-center">
@@ -36,7 +36,7 @@
           <a class={"nav-link" + ('/roadmap' === path ? ' active' : '')} href="/roadmap">Roadmap</a>
         </li>
       </ul>
-      <PrimaryBtn link="https://forms.gle/yJjj42ooRk9NeB5J6">Sign up!</PrimaryBtn>
+      <NavBtn link="https://forms.gle/yJjj42ooRk9NeB5J6">Sign up!</NavBtn>
     </div>
   </div>
 </nav>

@@ -4,11 +4,13 @@
 
 <div class={"reg-card card rounded-0" + (arrow ? ' link-card bg-white' : ' card-light-blue')}>
   <div class={"card-body relative text-black" + (arrow ? ' py-4 ps-4' : ' p-4')}>
-    <h5 class="card-title">{title}</h5>
-
-    {#if subtitle}
-    <h6 class="card-subtitle text-body-secondary mt-2">{subtitle}</h6>
-    {/if}
+    <div>
+      <h5 class="card-title fw-semibold">{title}</h5>
+  
+      {#if subtitle}
+      <h6 class="card-subtitle text-body-secondary mt-2">{subtitle}</h6>
+      {/if}
+    </div>
     
     {#if desc}
     <p class={"card-text mb-0" + (subtitle ? ' mt-3' : ' mt-5')}>{desc}</p>
@@ -43,10 +45,18 @@
 
 .reg-card {
   border: solid 2px #050D2E;
+  height: 100%;
+  min-height: 175px;
+}
+
+.reg-card .card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .link-card {
-  overflow: hidden; /* for hover effect, heavily inspired by https://codepen.io/andrewsims/pen/mQoYwz */
+  overflow: hidden; /* for hover effect (see below) */
 }
 
 .link-card .card-body {
@@ -55,6 +65,7 @@
   overflow: hidden;
 }
 
+/* heavily inspired by https://codepen.io/andrewsims/pen/mQoYwz */
 /* : and :: for cross-compatibility to be safe */
 .link-card .card-body::before, .link-card .card-body:before {
   content: "";
@@ -96,5 +107,50 @@
 
 .card-links a:hover {
   text-decoration: underline;
+}
+
+@media screen and (min-width: 1440px) {
+  .link-card .card-body:hover::before, .link-card .card-body:hover:before {
+    transform: scale(35);
+    transition-duration: 0.35s;
+  }
+
+  .link-card .card-body:hover h5, .link-card .card-body:hover h6, .link-card .card-body:hover p, .link-card .card-body:hover ul {
+    transition-duration: 0.4s;
+  }
+}
+
+/* in case the site is viewed on giant screens (TVs, dual monitors, etc.) */
+@media screen and (min-width: 2500px) {
+  .reg-card {
+    min-height: 200px;
+  }
+  
+  .link-card .card-body:hover::before, .link-card .card-body:hover:before {
+    transform: scale(45);
+    transition-duration: 0.45s;
+  }
+
+  .link-card .card-body:hover h5, .link-card .card-body:hover h6, .link-card .card-body:hover p, .link-card .card-body:hover ul {
+    transition-duration: 0.5s;
+  }
+}
+
+@media screen and (min-width: 3100px) {
+  .link-card .card-body:hover::before, .link-card .card-body:hover:before {
+    transform: scale(55);
+  }
+}
+
+@media screen and (min-width: 3800px) {
+  .link-card .card-body:hover::before, .link-card .card-body:hover:before {
+    transform: scale(65);
+  }
+}
+
+@media screen and (min-width: 4500px) {
+  .link-card .card-body:hover::before, .link-card .card-body:hover:before {
+    transform: scale(75);
+  }
 }
 </style>

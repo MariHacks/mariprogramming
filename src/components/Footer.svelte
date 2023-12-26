@@ -20,10 +20,12 @@
 
   .footer .menu a {
     text-decoration: none;
+    opacity: 1;
+    transition: opacity 0.15s ease-in-out;
   }
 
   .footer .menu a:hover {
-    text-decoration: underline;
+    opacity: 0.75;
   }
 
   @media screen and (min-width: 992px) {

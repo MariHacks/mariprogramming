@@ -1,0 +1,1 @@
+export const prerender = true; // for static site generation (SSG)

@@ -11,7 +11,7 @@
 
 <TopNav {path} />
 
-<main id="content">
+<main id="content" class="d-grid">
   <slot></slot>
 </main>
 
