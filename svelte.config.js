@@ -1,15 +1,8 @@
-// you may need to run `npm i -D @sveltejs/adapter-static` locally to install the adapter first
-import adapter from '@sveltejs/adapter-static';
+// you may need to run `npm i -D @sveltejs/adapter-vercel` locally to install the adapter first
+import adapter from '@sveltejs/adapter-vercel';
 
 export default {
 	kit: {
-		adapter: adapter({
-			// prep for github pages deployment
-			pages: 'build',
-			assets: 'build',
-			fallback: undefined,
-			precompress: false,
-			strict: true
-		})
+		adapter: adapter() // see https://kit.svelte.dev/docs/adapter-vercel for config options
 	}
 };
