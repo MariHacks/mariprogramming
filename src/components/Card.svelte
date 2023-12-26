@@ -26,7 +26,7 @@
 
     {#if links}
     <div class="card-links d-flex column-gap-3 row-gap-1 flex-wrap mt-3">
-      {#each Object.entries(links) as [link, text]}
+      {#each Object.entries(links) as [text, link]}
       <a href={link} class="d-flex align-items-center text-black"><img class="link-icon" src="/link/link-icon-dark.svg" alt={`Link to ${text}`}>{text}</a>
       {/each}
     </div>

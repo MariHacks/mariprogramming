@@ -4,17 +4,18 @@
 </svelte:head>
 
 <script>
-  import Card from "../components/Card.svelte";
-  import CardRow from "../components/CardRow.svelte";
   import CustomBtn from "../components/buttons/CustomBtn.svelte";
   import EventCarousel from "../components/events/EventCarousel.svelte";
+  import SeeAlso from "../components/SeeAlso.svelte";
+
+  const seeAlsoLinks = {
+    "About the Programming Club": ["/about-us", "Learn more about the club"],
+    "Workshop archive": ["/our-workshops", "Past workshop material"],
+    "Club roadmap": ["/roadmap", "See the club roadmap"],
+  };
 </script>
 
-<CardRow bg='light-blue'>
-  <a href="/about-us" class="text-decoration-none link-card-wrap"><Card title="About the Programming Club" desc="Learn more about the club" arrow list='' subtitle='' links='' /></a>
-  <a href="/our-workshops" class="text-decoration-none link-card-wrap"><Card title="Workshop archive" desc="Past workshop material" arrow list='' subtitle='' links='' /></a>
-  <a href="/roadmap" class="text-decoration-none link-card-wrap"><Card title="Club roadmap" desc="See the club roadmap" arrow list='' subtitle='' links='' /></a>
-</CardRow>
+<SeeAlso bg='light-blue' {seeAlsoLinks} topSpacing />
 
 <div class="join-hero d-flex flex-column reg-container row-gap-3 align-items-center">
   <h3 class="text-center">Workshops, seminars, and activities for programmers of all levels!</h3>

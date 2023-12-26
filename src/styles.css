@@ -42,3 +42,13 @@ button.splide__arrow svg {
     display: block;
   }
 }
+
+.heading {
+  font-weight: 700;
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.text-body {
+  font-size: 1.25rem;
+}

@@ -2,13 +2,14 @@
   export let link, btnStyle, expand;
 </script>
 
-<a href={link} class={`btn ${expand ? 'expand' : 'custom-btn'} ${btnStyle}-btn m-0 py-2 mx-lg-2 px-lg-2 border-2`}>
+<a href={link} class={`btn ${expand ? 'expand' : 'custom-btn'} ${btnStyle}-btn m-0 py-2 px-lg-2 border-2`}>
   <slot></slot>
 </a>
 
 <style>
 .custom-btn, .expand {
   width: 100%;
+  font-weight: 500;
 }
 
 @media screen and (min-width: 992px) {
