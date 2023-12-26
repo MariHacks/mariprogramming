@@ -2,7 +2,7 @@
   export let bg, topSpacing;
 </script>
 
-<div class={"d-grid justify-content-center align-items-center card-row" + (bg ? ` ${bg}` : '') + (topSpacing ? " reg-container" : " px-5 pb-5")}>
+<div class={"d-grid justify-content-center align-items-center card-row w-100" + (bg ? ` ${bg}` : '') + (topSpacing ? " reg-container" : " px-5 pb-5")}>
   <slot></slot>
 </div>
 
