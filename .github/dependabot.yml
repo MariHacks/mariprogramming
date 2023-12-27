@@ -1,0 +1,9 @@
+# For all options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: "npm" # update npm dependencies
+    directory: "/"
+    schedule:
+      interval: "monthly"

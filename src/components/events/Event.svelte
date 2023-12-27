@@ -3,7 +3,7 @@
 </script>
 
 <div class="card rounded-0 event p-1 p-sm-3 mx-auto">
-  <div class="card-body text-black d-flex flex-column justify-content-between">
+  <div class="card-body text-black d-flex flex-column">
     <div>
       <h5 class="card-title fw-semibold">{name}</h5>
       <h6 class="card-subtitle mt-1">{date}</h6>

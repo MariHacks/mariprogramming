@@ -1,7 +1,7 @@
 <script>
   import { page } from '$app/stores';
   import SeeAlso from '../components/SeeAlso.svelte';
-
+  
   const seeAlsoLinks = {
     "Home": ["/", "The home page"],
     "About us": ["/about-us", "Learn more about the club"],
@@ -10,7 +10,12 @@
     "Resources": ["/resources", "Coding resources we recommend"],
     "Sign up now!": ["https://forms.gle/yJjj42ooRk9NeB5J6", "Join our Discord too :)"],
   }
-</script>
+  </script>
+
+<svelte:head>
+  <meta name="description" content="Welcome to the Marianopolis Programming Club!">
+  <title>{$page.status}: {$page.error?.message} | Programming Club</title>
+</svelte:head>
 
 <h2 class="alert alert-danger w-100 text-center">{$page.status}: {$page.error?.message}</h2>
 

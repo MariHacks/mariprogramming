@@ -14,6 +14,7 @@
                                                                   1200: { perPage: 3, padding: 30 },
                                                                 }, 
                                                                 pagination: false,
+                                                                perMove: 1,
                                                                 padding: 5 }}>
   {#each Object.entries(events) as [name, [date, desc]]}
   <SplideSlide><Event {name} {date} {desc} /></SplideSlide>

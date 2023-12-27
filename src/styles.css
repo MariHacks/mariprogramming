@@ -15,13 +15,13 @@ body {
 }
 
 .reg-container {
-  padding: 3rem;
+  padding: 2rem;
   width: 100%;
 }
 
 button.splide__arrow {
   background-color: #050D2E;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 button.splide__arrow:disabled {
@@ -38,6 +38,10 @@ button.splide__arrow svg {
 }
 
 @media screen and (min-width: 340px) {
+  .reg-container {
+    padding: 3em;
+  }
+
   .mobile-hidden-carousel {
     display: block;
   }

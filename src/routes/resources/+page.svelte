@@ -23,9 +23,17 @@
   </div>
 
   <CardRow bg='' topSpacing={false}>
-    <ResourceCard category='Category 1' links={{ 'Link 1': 'https://github.com', 'Link 2': 'https://vercel.com', 'Link 3': 'https://marianopolis.edu' }} />
-    <ResourceCard category='Category 2' links={{ 'Link 1': 'https://github.com', 'Link 2': 'https://vercel.com', 'Link 3': 'https://marianopolis.edu' }} />
-    <ResourceCard category='Category 3' links={{ 'Link 1': 'https://github.com', 'Link 2': 'https://vercel.com', 'Link 3': 'https://marianopolis.edu' }} />
+    <ResourceCard category='Coding courses' 
+                  links={{ 'freeCodeCamp': 'https://www.freecodecamp.org/learn', 'Codecademy': 'https://www.codecademy.com/', 
+                           'The Odin Project (web dev)': 'https://www.theodinproject.com/', 'Harvard CS50x: Introduction to CS': 'https://cs50.harvard.edu/x/',
+                           'Google Developers Web (web dev)': 'https://web.dev/learn' }} />
+    <ResourceCard category='Coding YouTube channels' 
+                  links={{ 'freeCodeCamp on YT': 'https://www.youtube.com/@freecodecamp', 'Tech with Tim': 'https://www.youtube.com/@TechWithTim', 
+                           'Traversy Media': 'https://www.youtube.com/@TraversyMedia', 'Coder Coder (web dev)': 'https://www.youtube.com/@TheCoderCoder',
+                           'Pooky Codes': 'https://www.youtube.com/@PookyCodes' }} />
+    <ResourceCard category='Coding practice and forums' 
+                  links={{ 'LeetCode': 'https://leetcode.com/', 'Codewars': 'https://www.codewars.com/', 'HackerRank': 'https://www.hackerrank.com/', 
+                           'Frontend Mentor (frontend challenges)': 'https://www.frontendmentor.io/challenges', 'Stack Overflow': 'https://stackoverflow.com/' }} />
   </CardRow>
 </div>
 

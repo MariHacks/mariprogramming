@@ -24,9 +24,11 @@
 
 <div class="events-hero px-sm-1 py-5 overflow-x-hidden relative">
   <h3 class="text-center fw-bold mb-4 text-black">Upcoming events</h3>
-  <EventCarousel events={{'Event 1': ['Jan 17, 2024', 'Event 1 short description'], 
-                          'Event 2': ['Jan 24, 2024', 'Event 2 short description'],
-                          'Event 3': ['Jan 31, 2024', 'Event 3 longer description to test layout and CSS']}} />
+  <EventCarousel events={{'Join a club day': ['TBD, 2024', 'Come see us in the gym during AP to learn more about the club and to sign up!'], 
+                          'Workshop: Algorithms and Data Structures 1': ['Jan 23, 2024 (TBC)', 'Now that we\'ve covered Python basics, we will be covering foundational concepts in programming: algorithms and data structures.'],
+                          'Workshop: Algorithms and Data Structures 2': ['Jan 30, 2024 (TBC)', 'A continuation of last week\'s workshop on algorithms and data structures.'],
+                          'MariHacks registration opens': ['Feb 2024 (TBD)', 'High school and CEGEP students: make sure to register for MariHacks, the official hackathon of Marianopolis College!'],
+                          'MariHacks': ['Apr 5-6, 2024', 'The 7th edition of Marianopolis College\'s official annual hackathon! See the MariHacks website for more details.']}} />
 </div>
 
 <style>

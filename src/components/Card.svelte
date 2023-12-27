@@ -3,7 +3,7 @@
 </script>
 
 <div class={"reg-card card rounded-0" + (arrow ? ' link-card bg-white' : ' card-light-blue')}>
-  <div class={"card-body relative text-black" + (arrow ? ' py-4 ps-4' : ' p-4')}>
+  <div class={"card-body relative text-black" + (arrow ? ' py-4 ps-4 justify-content-between' : ' p-4')}>
     <div>
       <h5 class="card-title fw-semibold">{title}</h5>
   
@@ -52,7 +52,6 @@
 .reg-card .card-body {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
 .link-card {

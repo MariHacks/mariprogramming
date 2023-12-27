@@ -17,40 +17,33 @@
 
 <div class="pt-5 px-5 pb-3">
   <h2 class="heading">Our workshops</h2>
-  <p class="text-body">Here's the past material from our club workshops!</p>
+  <p class="text-body">Here's the past material from our 2023-24 club workshops!</p>
 </div>
 
 <CardRow topSpacing={false}>
-  <Card title='#1: Intro to Python' subtitle='Python Basics' desc='Short workshop description for workshop 1 here...' list='' 
-  links={{ 'Slides': 'https://slides.google.com/',
-           'Colab': 'https://colab.research.google.com/',
-           'GitHub': 'https://github.com/' }} 
+  <Card title='#1: Intro to Python' subtitle='Python Basics' desc='The basics of Python: variables, data types, operations, conditional statements and loops.' list='' 
+  links={{ 'Slides': 'https://docs.google.com/presentation/d/1MNX3TRe8Rzh_st2cG6TyUjDhHmbPRdsMHE0lI2--2Ho/edit?usp=drive_link',
+           'Colab': 'https://colab.research.google.com/drive/1UX_XKx1KWytoyxW7XACD2GparE-TPQU3?usp=sharing' }} 
   arrow='' />
-  <Card title='#2: Functions and Lists' subtitle='Python Basics' desc='Short workshop description for workshop 2 here...' list='' 
-  links={{ 'Slides': 'https://slides.google.com/',
-           'Colab': 'https://colab.research.google.com/',
-           'GitHub': 'https://github.com/' }} 
+  <Card title='#2: Functions and Lists' subtitle='Python Basics' desc='More Python basics: loops, lists, functions, dictionaries, etc.' list='' 
+  links={{ 'Slides': 'https://docs.google.com/presentation/d/1QVGR1s9O3rBgoNJ8uCYrX1818NZHO8ZBH3mKDcvxrZI/edit?usp=sharing' }} 
   arrow='' />
-  <Card title='#3: Manipulating Dictionaries and Lists' subtitle='Python Basics' desc='Short workshop description for workshop 3 here...' list='' 
-  links={{ 'Slides': 'https://slides.google.com/',
-           'Colab': 'https://colab.research.google.com/',
-           'GitHub': 'https://github.com/' }} 
+  <Card title='#3: Manipulating Dictionaries and Lists' subtitle='Python Basics' desc='Dictionary and list manipulation: list and dictionary comprehensions, tuples, destructuring, etc.' list='' 
+  links={{ 'Slides': 'https://docs.google.com/presentation/d/1rfqu_Dw09ZJm3pn5zqhRVWJ2DHssq5XXREJT0O5kYVM/edit?usp=sharing' }} 
   arrow='' />
-  <Card title='#4: NumPy' subtitle='Python Libraries' desc='Short workshop description for workshop 4 here...' list='' 
-  links={{ 'Slides': 'https://slides.google.com/',
-           'Colab': 'https://colab.research.google.com/',
-           'GitHub': 'https://github.com/' }} 
+  <Card title='#3.5: Strings and Files' subtitle='Python Basics' desc='String and file basics: character codes, strings, manipulating files.' list='' 
+  links={{ 'Slides': 'https://docs.google.com/presentation/d/1gnF6-zQ6X_ED3XhfKA_rlcbomAJhIHEeSqOYqPfrJLM/edit?usp=sharing' }} 
   arrow='' />
-  <Card title='#5: Matplotlib' subtitle='Python Libraries' desc='Short workshop description for workshop 5 here...' list='' 
-  links={{ 'Slides': 'https://slides.google.com/',
-           'Colab': 'https://colab.research.google.com/',
-           'GitHub': 'https://github.com/' }} 
+  <Card title='#4: NumPy' subtitle='Python Libraries' desc='The fundamentals of the NumPy library: working with NumPy arrays (shape, dimension, operations...).' list='' 
+  links={{ 'Slides': 'https://docs.google.com/presentation/d/1wuC7wCAerBPxLYiQRHgRp6zLSTp1cbIUUsiASsj94Co/edit?usp=sharing' }} 
   arrow='' />
-  <Card title='#5.5: Review Workshop 1' subtitle='Review' desc='Short workshop description for workshop 5.5 here...' list='' 
-  links={{ 'Slides': 'https://slides.google.com/',
-           'Problem set': 'https://colab.research.google.com/',
-           'Solutions': 'https://colab.research.google.com/',
-           'GitHub': 'https://github.com/' }} 
+  <Card title='#5: Matplotlib' subtitle='Python Libraries' desc='Matplotlib library basics: generating and customizing plots.' list='' 
+  links={{ 'Slides': 'https://docs.google.com/presentation/d/1jkPRUiXcry1UExDtmLrt6JVCmVcy9O6KB5NBIjO1mXE/edit?usp=sharing' }} 
+  arrow='' />
+  <Card title='#5.5: Review Workshop 1' subtitle='Review' desc='A review of everything we covered in previous workshops: the basics of Python and some Python libraries!' list='' 
+  links={{ 'Slides': 'https://docs.google.com/presentation/d/1QETOIuXHtx2YUJXBGuVClhjnKoCCsB_mJs9dtq9KYpQ/edit?usp=sharing',
+           'Problem set': 'https://colab.research.google.com/drive/1GWQT1ciq4VNblDmxJPyom11JyqZg9EvV?usp=sharing',
+           'Solutions to problem set': 'https://colab.research.google.com/drive/1bSJggUXE4x-r3jQ8wwcGUAd14xQVuMs_?usp=sharing' }} 
   arrow='' />
 </CardRow>
 
