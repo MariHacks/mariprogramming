@@ -21,17 +21,17 @@
 </div>
 
 <CardRow topSpacing={false}>
-  <Card title='Week 1: Object-oriented programming' subtitle='Early February' desc='' 
+  <Card title='Weeks 1-2: Object-oriented programming' subtitle='Early - mid February' desc='' 
   list={['The OOP paradigm', 'Classes and objects', 'Encapsulation, inheritance, polymorphism']} links='' arrow='' />
   <Card title='Weeks 2-3: Algorithms and DS' subtitle='Mid - end of February' desc='' list={['Algorithms (sorting, searching, etc.)', 'Data structures (hash tables, stacks, linked lists, etc.)', 'Time and space complexity']} links='' arrow='' />
-  <Card title='Weeks 4-6: Web development' subtitle='Early - end of March' desc='' list={['HTML and CSS', 'JavaScript', 'React.js']} links='' arrow='' />
-  <Card title='Weeks 7-8: Applications of Python' subtitle='Early April' desc='' 
-  list={['Topics to be confirmed based on interest and resources', 'Data science', 'Backend development']} links='' arrow='' />
+  <Card title='Weeks 3-5: Web development' subtitle='End of February - mid March' desc='' list={['HTML and CSS', 'JavaScript', 'Depending on interest and participation: React.js']} links='' arrow='' />
+  <Card title='Weeks 6-8: Applications of Python' subtitle='Early April' desc='' 
+  list={['Topics to be confirmed based on interest and resources', 'Data science', 'Back-end development']} links='' arrow='' />
   <Card title='Week 9: MariHacks VII' subtitle='April 5-6' desc='' 
         list={['24-hour in-person hackathon at Marianopolis', 'Open to high school and CEGEP students', 'Beginner and advanced challenges', 'Workshops and seminars', 'Free food and prizes!']} 
         links={{ 'MariHacks website': 'https://www.marihacks.com/' }} arrow='' />
   <Card title='Weeks 9+: Applications of Programming' subtitle='Mid - end of April' desc='' 
-        list={['Topics depend on interest and resources', 'Arduino (hardware/robotics)', 'Game development', 'Backend with JavaScript', 'Command line scripting']} links='' arrow='' />
+        list={['Topics depend on interest and resources', 'Arduino (hardware/robotics)', 'Game development', 'Back-end with JavaScript', 'Command line scripting']} links='' arrow='' />
 </CardRow>
 
 <SeeAlso bg='light-gray' topSpacing {seeAlsoLinks} />
