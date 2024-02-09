@@ -45,6 +45,10 @@
            'Problem set': 'https://colab.research.google.com/drive/1GWQT1ciq4VNblDmxJPyom11JyqZg9EvV?usp=sharing',
            'Solutions to problem set': 'https://colab.research.google.com/drive/1bSJggUXE4x-r3jQ8wwcGUAd14xQVuMs_?usp=sharing' }} 
   arrow='' />
+  <Card title='#6: Object-Oriented Programming 1' subtitle='OOP' desc='We start with basic OOP concepts (creating classes, etc.) and gradually delve into more advanced and interesting applications.' list='' 
+  links={{ 'Slides': 'https://docs.google.com/presentation/d/1LNfJLjlheS1SMNjqB1aNcXEuXffYOkMywmSv4qvUDEQ/edit?usp=sharing',
+           'Code examples': 'https://github.com/MariHacks/workshops-2023-2024/tree/main/OOP' }} 
+  arrow='' />
 </CardRow>
 
 <SeeAlso bg='light-gray' topSpacing {seeAlsoLinks} />
