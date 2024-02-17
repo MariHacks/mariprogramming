@@ -23,7 +23,7 @@
 <CardRow topSpacing={false}>
   <Card title='Weeks 1-2: Object-oriented programming' subtitle='Early - mid February' desc='' 
   list={['The OOP paradigm', 'Classes and objects', 'Encapsulation, inheritance, polymorphism']} links='' arrow='' />
-  <Card title='Weeks 2-3: Algorithms and DS' subtitle='Mid - end of February' desc='' list={['Algorithms (sorting, searching, etc.)', 'Data structures (hash tables, stacks, linked lists, etc.)', 'Time and space complexity']} links='' arrow='' />
+  <Card title='Weeks 2-3: Algorithms and DS' subtitle='Mid - end of February' desc='' list={['Computing competition prep', 'Algorithms (sorting, searching, etc.)', 'Data structures (hash tables, stacks, linked lists, etc.)', 'Time and space complexity']} links='' arrow='' />
   <Card title='Weeks 3-5: Web development' subtitle='End of February - mid March' desc='' list={['HTML and CSS', 'JavaScript', 'Depending on interest and participation: React.js']} links='' arrow='' />
   <Card title='Weeks 6-8: Applications of Python' subtitle='Early April' desc='' 
   list={['Topics to be confirmed based on interest and resources', 'Data science', 'Back-end development']} links='' arrow='' />
