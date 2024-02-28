@@ -40,7 +40,8 @@
 <div class="button-links px-5 pb-5 border-bottom border-white border-2">
   <h3 class="fw-bold text-black mb-4">Interested in coding, AI or hackathons?</h3>
   <div class="button-group d-grid align-items-center gap-3 gap-xl-4 gap-xxl-5">
-    <CustomBtn btnStyle="secondary" expand link="https://forms.gle/yJjj42ooRk9NeB5J6">Join the Programming Club</CustomBtn>
+    <CustomBtn btnStyle="secondary" expand link="https://discord.gg/BMvrpKJjej">Join our Discord server</CustomBtn>
+    <!-- <CustomBtn btnStyle="secondary" expand link="https://forms.gle/yJjj42ooRk9NeB5J6">Join the Programming Club</CustomBtn> -->
     <CustomBtn btnStyle="secondary" expand link="https://mariai.surge.sh/">Check out the AI Club</CustomBtn>
     <CustomBtn btnStyle="secondary" expand link="https://www.marihacks.com/">We also run MariHacks!</CustomBtn>
   </div>

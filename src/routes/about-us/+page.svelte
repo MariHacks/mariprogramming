@@ -7,7 +7,8 @@
   import SeeAlso from '../../components/SeeAlso.svelte';
 
   const seeAlsoLinks = {
-    "Sign up now!": ["https://forms.gle/yJjj42ooRk9NeB5J6", "Join our Discord too :)"],
+    "Sign up for MariHacks!": ["https://www.marihacks.com", "Deadline is March 10, 11:59 pm EST"],
+    // "Sign up now!": ["https://forms.gle/yJjj42ooRk9NeB5J6", "Join our Discord too :)"],
     "Workshop archive": ["/our-workshops", "Past workshop material"],
     "Club roadmap": ["/roadmap", "See the club roadmap"],
   }
