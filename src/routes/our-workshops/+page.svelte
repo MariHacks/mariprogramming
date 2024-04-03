@@ -50,6 +50,10 @@
   links={{ 'Slides': 'https://docs.google.com/presentation/d/1LNfJLjlheS1SMNjqB1aNcXEuXffYOkMywmSv4qvUDEQ/edit?usp=sharing',
            'Code examples': 'https://github.com/MariHacks/workshops-2023-2024/tree/main/OOP' }} 
   arrow='' />
+  <Card title='MariHacks special #1: Python Libraries' subtitle='MariHacks prep' desc='We briefly discuss lots of popular and useful Python libraries that could come in handy at MariHacks!' list='' 
+  links={{ 'Slides': 'https://docs.google.com/presentation/d/1BP8OQZS9y7Ew_3Oq9zr1Ns2Ta2BVBLPtlPmfvu4RR34/edit?usp=sharing',
+           'Code examples': 'https://github.com/MariHacks/workshops-2023-2024/tree/main/marihacks_prep' }} 
+  arrow='' />
 </CardRow>
 
 <SeeAlso bg='light-gray' topSpacing {seeAlsoLinks} />
