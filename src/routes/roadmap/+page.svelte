@@ -9,8 +9,9 @@
   import SeeAlso from '../../components/SeeAlso.svelte';
 
   const seeAlsoLinks = {
-    "Sign up for MariHacks!": ["https://www.marihacks.com", "Deadline is March 10, 11:59 pm EST"],
+    // "Sign up for MariHacks!": ["https://www.marihacks.com", "Deadline is March 10, 11:59 pm EST"],
     // "Sign up now!": ["https://forms.gle/yJjj42ooRk9NeB5J6", "Join our Discord too :)"],
+    "Exec applications are open!": ["https://forms.gle/pjxRBgioWrTS6Wc9A", "Apply by May 3, 10:00 pm EST!"],
     "About us": ["/about-us", "Learn more about the club"],
     "Workshop archive": ["/our-workshops", "Past workshop material"],
   }
@@ -31,8 +32,8 @@
   <Card title='Week 9: MariHacks VII' subtitle='April 5-6' desc='' 
         list={['24-hour in-person hackathon at Marianopolis', 'Open to high school and CEGEP students', 'Beginner and advanced challenges', 'Workshops and seminars', 'Free food and prizes!']} 
         links={{ 'MariHacks website': 'https://www.marihacks.com/' }} arrow='' />
-  <Card title='Weeks 9+: Applications of Programming' subtitle='Mid - end of April' desc='' 
-        list={['Topics depend on interest and resources', 'Arduino (hardware/robotics)', 'Game development', 'Back-end with JavaScript', 'Command line scripting']} links='' arrow='' />
+  <!-- <Card title='Weeks 9+: Applications of Programming' subtitle='Mid - end of April' desc='' 
+        list={['Topics depend on interest and resources', 'Arduino (hardware/robotics)', 'Game development', 'Back-end with JavaScript', 'Command line scripting']} links='' arrow='' /> -->
 </CardRow>
 
 <SeeAlso bg='light-gray' topSpacing {seeAlsoLinks} />

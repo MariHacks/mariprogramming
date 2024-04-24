@@ -8,8 +8,9 @@
     "Workshop archive": ["/our-workshops", "Past workshop material"],
     "Club roadmap": ["/roadmap", "See the club roadmap"],
     "Resources": ["/resources", "Coding resources we recommend"],
-    "Sign up for MariHacks!": ["https://www.marihacks.com", "Deadline is March 10, 11:59 pm EST"],
+    // "Sign up for MariHacks!": ["https://www.marihacks.com", "Deadline is March 10, 11:59 pm EST"],
     // "Sign up now!": ["https://forms.gle/yJjj42ooRk9NeB5J6", "Join our Discord too :)"],
+    "Exec applications are open!": ["https://forms.gle/pjxRBgioWrTS6Wc9A", "Apply by May 3, 10:00 pm EST!"],
   }
   </script>
 

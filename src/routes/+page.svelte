@@ -19,14 +19,14 @@
 
 <div class="join-hero d-flex flex-column reg-container row-gap-3 align-items-center">
   <h3 class="text-center text-black">Workshops, seminars, and activities for programmers of all levels!</h3>
-  <CustomBtn btnStyle="primary" expand={true} link="https://www.marihacks.com">Club and MariHacks registration is closed. Learn more about MariHacks!</CustomBtn>
+  <CustomBtn btnStyle="primary" expand={true} link="https://forms.gle/pjxRBgioWrTS6Wc9A">Apply for an executive position!</CustomBtn>
 </div>
 
 <div class="events-hero px-sm-1 py-5 overflow-x-hidden relative">
   <h3 class="text-center fw-bold mb-4 text-black">Upcoming events</h3>
   <EventCarousel events={{
-    'Workshop: Git, GitHub, Devpost': ['Apr 4, 2024', 'The second workshop of our brief MariHacks prep series! We\'ll teach you the basics of Git, GitHub, and Devpost, three essential tools for any hackathon.'],
-    'MariHacks': ['Apr 5-6, 2024', 'The 7th edition of Marianopolis College\'s official annual hackathon! See the MariHacks website (marihacks.com) for more details.']}} />
+    '2024-25 Exec application deadline': ['May 3, 2024', 'Apply to be an executive of the Programming Club (and MariHacks)! Stay tuned for more information regarding interviews.']
+    }} />
 </div>
 
 <style>

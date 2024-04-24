@@ -7,8 +7,9 @@
   import SeeAlso from '../../components/SeeAlso.svelte';
 
   const seeAlsoLinks = {
-    "Sign up for MariHacks!": ["https://www.marihacks.com", "Deadline is March 10, 11:59 pm EST"],
+    // "Sign up for MariHacks!": ["https://www.marihacks.com", "Deadline is March 10, 11:59 pm EST"],
     // "Sign up now!": ["https://forms.gle/yJjj42ooRk9NeB5J6", "Join our Discord too :)"],
+    "Exec applications are open!": ["https://forms.gle/pjxRBgioWrTS6Wc9A", "Apply by May 3, 10:00 pm EST!"],
     "Workshop archive": ["/our-workshops", "Past workshop material"],
     "Club roadmap": ["/roadmap", "See the club roadmap"],
   }
@@ -16,8 +17,7 @@
 
 <div class="reg-container">
   <h2 class="text-black heading">About us</h2>
-  <p class="text-black text-body">Whether you're a beginner or expert, the Programming Club is the perfect place to start (or continue) your coding journey! 
-    Discover the joy of programming with our community through a multitude of activities.</p>
+  <p class="text-black text-body">Whether you're a beginner or expert, the Programming Club is the perfect place to start (or continue) your coding journey! Discover the joy of programming with our community through a multitude of activities.</p>
 
   <div class="text-black about-us pt-3 d-flex flex-column flex-lg-row gap-4 gap-lg-5 align-items-start">
     <img class="desc-img" src="/club-preview-1.svg" alt="Preview of club activities such as workshops, lessons, guest speakers, MariHacks, bake sale and more">

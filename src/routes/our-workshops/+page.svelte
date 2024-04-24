@@ -9,8 +9,9 @@
   import SeeAlso from '../../components/SeeAlso.svelte';
 
   const seeAlsoLinks = {
-    "Sign up for MariHacks!": ["https://www.marihacks.com", "Deadline is March 10, 11:59 pm EST"],
+    // "Sign up for MariHacks!": ["https://www.marihacks.com", "Deadline is March 10, 11:59 pm EST"],
     // "Sign up now!": ["https://forms.gle/yJjj42ooRk9NeB5J6", "Join our Discord too :)"],
+    "Exec applications are open!": ["https://forms.gle/pjxRBgioWrTS6Wc9A", "Apply by May 3, 10:00 pm EST!"],
     "About us": ["/about-us", "Learn more about the club"],
     "Club roadmap": ["/roadmap", "See the club roadmap"],
   }
@@ -54,6 +55,9 @@
   links={{ 'Slides': 'https://docs.google.com/presentation/d/1BP8OQZS9y7Ew_3Oq9zr1Ns2Ta2BVBLPtlPmfvu4RR34/edit?usp=sharing',
            'Code examples': 'https://github.com/MariHacks/workshops-2023-2024/tree/main/marihacks_prep' }} 
   arrow='' />
+  <!-- <Card title='MariHacks special #2: Hackathon Tools' subtitle='MariHacks prep' desc='We go over some essential tools for hackathons (and coding projects in general), such as !' list='' 
+  links={{ 'Slides': 'https://docs.google.com/presentation/d/1BP8OQZS9y7Ew_3Oq9zr1Ns2Ta2BVBLPtlPmfvu4RR34/edit?usp=sharing' }} 
+  arrow='' /> -->
 </CardRow>
 
 <SeeAlso bg='light-gray' topSpacing {seeAlsoLinks} />
