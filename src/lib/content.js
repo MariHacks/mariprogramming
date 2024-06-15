@@ -130,8 +130,8 @@ export const aboutUs = {
 			'url': '/our-workshops'
 		},
 		'Club roadmap': {
-			'url': '/roadmap',
-			'text': 'See the club roadmap'
+			'text': 'See the club roadmap',
+			'url': '/roadmap'
 		}
 	}
 };
@@ -389,6 +389,46 @@ export const roadmap = {
 		'Workshop archive': {
 			'text': 'Past workshop material',
 			'url': '/our-workshops'
+		}
+	}
+};
+
+export const errorContent = {
+	'metaDesc': 'Welcome to the Marianopolis Programming Club!',
+	'intro':
+		'Looks like something went wrong, sorry about that :/ We hope the links below will help!',
+	'info':
+		"Feel free to reach out to us on Discord, Instagram, or Omnivox as well — we're happy to help, whether you have coding questions, suggestions, or other concerns :)",
+	'contact': {
+		'Discord':
+			"look for users in our club server with Exec 'year (e.g. Exec '24) in their username who have the executive and/or organizer role!",
+		'Instagram': 'Instagram: you can find us at @mari_programming_club or @marihacks',
+		'Omnivox': 'Omnivox: check your MIOs from us :)'
+	},
+	'seeAlsoLinks': {
+		'Home': {
+			'text': 'The home page',
+			'url': '/'
+		},
+		'About us': {
+			'text': 'Learn more about the club',
+			'url': '/about-us'
+		},
+		'Workshop archive': {
+			'text': 'Past workshop material',
+			'url': '/our-workshops'
+		},
+		'Club roadmap': {
+			'text': 'See the club roadmap',
+			'url': '/roadmap'
+		},
+		'Resources': {
+			'text': 'Coding resources we recommend',
+			'url': '/resources'
+		},
+		'Join our Discord server!': {
+			'text': 'Join our Discord community to learn more and ask us questions!',
+			'url': 'https://discord.gg/BMvrpKJjej'
 		}
 	}
 };

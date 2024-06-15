@@ -1,12 +1,14 @@
 <script>
 	import { footer } from '$lib/content';
+
+	const { brand, socials } = footer;
 </script>
 
 <footer class="footer text-center">
 	<div
 		class="px-3 py-3 menu d-flex justify-content-center align-items-center column-gap-4 column-gap-sm-5"
 	>
-		{#each Object.entries(footer.socials) as [name, info]}
+		{#each Object.entries(socials) as [name, info]}
 			<a class="text-white" href={info.url}
 				><img src={info.icon} height={info.height} alt={info.iconAlt} /><span
 					class="ms-2 d-none d-md-inline">{name}</span
@@ -14,7 +16,7 @@
 			>
 		{/each}
 	</div>
-	<div class="px-4 py-2 bar">{footer.brand}</div>
+	<div class="px-4 py-2 bar">{brand}</div>
 </footer>
 
 <style>

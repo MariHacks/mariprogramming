@@ -29,8 +29,8 @@
 
 <!-- regular column of events when < 340px -->
 <div class="event-carousel flex-column gap-4">
-	{#each Object.entries(events) as [name, [date, desc]]}
-		<Event {name} {date} {desc} />
+	{#each Object.entries(events) as [name, info]}
+		<Event {name} date={info.date} desc={info.desc} />
 	{/each}
 </div>
 
