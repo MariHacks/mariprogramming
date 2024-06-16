@@ -393,6 +393,7 @@ export const roadmap = {
 	}
 };
 
+// error page (e.g. 404, 500 errors, etc.)
 export const errorContent = {
 	'metaDesc': 'Welcome to the Marianopolis Programming Club!',
 	'intro':
@@ -402,8 +403,8 @@ export const errorContent = {
 	'contact': {
 		'Discord':
 			"look for users in our club server with Exec 'year (e.g. Exec '24) in their username who have the executive and/or organizer role!",
-		'Instagram': 'Instagram: you can find us at @mari_programming_club or @marihacks',
-		'Omnivox': 'Omnivox: check your MIOs from us :)'
+		'Instagram': 'you can find us at @mari_programming_club or @marihacks',
+		'Omnivox': 'check your MIOs from us :)'
 	},
 	'seeAlsoLinks': {
 		'Home': {
