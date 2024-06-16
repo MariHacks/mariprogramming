@@ -18,10 +18,6 @@
 		font-weight: 500;
 	}
 
-	.disabled {
-		pointer-events: none;
-	}
-
 	@media screen and (min-width: 992px) {
 		.custom-btn {
 			width: 75%;

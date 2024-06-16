@@ -21,10 +21,6 @@
 		color: #050d2e;
 	}
 
-	.disabled {
-		pointer-events: none;
-	}
-
 	@media screen and (min-width: 992px) {
 		.light-btn {
 			width: auto;
