@@ -25,6 +25,6 @@
 	"type": "module",
 	"dependencies": {
 		"@splidejs/svelte-splide": "^0.2.9",
-		"bootstrap": "^5.3.3"
+		"bootstrap": "^5.3.8"
 	}
 }
