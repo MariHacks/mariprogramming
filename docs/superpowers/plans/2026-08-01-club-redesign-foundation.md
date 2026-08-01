@@ -94,7 +94,61 @@ git add .gitignore svelte.config.js
 git commit -m "build: target a supported Vercel Node runtime"
 ```
 
-## Task 1: Establish a testable, typed-JavaScript baseline
+## Task 1: Normalize the existing formatting baseline
+
+**Files:**
+- Modify: `.github/dependabot.yml`
+- Modify: `docs/superpowers/specs/2026-08-01-club-and-book-delivery-design.md`
+- Modify: `docs/superpowers/plans/2026-08-01-club-redesign-foundation.md`
+- Modify: `docs/superpowers/plans/2026-08-01-book-catalogue-and-cart.md`
+- Modify: `docs/superpowers/plans/2026-08-01-book-delivery-commerce-and-admin.md`
+- Modify: `src/app.html`
+- Modify: `src/lib/components/CardRow.svelte`
+- Modify: `src/lib/components/ResourceCard.svelte`
+- Modify: `src/lib/components/events/Event.svelte`
+- Modify: `src/routes/+layout.js`
+- Modify: `src/styles.css`
+- Modify: `svelte.config.js`
+
+**Interfaces:**
+- Produces: a clean existing Prettier and ESLint baseline without changing runtime behavior.
+- Produces: no functional redesign or dependency change.
+
+- [ ] **Step 1: Capture the inherited formatter failure**
+
+Run: `npm run lint`
+
+Expected before this task: Prettier reports exactly the listed legacy files as needing formatting. ESLint does not get a chance to run until Prettier exits cleanly.
+
+- [ ] **Step 2: Apply formatting only to the known legacy files**
+
+Run:
+
+```bash
+npx prettier --write .github/dependabot.yml docs/superpowers/specs/2026-08-01-club-and-book-delivery-design.md docs/superpowers/plans/2026-08-01-club-redesign-foundation.md docs/superpowers/plans/2026-08-01-book-catalogue-and-cart.md docs/superpowers/plans/2026-08-01-book-delivery-commerce-and-admin.md src/app.html src/lib/components/CardRow.svelte src/lib/components/ResourceCard.svelte src/lib/components/events/Event.svelte src/routes/+layout.js src/styles.css svelte.config.js
+```
+
+Review the diff. It must contain whitespace, indentation, quote, line-break, or trailing-comma changes only. Do not change copy, selectors, imports, component behavior, dependencies, or configuration values.
+
+- [ ] **Step 3: Verify a clean baseline**
+
+Run:
+
+```bash
+npm run lint
+git diff --check
+```
+
+Expected: both commands exit successfully. If a semantic-looking diff appears, revert only that edit using an inverse `apply_patch`, then rerun the two commands.
+
+- [ ] **Step 4: Commit the nonfunctional baseline**
+
+```bash
+git add .github/dependabot.yml docs/superpowers/specs/2026-08-01-club-and-book-delivery-design.md docs/superpowers/plans/2026-08-01-club-redesign-foundation.md docs/superpowers/plans/2026-08-01-book-catalogue-and-cart.md docs/superpowers/plans/2026-08-01-book-delivery-commerce-and-admin.md src/app.html src/lib/components/CardRow.svelte src/lib/components/ResourceCard.svelte src/lib/components/events/Event.svelte src/routes/+layout.js src/styles.css svelte.config.js
+git commit -m "style: normalize project formatting"
+```
+
+## Task 2: Establish a testable, typed-JavaScript baseline
 
 **Files:**
 - Create: `jsconfig.json`
@@ -213,7 +267,7 @@ git add package.json package-lock.json vite.config.js jsconfig.json src/lib/form
 git commit -m "test: add SvelteKit quality baseline"
 ```
 
-## Task 2: Replace stale copy with a current, centralized club content model
+## Task 3: Replace stale copy with a current, centralized club content model
 
 **Files:**
 - Create: `src/lib/content/club.js`
@@ -310,7 +364,7 @@ git add src/lib/content/club.js src/lib/content/club.test.js src/lib/content.js
 git commit -m "refactor: centralize current club content"
 ```
 
-## Task 3: Build the visual system and reusable content primitives
+## Task 4: Build the visual system and reusable content primitives
 
 **Files:**
 - Create: `src/lib/components/site/SectionIntro.svelte`
@@ -403,7 +457,7 @@ git add src/styles.css src/app.html src/lib/components/site
 git commit -m "feat: add club visual system and content primitives"
 ```
 
-## Task 4: Replace the shared shell with a responsive, accessible club header and footer
+## Task 5: Replace the shared shell with a responsive, accessible club header and footer
 
 **Files:**
 - Create: `src/lib/components/site/SiteHeader.svelte`
@@ -477,7 +531,7 @@ git rm src/lib/components/TopNav.svelte src/lib/components/Footer.svelte
 git commit -m "feat: redesign shared club navigation"
 ```
 
-## Task 5: Deliver the refreshed home and club introduction pages
+## Task 6: Deliver the refreshed home and club introduction pages
 
 **Files:**
 - Modify: `src/routes/+page.svelte`
@@ -540,7 +594,7 @@ git add src/routes/+page.svelte src/routes/about-us/+page.svelte src/routes/+pag
 git commit -m "feat: refresh club home and about pages"
 ```
 
-## Task 6: Rebuild workshops, events, resources, and the obsolete roadmap route
+## Task 7: Rebuild workshops, events, resources, and the obsolete roadmap route
 
 **Files:**
 - Create: `src/lib/components/site/EventList.svelte`
@@ -620,7 +674,7 @@ git rm src/lib/components/Card.svelte src/lib/components/CardRow.svelte src/lib/
 git commit -m "feat: rebuild club content pages"
 ```
 
-## Task 7: Complete visual and accessibility regression coverage
+## Task 8: Complete visual and accessibility regression coverage
 
 **Files:**
 - Create: `tests/e2e/club-navigation.spec.js`
@@ -716,6 +770,6 @@ git commit -m "test: cover redesigned club experience"
 
 ## Plan self-review
 
-- Spec coverage: shared visual system, club home/about/workshops/events/resources, current content, Book Delivery discoverability, cart isolation, accessibility, responsiveness, and stale-content removal map to Tasks 2-7.
+- Spec coverage: formatting baseline, shared visual system, club home/about/workshops/events/resources, current content, Book Delivery discoverability, cart isolation, accessibility, responsiveness, and stale-content removal map to Tasks 1-8.
 - Intentional boundary: Book Delivery catalogue, cart behavior, checkout, payments, order emails, and admin operation are implemented in the two companion plans so this plan delivers a coherent non-commerce site on its own.
 - Type consistency: `formatCad`, `clubContent`, `getUpcomingEvents`, `getWorkshopTracks`, `ContentCard`, and `EventList` are defined before their planned consumers.
