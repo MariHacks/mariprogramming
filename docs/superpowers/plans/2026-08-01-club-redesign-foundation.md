@@ -192,7 +192,7 @@ npm install -D @eslint/js@9.8.0 globals@14.0.0
 
 Create `eslint.config.js` using `@eslint/js`, `eslint-plugin-svelte`'s `flat/recommended` configuration, `eslint-config-prettier`, and `globals`. Carry the intent of `.eslintignore` into an initial global `ignores` object, including `.vercel/**`, `.svelte-kit/**`, `build/**`, `package/**`, `node_modules/**`, and environment-file patterns. Use browser and Node globals, ECMAScript 2020, and module source type.
 
-Delete `.eslintrc.cjs` and `.eslintignore`; ESLint 9 must not discover legacy configuration files. Add a final Svelte-only override that downgrades `svelte/require-each-key` to `warn` solely while the Task 8 legacy page/component replacement is pending. Do not disable any other recommended rule.
+Delete `.eslintrc.cjs` and `.eslintignore`; ESLint 9 must not discover legacy configuration files. Because `eslint-config-prettier` disables core `no-unexpected-multiline`, explicitly restore that rule to `error` after the Prettier config. Add a final Svelte-only override that downgrades `svelte/require-each-key` to `warn` solely while the Task 8 legacy page/component replacement is pending. Do not disable any other recommended rule.
 
 - [ ] **Step 3: Verify lint behavior and Svelte config resolution**
 
@@ -205,7 +205,7 @@ npm run build
 git diff --check
 ```
 
-Expected: every command exits successfully. The printed config resolves Svelte rules and shows `svelte/require-each-key` at warning severity; no generated `.vercel` output is linted.
+Expected: every command exits successfully. The printed config resolves Svelte rules, shows `svelte/require-each-key` at warning severity and `no-unexpected-multiline` at error severity; no generated `.vercel` output is linted.
 
 - [ ] **Step 4: Commit the toolchain migration**
 
