@@ -34,6 +34,11 @@ export default [
 	...svelte.configs['flat/recommended'],
 	prettier,
 	{
+		rules: {
+			'no-unexpected-multiline': 'error'
+		}
+	},
+	{
 		files: ['**/*.svelte'],
 		rules: {
 			// Task 8 replaces the legacy views, then restores the recommended error severity.
