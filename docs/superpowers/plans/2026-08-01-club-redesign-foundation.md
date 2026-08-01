@@ -42,6 +42,58 @@
 | `vite.config.js` | SvelteKit and Vitest configuration. |
 | `package.json` | Quality and test commands. |
 
+## Task 0: Make the existing Vercel build compatible with the local Node runtime
+
+**Files:**
+- Modify: `.gitignore`
+- Modify: `svelte.config.js`
+
+**Interfaces:**
+- Produces: Vercel output targeted to supported `nodejs22.x` even when local development uses a newer Node release.
+- Produces: no tracked `.vercel/output` build artifact.
+
+- [ ] **Step 1: Record the failing baseline build evidence**
+
+Run: `npm run build`
+
+Expected before this task: the Vercel adapter rejects local Node 24 with `Building locally with unsupported Node.js version` after SvelteKit produces its initial bundle.
+
+- [ ] **Step 2: Configure a supported Vercel runtime and ignore generated output**
+
+Change the adapter configuration in `svelte.config.js` to:
+
+```js
+kit: {
+	adapter: adapter({ runtime: 'nodejs22.x' })
+}
+```
+
+Add this exact line to `.gitignore`:
+
+```text
+.vercel/
+```
+
+Do not add an `engines` range because this workspace currently uses Node 24 with `engine-strict=true`; the adapter runtime option is sufficient to produce a Node 22 Vercel function while retaining local tooling compatibility.
+
+- [ ] **Step 3: Verify the adapter produces a Vercel output cleanly**
+
+Run:
+
+```bash
+npm run build
+git status --short
+```
+
+Expected: the build exits successfully and `.vercel/output` does not appear as an untracked file.
+
+- [ ] **Step 4: Commit the compatibility fix**
+
+```bash
+git add .gitignore svelte.config.js
+git commit -m "build: target a supported Vercel Node runtime"
+```
+
 ## Task 1: Establish a testable, typed-JavaScript baseline
 
 **Files:**
