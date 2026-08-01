@@ -17,6 +17,10 @@
 - Meet keyboard, visible-focus, mobile, and reduced-motion requirements.
 - Touch only files required for the redesign. Preserve existing public routes or redirect legacy routes deliberately.
 
+## Component Ownership Protocol
+
+The redesign is intentionally executed as one implementation and one independent review per visible component. Shared CSS, page composition, and route wiring are separate non-component work units. This keeps the visual language coherent without asking one agent to make unreviewed UX decisions for multiple components. The foundation component units are: `SectionIntro`, `ContentCard`, `SiteHeader`, `SiteFooter`, and `EventList`; each receives a component-specific brief, test where behavior warrants one, and a dedicated UX review before its consumer route is implemented.
+
 ---
 
 ## File Structure
