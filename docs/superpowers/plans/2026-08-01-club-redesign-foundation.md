@@ -230,6 +230,7 @@ git commit -m "build: migrate lint configuration"
 
 - Produces: `formatCad(cents: number): string`, used by Book Delivery plans.
 - Produces: `vite.config.js` test environment with `setupFiles: ['./src/test/setup.js']`.
+- Produces: a full-source `npm run check` command that records the six inherited diagnostics in legacy views without excluding them; Task 8 removes those views and makes this command fully clean.
 
 - [ ] **Step 1: Install the narrowly scoped quality dependencies**
 
@@ -327,7 +328,7 @@ npm run check
 npm run lint
 ```
 
-Expected: all commands pass.
+Expected: the focused test and lint pass. At this point `npm run check` is expected to report only the six pre-existing diagnostics in untouched legacy views (`SeeAlso.svelte`, `TopNav.svelte`, `EventCarousel.svelte`, `our-workshops/+page.svelte`, and `roadmap/+page.svelte`); it must report no diagnostic in the Task 3 files. Do not weaken `jsconfig.json` or exclude those files. Task 8 replaces or deletes every named legacy view and verifies a clean check.
 
 Commit:
 
@@ -704,6 +705,7 @@ git commit -m "feat: refresh club home and about pages"
 
 - Consumes: `clubContent`, `getUpcomingEvents`, `getWorkshopTracks`, `ContentCard`.
 - Produces: `/events` and a permanent `/roadmap` redirect.
+- Resolves: the known legacy `svelte-check` diagnostics by replacing or deleting every affected view.
 
 - [ ] **Step 1: Write the failing event empty-state test**
 
