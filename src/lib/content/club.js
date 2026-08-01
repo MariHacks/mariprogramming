@@ -1,7 +1,32 @@
+const discordJoinUrl = 'https://discord.gg/BMvrpKJjej';
+
 export const clubContent = {
-	joinUrl: 'https://discord.gg/BMvrpKJjej',
+	name: 'Marianopolis Programming Club',
+	joinUrl: discordJoinUrl,
 	mission:
 		'A welcoming place for Marianopolis students to learn programming, build together, and share software, with no experience required.',
+	socialLinks: [
+		{
+			label: 'GitHub',
+			url: 'https://github.com/MariHacks',
+			icon: '/socials/github.svg'
+		},
+		{
+			label: 'Discord',
+			url: discordJoinUrl,
+			icon: '/socials/discord.svg'
+		},
+		{
+			label: 'Instagram',
+			url: 'https://www.instagram.com/mari_programming_club/',
+			icon: '/socials/instagram.svg'
+		},
+		{
+			label: 'MariHacks',
+			url: 'https://www.marihacks.com/',
+			icon: '/socials/marihacks.png'
+		}
+	],
 	events: [],
 	workshops: [
 		{

@@ -33,33 +33,13 @@ export const topNav = {
 };
 
 export const footer = {
-	brand: '\u003cThe Marianopolis Programming Club\u00a0/\u003e',
-	socials: {
-		GitHub: {
-			url: 'https://github.com/MariHacks',
-			icon: '/socials/github.svg',
-			iconAlt: 'GitHub logo',
-			height: 30
-		},
-		Discord: {
-			url: clubContent.joinUrl,
-			icon: '/socials/discord.svg',
-			iconAlt: 'Discord logo',
-			height: 30
-		},
-		Instagram: {
-			url: 'https://www.instagram.com/mari_programming_club/',
-			icon: '/socials/instagram.svg',
-			iconAlt: 'Instagram logo',
-			height: 30
-		},
-		MariHacks: {
-			url: 'https://www.marihacks.com/',
-			icon: '/socials/marihacks.png',
-			iconAlt: 'MariHacks logo',
-			height: 30
-		}
-	}
+	brand: `\u003cThe ${clubContent.name}\u00a0/\u003e`,
+	socials: Object.fromEntries(
+		clubContent.socialLinks.map(({ label, url, icon }) => [
+			label,
+			{ url, icon, iconAlt: `${label} logo`, height: 30 }
+		])
+	)
 };
 
 export const home = {
