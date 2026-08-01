@@ -175,6 +175,8 @@
 	}
 
 	.path-entry {
+		width: 100%;
+		max-width: none;
 		min-width: 0;
 		border-block-start: 1px solid rgb(153 194 255 / 28%);
 	}
