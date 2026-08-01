@@ -31,26 +31,26 @@ The refreshed global navigation includes Club, Workshops, Events, Resources, and
 
 ### Club pages
 
-| Page | Purpose |
-| --- | --- |
-| Home | Lead with current club activity, the next workshop or event, projects, and a direct path to join. |
-| About | Explain who the club is for and how students can participate. |
-| Workshops | Searchable archive organized by learning track and semester. |
-| Events | Current event list and detail pages, with an obvious empty state between terms. |
-| Resources | Practical starter paths, contest links, hackathon material, and club-made resources. |
+| Page      | Purpose                                                                                           |
+| --------- | ------------------------------------------------------------------------------------------------- |
+| Home      | Lead with current club activity, the next workshop or event, projects, and a direct path to join. |
+| About     | Explain who the club is for and how students can participate.                                     |
+| Workshops | Searchable archive organized by learning track and semester.                                      |
+| Events    | Current event list and detail pages, with an obvious empty state between terms.                   |
+| Resources | Practical starter paths, contest links, hackathon material, and club-made resources.              |
 
 Club content must be structured so executives can replace stale event and workshop material without editing page layouts.
 
 ### Book Delivery pages
 
-| Route area | Purpose and behavior |
-| --- | --- |
-| Catalogue | Teacher-first card grid. Every card shows an offset stack of relevant book covers, teacher name, course names, required-book count, price range, and bookstore count. |
+| Route area     | Purpose and behavior                                                                                                                                                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Catalogue      | Teacher-first card grid. Every card shows an offset stack of relevant book covers, teacher name, course names, required-book count, price range, and bookstore count.                                                                                 |
 | Teacher detail | Groups book rows by course. Each row has a book-cover thumbnail, title, format or edition, bookstore name, price, optional bookstore product link, selected state, and quantity controls. Preset books start selected and students can unselect them. |
-| Cart | Groups selected books by bookstore, applies the configured fee one time per group, shows taxes and total, and supports quantity changes or removals. |
-| Checkout | Custom two-column layout. The light panel collects Marianopolis email, student ID, and a payment choice. The deep-navy panel holds a live order summary. Stripe card fields remain securely hosted by Stripe. |
-| Review | Re-states the total and selected books, then shows a Marianopolis College map with Wayne's Front Desk as the pickup location. Pickup guidance does not distract from catalogue or teacher-detail screens. |
-| Confirmation | Provides the order number, current payment state, receipt or transfer instructions, and the pickup map. |
+| Cart           | Groups selected books by bookstore, applies the configured fee one time per group, shows taxes and total, and supports quantity changes or removals.                                                                                                  |
+| Checkout       | Custom two-column layout. The light panel collects Marianopolis email, student ID, and a payment choice. The deep-navy panel holds a live order summary. Stripe card fields remain securely hosted by Stripe.                                         |
+| Review         | Re-states the total and selected books, then shows a Marianopolis College map with Wayne's Front Desk as the pickup location. Pickup guidance does not distract from catalogue or teacher-detail screens.                                             |
+| Confirmation   | Provides the order number, current payment state, receipt or transfer instructions, and the pickup map.                                                                                                                                               |
 
 The optional bookstore product link appears as a plainly labeled external action, such as `View at Renaud-Bray`. It opens the exact retailer page in a new tab. If an executive has not supplied a verified URL, the action is absent.
 
@@ -58,14 +58,14 @@ The optional bookstore product link appears as a plainly labeled external action
 
 The redesign keeps the club's established colors, then expands them for better contrast and a calmer service experience.
 
-| Token | Value | Use |
-| --- | --- | --- |
-| Midnight | `#050D2E` | Navigation, checkout summary, high-contrast sections. |
-| Club blue | `#0D2173` | Primary actions and interactive states. |
-| Sky | `#99C2FF` | Supporting surfaces and club highlights. |
-| Paper | `#F7F4ED` | Book pages, reading surfaces, and space around covers. |
-| Graphite | `#181B25` | Body copy and information hierarchy. |
-| Coral | `#DF5B48` | Deadline and attention states only. |
+| Token     | Value     | Use                                                    |
+| --------- | --------- | ------------------------------------------------------ |
+| Midnight  | `#050D2E` | Navigation, checkout summary, high-contrast sections.  |
+| Club blue | `#0D2173` | Primary actions and interactive states.                |
+| Sky       | `#99C2FF` | Supporting surfaces and club highlights.               |
+| Paper     | `#F7F4ED` | Book pages, reading surfaces, and space around covers. |
+| Graphite  | `#181B25` | Body copy and information hierarchy.                   |
+| Coral     | `#DF5B48` | Deadline and attention states only.                    |
 
 Typography pairs a characterful geometric display sans with a precise mono utility face. The visual signature is the offset stack of book covers on every teacher card. It conveys a curated course bundle rather than a generic ecommerce catalogue.
 
@@ -116,17 +116,17 @@ Admin capabilities:
 
 ## Data model
 
-| Entity | Key fields |
-| --- | --- |
-| Executive | Email, role, authentication identity. |
-| Teacher | Name, display order, optional photo or biography. |
-| Course | Teacher, term, code, title, availability. |
-| Bookstore | Name, service fee, address or notes, active state. |
-| Book | Course, title, author, ISBN, edition, format, cover asset, price, tax rule, bookstore, external product URL, active state. |
-| Order | Order number, student email, student ID, payment method and state, fulfillment state, price snapshot, timestamps. |
-| Order item | Order, book snapshot, unit price, quantity, bookstore snapshot. |
-| Fee line | Order, bookstore snapshot, amount. |
-| Email event | Order, template type, provider message ID, sent time. |
+| Entity      | Key fields                                                                                                                 |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Executive   | Email, role, authentication identity.                                                                                      |
+| Teacher     | Name, display order, optional photo or biography.                                                                          |
+| Course      | Teacher, term, code, title, availability.                                                                                  |
+| Bookstore   | Name, service fee, address or notes, active state.                                                                         |
+| Book        | Course, title, author, ISBN, edition, format, cover asset, price, tax rule, bookstore, external product URL, active state. |
+| Order       | Order number, student email, student ID, payment method and state, fulfillment state, price snapshot, timestamps.          |
+| Order item  | Order, book snapshot, unit price, quantity, bookstore snapshot.                                                            |
+| Fee line    | Order, bookstore snapshot, amount.                                                                                         |
+| Email event | Order, template type, provider message ID, sent time.                                                                      |
 
 ## Technology choices
 

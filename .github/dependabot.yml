@@ -3,7 +3,7 @@
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # update npm dependencies
-    directory: "/"
+  - package-ecosystem: 'npm' # update npm dependencies
+    directory: '/'
     schedule:
-      interval: "monthly"
+      interval: 'monthly'

@@ -22,34 +22,36 @@
 
 ## File Structure
 
-| Path | Responsibility |
-| --- | --- |
-| `src/lib/books/catalogue.js` | Local development fixture and read-only lookup helpers. |
-| `src/lib/books/cart.js` | Pure cart mutation and price-summary functions. |
-| `src/lib/books/cart-store.js` | Browser-persistent Svelte cart store. |
-| `src/lib/books/BookCover.svelte` | Uploaded-image or generated fallback cover. |
-| `src/lib/books/BookCoverStack.svelte` | Offset stacked-cover teacher-card visual. |
-| `src/lib/books/TeacherCard.svelte` | Single accessible link to one teacher's courses. |
-| `src/lib/books/BookRow.svelte` | Selection, quantity, cover, price, and retailer-link row. |
-| `src/lib/books/BookDeliveryBar.svelte` | Book-only local navigation and cart count. |
-| `src/lib/books/BookstoreCartGroup.svelte` | Cart group, fee explanation, and removable book lines. |
-| `src/lib/books/CartTotals.svelte` | Reusable subtotal, tax, fee, and total display. |
-| `src/routes/books/+layout.svelte` | Creates the cart context and renders `BookDeliveryBar`. |
-| `src/routes/books/+page.js` | Supplies teacher summaries from the fixture. |
-| `src/routes/books/+page.svelte` | Teacher catalogue. |
-| `src/routes/books/[teacherSlug]/+page.js` | Resolves a teacher or returns 404. |
-| `src/routes/books/[teacherSlug]/+page.svelte` | Course-grouped selectable detail view. |
-| `src/routes/books/cart/+page.svelte` | Cart and checkout handoff. |
+| Path                                          | Responsibility                                            |
+| --------------------------------------------- | --------------------------------------------------------- |
+| `src/lib/books/catalogue.js`                  | Local development fixture and read-only lookup helpers.   |
+| `src/lib/books/cart.js`                       | Pure cart mutation and price-summary functions.           |
+| `src/lib/books/cart-store.js`                 | Browser-persistent Svelte cart store.                     |
+| `src/lib/books/BookCover.svelte`              | Uploaded-image or generated fallback cover.               |
+| `src/lib/books/BookCoverStack.svelte`         | Offset stacked-cover teacher-card visual.                 |
+| `src/lib/books/TeacherCard.svelte`            | Single accessible link to one teacher's courses.          |
+| `src/lib/books/BookRow.svelte`                | Selection, quantity, cover, price, and retailer-link row. |
+| `src/lib/books/BookDeliveryBar.svelte`        | Book-only local navigation and cart count.                |
+| `src/lib/books/BookstoreCartGroup.svelte`     | Cart group, fee explanation, and removable book lines.    |
+| `src/lib/books/CartTotals.svelte`             | Reusable subtotal, tax, fee, and total display.           |
+| `src/routes/books/+layout.svelte`             | Creates the cart context and renders `BookDeliveryBar`.   |
+| `src/routes/books/+page.js`                   | Supplies teacher summaries from the fixture.              |
+| `src/routes/books/+page.svelte`               | Teacher catalogue.                                        |
+| `src/routes/books/[teacherSlug]/+page.js`     | Resolves a teacher or returns 404.                        |
+| `src/routes/books/[teacherSlug]/+page.svelte` | Course-grouped selectable detail view.                    |
+| `src/routes/books/cart/+page.svelte`          | Cart and checkout handoff.                                |
 
 ## Task 1: Define the fixture contract and pure price calculation
 
 **Files:**
+
 - Create: `src/lib/books/catalogue.js`
 - Create: `src/lib/books/catalogue.test.js`
 - Create: `src/lib/books/cart.js`
 - Create: `src/lib/books/cart.test.js`
 
 **Interfaces:**
+
 - Produces: `catalogue`, `getTeacherBySlug(slug)`, and `getTeacherBooks(teacherId)`.
 - Produces: `createCart(itemsOrBookIds)`, `addBooks(cart, selections)`, `setBookSelected(cart, bookId, selected)`, `setBookQuantity(cart, bookId, quantity)`, and `calculateCart(catalogue, cart)`.
 - `calculateCart` returns `{ bookSubtotalCents, taxCents, fees, totalCents, lines }`, where every fee has `{ bookstoreId, label, amountCents }`.
@@ -69,7 +71,12 @@ const fixture = {
 		{ id: 'archambault', name: 'Archambault', serviceFeeCents: 700 }
 	],
 	books: [
-		{ id: 'le-petit-prince', title: 'Le Petit Prince', priceCents: 1895, bookstoreId: 'renaud-bray' },
+		{
+			id: 'le-petit-prince',
+			title: 'Le Petit Prince',
+			priceCents: 1895,
+			bookstoreId: 'renaud-bray'
+		},
 		{ id: 'bescherelle', title: 'Bescherelle', priceCents: 2995, bookstoreId: 'renaud-bray' },
 		{ id: 'antigone', title: 'Antigone', priceCents: 1695, bookstoreId: 'archambault' }
 	]
@@ -77,9 +84,16 @@ const fixture = {
 
 describe('calculateCart', () => {
 	it('charges one service fee for two books from the same bookstore', () => {
-		const result = calculateCart(fixture, { items: [{ bookId: 'le-petit-prince', quantity: 1 }, { bookId: 'bescherelle', quantity: 1 }] });
+		const result = calculateCart(fixture, {
+			items: [
+				{ bookId: 'le-petit-prince', quantity: 1 },
+				{ bookId: 'bescherelle', quantity: 1 }
+			]
+		});
 		expect(result.bookSubtotalCents).toBe(4890);
-		expect(result.fees).toEqual([{ bookstoreId: 'renaud-bray', label: 'Renaud-Bray pickup service', amountCents: 500 }]);
+		expect(result.fees).toEqual([
+			{ bookstoreId: 'renaud-bray', label: 'Renaud-Bray pickup service', amountCents: 500 }
+		]);
 	});
 
 	it('removes a line when a selected book is unselected', () => {
@@ -143,10 +157,12 @@ git commit -m "feat: add book catalogue and cart calculations"
 ## Task 2: Add a browser-persistent cart store without SSR leakage
 
 **Files:**
+
 - Create: `src/lib/books/cart-store.js`
 - Create: `src/lib/books/cart-store.test.js`
 
 **Interfaces:**
+
 - Consumes: pure helpers from `src/lib/books/cart.js`.
 - Produces: `createBookCartStore(storageKey = 'mari-book-cart')` with `subscribe`, `addBooks(selections)`, `setSelected`, `setQuantity`, `clear`, and `hydrate` methods.
 
@@ -160,7 +176,10 @@ import { expect, it, vi } from 'vitest';
 import { createBookCartStore } from './cart-store';
 
 it('hydrates valid saved items and discards malformed storage', () => {
-	const storage = { getItem: vi.fn().mockReturnValue('{"items":[{"bookId":"antigone","quantity":1}]}'), setItem: vi.fn() };
+	const storage = {
+		getItem: vi.fn().mockReturnValue('{"items":[{"bookId":"antigone","quantity":1}]}'),
+		setItem: vi.fn()
+	};
 	const store = createBookCartStore('test-cart', storage);
 	store.hydrate();
 	expect(get(store).items).toEqual([{ bookId: 'antigone', quantity: 1 }]);
@@ -178,9 +197,15 @@ Expected: FAIL because `cart-store.js` does not exist.
 Use Svelte's `writable` and inject storage so tests do not touch global browser state:
 
 ```js
-export function createBookCartStore(storageKey = 'mari-book-cart', storage = globalThis.localStorage) {
+export function createBookCartStore(
+	storageKey = 'mari-book-cart',
+	storage = globalThis.localStorage
+) {
 	const { subscribe, set, update } = writable(createCart());
-	function persist(cart) { storage?.setItem(storageKey, JSON.stringify(cart)); return cart; }
+	function persist(cart) {
+		storage?.setItem(storageKey, JSON.stringify(cart));
+		return cart;
+	}
 	return { subscribe, hydrate, addBooks, setSelected, setQuantity, clear };
 }
 ```
@@ -209,6 +234,7 @@ git commit -m "feat: persist book cart in the browser"
 ## Task 3: Build book visual primitives and teacher catalogue cards
 
 **Files:**
+
 - Create: `src/lib/books/BookCover.svelte`
 - Create: `src/lib/books/BookCoverStack.svelte`
 - Create: `src/lib/books/TeacherCard.svelte`
@@ -218,6 +244,7 @@ git commit -m "feat: persist book cart in the browser"
 - Modify: `src/styles.css`
 
 **Interfaces:**
+
 - Consumes: `catalogue`, `getTeacherBooks`, and existing site tokens.
 - Produces: a teacher card link named for the teacher and all associated courses.
 
@@ -235,10 +262,22 @@ it('uses one link for a teacher card and describes its course bundle', () => {
 		props: {
 			teacher: { name: 'Mme Tremblay', slug: 'mme-tremblay' },
 			courses: [{ title: 'French 101' }],
-			books: [{ id: 'le-petit-prince', title: 'Le Petit Prince', coverUrl: null, coverTheme: 'coral', priceCents: 1895, bookstoreId: 'renaud-bray' }]
+			books: [
+				{
+					id: 'le-petit-prince',
+					title: 'Le Petit Prince',
+					coverUrl: null,
+					coverTheme: 'coral',
+					priceCents: 1895,
+					bookstoreId: 'renaud-bray'
+				}
+			]
 		}
 	});
-	expect(screen.getByRole('link', { name: /mme tremblay.*french 101/i })).toHaveAttribute('href', '/books/mme-tremblay');
+	expect(screen.getByRole('link', { name: /mme tremblay.*french 101/i })).toHaveAttribute(
+		'href',
+		'/books/mme-tremblay'
+	);
 });
 ```
 
@@ -253,7 +292,7 @@ Expected: FAIL because `TeacherCard.svelte` does not exist.
 `BookCover.svelte` accepts `title`, `src`, `theme`, and `size`. When `src` exists, render:
 
 ```svelte
-<img src={src} alt={`Cover of ${title}`} loading="lazy" />
+<img {src} alt={`Cover of ${title}`} loading="lazy" />
 ```
 
 When `src` is absent, render a visible generated cover with the title and `aria-label={`Cover placeholder for ${title}`}`. `BookCoverStack` must show at most three covers, offset by CSS transforms, and mark purely decorative duplicate layers as `aria-hidden="true"`.
@@ -283,6 +322,7 @@ git commit -m "feat: add teacher-first book catalogue"
 ## Task 4: Scope the cart bar to Book Delivery and implement selectable book lists
 
 **Files:**
+
 - Create: `src/lib/books/BookDeliveryBar.svelte`
 - Create: `src/lib/books/BookRow.svelte`
 - Create: `src/lib/books/BookRow.test.js`
@@ -291,6 +331,7 @@ git commit -m "feat: add teacher-first book catalogue"
 - Create: `src/routes/books/[teacherSlug]/+page.svelte`
 
 **Interfaces:**
+
 - Consumes: `createBookCartStore`, `getTeacherBySlug`, `getTeacherBooks`, `BookCover`.
 - Produces: a Book Delivery-only cart count and a teacher-detail draft selection that is committed with `addBooks([{ bookId, quantity }])`.
 
@@ -306,14 +347,25 @@ import BookRow from './BookRow.svelte';
 it('renders a cover, a selected checkbox, and a safe retailer link', () => {
 	render(BookRow, {
 		props: {
-			book: { id: 'antigone', title: 'Antigone', format: 'Paperback', priceCents: 1695, coverUrl: null, coverTheme: 'sky', storefrontUrl: 'https://books.example/antigone' },
+			book: {
+				id: 'antigone',
+				title: 'Antigone',
+				format: 'Paperback',
+				priceCents: 1695,
+				coverUrl: null,
+				coverTheme: 'sky',
+				storefrontUrl: 'https://books.example/antigone'
+			},
 			selected: true,
 			quantity: 1
 		}
 	});
 	expect(screen.getByLabelText(/select antigone/i)).toBeChecked();
 	expect(screen.getByLabelText(/cover placeholder for antigone/i)).toBeInTheDocument();
-	expect(screen.getByRole('link', { name: /view at bookstore/i })).toHaveAttribute('target', '_blank');
+	expect(screen.getByRole('link', { name: /view at bookstore/i })).toHaveAttribute(
+		'target',
+		'_blank'
+	);
 });
 ```
 
@@ -359,12 +411,14 @@ git commit -m "feat: add selectable course book lists"
 ## Task 5: Build the bookstore-grouped cart and checkout handoff
 
 **Files:**
+
 - Create: `src/lib/books/BookstoreCartGroup.svelte`
 - Create: `src/lib/books/CartTotals.svelte`
 - Create: `src/lib/books/CartTotals.test.js`
 - Create: `src/routes/books/cart/+page.svelte`
 
 **Interfaces:**
+
 - Consumes: cart store, `calculateCart`, `formatCad`, and catalogue fixture.
 - Produces: a cart with an honest per-bookstore fee breakdown and a button to `/books/checkout`.
 
@@ -380,7 +434,14 @@ import CartTotals from './CartTotals.svelte';
 it('labels the store fee once and exposes the final amount', () => {
 	render(CartTotals, {
 		props: {
-			summary: { bookSubtotalCents: 4890, taxCents: 807, fees: [{ bookstoreId: 'renaud-bray', label: 'Renaud-Bray pickup service', amountCents: 500 }], totalCents: 6197 }
+			summary: {
+				bookSubtotalCents: 4890,
+				taxCents: 807,
+				fees: [
+					{ bookstoreId: 'renaud-bray', label: 'Renaud-Bray pickup service', amountCents: 500 }
+				],
+				totalCents: 6197
+			}
 		}
 	});
 	expect(screen.getByText('Renaud-Bray pickup service')).toBeInTheDocument();
@@ -434,10 +495,12 @@ git commit -m "feat: add bookstore-grouped book cart"
 ## Task 6: Add Book Delivery visual regression coverage
 
 **Files:**
+
 - Create: `tests/e2e/book-delivery.spec.js`
 - Modify: `playwright.config.js`
 
 **Interfaces:**
+
 - Consumes: `/books`, one fixture teacher route, and the book-only cart bar.
 - Produces: stable browser coverage for core shopping behavior.
 

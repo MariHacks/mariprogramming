@@ -23,35 +23,36 @@
 
 ## File Structure
 
-| Path | Responsibility |
-| --- | --- |
-| `supabase/migrations/202608010001_book_delivery.sql` | Tables, constraints, indexes, RLS, storage bucket, and public catalogue policies. |
-| `supabase/seed.sql` | Non-production fixture data for local and staging testing. |
-| `src/app.d.ts` | `App.Locals` and environment typing. |
-| `src/hooks.server.js` | Cookie-backed Supabase client per request. |
-| `src/lib/server/supabase.js` | Server and service-role Supabase clients. |
-| `src/lib/server/auth.js` | Executive identity and role checks. |
-| `src/lib/server/catalogue.js` | Read and mutation repository for catalogue data. |
-| `src/lib/server/order-pricing.js` | Authoritative quote and snapshot creation. |
-| `src/lib/server/order-access.js` | Opaque guest order-token generation and verification. |
-| `src/lib/server/order-state.js` | Valid payment and fulfillment state transitions. |
-| `src/lib/server/validation.js` | Shared Zod schemas for forms and URLs. |
-| `src/lib/server/stripe.js` | Stripe client and PaymentIntent helpers. |
-| `src/lib/server/email.js` | Resend adapter and idempotent email dispatch. |
-| `src/lib/books/PickupMap.svelte` | Accessible Marianopolis College map and Wayne's Front Desk callout. |
-| `src/lib/books/StripePayment.svelte` | Secure Stripe Payment Element wrapper. |
-| `src/routes/auth/confirm/+server.js` | Magic-link token exchange. |
-| `src/routes/admin/**` | Executive login, catalogue management, order operations, and exports. |
-| `src/routes/books/checkout/**` | Guest identity and payment-method choice. |
-| `src/routes/books/review/[accessToken]/**` | Price-reviewed, map-bearing payment confirmation. |
-| `src/routes/books/order/[accessToken]/**` | Guest confirmation and order status. |
-| `src/routes/api/stripe/payment-intent/+server.js` | Creates one PaymentIntent for an approved draft. |
-| `src/routes/api/stripe/webhook/+server.js` | Verifies and handles Stripe events idempotently. |
-| `src/routes/api/orders/[accessToken]/etransfer/+server.js` | Places a reviewed e-transfer order. |
+| Path                                                       | Responsibility                                                                    |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `supabase/migrations/202608010001_book_delivery.sql`       | Tables, constraints, indexes, RLS, storage bucket, and public catalogue policies. |
+| `supabase/seed.sql`                                        | Non-production fixture data for local and staging testing.                        |
+| `src/app.d.ts`                                             | `App.Locals` and environment typing.                                              |
+| `src/hooks.server.js`                                      | Cookie-backed Supabase client per request.                                        |
+| `src/lib/server/supabase.js`                               | Server and service-role Supabase clients.                                         |
+| `src/lib/server/auth.js`                                   | Executive identity and role checks.                                               |
+| `src/lib/server/catalogue.js`                              | Read and mutation repository for catalogue data.                                  |
+| `src/lib/server/order-pricing.js`                          | Authoritative quote and snapshot creation.                                        |
+| `src/lib/server/order-access.js`                           | Opaque guest order-token generation and verification.                             |
+| `src/lib/server/order-state.js`                            | Valid payment and fulfillment state transitions.                                  |
+| `src/lib/server/validation.js`                             | Shared Zod schemas for forms and URLs.                                            |
+| `src/lib/server/stripe.js`                                 | Stripe client and PaymentIntent helpers.                                          |
+| `src/lib/server/email.js`                                  | Resend adapter and idempotent email dispatch.                                     |
+| `src/lib/books/PickupMap.svelte`                           | Accessible Marianopolis College map and Wayne's Front Desk callout.               |
+| `src/lib/books/StripePayment.svelte`                       | Secure Stripe Payment Element wrapper.                                            |
+| `src/routes/auth/confirm/+server.js`                       | Magic-link token exchange.                                                        |
+| `src/routes/admin/**`                                      | Executive login, catalogue management, order operations, and exports.             |
+| `src/routes/books/checkout/**`                             | Guest identity and payment-method choice.                                         |
+| `src/routes/books/review/[accessToken]/**`                 | Price-reviewed, map-bearing payment confirmation.                                 |
+| `src/routes/books/order/[accessToken]/**`                  | Guest confirmation and order status.                                              |
+| `src/routes/api/stripe/payment-intent/+server.js`          | Creates one PaymentIntent for an approved draft.                                  |
+| `src/routes/api/stripe/webhook/+server.js`                 | Verifies and handles Stripe events idempotently.                                  |
+| `src/routes/api/orders/[accessToken]/etransfer/+server.js` | Places a reviewed e-transfer order.                                               |
 
 ## Task 1: Provision the service contract, database schema, and local test data
 
 **Files:**
+
 - Create: `.env.example`
 - Create: `supabase/config.toml`
 - Create: `supabase/migrations/202608010001_book_delivery.sql`
@@ -61,6 +62,7 @@
 - Modify: `package.json`
 
 **Interfaces:**
+
 - Produces the payment states `draft`, `payment_pending`, `awaiting_transfer`, `paid`, `failed`, `refunded`, and `cancelled`.
 - Produces the fulfillment states `unstarted`, `purchased`, `received`, `ready_for_pickup`, `picked_up`, and `cancelled`.
 - Produces `canTransition(current, next, transitions): boolean` and `canAdvanceFulfillment(paymentStatus, current, next): boolean` for all later order actions.
@@ -99,7 +101,12 @@ Create `src/lib/server/order-state.test.js`:
 
 ```js
 import { describe, expect, it } from 'vitest';
-import { canAdvanceFulfillment, canTransition, fulfillmentTransitions, paymentTransitions } from './order-state';
+import {
+	canAdvanceFulfillment,
+	canTransition,
+	fulfillmentTransitions,
+	paymentTransitions
+} from './order-state';
 
 describe('order state transitions', () => {
 	it('allows a successful card payment to become paid', () => {
@@ -362,6 +369,7 @@ git commit -m "feat: add book delivery service schema"
 ## Task 2: Add secure Supabase request clients and executive magic-link access
 
 **Files:**
+
 - Create: `src/app.d.ts`
 - Create: `src/hooks.server.js`
 - Create: `src/lib/server/supabase.js`
@@ -373,6 +381,7 @@ git commit -m "feat: add book delivery service schema"
 - Create: `src/routes/admin/+layout.server.js`
 
 **Interfaces:**
+
 - Produces `event.locals.supabase` using cookie-backed `@supabase/ssr`.
 - Produces `requireExecutive(event, isExecutive = lookupExecutive): Promise<{ id: string, email: string }>`.
 - Produces a magic-link confirmation endpoint and protected `/admin` layout.
@@ -391,7 +400,15 @@ it('accepts only configured student email domains', () => {
 });
 
 it('rejects a user who is not in the executive allowlist', async () => {
-	const event = { locals: { supabase: { auth: { getUser: async () => ({ data: { user: { id: 'u1', email: 'student@marianopolis.edu' } } }) } } } };
+	const event = {
+		locals: {
+			supabase: {
+				auth: {
+					getUser: async () => ({ data: { user: { id: 'u1', email: 'student@marianopolis.edu' } } })
+				}
+			}
+		}
+	};
 	await expect(requireExecutive(event, async () => false)).rejects.toMatchObject({ status: 303 });
 });
 ```
@@ -415,7 +432,7 @@ export function isAllowedStudentEmail(email, allowedDomains) {
 }
 ```
 
-The admin login action must first verify that the submitted address is an active executive email, then request `signInWithOtp` with `emailRedirectTo: `${PUBLIC_SITE_URL}/auth/confirm``. `/auth/confirm` exchanges `token_hash` for a cookie session and redirects to `/admin`; a failed exchange redirects to `/admin/login?error=invalid-link`. The protected layout redirects unauthenticated and non-executive requests to `/admin/login`.
+The admin login action must first verify that the submitted address is an active executive email, then request `signInWithOtp` with `emailRedirectTo: `${PUBLIC_SITE_URL}/auth/confirm``. `/auth/confirm`exchanges`token_hash`for a cookie session and redirects to`/admin`; a failed exchange redirects to `/admin/login?error=invalid-link`. The protected layout redirects unauthenticated and non-executive requests to `/admin/login`.
 
 - [ ] **Step 4: Verify authorization behavior and Supabase SSR configuration**
 
@@ -439,6 +456,7 @@ git commit -m "feat: secure executive access"
 ## Task 3: Replace fixture catalogue data with executive-managed Supabase data
 
 **Files:**
+
 - Create: `src/lib/server/validation.js`
 - Create: `src/lib/server/catalogue.js`
 - Create: `src/lib/server/catalogue.test.js`
@@ -454,6 +472,7 @@ git commit -m "feat: secure executive access"
 - Modify: `src/lib/books/catalogue.js`
 
 **Interfaces:**
+
 - Produces `bookSchema`, `bookstoreSchema`, and `validateStorefrontUrl(value)`.
 - Produces `listPublicTeachers()`, `getPublicTeacherBySlug(slug)`, `saveBook(input)`, and `uploadBookCover(file, bookId)`.
 - Replaces local fixture reads in public load functions with serializable repository results.
@@ -467,7 +486,9 @@ import { expect, it } from 'vitest';
 import { validateStorefrontUrl } from './validation';
 
 it('accepts an HTTPS bookstore product URL', () => {
-	expect(validateStorefrontUrl('https://www.renaud-bray.com/book')).toBe('https://www.renaud-bray.com/book');
+	expect(validateStorefrontUrl('https://www.renaud-bray.com/book')).toBe(
+		'https://www.renaud-bray.com/book'
+	);
 });
 
 it('rejects a javascript URL', () => {
@@ -526,6 +547,7 @@ git commit -m "feat: add executive book catalogue management"
 ## Task 4: Create guest order drafts and authoritative price snapshots
 
 **Files:**
+
 - Create: `src/lib/server/order-pricing.js`
 - Create: `src/lib/server/order-pricing.test.js`
 - Create: `src/lib/server/order-access.js`
@@ -537,6 +559,7 @@ git commit -m "feat: add executive book catalogue management"
 - Create: `src/lib/books/PickupMap.svelte`
 
 **Interfaces:**
+
 - Produces `quoteOrder(catalogue, cart): OrderQuote` using current database values.
 - Produces `createOrderAccessToken(): { token: string, hash: string }` and `hashOrderAccessToken(token): string`.
 - Produces a persisted draft with ordered-item and fee snapshots before any payment interaction.
@@ -551,7 +574,11 @@ import { quoteOrder } from './order-pricing';
 
 it('ignores a forged browser price and uses the catalogue price', () => {
 	const quote = quoteOrder(
-		{ taxRateBps: 1498, bookstores: [{ id: 'b1', serviceFeeCents: 500 }], books: [{ id: 'book-1', title: 'Book', priceCents: 2500, bookstoreId: 'b1' }] },
+		{
+			taxRateBps: 1498,
+			bookstores: [{ id: 'b1', serviceFeeCents: 500 }],
+			books: [{ id: 'book-1', title: 'Book', priceCents: 2500, bookstoreId: 'b1' }]
+		},
 		{ items: [{ bookId: 'book-1', quantity: 1, priceCents: 1 }] }
 	);
 	expect(quote.bookSubtotalCents).toBe(2500);
@@ -609,6 +636,7 @@ git commit -m "feat: add reviewed guest book orders"
 ## Task 5: Integrate Stripe Payment Element and verified webhook payment updates
 
 **Files:**
+
 - Create: `src/lib/server/stripe.js`
 - Create: `src/lib/server/stripe.test.js`
 - Create: `src/lib/books/StripePayment.svelte`
@@ -619,6 +647,7 @@ git commit -m "feat: add reviewed guest book orders"
 - Modify: `src/routes/books/review/[accessToken]/+page.svelte`
 
 **Interfaces:**
+
 - Produces `createPaymentIntentForDraft(order)` and `handleStripeEvent(event)`.
 - Produces `StripePayment` props `{ clientSecret, orderToken, amountCents, onSuccess, onError }`.
 - PaymentIntent metadata contains only `orderId` and `orderNumber`.
@@ -632,9 +661,22 @@ import { expect, it, vi } from 'vitest';
 import { createPaymentIntentForDraft } from './stripe';
 
 it('creates a CAD PaymentIntent from the persisted draft total and receipt email', async () => {
-	const stripe = { paymentIntents: { create: vi.fn().mockResolvedValue({ id: 'pi_123', client_secret: 'secret' }) } };
-	await createPaymentIntentForDraft(stripe, { id: 'order-1', orderNumber: 'MARI-1001', totalCents: 6197, studentEmail: 'student@marianopolis.edu' });
-	expect(stripe.paymentIntents.create).toHaveBeenCalledWith(expect.objectContaining({ amount: 6197, currency: 'cad', receipt_email: 'student@marianopolis.edu' }));
+	const stripe = {
+		paymentIntents: { create: vi.fn().mockResolvedValue({ id: 'pi_123', client_secret: 'secret' }) }
+	};
+	await createPaymentIntentForDraft(stripe, {
+		id: 'order-1',
+		orderNumber: 'MARI-1001',
+		totalCents: 6197,
+		studentEmail: 'student@marianopolis.edu'
+	});
+	expect(stripe.paymentIntents.create).toHaveBeenCalledWith(
+		expect.objectContaining({
+			amount: 6197,
+			currency: 'cad',
+			receipt_email: 'student@marianopolis.edu'
+		})
+	);
 });
 ```
 
@@ -680,6 +722,7 @@ git commit -m "feat: accept book orders with Stripe"
 ## Task 6: Implement e-transfer and branded transactional email paths
 
 **Files:**
+
 - Create: `src/lib/server/email.js`
 - Create: `src/lib/server/email.test.js`
 - Create: `src/routes/api/orders/[accessToken]/etransfer/+server.js`
@@ -687,6 +730,7 @@ git commit -m "feat: accept book orders with Stripe"
 - Modify: `src/routes/books/order/[accessToken]/+page.svelte`
 
 **Interfaces:**
+
 - Produces `sendOrderEmail({ order, template, resend })` and idempotent email-event records.
 - Produces `placeEtransferOrder(accessToken)` that moves only a draft to `awaiting_transfer`.
 
@@ -699,14 +743,23 @@ import { expect, it, vi } from 'vitest';
 import { buildEtransferEmail, sendOrderEmail } from './email';
 
 it('includes the exact transfer amount and unique memo', () => {
-	const email = buildEtransferEmail({ orderNumber: 'MARI-1001', totalCents: 6197, transferMemo: 'MARI-1001' });
+	const email = buildEtransferEmail({
+		orderNumber: 'MARI-1001',
+		totalCents: 6197,
+		transferMemo: 'MARI-1001'
+	});
 	expect(email.text).toMatch(/\$61\.97/);
 	expect(email.text).toMatch(/MARI-1001/);
 });
 
 it('does not send an already-recorded email template twice', async () => {
 	const resend = { emails: { send: vi.fn() } };
-	const result = await sendOrderEmail({ alreadySent: true, resend, order: {}, template: 'confirmation' });
+	const result = await sendOrderEmail({
+		alreadySent: true,
+		resend,
+		order: {},
+		template: 'confirmation'
+	});
 	expect(result).toEqual({ skipped: true });
 	expect(resend.emails.send).not.toHaveBeenCalled();
 });
@@ -746,6 +799,7 @@ git commit -m "feat: add e-transfer order emails"
 ## Task 7: Build executive fulfillment, storefront exports, and pickup actions
 
 **Files:**
+
 - Create: `src/routes/admin/orders/+page.server.js`
 - Create: `src/routes/admin/orders/+page.svelte`
 - Create: `src/routes/admin/orders/[orderId]/+page.server.js`
@@ -757,6 +811,7 @@ git commit -m "feat: add e-transfer order emails"
 - Modify: `src/lib/server/email.js`
 
 **Interfaces:**
+
 - Produces `escapeCsvCell(value): string`, `buildBookstorePurchaseRows(orderItems)`, and a paid-order export grouped by bookstore and book snapshot.
 - Produces admin-only actions `confirmTransfer`, `advanceFulfillment`, and `markPickedUp` that use the transition maps.
 
@@ -778,10 +833,26 @@ it('prevents spreadsheet formula interpretation', () => {
 
 it('aggregates purchase quantities without exporting student data', () => {
 	const rows = buildBookstorePurchaseRows([
-		{ bookstoreName: 'Renaud-Bray', bookTitle: 'Antigone', bookEdition: null, bookFormat: 'Paperback', quantity: 1, studentId: '111' },
-		{ bookstoreName: 'Renaud-Bray', bookTitle: 'Antigone', bookEdition: null, bookFormat: 'Paperback', quantity: 2, studentId: '222' }
+		{
+			bookstoreName: 'Renaud-Bray',
+			bookTitle: 'Antigone',
+			bookEdition: null,
+			bookFormat: 'Paperback',
+			quantity: 1,
+			studentId: '111'
+		},
+		{
+			bookstoreName: 'Renaud-Bray',
+			bookTitle: 'Antigone',
+			bookEdition: null,
+			bookFormat: 'Paperback',
+			quantity: 2,
+			studentId: '222'
+		}
 	]);
-	expect(rows).toEqual([{ bookstore: 'Renaud-Bray', title: 'Antigone', edition: '', format: 'Paperback', quantity: 3 }]);
+	expect(rows).toEqual([
+		{ bookstore: 'Renaud-Bray', title: 'Antigone', edition: '', format: 'Paperback', quantity: 3 }
+	]);
 });
 ```
 
@@ -831,12 +902,14 @@ git commit -m "feat: add book delivery fulfillment tools"
 ## Task 8: Finish end-to-end verification, environment setup, and operational documentation
 
 **Files:**
+
 - Create: `tests/e2e/book-checkout.spec.js`
 - Create: `docs/book-delivery-operations.md`
 - Modify: `README.md`
 - Create: `.github/workflows/quality.yml`
 
 **Interfaces:**
+
 - Consumes: the implemented staging services and safe test keys.
 - Produces: a documented launch checklist and end-to-end coverage for card, e-transfer, guest access, and pickup-map behavior.
 
