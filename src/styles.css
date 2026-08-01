@@ -16,7 +16,7 @@
 	--color-action: var(--club-blue);
 	--color-focus: var(--coral);
 	--color-border: rgb(5 13 46 / 16%);
-	--color-border-strong: rgb(5 13 46 / 32%);
+	--color-border-strong: rgb(5 13 46 / 46%);
 
 	--font-display: 'Sora', 'Avenir Next', 'Segoe UI', sans-serif;
 	--font-body: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
@@ -67,7 +67,6 @@
 }
 
 html {
-	min-width: 20rem;
 	background: var(--midnight);
 	scroll-behavior: smooth;
 	text-size-adjust: 100%;
@@ -76,7 +75,6 @@ html {
 body {
 	min-height: 100vh;
 	margin: 0;
-	overflow-x: clip;
 	background: var(--color-background);
 	color: var(--color-text);
 	font-family: var(--font-body);
@@ -187,6 +185,12 @@ h4 {
 }
 
 :focus-visible {
+	outline: 3px solid var(--color-focus);
+	outline-offset: 3px;
+}
+
+button.btn:focus-visible,
+a.btn:focus-visible {
 	outline: 3px solid var(--color-focus);
 	outline-offset: 3px;
 }
@@ -380,7 +384,7 @@ h4 {
 }
 
 :where(input, select, textarea)::placeholder {
-	color: rgb(24 27 37 / 58%);
+	color: rgb(24 27 37 / 62%);
 	opacity: 1;
 }
 
@@ -454,7 +458,9 @@ button.splide__arrow svg {
 }
 
 @media (forced-colors: active) {
-	:focus-visible {
+	:focus-visible,
+	button.btn:focus-visible,
+	a.btn:focus-visible {
 		outline-color: Highlight;
 	}
 
