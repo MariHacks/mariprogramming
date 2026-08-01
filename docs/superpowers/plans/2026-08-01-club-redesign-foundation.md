@@ -21,34 +21,36 @@
 
 ## File Structure
 
-| Path | Responsibility |
-| --- | --- |
-| `src/lib/format.js` | Small pure helpers shared by static club and Book Delivery UI. |
-| `src/lib/content/club.js` | Current club content data, including intentional empty states. |
-| `src/lib/components/site/SiteHeader.svelte` | Responsive global navigation without commerce controls. |
-| `src/lib/components/site/SiteFooter.svelte` | Reusable footer and social links. |
-| `src/lib/components/site/SectionIntro.svelte` | Consistent page title and introductory copy. |
-| `src/lib/components/site/ContentCard.svelte` | Reusable link, workshop, event, and resource card shell. |
-| `src/lib/components/site/EventList.svelte` | Upcoming-event list with a helpful empty state. |
-| `src/routes/+layout.svelte` | Shared app shell and header/footer composition. |
-| `src/routes/+page.svelte` | Home page. |
-| `src/routes/about-us/+page.svelte` | Club participation page. |
-| `src/routes/our-workshops/+page.svelte` | Workshop archive. |
-| `src/routes/events/+page.svelte` | Current events page. |
-| `src/routes/resources/+page.svelte` | Resource paths. |
-| `src/routes/roadmap/+page.server.js` | Permanent redirect from the obsolete roadmap path to `/events`. |
-| `src/styles.css` | Shared design tokens, typography, layout primitives, focus, and motion rules. |
-| `src/test/setup.js` | Testing Library matcher setup. |
-| `vite.config.js` | SvelteKit and Vitest configuration. |
-| `package.json` | Quality and test commands. |
+| Path                                          | Responsibility                                                                |
+| --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `src/lib/format.js`                           | Small pure helpers shared by static club and Book Delivery UI.                |
+| `src/lib/content/club.js`                     | Current club content data, including intentional empty states.                |
+| `src/lib/components/site/SiteHeader.svelte`   | Responsive global navigation without commerce controls.                       |
+| `src/lib/components/site/SiteFooter.svelte`   | Reusable footer and social links.                                             |
+| `src/lib/components/site/SectionIntro.svelte` | Consistent page title and introductory copy.                                  |
+| `src/lib/components/site/ContentCard.svelte`  | Reusable link, workshop, event, and resource card shell.                      |
+| `src/lib/components/site/EventList.svelte`    | Upcoming-event list with a helpful empty state.                               |
+| `src/routes/+layout.svelte`                   | Shared app shell and header/footer composition.                               |
+| `src/routes/+page.svelte`                     | Home page.                                                                    |
+| `src/routes/about-us/+page.svelte`            | Club participation page.                                                      |
+| `src/routes/our-workshops/+page.svelte`       | Workshop archive.                                                             |
+| `src/routes/events/+page.svelte`              | Current events page.                                                          |
+| `src/routes/resources/+page.svelte`           | Resource paths.                                                               |
+| `src/routes/roadmap/+page.server.js`          | Permanent redirect from the obsolete roadmap path to `/events`.               |
+| `src/styles.css`                              | Shared design tokens, typography, layout primitives, focus, and motion rules. |
+| `src/test/setup.js`                           | Testing Library matcher setup.                                                |
+| `vite.config.js`                              | SvelteKit and Vitest configuration.                                           |
+| `package.json`                                | Quality and test commands.                                                    |
 
 ## Task 0: Make the existing Vercel build compatible with the local Node runtime
 
 **Files:**
+
 - Modify: `.gitignore`
 - Modify: `svelte.config.js`
 
 **Interfaces:**
+
 - Produces: Vercel output targeted to supported `nodejs22.x` even when local development uses a newer Node release.
 - Produces: no tracked `.vercel/output` build artifact.
 
@@ -64,7 +66,7 @@ Change the adapter configuration in `svelte.config.js` to:
 
 ```js
 kit: {
-	adapter: adapter({ runtime: 'nodejs22.x' })
+	adapter: adapter({ runtime: 'nodejs22.x' });
 }
 ```
 
@@ -97,6 +99,7 @@ git commit -m "build: target a supported Vercel Node runtime"
 ## Task 1: Normalize the existing formatting baseline
 
 **Files:**
+
 - Modify: `.github/dependabot.yml`
 - Modify: `docs/superpowers/specs/2026-08-01-club-and-book-delivery-design.md`
 - Modify: `docs/superpowers/plans/2026-08-01-club-redesign-foundation.md`
@@ -109,8 +112,10 @@ git commit -m "build: target a supported Vercel Node runtime"
 - Modify: `src/routes/+layout.js`
 - Modify: `src/styles.css`
 - Modify: `svelte.config.js`
+- Modify: `.prettierignore`
 
 **Interfaces:**
+
 - Produces: a clean existing Prettier and ESLint baseline without changing runtime behavior.
 - Produces: no functional redesign or dependency change.
 
@@ -130,6 +135,12 @@ npx prettier --write .github/dependabot.yml docs/superpowers/specs/2026-08-01-cl
 
 Review the diff. It must contain whitespace, indentation, quote, line-break, or trailing-comma changes only. Do not change copy, selectors, imports, component behavior, dependencies, or configuration values.
 
+Add this exact `.prettierignore` line before the verification step so short-lived SDD briefs, reports, and review packages do not become formatter debt:
+
+```text
+.superpowers/
+```
+
 - [ ] **Step 3: Verify a clean baseline**
 
 Run:
@@ -144,13 +155,14 @@ Expected: both commands exit successfully. If a semantic-looking diff appears, r
 - [ ] **Step 4: Commit the nonfunctional baseline**
 
 ```bash
-git add .github/dependabot.yml docs/superpowers/specs/2026-08-01-club-and-book-delivery-design.md docs/superpowers/plans/2026-08-01-club-redesign-foundation.md docs/superpowers/plans/2026-08-01-book-catalogue-and-cart.md docs/superpowers/plans/2026-08-01-book-delivery-commerce-and-admin.md src/app.html src/lib/components/CardRow.svelte src/lib/components/ResourceCard.svelte src/lib/components/events/Event.svelte src/routes/+layout.js src/styles.css svelte.config.js
+git add .github/dependabot.yml .prettierignore docs/superpowers/specs/2026-08-01-club-and-book-delivery-design.md docs/superpowers/plans/2026-08-01-club-redesign-foundation.md docs/superpowers/plans/2026-08-01-book-catalogue-and-cart.md docs/superpowers/plans/2026-08-01-book-delivery-commerce-and-admin.md src/app.html src/lib/components/CardRow.svelte src/lib/components/ResourceCard.svelte src/lib/components/events/Event.svelte src/routes/+layout.js src/styles.css svelte.config.js
 git commit -m "style: normalize project formatting"
 ```
 
 ## Task 2: Establish a testable, typed-JavaScript baseline
 
 **Files:**
+
 - Create: `jsconfig.json`
 - Create: `src/lib/format.js`
 - Create: `src/lib/format.test.js`
@@ -159,6 +171,7 @@ git commit -m "style: normalize project formatting"
 - Modify: `vite.config.js`
 
 **Interfaces:**
+
 - Produces: `formatCad(cents: number): string`, used by Book Delivery plans.
 - Produces: `vite.config.js` test environment with `setupFiles: ['./src/test/setup.js']`.
 
@@ -174,9 +187,9 @@ Add these scripts to `package.json`:
 
 ```json
 {
-  "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
-  "test": "vitest run",
-  "test:watch": "vitest"
+	"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
+	"test": "vitest run",
+	"test:watch": "vitest"
 }
 ```
 
@@ -223,12 +236,12 @@ Create `jsconfig.json`:
 ```json
 {
 	"extends": "./.svelte-kit/tsconfig.json",
-  "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
-    "strict": true
-  },
-  "include": ["src/**/*.js", "src/**/*.svelte", "vite.config.js"]
+	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": true,
+		"strict": true
+	},
+	"include": ["src/**/*.js", "src/**/*.svelte", "vite.config.js"]
 }
 ```
 
@@ -270,11 +283,13 @@ git commit -m "test: add SvelteKit quality baseline"
 ## Task 3: Replace stale copy with a current, centralized club content model
 
 **Files:**
+
 - Create: `src/lib/content/club.js`
 - Create: `src/lib/content/club.test.js`
 - Modify: `src/lib/content.js`
 
 **Interfaces:**
+
 - Consumes: no runtime dependencies beyond JavaScript.
 - Produces: `clubContent`, `getUpcomingEvents(events, today)` and `getWorkshopTracks(workshops)`.
 - Produces: explicit empty events instead of invented or expired dates.
@@ -367,6 +382,7 @@ git commit -m "refactor: centralize current club content"
 ## Task 4: Build the visual system and reusable content primitives
 
 **Files:**
+
 - Create: `src/lib/components/site/SectionIntro.svelte`
 - Create: `src/lib/components/site/ContentCard.svelte`
 - Create: `src/lib/components/site/ContentCard.test.js`
@@ -374,6 +390,7 @@ git commit -m "refactor: centralize current club content"
 - Modify: `src/app.html`
 
 **Interfaces:**
+
 - Produces: `SectionIntro` with `eyebrow`, `title`, and `summary` props.
 - Produces: `ContentCard` with `title`, `summary`, `href`, `meta`, and `variant` props.
 - Produces: token classes `surface-paper`, `surface-navy`, `button-primary`, and `button-secondary`.
@@ -389,7 +406,11 @@ import ContentCard from './ContentCard.svelte';
 
 it('renders its complete card as one descriptive link', () => {
 	render(ContentCard, {
-		props: { title: 'Python foundations', summary: 'Start with the basics.', href: '/our-workshops' }
+		props: {
+			title: 'Python foundations',
+			summary: 'Start with the basics.',
+			href: '/our-workshops'
+		}
 	});
 	const link = screen.getByRole('link', { name: /python foundations.*start with the basics/i });
 	expect(link).toHaveAttribute('href', '/our-workshops');
@@ -407,7 +428,7 @@ Expected: FAIL because `ContentCard.svelte` does not exist.
 `ContentCard.svelte` must use one `<a>` when `href` is supplied rather than nesting links. Its key structure is:
 
 ```svelte
-<svelte:element this={href ? 'a' : 'article'} class:content-card-link={href} href={href}>
+<svelte:element this={href ? 'a' : 'article'} class:content-card-link={href} {href}>
 	<p class="card-meta">{meta}</p>
 	<h3>{title}</h3>
 	<p>{summary}</p>
@@ -432,7 +453,13 @@ Replace the global styles with custom properties and explicit focus behavior:
 }
 
 @media (prefers-reduced-motion: reduce) {
-	*, *::before, *::after { scroll-behavior: auto; transition-duration: 0.01ms; animation-duration: 0.01ms; }
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto;
+		transition-duration: 0.01ms;
+		animation-duration: 0.01ms;
+	}
 }
 ```
 
@@ -460,6 +487,7 @@ git commit -m "feat: add club visual system and content primitives"
 ## Task 5: Replace the shared shell with a responsive, accessible club header and footer
 
 **Files:**
+
 - Create: `src/lib/components/site/SiteHeader.svelte`
 - Create: `src/lib/components/site/SiteHeader.test.js`
 - Create: `src/lib/components/site/SiteFooter.svelte`
@@ -469,6 +497,7 @@ git commit -m "feat: add club visual system and content primitives"
 - Delete: `src/lib/components/Footer.svelte`
 
 **Interfaces:**
+
 - Consumes: `clubContent.joinUrl` and SvelteKit `$page` data.
 - Produces: a `SiteHeader` whose navigation contains `/books` but no cart button.
 
@@ -534,6 +563,7 @@ git commit -m "feat: redesign shared club navigation"
 ## Task 6: Deliver the refreshed home and club introduction pages
 
 **Files:**
+
 - Modify: `src/routes/+page.svelte`
 - Modify: `src/routes/about-us/+page.svelte`
 - Create: `src/routes/+page.test.js`
@@ -541,6 +571,7 @@ git commit -m "feat: redesign shared club navigation"
 - Modify: `src/lib/content/club.js`
 
 **Interfaces:**
+
 - Consumes: `clubContent.mission`, `clubContent.events`, workshops, and join URL.
 - Produces: content-led pages that show useful empty states instead of stale dates.
 
@@ -597,6 +628,7 @@ git commit -m "feat: refresh club home and about pages"
 ## Task 7: Rebuild workshops, events, resources, and the obsolete roadmap route
 
 **Files:**
+
 - Create: `src/lib/components/site/EventList.svelte`
 - Create: `src/lib/components/site/EventList.test.js`
 - Modify: `src/routes/our-workshops/+page.svelte`
@@ -612,6 +644,7 @@ git commit -m "feat: refresh club home and about pages"
 - Delete: `src/lib/components/events/EventCarousel.svelte`
 
 **Interfaces:**
+
 - Consumes: `clubContent`, `getUpcomingEvents`, `getWorkshopTracks`, `ContentCard`.
 - Produces: `/events` and a permanent `/roadmap` redirect.
 
@@ -677,11 +710,13 @@ git commit -m "feat: rebuild club content pages"
 ## Task 8: Complete visual and accessibility regression coverage
 
 **Files:**
+
 - Create: `tests/e2e/club-navigation.spec.js`
 - Modify: `package.json`
 - Modify: `README.md`
 
 **Interfaces:**
+
 - Consumes: running Vite app and stable accessible names from Tasks 4-6.
 - Produces: a repeatable desktop and mobile smoke test command.
 
