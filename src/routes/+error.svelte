@@ -30,7 +30,7 @@
 		<div class="recovery-copy">
 			<SectionIntro eyebrow="Route recovery" title={heading} {summary} />
 
-			<div class="status-reference" aria-label={`Status ${$page.status}`}>
+			<div class="status-reference">
 				<p class="status-code">Status {$page.status}</p>
 				{#if $page.error?.message}
 					<p class="status-message">{$page.error.message}</p>
