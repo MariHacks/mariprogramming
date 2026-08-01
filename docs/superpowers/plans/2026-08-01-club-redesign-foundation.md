@@ -24,6 +24,7 @@
 | Path                                          | Responsibility                                                                |
 | --------------------------------------------- | ----------------------------------------------------------------------------- |
 | `src/lib/format.js`                           | Small pure helpers shared by static club and Book Delivery UI.                |
+| `eslint.config.js`                            | ESLint 9 flat configuration for SvelteKit source and generated-file ignores.  |
 | `src/lib/content/club.js`                     | Current club content data, including intentional empty states.                |
 | `src/lib/components/site/SiteHeader.svelte`   | Responsive global navigation without commerce controls.                       |
 | `src/lib/components/site/SiteFooter.svelte`   | Reusable footer and social links.                                             |
@@ -116,7 +117,8 @@ git commit -m "build: target a supported Vercel Node runtime"
 
 **Interfaces:**
 
-- Produces: a clean existing Prettier and ESLint baseline without changing runtime behavior.
+- Produces: a clean existing Prettier baseline without changing runtime behavior.
+- Produces: the evidence for the separate ESLint 9 migration that immediately follows this task.
 - Produces: no functional redesign or dependency change.
 
 - [ ] **Step 1: Capture the inherited formatter failure**
@@ -141,16 +143,16 @@ Add this exact `.prettierignore` line before the verification step so short-live
 .superpowers/
 ```
 
-- [ ] **Step 3: Verify a clean baseline**
+- [ ] **Step 3: Verify the clean Prettier baseline**
 
 Run:
 
 ```bash
-npm run lint
+npx prettier --check .
 git diff --check
 ```
 
-Expected: both commands exit successfully. If a semantic-looking diff appears, revert only that edit using an inverse `apply_patch`, then rerun the two commands.
+Expected: both commands exit successfully. If a semantic-looking diff appears, revert only that edit using an inverse `apply_patch`, then rerun the two commands. Run `npm run lint` once to record the expected post-Prettier ESLint 9 configuration failure; do not repair it in this formatting-only task.
 
 - [ ] **Step 4: Commit the nonfunctional baseline**
 
@@ -159,7 +161,61 @@ git add .github/dependabot.yml .prettierignore docs/superpowers/specs/2026-08-01
 git commit -m "style: normalize project formatting"
 ```
 
-## Task 2: Establish a testable, typed-JavaScript baseline
+## Task 2: Migrate ESLint 9 to a durable flat configuration
+
+**Files:**
+
+- Create: `eslint.config.js`
+- Delete: `.eslintrc.cjs`
+- Delete: `.eslintignore`
+- Modify: `package.json`
+
+**Interfaces:**
+
+- Produces: `npm run lint` that runs Prettier followed by ESLint 9 without legacy-config warnings or errors.
+- Produces: Svelte recommended linting with generated Vercel/SvelteKit output, package artifacts, environment files, and dependencies ignored.
+- Produces: a temporary warning-level `svelte/require-each-key` rule for legacy views; Task 8 restores it to an error after those views are replaced.
+
+- [ ] **Step 1: Record the configuration failure after Prettier succeeds**
+
+Run: `npm run lint`
+
+Expected before this task: Prettier exits successfully and ESLint exits with the ESLint 9 missing-flat-config error. Do not use `ESLINT_USE_FLAT_CONFIG=false`; the installed Svelte plugin is flat-config-first and its legacy extension path is circular.
+
+- [ ] **Step 2: Add direct config dependencies and replace the legacy configuration**
+
+Run:
+
+```bash
+npm install -D @eslint/js@9.8.0 globals@14.0.0
+```
+
+Create `eslint.config.js` using `@eslint/js`, `eslint-plugin-svelte`'s `flat/recommended` configuration, `eslint-config-prettier`, and `globals`. Carry the intent of `.eslintignore` into an initial global `ignores` object, including `.vercel/**`, `.svelte-kit/**`, `build/**`, `package/**`, `node_modules/**`, and environment-file patterns. Use browser and Node globals, ECMAScript 2020, and module source type.
+
+Delete `.eslintrc.cjs` and `.eslintignore`; ESLint 9 must not discover legacy configuration files. Add a final Svelte-only override that downgrades `svelte/require-each-key` to `warn` solely while the Task 8 legacy page/component replacement is pending. Do not disable any other recommended rule.
+
+- [ ] **Step 3: Verify lint behavior and Svelte config resolution**
+
+Run:
+
+```bash
+npm run lint
+npx eslint --print-config src/routes/+page.svelte
+npm run build
+git diff --check
+```
+
+Expected: every command exits successfully. The printed config resolves Svelte rules and shows `svelte/require-each-key` at warning severity; no generated `.vercel` output is linted.
+
+- [ ] **Step 4: Commit the toolchain migration**
+
+```bash
+git add eslint.config.js package.json package-lock.json
+git rm .eslintrc.cjs .eslintignore
+git commit -m "build: migrate lint configuration"
+```
+
+## Task 3: Establish a testable, typed-JavaScript baseline
 
 **Files:**
 
@@ -280,7 +336,7 @@ git add package.json package-lock.json vite.config.js jsconfig.json src/lib/form
 git commit -m "test: add SvelteKit quality baseline"
 ```
 
-## Task 3: Replace stale copy with a current, centralized club content model
+## Task 4: Replace stale copy with a current, centralized club content model
 
 **Files:**
 
@@ -379,7 +435,7 @@ git add src/lib/content/club.js src/lib/content/club.test.js src/lib/content.js
 git commit -m "refactor: centralize current club content"
 ```
 
-## Task 4: Build the visual system and reusable content primitives
+## Task 5: Build the visual system and reusable content primitives
 
 **Files:**
 
@@ -484,7 +540,7 @@ git add src/styles.css src/app.html src/lib/components/site
 git commit -m "feat: add club visual system and content primitives"
 ```
 
-## Task 5: Replace the shared shell with a responsive, accessible club header and footer
+## Task 6: Replace the shared shell with a responsive, accessible club header and footer
 
 **Files:**
 
@@ -560,7 +616,7 @@ git rm src/lib/components/TopNav.svelte src/lib/components/Footer.svelte
 git commit -m "feat: redesign shared club navigation"
 ```
 
-## Task 6: Deliver the refreshed home and club introduction pages
+## Task 7: Deliver the refreshed home and club introduction pages
 
 **Files:**
 
@@ -625,7 +681,7 @@ git add src/routes/+page.svelte src/routes/about-us/+page.svelte src/routes/+pag
 git commit -m "feat: refresh club home and about pages"
 ```
 
-## Task 7: Rebuild workshops, events, resources, and the obsolete roadmap route
+## Task 8: Rebuild workshops, events, resources, and the obsolete roadmap route
 
 **Files:**
 
@@ -642,6 +698,7 @@ git commit -m "feat: refresh club home and about pages"
 - Delete: `src/lib/components/SeeAlso.svelte`
 - Delete: `src/lib/components/events/Event.svelte`
 - Delete: `src/lib/components/events/EventCarousel.svelte`
+- Modify: `eslint.config.js`
 
 **Interfaces:**
 
@@ -684,7 +741,7 @@ export function load() {
 }
 ```
 
-Replace all imports of legacy generic components before deleting them.
+Replace all imports of legacy generic components before deleting them. Once every remaining `#each` block has a stable key, restore `svelte/require-each-key` to `error` in `eslint.config.js`; do not leave the transitional warning override in the finished redesign.
 
 - [ ] **Step 4: Verify all public pages and the redirect**
 
@@ -694,20 +751,21 @@ Run:
 npm test -- src/lib/components/site/EventList.test.js
 npm run check
 npm run lint
+npx eslint . --max-warnings 0
 npm run build
 ```
 
-Expected: all commands pass. With `npm run dev`, request `/roadmap` and confirm it returns a permanent redirect to `/events`.
+Expected: all commands pass without ESLint warnings. With `npm run dev`, request `/roadmap` and confirm it returns a permanent redirect to `/events`.
 
 - [ ] **Step 5: Commit the content-page redesign**
 
 ```bash
-git add src/routes src/lib/components/site src/lib/content/club.js
+git add src/routes src/lib/components/site src/lib/content/club.js eslint.config.js
 git rm src/lib/components/Card.svelte src/lib/components/CardRow.svelte src/lib/components/ResourceCard.svelte src/lib/components/SeeAlso.svelte src/lib/components/events/Event.svelte src/lib/components/events/EventCarousel.svelte src/routes/roadmap/+page.svelte
 git commit -m "feat: rebuild club content pages"
 ```
 
-## Task 8: Complete visual and accessibility regression coverage
+## Task 9: Complete visual and accessibility regression coverage
 
 **Files:**
 
@@ -717,7 +775,7 @@ git commit -m "feat: rebuild club content pages"
 
 **Interfaces:**
 
-- Consumes: running Vite app and stable accessible names from Tasks 4-6.
+- Consumes: running Vite app and stable accessible names from Tasks 5-7.
 - Produces: a repeatable desktop and mobile smoke test command.
 
 - [ ] **Step 1: Install Playwright and add the browser-test script**
@@ -761,7 +819,7 @@ test('the home page has no horizontal overflow on a phone', async ({ page }) => 
 
 Run: `npm run test:e2e -- tests/e2e/club-navigation.spec.js`
 
-Expected: PASS after Tasks 4-6. If it fails, correct the named accessible control or overflow instead of weakening the assertion.
+Expected: PASS after Tasks 5-7. If it fails, correct the named accessible control or overflow instead of weakening the assertion.
 
 - [ ] **Step 4: Document local verification**
 
@@ -805,6 +863,6 @@ git commit -m "test: cover redesigned club experience"
 
 ## Plan self-review
 
-- Spec coverage: formatting baseline, shared visual system, club home/about/workshops/events/resources, current content, Book Delivery discoverability, cart isolation, accessibility, responsiveness, and stale-content removal map to Tasks 1-8.
+- Spec coverage: formatting and lint baselines, shared visual system, club home/about/workshops/events/resources, current content, Book Delivery discoverability, cart isolation, accessibility, responsiveness, and stale-content removal map to Tasks 1-9.
 - Intentional boundary: Book Delivery catalogue, cart behavior, checkout, payments, order emails, and admin operation are implemented in the two companion plans so this plan delivers a coherent non-commerce site on its own.
 - Type consistency: `formatCad`, `clubContent`, `getUpcomingEvents`, `getWorkshopTracks`, `ContentCard`, and `EventList` are defined before their planned consumers.
