@@ -262,6 +262,12 @@
 		color: var(--sky, #99c2ff);
 	}
 
+	.primary-nav .nav-link:focus-visible {
+		outline: 3px solid var(--color-focus, #df5b48);
+		outline-offset: 3px;
+		box-shadow: none;
+	}
+
 	.nav-link.current {
 		background: rgb(153 194 255 / 14%);
 		color: var(--sky, #99c2ff);
@@ -379,7 +385,21 @@
 	}
 
 	@media (max-width: 24rem) {
+		.brand {
+			gap: 0.5rem;
+		}
+
+		.brand-mark {
+			width: 1.75rem;
+			height: 1.875rem;
+		}
+
 		.brand-name {
+			font-size: 0.82rem;
+			line-height: 1.05;
+		}
+
+		.brand-campus {
 			display: none;
 		}
 	}
@@ -401,6 +421,12 @@
 
 		.nav-link.current::before {
 			background: Highlight;
+		}
+
+		.primary-nav .nav-link:focus-visible {
+			outline: 3px solid Highlight;
+			outline-offset: 3px;
+			box-shadow: none;
 		}
 	}
 </style>

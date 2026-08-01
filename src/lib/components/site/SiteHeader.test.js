@@ -48,6 +48,12 @@ describe('SiteHeader', () => {
 		expect(screen.getByRole('link', { name: 'Workshops' })).not.toHaveAttribute('aria-current');
 	});
 
+	it('does not mark a route with only a shared path prefix as current', () => {
+		render(SiteHeader, { props: { pathname: '/bookstore' } });
+
+		expect(screen.getByRole('link', { name: 'Book Delivery' })).not.toHaveAttribute('aria-current');
+	});
+
 	it('uses one native control for pointer and keyboard mobile-menu behavior', async () => {
 		const user = userEvent.setup();
 		const { container } = render(SiteHeader, { props: { pathname: '/events' } });
@@ -78,5 +84,31 @@ describe('SiteHeader', () => {
 			'true'
 		);
 		expect(container.querySelectorAll('#site-navigation')).toHaveLength(1);
+
+		const eventsLink = screen.getByRole('link', { name: 'Events' });
+		eventsLink.addEventListener('click', (event) => event.preventDefault(), { once: true });
+		await user.click(eventsLink);
+		expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveAttribute(
+			'aria-expanded',
+			'false'
+		);
+		expect(navigation).toHaveAttribute('data-open', 'false');
+	});
+
+	it('leaves focus and menu state unchanged when Escape is pressed while closed', async () => {
+		const user = userEvent.setup();
+		render(SiteHeader, { props: { pathname: '/events' } });
+		const homeLink = screen.getByRole('link', {
+			name: 'Marianopolis Programming Club, home'
+		});
+
+		homeLink.focus();
+		await user.keyboard('{Escape}');
+
+		expect(homeLink).toHaveFocus();
+		expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveAttribute(
+			'aria-expanded',
+			'false'
+		);
 	});
 });
