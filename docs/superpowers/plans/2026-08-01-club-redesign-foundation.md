@@ -448,7 +448,6 @@ git commit -m "refactor: centralize current club content"
 - Create: `src/lib/components/site/ContentCard.svelte`
 - Create: `src/lib/components/site/ContentCard.test.js`
 - Modify: `src/styles.css`
-- Modify: `src/app.html`
 
 **Interfaces:**
 
@@ -524,7 +523,7 @@ Replace the global styles with custom properties and explicit focus behavior:
 }
 ```
 
-Remove the Bootstrap CDN stylesheet and script from `src/app.html`; components must not rely on Bootstrap JavaScript for navigation or behavior.
+Keep the Bootstrap CDN in place temporarily so the still-live legacy header remains operable. Task 6 removes Bootstrap from `src/app.html` only after it replaces that header with the independent Svelte navigation.
 
 - [ ] **Step 4: Verify components, lint, and focus styles**
 
@@ -553,6 +552,7 @@ git commit -m "feat: add club visual system and content primitives"
 - Create: `src/lib/components/site/SiteHeader.test.js`
 - Create: `src/lib/components/site/SiteFooter.svelte`
 - Modify: `src/routes/+layout.svelte`
+- Modify: `src/app.html`
 - Modify: `src/lib/content/club.js`
 - Delete: `src/lib/components/TopNav.svelte`
 - Delete: `src/lib/components/Footer.svelte`
@@ -598,7 +598,7 @@ const links = [
 ];
 ```
 
-Use the existing logo assets and Discord URL. `SiteFooter.svelte` retains the existing social destinations, ensures external links use `target="_blank" rel="noreferrer"`, and has a current copyright line without a dated claim. Update `+layout.svelte` to render the new components around `<slot />` and pass `$page.url.pathname` to the header.
+Use the existing logo assets and Discord URL. `SiteFooter.svelte` retains the existing social destinations, ensures external links use `target="_blank" rel="noreferrer"`, and has a current copyright line without a dated claim. Update `+layout.svelte` to render the new components around `<slot />` and pass `$page.url.pathname` to the header. At the same time, remove the Bootstrap CDN stylesheet and script from `src/app.html`; the new shell must not rely on Bootstrap JavaScript.
 
 - [ ] **Step 4: Verify navigation behavior and legacy component removal**
 
@@ -616,7 +616,7 @@ Expected: test and quality checks pass; the search has no obsolete component ref
 - [ ] **Step 5: Commit the shell replacement**
 
 ```bash
-git add src/routes/+layout.svelte src/lib/components/site src/lib/content/club.js
+git add src/routes/+layout.svelte src/app.html src/lib/components/site src/lib/content/club.js
 git rm src/lib/components/TopNav.svelte src/lib/components/Footer.svelte
 git commit -m "feat: redesign shared club navigation"
 ```
