@@ -393,7 +393,10 @@ Create `src/lib/content/club.js` with the following public shape:
 
 ```js
 export const clubContent = {
-	joinUrl: 'https://discord.gg/BMvrpKJjej',
+	communityAction: {
+		label: 'Follow on Instagram',
+		url: 'https://www.instagram.com/mari_programming_club/'
+	},
 	mission: 'A welcoming place to learn, build, and share software at Marianopolis.',
 	events: [],
 	workshops: [
@@ -559,7 +562,7 @@ git commit -m "feat: add club visual system and content primitives"
 
 **Interfaces:**
 
-- Consumes: `clubContent.joinUrl` and SvelteKit `$page` data.
+- Consumes: `clubContent.communityAction` and SvelteKit `$page` data.
 - Produces: a `SiteHeader` whose navigation contains `/books` but no cart button.
 
 - [ ] **Step 1: Write the failing navigation test**
@@ -598,7 +601,7 @@ const links = [
 ];
 ```
 
-Use the existing logo assets and Discord URL. `SiteFooter.svelte` retains the existing social destinations, ensures external links use `target="_blank" rel="noreferrer"`, and has a current copyright line without a dated claim. Update `+layout.svelte` to render the new components around `<slot />` and pass `$page.url.pathname` to the header. At the same time, remove the Bootstrap CDN stylesheet and script from `src/app.html`; the new shell must not rely on Bootstrap JavaScript.
+Use the existing logo assets and centralized community action. `SiteFooter.svelte` retains only verified current social destinations, ensures external links use `target="_blank" rel="noreferrer"`, and has a current copyright line without a dated claim. Update `+layout.svelte` to render the new components around `<slot />` and pass `$page.url.pathname` to the header. At the same time, remove the Bootstrap CDN stylesheet and script from `src/app.html`; the new shell must not rely on Bootstrap JavaScript.
 
 - [ ] **Step 4: Verify navigation behavior and legacy component removal**
 
@@ -652,7 +655,7 @@ it('offers a direct path to upcoming events when the calendar is empty', () => {
 });
 ```
 
-Create `src/routes/about-us/+page.test.js` asserting that a Discord join link is present and that the club description mentions beginners.
+Create `src/routes/about-us/+page.test.js` asserting that the centralized community action is present and that the club description mentions beginners.
 
 - [ ] **Step 2: Run the page tests and verify they fail**
 
@@ -662,7 +665,7 @@ Expected: FAIL because the old pages do not render the new copy or event empty s
 
 - [ ] **Step 3: Implement the two content-led pages**
 
-Home must include, in this order: a compact statement of purpose, a primary Discord action, a next-workshop or workshop-path card, an upcoming-events block, and a Book Delivery introduction that links to `/books` without showing cart controls. About must clarify that beginners are welcome and use the existing club-activity SVG only if it still supports the updated story.
+Home must include, in this order: a compact statement of purpose, a primary community action, a next-workshop or workshop-path card, an upcoming-events block, and a Book Delivery introduction that links to `/books` without showing cart controls. About must clarify that beginners are welcome and use the existing club-activity SVG only if it still supports the updated story.
 
 Use `SectionIntro` and `ContentCard`; do not recreate page-specific button or card styles.
 

@@ -27,7 +27,7 @@ The club site and Book Delivery share a visual language, but commerce controls a
 
 ### Shared navigation
 
-The refreshed global navigation includes Club, Workshops, Events, Resources, and Book Delivery. It has a clear Discord or join action. The cart icon and count appear only after entering Book Delivery routes, never on club pages.
+The refreshed global navigation includes Club, Workshops, Events, Resources, and Book Delivery. It has a clear community action. Until executives supply a fresh verified Discord invite, that action uses the club’s existing Instagram profile rather than a dead invite. The cart icon and count appear only after entering Book Delivery routes, never on club pages.
 
 ### Club pages
 
