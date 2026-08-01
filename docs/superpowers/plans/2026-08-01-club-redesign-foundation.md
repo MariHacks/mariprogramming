@@ -555,7 +555,6 @@ git commit -m "feat: add club visual system and content primitives"
 - Create: `src/lib/components/site/SiteHeader.test.js`
 - Create: `src/lib/components/site/SiteFooter.svelte`
 - Modify: `src/routes/+layout.svelte`
-- Modify: `src/app.html`
 - Modify: `src/lib/content/club.js`
 - Delete: `src/lib/components/TopNav.svelte`
 - Delete: `src/lib/components/Footer.svelte`
@@ -601,7 +600,7 @@ const links = [
 ];
 ```
 
-Use the existing logo assets and centralized community action. `SiteFooter.svelte` retains only verified current social destinations, ensures external links use `target="_blank" rel="noreferrer"`, and has a current copyright line without a dated claim. Update `+layout.svelte` to render the new components around `<slot />` and pass `$page.url.pathname` to the header. At the same time, remove the Bootstrap CDN stylesheet and script from `src/app.html`; the new shell must not rely on Bootstrap JavaScript.
+Use the existing logo assets and centralized community action. `SiteFooter.svelte` retains only verified current social destinations, ensures external links use `target="_blank" rel="noreferrer"`, and has a current copyright line without a dated claim. Update `+layout.svelte` to render the new components around `<slot />` and pass `$page.url.pathname` to the header. Keep the Bootstrap CDN temporarily so the unreplaced legacy content routes remain operable; Task 8 removes it after those routes are rebuilt.
 
 - [ ] **Step 4: Verify navigation behavior and legacy component removal**
 
@@ -619,7 +618,7 @@ Expected: test and quality checks pass; the search has no obsolete component ref
 - [ ] **Step 5: Commit the shell replacement**
 
 ```bash
-git add src/routes/+layout.svelte src/app.html src/lib/components/site src/lib/content/club.js
+git add src/routes/+layout.svelte src/lib/components/site src/lib/content/club.js
 git rm src/lib/components/TopNav.svelte src/lib/components/Footer.svelte
 git commit -m "feat: redesign shared club navigation"
 ```
@@ -699,6 +698,7 @@ git commit -m "feat: refresh club home and about pages"
 - Create: `src/routes/events/+page.svelte`
 - Modify: `src/routes/resources/+page.svelte`
 - Create: `src/routes/roadmap/+page.server.js`
+- Modify: `src/app.html`
 - Delete: `src/routes/roadmap/+page.svelte`
 - Delete: `src/lib/components/Card.svelte`
 - Delete: `src/lib/components/CardRow.svelte`
@@ -750,7 +750,7 @@ export function load() {
 }
 ```
 
-Replace all imports of legacy generic components before deleting them. Once every remaining `#each` block has a stable key, restore `svelte/require-each-key` to `error` in `eslint.config.js`; do not leave the transitional warning override in the finished redesign.
+Replace all imports of legacy generic components before deleting them. Once all legacy Bootstrap-dependent routes are rebuilt, remove the Bootstrap CDN stylesheet and script from `src/app.html`; no redesigned component may rely on Bootstrap JavaScript. Once every remaining `#each` block has a stable key, restore `svelte/require-each-key` to `error` in `eslint.config.js`; do not leave the transitional warning override in the finished redesign.
 
 - [ ] **Step 4: Verify all public pages and the redirect**
 
@@ -769,7 +769,7 @@ Expected: all commands pass without ESLint warnings. With `npm run dev`, request
 - [ ] **Step 5: Commit the content-page redesign**
 
 ```bash
-git add src/routes src/lib/components/site src/lib/content/club.js eslint.config.js
+git add src/routes src/app.html src/lib/components/site src/lib/content/club.js eslint.config.js
 git rm src/lib/components/Card.svelte src/lib/components/CardRow.svelte src/lib/components/ResourceCard.svelte src/lib/components/SeeAlso.svelte src/lib/components/events/Event.svelte src/lib/components/events/EventCarousel.svelte src/routes/roadmap/+page.svelte
 git commit -m "feat: rebuild club content pages"
 ```
