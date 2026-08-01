@@ -3,6 +3,6 @@ import adapter from '@sveltejs/adapter-vercel';
 
 export default {
 	kit: {
-		adapter: adapter() // see https://kit.svelte.dev/docs/adapter-vercel for config options
+		adapter: adapter({ runtime: 'nodejs22.x' })
 	}
 };
