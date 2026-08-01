@@ -94,11 +94,11 @@
 			</ul>
 
 			<a
-				class="discord-link"
-				href={clubContent.joinUrl}
+				class="community-link"
+				href={clubContent.communityAction.url}
 				target="_blank"
 				rel="noopener noreferrer"
-				on:click={closeMenu}>Join Discord</a
+				on:click={closeMenu}>{clubContent.communityAction.label}</a
 			>
 		</nav>
 	</div>
@@ -229,7 +229,7 @@
 	}
 
 	.nav-link,
-	.discord-link {
+	.community-link {
 		display: flex;
 		align-items: center;
 		min-height: 3rem;
@@ -283,7 +283,7 @@
 		border-top: 1px solid rgb(153 194 255 / 25%);
 	}
 
-	.discord-link {
+	.community-link {
 		justify-content: center;
 		margin-top: 0.85rem;
 		padding: 0.65rem 1rem;
@@ -293,7 +293,7 @@
 		font-size: 0.875rem;
 	}
 
-	.discord-link:hover {
+	.community-link:hover {
 		border-color: var(--paper, #f7f4ed);
 		background: var(--paper, #f7f4ed);
 		color: var(--midnight, #050d2e);
@@ -375,7 +375,7 @@
 			border-left: 1px solid rgb(153 194 255 / 32%);
 		}
 
-		.discord-link {
+		.community-link {
 			min-height: 2.75rem;
 			margin-top: 0;
 			margin-left: clamp(0.65rem, 1.2vw, 1.1rem);
@@ -415,7 +415,7 @@
 		.primary-nav,
 		.service-route,
 		.menu-toggle,
-		.discord-link {
+		.community-link {
 			border-color: CanvasText;
 		}
 

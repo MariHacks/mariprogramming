@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
+import { footer } from '$lib/content';
 import { clubContent } from '$lib/content/club';
 import SiteFooter from './SiteFooter.svelte';
 
@@ -7,7 +8,6 @@ afterEach(cleanup);
 
 const expectedDestinations = [
 	['GitHub', 'https://github.com/MariHacks'],
-	['Discord', 'https://discord.gg/BMvrpKJjej'],
 	['Instagram', 'https://www.instagram.com/mari_programming_club/'],
 	['MariHacks', 'https://www.marihacks.com/']
 ];
@@ -15,16 +15,17 @@ const expectedDestinations = [
 describe('club footer content', () => {
 	it('keeps the club identity and community destinations in the current content model', () => {
 		expect(clubContent.name).toBe('Marianopolis Programming Club');
+		expect(clubContent.communityAction).toEqual({
+			label: 'Follow on Instagram',
+			url: 'https://www.instagram.com/mari_programming_club/',
+			socialLabel: 'Instagram',
+			icon: '/socials/instagram.svg'
+		});
 		expect(clubContent.socialLinks).toEqual([
 			{
 				label: 'GitHub',
 				url: 'https://github.com/MariHacks',
 				icon: '/socials/github.svg'
-			},
-			{
-				label: 'Discord',
-				url: 'https://discord.gg/BMvrpKJjej',
-				icon: '/socials/discord.svg'
 			},
 			{
 				label: 'Instagram',
@@ -37,9 +38,20 @@ describe('club footer content', () => {
 				icon: '/socials/marihacks.png'
 			}
 		]);
-		expect(clubContent.socialLinks.find(({ label }) => label === 'Discord')?.url).toBe(
-			clubContent.joinUrl
-		);
+	});
+
+	it('keeps the legacy footer bridge aligned with every centralized social field', () => {
+		expect(footer.brand).toBe(`<The ${clubContent.name}\u00a0/>`);
+		expect(Object.keys(footer.socials)).toEqual(clubContent.socialLinks.map(({ label }) => label));
+
+		for (const { label, url, icon } of clubContent.socialLinks) {
+			expect(footer.socials[label]).toEqual({
+				url,
+				icon,
+				iconAlt: `${label} logo`,
+				height: 30
+			});
+		}
 	});
 });
 

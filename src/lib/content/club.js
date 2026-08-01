@@ -1,8 +1,13 @@
-const discordJoinUrl = 'https://discord.gg/BMvrpKJjej';
+const communityAction = {
+	label: 'Follow on Instagram',
+	url: 'https://www.instagram.com/mari_programming_club/',
+	socialLabel: 'Instagram',
+	icon: '/socials/instagram.svg'
+};
 
 export const clubContent = {
 	name: 'Marianopolis Programming Club',
-	joinUrl: discordJoinUrl,
+	communityAction,
 	mission:
 		'A welcoming place for Marianopolis students to learn programming, build together, and share software, with no experience required.',
 	socialLinks: [
@@ -12,14 +17,9 @@ export const clubContent = {
 			icon: '/socials/github.svg'
 		},
 		{
-			label: 'Discord',
-			url: discordJoinUrl,
-			icon: '/socials/discord.svg'
-		},
-		{
-			label: 'Instagram',
-			url: 'https://www.instagram.com/mari_programming_club/',
-			icon: '/socials/instagram.svg'
+			label: communityAction.socialLabel,
+			url: communityAction.url,
+			icon: communityAction.icon
 		},
 		{
 			label: 'MariHacks',

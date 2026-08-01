@@ -7,7 +7,7 @@ import SiteHeader from './SiteHeader.svelte';
 afterEach(cleanup);
 
 describe('SiteHeader', () => {
-	it('provides one primary route set and a safe Discord action', () => {
+	it('provides one primary route set and the centralized community action', () => {
 		render(SiteHeader, { props: { pathname: '/about-us' } });
 
 		expect(screen.getAllByRole('navigation', { name: 'Primary navigation' })).toHaveLength(1);
@@ -22,10 +22,12 @@ describe('SiteHeader', () => {
 		expect(screen.getByRole('link', { name: 'Events' })).toHaveAttribute('href', '/events');
 		expect(screen.getByRole('link', { name: 'Resources' })).toHaveAttribute('href', '/resources');
 
-		const discordLink = screen.getByRole('link', { name: 'Join Discord' });
-		expect(discordLink).toHaveAttribute('href', clubContent.joinUrl);
-		expect(discordLink).toHaveAttribute('target', '_blank');
-		expect(discordLink).toHaveAttribute('rel', 'noopener noreferrer');
+		const communityLink = screen.getByRole('link', {
+			name: clubContent.communityAction.label
+		});
+		expect(communityLink).toHaveAttribute('href', clubContent.communityAction.url);
+		expect(communityLink).toHaveAttribute('target', '_blank');
+		expect(communityLink).toHaveAttribute('rel', 'noopener noreferrer');
 	});
 
 	it('makes Book Delivery discoverable without leaking cart controls', () => {

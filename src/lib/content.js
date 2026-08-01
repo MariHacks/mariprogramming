@@ -9,6 +9,7 @@ export { clubContent, getUpcomingEvents, getWorkshopTracks } from './content/clu
  * @returns {Record<string, string>}
  */
 const toLegacyLinks = (links) => Object.fromEntries(links.map(({ label, url }) => [label, url]));
+const { communityAction } = clubContent;
 
 export const topNav = {
 	left: {
@@ -20,8 +21,8 @@ export const topNav = {
 		Resources: '/resources'
 	},
 	cta: {
-		text: 'Join Discord',
-		url: clubContent.joinUrl
+		text: communityAction.label,
+		url: communityAction.url
 	},
 	brand: {
 		imgSm: '/logo-icon.svg',
@@ -57,8 +58,8 @@ export const home = {
 	},
 	heroText: clubContent.mission,
 	cta: {
-		text: 'Join the Discord',
-		url: clubContent.joinUrl
+		text: communityAction.label,
+		url: communityAction.url
 	},
 	eventsTitle: 'Upcoming events',
 	events: {}
@@ -77,12 +78,12 @@ export const aboutUs = {
 	whatWeOffer: [
 		'Learn programming fundamentals through beginner-friendly workshops.',
 		'Build projects with other students and share what you discover.',
-		'Find club updates, learning help, and event announcements in the Discord community.'
+		'Find club updates and event announcements through our current community channel.'
 	],
 	seeAlsoLinks: {
-		'Join our Discord server': {
-			text: 'Meet the community, ask questions, and get current updates',
-			url: clubContent.joinUrl
+		[communityAction.label]: {
+			text: 'Follow club updates and reach the community',
+			url: communityAction.url
 		},
 		'Workshop archive': {
 			text: 'Explore club-made workshop material',
@@ -107,9 +108,9 @@ export const ourWorkshops = {
 		])
 	),
 	seeAlsoLinks: {
-		'Join our Discord server': {
-			text: 'Ask a question or hear about the next workshop',
-			url: clubContent.joinUrl
+		[communityAction.label]: {
+			text: 'See current workshop announcements',
+			url: communityAction.url
 		},
 		'About us': {
 			text: 'Learn more about the club',
@@ -128,7 +129,7 @@ export const resources = {
 	),
 	ctaTitle: 'Keep learning with the Marianopolis community',
 	ctaBtns: {
-		'Join our Discord server': clubContent.joinUrl,
+		[communityAction.label]: communityAction.url,
 		'Visit the AI Club': 'https://mariai.surge.sh/',
 		'Explore MariHacks': 'https://www.marihacks.com/'
 	},
@@ -149,12 +150,12 @@ export const roadmap = {
 	metaDesc: 'Current Programming Club activities and announcements.',
 	title: 'Club updates',
 	intro:
-		'No activities are scheduled here right now. Join the Discord for new dates as they are confirmed.',
+		'No activities are scheduled here right now. Follow the club for new dates as they are confirmed.',
 	activities: {},
 	seeAlsoLinks: {
-		'Join our Discord server': {
+		[communityAction.label]: {
 			text: 'Get current club announcements',
-			url: clubContent.joinUrl
+			url: communityAction.url
 		},
 		'Workshop archive': {
 			text: 'Explore club-made workshop material',
@@ -168,7 +169,6 @@ export const errorContent = {
 	intro: 'We could not find the page you were looking for.',
 	info: 'Use one of the links below or reach out to the club for help.',
 	contact: {
-		Discord: 'Join the community server and ask an executive for help.',
 		Instagram: 'Message @mari_programming_club.',
 		Omnivox: 'Send a MIO to a current club executive.'
 	},
@@ -189,9 +189,9 @@ export const errorContent = {
 			text: 'Browse recommended programming resources',
 			url: '/resources'
 		},
-		'Join our Discord server': {
-			text: 'Join the community and ask a question',
-			url: clubContent.joinUrl
+		[communityAction.label]: {
+			text: 'Follow club updates and reach the community',
+			url: communityAction.url
 		}
 	}
 };
