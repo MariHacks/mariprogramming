@@ -363,6 +363,7 @@
 
 	.book-list li {
 		min-width: 0;
+		max-inline-size: var(--reading-width);
 	}
 
 	.selection-footer {
