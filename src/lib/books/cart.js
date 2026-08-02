@@ -20,9 +20,42 @@ function assertBookId(bookId) {
  * @param {number} quantity
  */
 function assertIntegerQuantity(quantity) {
-	if (!Number.isInteger(quantity)) {
-		throw new Error('Book quantity must be an integer quantity');
+	if (!Number.isSafeInteger(quantity)) {
+		throw new Error('Book quantity must be a safe integer quantity');
 	}
+}
+
+/**
+ * @param {number} value
+ * @param {string} label
+ * @returns {number}
+ */
+function assertNonNegativeSafeInteger(value, label) {
+	if (!Number.isSafeInteger(value) || value < 0) {
+		throw new Error(`${label} must be a non-negative safe integer`);
+	}
+
+	return value;
+}
+
+/**
+ * @param {number} left
+ * @param {number} right
+ * @param {string} label
+ * @returns {number}
+ */
+function addSafeIntegers(left, right, label) {
+	return assertNonNegativeSafeInteger(left + right, label);
+}
+
+/**
+ * @param {number} left
+ * @param {number} right
+ * @param {string} label
+ * @returns {number}
+ */
+function multiplySafeIntegers(left, right, label) {
+	return assertNonNegativeSafeInteger(left * right, label);
 }
 
 /**
@@ -43,7 +76,10 @@ function mergeSelections(items, selections) {
 			throw new Error('Added book quantity must be greater than zero');
 		}
 
-		quantities.set(bookId, (quantities.get(bookId) ?? 0) + quantity);
+		quantities.set(
+			bookId,
+			addSafeIntegers(quantities.get(bookId) ?? 0, quantity, 'Merged book quantity')
+		);
 	}
 
 	return {
@@ -125,6 +161,7 @@ export function setBookQuantity(cart, bookId, quantity) {
  * @param {Cart} cart
  */
 export function calculateCart(priceCatalogue, cart) {
+	assertNonNegativeSafeInteger(priceCatalogue.taxRateBps, 'Tax rate basis points');
 	const booksById = new Map(priceCatalogue.books.map((book) => [book.id, book]));
 	const bookstoresById = new Map(
 		priceCatalogue.bookstores.map((bookstore) => [bookstore.id, bookstore])
@@ -140,6 +177,7 @@ export function calculateCart(priceCatalogue, cart) {
 			throw new Error(`Unknown bookstore: ${book.bookstoreId}`);
 		}
 
+		assertNonNegativeSafeInteger(book.priceCents, 'Book price in cents');
 		representedBookstores.add(book.bookstoreId);
 		return {
 			bookId: book.id,
@@ -147,32 +185,51 @@ export function calculateCart(priceCatalogue, cart) {
 			bookstoreId: book.bookstoreId,
 			quantity,
 			unitPriceCents: book.priceCents,
-			amountCents: book.priceCents * quantity
+			amountCents: multiplySafeIntegers(book.priceCents, quantity, 'Book line amount in cents')
 		};
 	});
-	const bookSubtotalCents = lines.reduce((subtotal, line) => subtotal + line.amountCents, 0);
+	const bookSubtotalCents = lines.reduce(
+		(subtotal, line) => addSafeIntegers(subtotal, line.amountCents, 'Book subtotal in cents'),
+		0
+	);
 	const fees = Array.from(representedBookstores, (bookstoreId) => {
 		const bookstore = bookstoresById.get(bookstoreId);
 		if (!bookstore) {
 			throw new Error(`Unknown bookstore: ${bookstoreId}`);
 		}
 
+		assertNonNegativeSafeInteger(bookstore.serviceFeeCents, 'Bookstore service fee in cents');
 		return {
 			bookstoreId,
 			label: `${bookstore.name} pickup service`,
 			amountCents: bookstore.serviceFeeCents
 		};
 	});
-	const feeSubtotalCents = fees.reduce((subtotal, fee) => subtotal + fee.amountCents, 0);
-	const taxCents = Math.round(
-		((bookSubtotalCents + feeSubtotalCents) * priceCatalogue.taxRateBps) / 10000
+	const feeSubtotalCents = fees.reduce(
+		(subtotal, fee) => addSafeIntegers(subtotal, fee.amountCents, 'Fee subtotal in cents'),
+		0
 	);
+	const preTaxTotalCents = addSafeIntegers(
+		bookSubtotalCents,
+		feeSubtotalCents,
+		'Pre-tax total in cents'
+	);
+	const taxNumerator = multiplySafeIntegers(
+		preTaxTotalCents,
+		priceCatalogue.taxRateBps,
+		'Tax numerator'
+	);
+	const taxCents = assertNonNegativeSafeInteger(
+		Math.round(taxNumerator / 10000),
+		'Tax amount in cents'
+	);
+	const totalCents = addSafeIntegers(preTaxTotalCents, taxCents, 'Cart total in cents');
 
 	return {
 		bookSubtotalCents,
 		taxCents,
 		fees,
-		totalCents: bookSubtotalCents + feeSubtotalCents + taxCents,
+		totalCents,
 		lines
 	};
 }

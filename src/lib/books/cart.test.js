@@ -91,6 +91,21 @@ describe('cart mutations', () => {
 			/integer quantity/i
 		);
 	});
+
+	it('rejects unsafe quantities', () => {
+		expect(() => setBookQuantity(createCart(), 'antigone', Number.MAX_SAFE_INTEGER + 1)).toThrow(
+			/safe integer quantity/i
+		);
+	});
+
+	it('rejects an unsafe quantity merge', () => {
+		expect(() =>
+			createCart([
+				{ bookId: 'antigone', quantity: Number.MAX_SAFE_INTEGER },
+				{ bookId: 'antigone', quantity: 1 }
+			])
+		).toThrow(/merged book quantity.*safe integer/i);
+	});
 });
 
 describe('calculateCart', () => {
@@ -168,5 +183,137 @@ describe('calculateCart', () => {
 		expect(() => calculateCart(invalidFixture, createCart(['orphan']))).toThrow(
 			/unknown bookstore: missing-store/i
 		);
+	});
+
+	it.each([
+		['fractional', 1000.25],
+		['negative', -1],
+		['unsafe', Number.MAX_SAFE_INTEGER + 1]
+	])('rejects a %s selected book price', (_case, priceCents) => {
+		const invalidFixture = structuredClone(fixture);
+		invalidFixture.books[0].priceCents = priceCents;
+
+		expect(() => calculateCart(invalidFixture, createCart(['le-petit-prince']))).toThrow(
+			/book price.*non-negative safe integer/i
+		);
+	});
+
+	it.each([
+		['fractional', 500.5],
+		['negative', -1],
+		['unsafe', Number.MAX_SAFE_INTEGER + 1]
+	])('rejects a %s represented bookstore fee', (_case, serviceFeeCents) => {
+		const invalidFixture = structuredClone(fixture);
+		invalidFixture.bookstores[0].serviceFeeCents = serviceFeeCents;
+
+		expect(() => calculateCart(invalidFixture, createCart(['le-petit-prince']))).toThrow(
+			/bookstore service fee.*non-negative safe integer/i
+		);
+	});
+
+	it.each([
+		['fractional', 1498.5],
+		['negative', -1],
+		['unsafe', Number.MAX_SAFE_INTEGER + 1]
+	])('rejects a %s tax rate', (_case, taxRateBps) => {
+		const invalidFixture = { ...fixture, taxRateBps };
+
+		expect(() => calculateCart(invalidFixture, createCart(['le-petit-prince']))).toThrow(
+			/tax rate.*non-negative safe integer/i
+		);
+	});
+
+	it('rejects an unsafe quantity-by-price product', () => {
+		const invalidFixture = structuredClone(fixture);
+		invalidFixture.books[0].priceCents = Number.MAX_SAFE_INTEGER;
+
+		expect(() =>
+			calculateCart(invalidFixture, createCart([{ bookId: 'le-petit-prince', quantity: 2 }]))
+		).toThrow(/book line amount.*safe integer/i);
+	});
+
+	it('rejects an unsafe book subtotal', () => {
+		const invalidFixture = structuredClone(fixture);
+		invalidFixture.books[0].priceCents = Number.MAX_SAFE_INTEGER;
+		invalidFixture.books[1].priceCents = 1;
+
+		expect(() =>
+			calculateCart(invalidFixture, createCart(['le-petit-prince', 'bescherelle']))
+		).toThrow(/book subtotal.*safe integer/i);
+	});
+
+	it('rejects an unsafe fee subtotal', () => {
+		const invalidFixture = structuredClone(fixture);
+		invalidFixture.books[0].priceCents = 0;
+		invalidFixture.books[2].priceCents = 0;
+		invalidFixture.bookstores[0].serviceFeeCents = Number.MAX_SAFE_INTEGER;
+		invalidFixture.bookstores[1].serviceFeeCents = 1;
+
+		expect(() =>
+			calculateCart(invalidFixture, createCart(['le-petit-prince', 'antigone']))
+		).toThrow(/fee subtotal.*safe integer/i);
+	});
+
+	it('rejects an unsafe pre-tax total', () => {
+		const invalidFixture = structuredClone(fixture);
+		invalidFixture.books[0].priceCents = Number.MAX_SAFE_INTEGER;
+		invalidFixture.bookstores[0].serviceFeeCents = 1;
+
+		expect(() => calculateCart(invalidFixture, createCart(['le-petit-prince']))).toThrow(
+			/pre-tax total.*safe integer/i
+		);
+	});
+
+	it('rejects an unsafe tax numerator', () => {
+		const invalidFixture = structuredClone(fixture);
+		invalidFixture.taxRateBps = 2;
+		invalidFixture.books[0].priceCents = Math.floor(Number.MAX_SAFE_INTEGER / 2) + 1;
+		invalidFixture.bookstores[0].serviceFeeCents = 0;
+
+		expect(() => calculateCart(invalidFixture, createCart(['le-petit-prince']))).toThrow(
+			/tax numerator.*safe integer/i
+		);
+	});
+
+	it('rejects an unsafe final total', () => {
+		const invalidFixture = structuredClone(fixture);
+		invalidFixture.taxRateBps = 1;
+		invalidFixture.books[0].priceCents = Number.MAX_SAFE_INTEGER;
+		invalidFixture.bookstores[0].serviceFeeCents = 0;
+
+		expect(() => calculateCart(invalidFixture, createCart(['le-petit-prince']))).toThrow(
+			/cart total.*safe integer/i
+		);
+	});
+
+	it('ignores malformed monetary data outside the selected cart', () => {
+		const catalogueWithUnselectedInvalidData = {
+			...fixture,
+			books: [
+				...fixture.books,
+				{
+					id: 'unselected',
+					title: 'Unselected',
+					priceCents: 12.5,
+					bookstoreId: 'unused-store'
+				}
+			],
+			bookstores: [
+				...fixture.bookstores,
+				{ id: 'unused-store', name: 'Unused Store', serviceFeeCents: -1 }
+			]
+		};
+
+		const result = calculateCart(
+			catalogueWithUnselectedInvalidData,
+			createCart(['le-petit-prince'])
+		);
+
+		expect(result.bookSubtotalCents).toBe(1895);
+		expect(result.fees).toEqual([
+			{ bookstoreId: 'renaud-bray', label: 'Renaud-Bray pickup service', amountCents: 500 }
+		]);
+		expect(result.taxCents).toBe(359);
+		expect(result.totalCents).toBe(2754);
 	});
 });
