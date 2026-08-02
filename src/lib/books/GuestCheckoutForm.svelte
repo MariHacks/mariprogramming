@@ -17,9 +17,12 @@
 	let nameInput;
 	/** @type {HTMLInputElement} */
 	let emailInput;
+	let handoffPending = false;
 
 	$: isSubmitting = Boolean(submitting);
 	$: parentError = typeof errorMessage === 'string' ? errorMessage.trim() : '';
+	$: if (isSubmitting || parentError) handoffPending = false;
+	$: isBusy = isSubmitting || handoffPending;
 	$: hasValidationError = Boolean(nameError || emailError);
 
 	/** @param {string} value */
@@ -49,7 +52,7 @@
 	async function submitGuestDetails(event) {
 		event.preventDefault();
 
-		if (isSubmitting) return;
+		if (isBusy) return;
 
 		const normalizedName = normalizeName(name);
 		const normalizedEmail = normalizeEmail(email);
@@ -67,6 +70,7 @@
 			return;
 		}
 
+		handoffPending = true;
 		dispatch('submit', { name: normalizedName, email: normalizedEmail });
 	}
 </script>
@@ -74,7 +78,7 @@
 <form
 	class="guest-checkout-form"
 	aria-labelledby="guest-details-title"
-	aria-busy={isSubmitting ? 'true' : undefined}
+	aria-busy={isBusy ? 'true' : undefined}
 	novalidate
 	on:submit={submitGuestDetails}
 >
@@ -112,7 +116,7 @@
 				name="name"
 				autocomplete="name"
 				required
-				disabled={isSubmitting}
+				disabled={isBusy}
 				aria-invalid={nameError ? 'true' : undefined}
 				aria-describedby={nameError ? 'pickup-name-error' : undefined}
 				on:input={clearNameError}
@@ -131,7 +135,7 @@
 				inputmode="email"
 				spellcheck="false"
 				required
-				disabled={isSubmitting}
+				disabled={isBusy}
 				aria-invalid={emailError ? 'true' : undefined}
 				aria-describedby={emailError ? 'receipt-email-error' : undefined}
 				on:input={clearEmailError}
@@ -146,8 +150,8 @@
 		<span>Payment details are entered on the next secure page.</span>
 	</p>
 
-	<button class="submit-button" type="submit" disabled={isSubmitting}>
-		{#if isSubmitting}
+	<button class="submit-button" type="submit" disabled={isBusy}>
+		{#if isBusy}
 			<span>Preparing secure payment</span>
 		{:else}
 			<span>Continue to secure payment</span>
