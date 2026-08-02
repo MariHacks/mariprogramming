@@ -276,7 +276,7 @@
 
 	.quantity-control {
 		display: grid;
-		grid-template-columns: 2.5rem minmax(2.75rem, 1fr) 2.5rem;
+		grid-template-columns: 2.75rem minmax(2.75rem, 1fr) 2.75rem;
 		min-width: 0;
 		border: 1px solid rgb(5 13 46 / 30%);
 		border-radius: var(--radius-xs);
@@ -298,6 +298,7 @@
 	}
 
 	.quantity-control button {
+		min-width: 2.75rem;
 		font-size: 1.1rem;
 		cursor: pointer;
 		transition:
