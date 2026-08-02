@@ -136,6 +136,28 @@ describe('Book Delivery order review', () => {
 		).not.toBeInTheDocument();
 	});
 
+	it.each([
+		['a javascript URL', 'javascript:alert("unsafe checkout")'],
+		['a credential-bearing HTTPS URL', 'https://pickup:secret@checkout.example.test/session']
+	])('refuses %s without navigating away from the order review', async (_case, unsafeUrl) => {
+		const cart = createTestCart();
+		cart.setQuantity('antigone', 1);
+		const assign = vi.fn();
+		vi.stubGlobal('location', { assign });
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ url: unsafeUrl })));
+		renderCheckout(cart);
+
+		await submitGuestDetails();
+
+		await waitFor(() =>
+			expect(screen.getByRole('status')).toHaveTextContent(
+				'We could not open secure payment. Please try again.'
+			)
+		);
+		expect(assign).not.toHaveBeenCalled();
+		expect(screen.getByRole('button', { name: 'Continue to secure payment' })).toBeEnabled();
+	});
+
 	it('holds the review form in a loading state and issues only one request while checkout is pending', async () => {
 		const cart = createTestCart();
 		cart.setQuantity('antigone', 1);
