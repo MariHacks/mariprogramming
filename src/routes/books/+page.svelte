@@ -1,9 +1,13 @@
 <script>
+	import TeacherCard from '$lib/books/TeacherCard.svelte';
 	import SectionIntro from '$lib/components/site/SectionIntro.svelte';
 	import { clubContent } from '$lib/content/club';
 
+	/** @type {import('./$types').PageData} */
+	export let data;
+
 	const metaDescription =
-		'Learn when teacher course-book lists will be available through the Marianopolis Programming Club.';
+		'Browse teacher-organized French and English course book lists from the Marianopolis Programming Club.';
 </script>
 
 <svelte:head>
@@ -11,72 +15,126 @@
 	<meta name="description" content={metaDescription} />
 </svelte:head>
 
-<section class="entry-page surface-paper">
-	<div class="page-container page-section entry-grid">
-		<SectionIntro
-			eyebrow="Book Delivery"
-			title="Course books, organized by teacher"
-			summary="Book Delivery will make it easier to start with the list that matches your Marianopolis course."
-		/>
+<div class="catalogue-page surface-paper">
+	<section class="catalogue-hero">
+		<div class="page-container hero-inner">
+			<div class="intro-copy">
+				<SectionIntro
+					eyebrow="Book Delivery"
+					title="Start with your teacher"
+					summary="Choose the instructor shown on your schedule to see the books assigned to each French or English course."
+				/>
+			</div>
+		</div>
+	</section>
 
-		<section class="status-panel surface-navy" aria-labelledby="book-list-status">
-			<p class="utility-label">Current status</p>
-			<h2 id="book-list-status">Teacher lists are being prepared</h2>
-			<p>
-				Return when your course list is available. You’ll be able to review the books assigned by
-				your teacher and choose only what you need.
-			</p>
-			<a class="button-secondary" href="/">Explore the club</a>
-		</section>
-	</div>
-</section>
+	<section class="teacher-directory surface-navy" aria-labelledby="teacher-directory-heading">
+		<div class="page-container directory-inner">
+			<header class="directory-header">
+				<div class="directory-title">
+					<p class="utility-label">Course list directory</p>
+					<h2 id="teacher-directory-heading">Available teacher lists</h2>
+				</div>
+				<p class="directory-note">Match the course code on your schedule before opening a list.</p>
+			</header>
+
+			<ul class="teacher-grid">
+				{#each data.teacherSummaries as summary (summary.teacher.id)}
+					<li>
+						<TeacherCard
+							teacher={summary.teacher}
+							courses={summary.courses}
+							books={summary.books}
+						/>
+					</li>
+				{/each}
+			</ul>
+		</div>
+	</section>
+</div>
 
 <style>
-	.entry-page {
-		min-height: clamp(32rem, 68vh, 48rem);
+	.catalogue-page {
+		min-height: 100%;
 	}
 
-	.entry-grid {
-		display: grid;
-		align-items: start;
-		gap: clamp(2.5rem, 7vw, 6rem);
+	.catalogue-hero {
+		border-block-end: 1px solid rgb(5 13 46 / 18%);
 	}
 
-	.status-panel {
-		display: grid;
-		align-content: start;
-		min-width: 0;
-		padding: clamp(1.5rem, 4vw, 2.5rem);
-		border: 1px solid rgb(153 194 255 / 38%);
+	.hero-inner {
+		padding-block: clamp(4.5rem, 9vw, 8rem);
+	}
+
+	.intro-copy {
+		width: min(100%, 58rem);
+	}
+
+	.teacher-directory {
 		border-block-start: 0.375rem solid var(--sky);
-		border-radius: var(--radius-sm);
-		box-shadow: var(--shadow-md);
+	}
+
+	.directory-inner {
+		padding-block: clamp(3.5rem, 7vw, 6.5rem);
+	}
+
+	.directory-header {
+		display: grid;
+		align-items: end;
+		padding-block-end: clamp(1.5rem, 4vw, 2.5rem);
+		border-block-end: 1px solid rgb(153 194 255 / 34%);
 		gap: var(--space-md);
 	}
 
-	.status-panel h2 {
-		max-width: 18ch;
-		font-size: var(--text-2xl);
+	.directory-title {
+		display: grid;
+		min-width: 0;
+		gap: var(--space-sm);
 	}
 
-	.status-panel p:not(.utility-label) {
-		color: rgb(247 244 237 / 78%);
-		line-height: 1.6;
+	.directory-title h2 {
+		max-width: 18ch;
+		font-size: var(--text-3xl);
+	}
+
+	.directory-note {
+		max-width: 38ch;
+		color: rgb(247 244 237 / 76%);
+		font-size: var(--text-lg);
+		line-height: 1.55;
 		text-wrap: pretty;
 	}
 
-	.status-panel .button-secondary {
-		width: fit-content;
-		margin-block-start: var(--space-xs);
+	.teacher-grid {
+		display: grid;
+		margin: clamp(2rem, 5vw, 3.5rem) 0 0;
+		padding: 0;
+		gap: clamp(1.5rem, 3vw, 2.5rem);
+		list-style: none;
 	}
 
-	@media (min-width: 52rem) {
-		.entry-grid {
-			grid-template-columns: minmax(0, 1.08fr) minmax(19rem, 0.72fr);
-		}
+	.teacher-grid li {
+		min-width: 0;
+	}
 
-		.status-panel {
-			margin-block-start: var(--space-lg);
+	@media (min-width: 48rem) {
+		.directory-header {
+			grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.55fr);
+			column-gap: var(--space-xl);
+		}
+	}
+
+	@media (min-width: 62rem) {
+		.teacher-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (forced-colors: active) {
+		.catalogue-hero,
+		.teacher-directory,
+		.directory-header {
+			border-color: CanvasText;
 		}
 	}
 </style>
