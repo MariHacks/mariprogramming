@@ -132,6 +132,54 @@ describe('POST /api/book-checkout', () => {
 		expect(createCheckoutSession).not.toHaveBeenCalled();
 	});
 
+	it('stops a chunked oversized body before consuming a later sentinel chunk', async () => {
+		const { handler, createStripeClient, createCheckoutSession } = createHandler();
+		const encoder = new TextEncoder();
+		let chunkIndex = 0;
+		let laterSentinelWasRead = false;
+		let bodyWasCancelled = false;
+		const body = new ReadableStream(
+			{
+				pull(controller) {
+					if (chunkIndex === 0) {
+						chunkIndex += 1;
+						controller.enqueue(encoder.encode('a'.repeat(16385)));
+						return;
+					}
+
+					laterSentinelWasRead = true;
+					controller.enqueue(encoder.encode('later-sentinel'));
+					controller.close();
+				},
+				cancel() {
+					bodyWasCancelled = true;
+				}
+			},
+			{ highWaterMark: 0 }
+		);
+		const request = new Request(
+			API_URL,
+			/** @type {RequestInit & { duplex: 'half' }} */ ({
+				method: 'POST',
+				headers: { origin: 'https://club.example', 'content-type': 'application/json' },
+				body,
+				duplex: 'half'
+			})
+		);
+
+		expect(request.headers.get('content-length')).toBeNull();
+
+		const response = await call(handler, request);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({ error: 'Checkout request is invalid.' });
+		expect(laterSentinelWasRead).toBe(false);
+		expect(bodyWasCancelled).toBe(true);
+		expect(request.body?.locked).toBe(false);
+		expect(createStripeClient).not.toHaveBeenCalled();
+		expect(createCheckoutSession).not.toHaveBeenCalled();
+	});
+
 	it('rejects a supplied cross-origin request before reading payment input', async () => {
 		const { handler, createStripeClient, createCheckoutSession } = createHandler();
 		const request = jsonRequest(validRequest(), {
