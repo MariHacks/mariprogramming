@@ -50,6 +50,10 @@ test.describe('Book Delivery cart boundary', () => {
 		page
 	}) => {
 		await page.goto('/books/mme-tremblay');
+		await expect(
+			page.getByRole('heading', { level: 1, name: 'Books for Mme Tremblay' })
+		).toBeVisible();
+		await expectNoHorizontalOverflow(page);
 
 		const antigone = page.getByRole('checkbox', { name: 'Select Antigone' });
 		await expect(antigone).toBeChecked();
@@ -81,7 +85,7 @@ test.describe('Book Delivery cart boundary', () => {
 test.describe('Book Delivery at a narrow width', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 
-	test('keeps the catalogue, local cart navigation, and teacher list within the viewport', async ({
+	test('keeps the catalogue, teacher list, and populated cart within the viewport', async ({
 		page
 	}) => {
 		await page.goto('/books');
@@ -101,6 +105,21 @@ test.describe('Book Delivery at a narrow width', () => {
 		await expect(
 			page.getByRole('heading', { level: 1, name: 'Books for Mme Tremblay' })
 		).toBeVisible();
+		await expectNoHorizontalOverflow(page);
+
+		await page.getByRole('button', { name: 'Add 3 books to cart' }).click();
+		await page
+			.getByRole('navigation', { name: 'Book Delivery navigation' })
+			.getByRole('link', { name: 'Cart, 3 items' })
+			.click();
+
+		await expect(page).toHaveURL('/books/cart');
+		await expect(
+			page.getByRole('heading', { level: 1, name: 'Your book delivery cart' })
+		).toBeVisible();
+		await expect(page.getByRole('region', { name: 'Renaud-Bray' })).toBeVisible();
+		await expect(page.getByRole('complementary', { name: 'Order summary' })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Continue to order review' })).toBeVisible();
 		await expectNoHorizontalOverflow(page);
 	});
 });
