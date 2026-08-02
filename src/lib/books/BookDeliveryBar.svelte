@@ -50,7 +50,7 @@
 	.cart-link {
 		display: inline-flex;
 		align-items: center;
-		min-height: 2.5rem;
+		min-height: 2.75rem;
 		color: var(--midnight);
 		font-weight: 600;
 		line-height: 1.2;

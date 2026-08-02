@@ -3,6 +3,7 @@ import { tick } from 'svelte';
 import { writable } from 'svelte/store';
 import { afterEach, describe, expect, it } from 'vitest';
 import BookDeliveryBar from './BookDeliveryBar.svelte';
+import bookDeliveryBarSource from './BookDeliveryBar.svelte?raw';
 
 afterEach(cleanup);
 
@@ -25,6 +26,12 @@ describe('BookDeliveryBar', () => {
 		render(BookDeliveryBar, { props: { cart } });
 
 		expect(screen.getByRole('link', { name: 'Cart, 1 item' })).toBeInTheDocument();
+	});
+
+	it('gives both local navigation links a 44 pixel minimum touch target', () => {
+		expect(bookDeliveryBarSource).toMatch(
+			/\.service-link,\s*\.cart-link\s*\{[\s\S]*?min-height:\s*2\.75rem;/
+		);
 	});
 
 	it('sums quantities and updates the cart name when the store emits', async () => {
