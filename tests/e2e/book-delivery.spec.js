@@ -46,6 +46,37 @@ test.describe('Book Delivery cart boundary', () => {
 		await expectNoHorizontalOverflow(page);
 	});
 
+	test('keeps the server-rendered teacher checklist inert without JavaScript', async ({
+		browser,
+		baseURL
+	}) => {
+		const context = await browser.newContext({ javaScriptEnabled: false });
+
+		try {
+			const page = await context.newPage();
+			await page.goto(`${baseURL}/books/mme-tremblay`);
+
+			await expect(page.getByRole('region', { name: 'Course book checklist' })).toHaveAttribute(
+				'aria-busy',
+				'true'
+			);
+
+			const antigone = page.getByRole('checkbox', { name: 'Select Antigone' });
+			await expect(antigone).toBeChecked();
+			await expect(antigone).toBeDisabled();
+			await expect(
+				page.getByRole('button', { name: 'Increase quantity for Antigone' })
+			).toBeDisabled();
+			await expect(page.getByRole('button', { name: 'Add 3 books to cart' })).toBeDisabled();
+
+			const checkedBeforeSpace = await antigone.evaluate((checkbox) => checkbox.checked);
+			await antigone.press('Space');
+			expect(await antigone.evaluate((checkbox) => checkbox.checked)).toBe(checkedBeforeSpace);
+		} finally {
+			await context.close();
+		}
+	});
+
 	test('adds only the still-selected books from a fresh teacher list by keyboard', async ({
 		page
 	}) => {
