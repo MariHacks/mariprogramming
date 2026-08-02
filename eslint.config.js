@@ -35,14 +35,8 @@ export default [
 	prettier,
 	{
 		rules: {
-			'no-unexpected-multiline': 'error'
-		}
-	},
-	{
-		files: ['**/*.svelte'],
-		rules: {
-			// Task 8 replaces the legacy views, then restores the recommended error severity.
-			'svelte/require-each-key': 'warn'
+			'no-unexpected-multiline': 'error',
+			'svelte/require-each-key': 'error'
 		}
 	}
 ];

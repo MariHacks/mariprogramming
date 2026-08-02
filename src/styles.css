@@ -189,12 +189,6 @@ h4 {
 	outline-offset: 3px;
 }
 
-button.btn:focus-visible,
-a.btn:focus-visible {
-	outline: 3px solid var(--color-focus);
-	outline-offset: 3px;
-}
-
 .page-container {
 	width: 100%;
 	max-width: calc(var(--layout-width) + var(--page-gutter) + var(--page-gutter));
@@ -397,49 +391,6 @@ a.btn:focus-visible {
 	opacity: 0.58;
 }
 
-.reg-container {
-	width: 100%;
-	padding: clamp(2rem, 5vw, 3.5rem);
-}
-
-.heading {
-	margin-bottom: var(--space-md);
-	font-size: var(--text-3xl);
-	font-weight: 700;
-}
-
-.text-body {
-	font-size: var(--text-lg);
-}
-
-.link-card-wrap {
-	height: 100%;
-}
-
-button.splide__arrow {
-	background-color: var(--midnight);
-	opacity: 0.85;
-}
-
-button.splide__arrow:disabled {
-	cursor: default;
-	opacity: 0.5;
-}
-
-button.splide__arrow svg {
-	fill: var(--paper);
-}
-
-.mobile-hidden-carousel {
-	display: none;
-}
-
-@media screen and (min-width: 21.25rem) {
-	.mobile-hidden-carousel {
-		display: block;
-	}
-}
-
 @media (prefers-reduced-motion: reduce) {
 	html:focus-within {
 		scroll-behavior: auto;
@@ -458,9 +409,7 @@ button.splide__arrow svg {
 }
 
 @media (forced-colors: active) {
-	:focus-visible,
-	button.btn:focus-visible,
-	a.btn:focus-visible {
+	:focus-visible {
 		outline-color: Highlight;
 	}
 
