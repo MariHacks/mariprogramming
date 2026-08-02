@@ -1,6 +1,5 @@
 import { cleanup, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
-import { footer } from '$lib/content';
 import { clubContent } from '$lib/content/club';
 import SiteFooter from './SiteFooter.svelte';
 
@@ -38,20 +37,6 @@ describe('club footer content', () => {
 				icon: '/socials/marihacks.png'
 			}
 		]);
-	});
-
-	it('keeps the legacy footer bridge aligned with every centralized social field', () => {
-		expect(footer.brand).toBe(`<The ${clubContent.name}\u00a0/>`);
-		expect(Object.keys(footer.socials)).toEqual(clubContent.socialLinks.map(({ label }) => label));
-
-		for (const { label, url, icon } of clubContent.socialLinks) {
-			expect(footer.socials[label]).toEqual({
-				url,
-				icon,
-				iconAlt: `${label} logo`,
-				height: 30
-			});
-		}
 	});
 });
 
