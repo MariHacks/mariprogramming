@@ -50,7 +50,7 @@ test.describe('desktop club navigation', () => {
 		await page.getByRole('link', { name: 'Book Delivery', exact: true }).click();
 		await expect(page).toHaveURL('/books');
 		await expect(
-			page.getByRole('heading', { level: 1, name: 'Course books, organized by teacher' })
+			page.getByRole('heading', { level: 1, name: 'Start with your teacher' })
 		).toBeVisible();
 	});
 
@@ -101,7 +101,7 @@ test.describe('mobile club navigation', () => {
 		await page.getByRole('link', { name: 'Book Delivery', exact: true }).click();
 		await expect(page).toHaveURL('/books');
 		await expect(
-			page.getByRole('heading', { level: 1, name: 'Course books, organized by teacher' })
+			page.getByRole('heading', { level: 1, name: 'Start with your teacher' })
 		).toBeVisible();
 		await expectNoHorizontalOverflow(page);
 	});
