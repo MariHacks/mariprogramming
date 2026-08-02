@@ -298,10 +298,6 @@
 		line-height: 1.45;
 	}
 
-	.cart-status:empty {
-		display: none;
-	}
-
 	.browse-link:focus-visible,
 	.order-review-link:focus-visible {
 		outline: 3px solid var(--color-focus);

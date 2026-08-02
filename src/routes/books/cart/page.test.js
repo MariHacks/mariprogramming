@@ -91,6 +91,27 @@ describe('Book Delivery cart page', () => {
 		expect(screen.queryByRole('button', { name: /pay|stripe/i })).not.toBeInTheDocument();
 	});
 
+	it('keeps a live status region exposed before and throughout cart changes', async () => {
+		const cart = createTestCart();
+		cart.setQuantity('le-petit-prince', 2);
+		cart.setQuantity('antigone', 1);
+		const { container } = renderCart(cart);
+		const status = container.querySelector('[aria-live="polite"][aria-atomic="true"]');
+
+		expect(status).toBeVisible();
+		expect(status).toHaveTextContent('');
+
+		await fireEvent.click(
+			screen.getByRole('button', { name: 'Increase quantity for Le Petit Prince' })
+		);
+
+		expect(status).toHaveTextContent('Quantity for Le Petit Prince updated to 3.');
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Remove Antigone' }));
+
+		expect(status).toHaveTextContent('Antigone removed from your cart.');
+	});
+
 	it('updates one line, then removes a one-book bookstore without changing another group', async () => {
 		const cart = createTestCart();
 		cart.setQuantity('le-petit-prince', 2);
