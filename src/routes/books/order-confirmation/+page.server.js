@@ -112,7 +112,9 @@ export async function load({ url }) {
 
 		if (!isRecord(session) || session.id !== sessionId) return recovery('unavailable');
 		if (session.status === 'expired') return recovery('expired');
-		if (session.payment_status !== 'paid') return recovery('unpaid');
+		if (session.status !== 'complete' || session.payment_status !== 'paid') {
+			return recovery('unpaid');
+		}
 
 		return {
 			confirmation: {

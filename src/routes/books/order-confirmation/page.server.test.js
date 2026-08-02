@@ -35,6 +35,7 @@ function confirmationEvent(sessionId) {
 function paidSession(overrides = {}) {
 	return {
 		id: SESSION_ID,
+		status: 'complete',
 		payment_status: 'paid',
 		customer_email: 'maya.chen@marianopolis.edu',
 		customer_details: { email: 'maya.chen@marianopolis.edu' },
@@ -78,7 +79,7 @@ describe('order confirmation server load', () => {
 		expect(prerender).toBe(false);
 	});
 
-	it('returns a minimal paid display model only after a verified paid session', async () => {
+	it('returns a minimal paid display model only after a verified complete paid session', async () => {
 		mockRetrieveStripeCheckoutSession.mockResolvedValue(paidSession());
 
 		const result = await load(confirmationEvent(SESSION_ID));
@@ -128,7 +129,7 @@ describe('order confirmation server load', () => {
 
 	it('keeps an expired Checkout Session in a distinct non-success recovery state', async () => {
 		mockRetrieveStripeCheckoutSession.mockResolvedValue(
-			paidSession({ payment_status: 'unpaid', status: 'expired' })
+			paidSession({ payment_status: 'paid', status: 'expired' })
 		);
 
 		const result = await load(confirmationEvent(SESSION_ID));
@@ -138,7 +139,32 @@ describe('order confirmation server load', () => {
 		});
 	});
 
-	it('maps unavailable, expired, and provider-error sessions to a non-success response', async () => {
+	it.each([
+		['an open session reported as paid', { status: 'open', payment_status: 'paid' }],
+		['an unknown session status reported as paid', { status: 'unknown', payment_status: 'paid' }]
+	])('keeps %s in non-success recovery', async (_case, sessionOverrides) => {
+		mockRetrieveStripeCheckoutSession.mockResolvedValue(paidSession(sessionOverrides));
+
+		const result = await load(confirmationEvent(SESSION_ID));
+
+		expect(result).toEqual({
+			confirmation: { status: 'recovery', reason: 'unpaid', returnPath: '/books/cart' }
+		});
+	});
+
+	it('keeps a paid session with a missing session status in non-success recovery', async () => {
+		const session = paidSession({ payment_status: 'paid' });
+		Reflect.deleteProperty(session, 'status');
+		mockRetrieveStripeCheckoutSession.mockResolvedValue(session);
+
+		const result = await load(confirmationEvent(SESSION_ID));
+
+		expect(result).toEqual({
+			confirmation: { status: 'recovery', reason: 'unpaid', returnPath: '/books/cart' }
+		});
+	});
+
+	it('maps unavailable and provider-error sessions to a non-success response', async () => {
 		for (const providerResult of [null, new Error('provider detail must stay private')]) {
 			mockRetrieveStripeCheckoutSession.mockReset();
 			mockRetrieveStripeCheckoutSession.mockImplementation(async () => {
