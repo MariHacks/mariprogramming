@@ -54,6 +54,10 @@ test.describe('Book Delivery cart boundary', () => {
 			page.getByRole('heading', { level: 1, name: 'Books for Mme Tremblay' })
 		).toBeVisible();
 		await expectNoHorizontalOverflow(page);
+		await expect(page.getByRole('region', { name: 'Course book checklist' })).toHaveAttribute(
+			'aria-busy',
+			'false'
+		);
 
 		const antigone = page.getByRole('checkbox', { name: 'Select Antigone' });
 		await expect(antigone).toBeChecked();

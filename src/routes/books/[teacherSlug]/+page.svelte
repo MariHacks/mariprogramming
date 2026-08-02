@@ -1,5 +1,5 @@
 <script>
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import BookRow from '$lib/books/BookRow.svelte';
 	import { BOOK_CART_CONTEXT_KEY } from '$lib/books/cart-context';
 	import { clubContent } from '$lib/content/club';
@@ -17,12 +17,17 @@
 	);
 	let hasAppliedSelection = false;
 	let statusMessage = '';
+	let interactive = false;
+
+	onMount(() => {
+		interactive = true;
+	});
 
 	$: selectedDrafts = Array.from(drafts.values()).filter((draft) => draft.selected);
 	$: selectedTitleCount = selectedDrafts.length;
 	$: selectedBookCount = selectedDrafts.reduce((total, draft) => total + draft.quantity, 0);
 	$: teacherHasCartItems = $cart.items.some((item) => teacherBookIds.has(item.bookId));
-	$: actionDisabled = selectedTitleCount === 0 && !teacherHasCartItems;
+	$: actionDisabled = !interactive || (selectedTitleCount === 0 && !teacherHasCartItems);
 	$: actionVerb = hasAppliedSelection || teacherHasCartItems ? 'Update cart with' : 'Add';
 	$: actionLabel =
 		selectedTitleCount === 0
@@ -101,7 +106,11 @@
 		</div>
 	</section>
 
-	<section class="course-checklist surface-navy" aria-label="Course book checklist">
+	<section
+		class="course-checklist surface-navy"
+		aria-label="Course book checklist"
+		aria-busy={interactive ? 'false' : 'true'}
+	>
 		<div class="page-container checklist-inner">
 			<header class="checklist-header">
 				<div>
@@ -134,6 +143,7 @@
 										bookstoreName={book.bookstoreName}
 										selected={drafts.get(book.id)?.selected ?? false}
 										quantity={drafts.get(book.id)?.quantity ?? 1}
+										{interactive}
 										on:selectionchange={handleSelectionChange}
 										on:quantitychange={handleQuantityChange}
 									/>

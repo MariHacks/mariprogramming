@@ -50,6 +50,18 @@ describe('BookRow', () => {
 		});
 	});
 
+	it('disables selection and quantity controls while its parent is not interactive', () => {
+		render(BookRow, { props: { ...props, interactive: false } });
+
+		expect(screen.getByRole('checkbox', { name: 'Select Le Petit Prince' })).toBeDisabled();
+		expect(
+			screen.getByRole('button', { name: 'Decrease quantity for Le Petit Prince' })
+		).toBeDisabled();
+		expect(
+			screen.getByRole('button', { name: 'Increase quantity for Le Petit Prince' })
+		).toBeDisabled();
+	});
+
 	it('hides quantity controls while deselected and restores the parent quantity on reselection', async () => {
 		const view = render(BookRow, {
 			props: { ...props, selected: false, quantity: 3 }

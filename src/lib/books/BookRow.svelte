@@ -30,6 +30,9 @@
 	/** @type {number} */
 	export let quantity;
 
+	/** @type {boolean} */
+	export let interactive = true;
+
 	const dispatch = createEventDispatcher();
 
 	$: resolvedQuantity = Number.isSafeInteger(quantity) && quantity >= 1 ? quantity : 1;
@@ -92,6 +95,7 @@
 				type="checkbox"
 				checked={selected}
 				aria-label={`Select ${book.title}`}
+				disabled={!interactive}
 				on:change={requestSelectionChange}
 			/>
 			<span aria-hidden="true">{selected ? 'Selected' : 'Select book'}</span>
@@ -102,13 +106,14 @@
 				<button
 					type="button"
 					aria-label={`Decrease quantity for ${book.title}`}
-					disabled={resolvedQuantity <= 1}
+					disabled={!interactive || resolvedQuantity <= 1}
 					on:click={() => requestQuantityChange(resolvedQuantity - 1)}>−</button
 				>
 				<output aria-label={`Quantity for ${book.title}`}>{resolvedQuantity}</output>
 				<button
 					type="button"
 					aria-label={`Increase quantity for ${book.title}`}
+					disabled={!interactive}
 					on:click={() => requestQuantityChange(resolvedQuantity + 1)}>+</button
 				>
 			</div>
