@@ -1,4 +1,6 @@
 <script>
+	import { resolve } from '$app/paths';
+
 	/** @type {string} */
 	export let title;
 
@@ -18,7 +20,7 @@
 </script>
 
 {#if href}
-	<a class="content-card content-card-link {variantClass}" {href}>
+	<a class="content-card content-card-link {variantClass}" href={resolve(href, {})}>
 		{#if meta}
 			<p class="card-meta">{meta}</p>
 		{/if}
@@ -60,7 +62,7 @@
 		--card-foreground: var(--graphite);
 		--card-heading: var(--midnight);
 		--card-meta: var(--club-blue);
-		--card-border: rgb(5 13 46 / 18%);
+		--card-border: rgb(var(--midnight-rgb) / 18%);
 		--card-accent: var(--club-blue);
 	}
 
@@ -69,7 +71,7 @@
 		--card-foreground: var(--paper);
 		--card-heading: var(--paper);
 		--card-meta: var(--sky);
-		--card-border: rgb(153 194 255 / 36%);
+		--card-border: rgb(var(--sky-rgb) / 36%);
 		--card-accent: var(--sky);
 	}
 

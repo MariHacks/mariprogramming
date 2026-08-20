@@ -6,57 +6,50 @@ import AboutPage from './+page.svelte';
 afterEach(cleanup);
 
 describe('about route', () => {
-	it('answers whether the club is for a first-time programmer with current club language', () => {
+	it('explains the club purpose, beginner access, and real activities without filler', () => {
 		const { container } = render(AboutPage);
 
 		expect(
 			screen.getByRole('heading', {
 				level: 1,
-				name: 'You can start before you know how to code.'
+				name: 'About the club'
 			})
 		).toBeInTheDocument();
 		expect(container.querySelectorAll('h1')).toHaveLength(1);
-		expect(screen.getByText(clubContent.mission)).toBeInTheDocument();
 		expect(
-			screen.getByRole('heading', { level: 2, name: 'No experience required' })
+			screen.getByText(/peer learning community for Marianopolis students/i)
 		).toBeInTheDocument();
+		expect(
+			screen.getByText('Members can get help while they build and use original workshop material.')
+		).toBeInTheDocument();
+		expect(screen.getByText(/mini-competitions are being prepared/i)).toBeInTheDocument();
+		expect(screen.getByText(/do not need programming experience/i)).toBeInTheDocument();
+		expect(container).not.toHaveTextContent(
+			/your next move|before you begin|how we learn together/i
+		);
 	});
 
-	it('grounds its two learning paths in the current workshop and resource catalogue', () => {
-		render(AboutPage);
-
-		expect(
-			screen.getByRole('heading', {
-				level: 2,
-				name: 'Use the path that matches your starting point'
-			})
-		).toBeInTheDocument();
-		expect(
-			screen.getByRole('heading', { level: 3, name: clubContent.workshops[0].title })
-		).toBeInTheDocument();
-		expect(screen.getByText(clubContent.workshops[0].description)).toBeInTheDocument();
-		expect(
-			screen.getByRole('heading', { level: 3, name: clubContent.resources[0].title })
-		).toBeInTheDocument();
-		expect(screen.getByText(clubContent.resources[0].description)).toBeInTheDocument();
-	});
-
-	it('offers the current community action before a lower-pressure local learning path', () => {
+	it('offers the verified registration form and direct learning destinations', () => {
 		render(AboutPage);
 
 		const links = screen.getAllByRole('link');
-		const communityLink = screen.getByRole('link', {
-			name: clubContent.communityAction.label
-		});
-		const workshopLink = screen.getByRole('link', { name: 'Browse beginner workshops' });
+		const signupLink = screen.getByRole('link', { name: 'Join the club' });
+		const workshopLink = screen.getByRole('link', { name: 'Browse workshops' });
+		const resourceLink = screen.getByRole('link', { name: 'Browse resources' });
 
-		expect(links).toHaveLength(2);
-		expect(links[0]).toBe(communityLink);
+		const discordLink = screen.getByRole('link', { name: 'Join Discord' });
+
+		expect(links).toHaveLength(4);
+		expect(links[0]).toBe(signupLink);
 		expect(links[1]).toBe(workshopLink);
-		expect(communityLink).toHaveAttribute('href', clubContent.communityAction.url);
-		expect(communityLink).toHaveAttribute('target', '_blank');
-		expect(communityLink).toHaveAttribute('rel', 'noopener noreferrer');
+		expect(links[2]).toBe(resourceLink);
+		expect(signupLink).toHaveAttribute('href', clubContent.signupUrl);
+		expect(signupLink).toHaveAttribute('target', '_blank');
+		expect(signupLink).toHaveAttribute('rel', 'external noopener noreferrer');
 		expect(workshopLink).toHaveAttribute('href', '/our-workshops');
+		expect(resourceLink).toHaveAttribute('href', '/resources');
+		expect(discordLink).toHaveAttribute('href', 'https://discord.gg/c6JJw9d');
+		expect(discordLink).toHaveAttribute('target', '_blank');
 	});
 
 	it('uses current metadata without exposing commerce or legacy joining content', () => {
@@ -67,7 +60,7 @@ describe('about route', () => {
 			'content',
 			clubContent.mission
 		);
-		expect(container).not.toHaveTextContent(/discord|fall 2024|coming soon|exec applications/i);
+		expect(container).not.toHaveTextContent(/fall 2024|winter 2024|coming soon|exec applications/i);
 		expect(container).not.toHaveTextContent(/\bcart\b|checkout|pickup/i);
 		expect(screen.queryByRole('link', { name: /cart/i })).not.toBeInTheDocument();
 	});

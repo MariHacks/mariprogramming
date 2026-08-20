@@ -9,21 +9,21 @@ describe('EventList', () => {
 	it('turns an unconfirmed schedule into a useful community action', () => {
 		const { container } = render(EventList, { props: { events: [] } });
 
-		expect(
-			screen.getByRole('heading', { level: 3, name: 'New events are being planned' })
-		).toBeInTheDocument();
-		expect(
-			screen.getByText('Dates will appear here after they are confirmed.')
-		).toBeInTheDocument();
-
+		const emptyHeading = screen.getByRole('heading', {
+			level: 3,
+			name: 'No upcoming events are listed.'
+		});
+		expect(emptyHeading).not.toHaveAttribute('aria-label');
+		expect(emptyHeading).toHaveTextContent('No upcoming events are listed.');
 		const communityLink = screen.getByRole('link', {
 			name: clubContent.communityAction.label
 		});
 
 		expect(communityLink).toHaveAttribute('href', clubContent.communityAction.url);
 		expect(communityLink).toHaveAttribute('target', '_blank');
-		expect(communityLink).toHaveAttribute('rel', 'noopener noreferrer');
+		expect(communityLink).toHaveAttribute('rel', 'external noopener noreferrer');
 		expect(container.querySelector('ul, ol')).not.toBeInTheDocument();
+		expect(screen.queryByText('Planning')).not.toBeInTheDocument();
 	});
 
 	it('renders supplied events as an accessible list', () => {
@@ -66,7 +66,7 @@ describe('EventList', () => {
 		);
 		expect(articles[1].querySelector('.event-description')).not.toBeInTheDocument();
 		expect(
-			screen.queryByRole('heading', { level: 3, name: 'New events are being planned' })
+			screen.queryByRole('heading', { level: 3, name: 'No upcoming events are listed.' })
 		).not.toBeInTheDocument();
 	});
 });

@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import BookstoreCartGroup from './BookstoreCartGroup.svelte';
-import { catalogue } from './catalogue';
+import { catalogue } from '../../test/fixtures/book-catalogue';
 
 const bookstore = { id: 'renaud-bray', name: 'Renaud-Bray' };
 const lines = [
@@ -32,6 +32,8 @@ describe('BookstoreCartGroup', () => {
 		expect(within(group).getByText('2 books')).toBeVisible();
 		expect(within(group).getAllByText('Renaud-Bray pickup service')).toHaveLength(1);
 		expect(within(group).getAllByText('$5.00')).toHaveLength(1);
+		expect(within(group).getByRole('list', { name: 'Renaud-Bray books' })).toBeVisible();
+		expect(within(group).queryByText('Source bookstore')).not.toBeInTheDocument();
 	});
 
 	it('uses singular book wording for a one-line bookstore group', async () => {
@@ -70,10 +72,21 @@ describe('BookstoreCartGroup', () => {
 		expect(container).not.toHaveTextContent(/checkout|payment|tax|discount|total due/i);
 	});
 
+	it('names every quantity and removal control for the affected book', () => {
+		render(BookstoreCartGroup, { props });
+
+		for (const title of ['Le Petit Prince', 'Bescherelle']) {
+			expect(screen.getByRole('group', { name: `Change quantity for ${title}` })).toBeVisible();
+			expect(screen.getByRole('button', { name: `Decrease quantity for ${title}` })).toBeVisible();
+			expect(screen.getByRole('button', { name: `Increase quantity for ${title}` })).toBeVisible();
+			expect(screen.getByRole('button', { name: `Remove ${title}` })).toBeVisible();
+		}
+	});
+
 	it('requests quantity changes with the affected book ID without mutating a cart', async () => {
 		const view = render(BookstoreCartGroup, { props });
 		const handleQuantityChange = vi.fn();
-		view.component.$on('quantitychange', handleQuantityChange);
+		/** @type {any} */ (view.component).$on('quantitychange', handleQuantityChange);
 
 		await fireEvent.click(
 			screen.getByRole('button', { name: 'Decrease quantity for Le Petit Prince' })
@@ -92,8 +105,8 @@ describe('BookstoreCartGroup', () => {
 		const view = render(BookstoreCartGroup, { props });
 		const handleQuantityChange = vi.fn();
 		const handleRemove = vi.fn();
-		view.component.$on('quantitychange', handleQuantityChange);
-		view.component.$on('remove', handleRemove);
+		/** @type {any} */ (view.component).$on('quantitychange', handleQuantityChange);
+		/** @type {any} */ (view.component).$on('remove', handleRemove);
 		const decrement = screen.getByRole('button', {
 			name: 'Decrease quantity for Bescherelle'
 		});

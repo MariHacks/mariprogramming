@@ -1,5 +1,63 @@
 import { describe, expect, it } from 'vitest';
-import { getUpcomingEvents, getWorkshopTracks } from './club';
+import { clubContent, getUpcomingEvents, getWorkshopTracks } from './club';
+
+describe('club destinations', () => {
+	it('publishes the team mailbox for public contact', () => {
+		expect(clubContent.contactEmail).toBe('team@marihacks.com');
+	});
+
+	it('describes beginner access in a complete metadata sentence', () => {
+		expect(clubContent.mission).toBe(
+			'Learn programming with other Marianopolis students. You do not need programming experience to join.'
+		);
+	});
+
+	it('keeps the verified member registration form as the sign-up destination', () => {
+		expect(clubContent.signupUrl).toBe(
+			'https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header'
+		);
+	});
+
+	it('includes the verified Instagram and Discord metadata', () => {
+		expect(clubContent.socialLinks).toEqual(
+			expect.arrayContaining([
+				{
+					label: 'Instagram',
+					url: 'https://www.instagram.com/mari_programming_club/',
+					icon: '/socials/instagram.svg'
+				},
+				{
+					label: 'Discord',
+					url: 'https://discord.gg/c6JJw9d',
+					icon: '/socials/discord.svg'
+				}
+			])
+		);
+	});
+});
+
+describe('club resources', () => {
+	it('keeps a useful description for every resource group', () => {
+		expect(clubContent.resources.map(({ id, description }) => ({ id, description }))).toEqual([
+			{
+				id: 'guided-learning',
+				description: 'Follow a structured course when you want a clear place to begin.'
+			},
+			{
+				id: 'web-development',
+				description: 'Learn web development by creating complete, practical projects.'
+			},
+			{
+				id: 'problem-solving',
+				description: 'Strengthen algorithms and implementation skills with focused challenges.'
+			},
+			{
+				id: 'video-and-community',
+				description: 'Use focused video guides, then research questions when you get stuck.'
+			}
+		]);
+	});
+});
 
 describe('getUpcomingEvents', () => {
 	it('excludes an event that has already started', () => {

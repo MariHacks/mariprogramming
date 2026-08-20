@@ -1,92 +1,84 @@
 <script>
+	import { resolve } from '$app/paths';
 	import { formatCad } from '../format';
 	import BookCoverStack from './BookCoverStack.svelte';
 
+	/** @typedef {{ id?: string, slug: string, name: string }} Teacher */
+	/** @typedef {{ id: string, teacherId?: string, code: string, title: string }} Course */
 	/**
-	 * @typedef {{ id: string, slug: string, name: string }} Teacher
-	 * @typedef {{ id: string, teacherId: string, code: string, title: string }} Course
 	 * @typedef {{
 	 *   id: string,
-	 *   courseId: string,
+	 *   courseId?: string,
 	 *   title: string,
-	 *   author: string,
-	 *   format: string,
+	 *   author: string | null,
+	 *   format?: string | null,
 	 *   priceCents: number,
-	 *   bookstoreId: string,
+	 *   bookstoreId?: string,
 	 *   storefrontUrl: string | null,
 	 *   coverUrl: string | null,
-	 *   coverTheme: string
+	 *   coverTheme?: string
 	 * }} Book
 	 */
 
 	/** @type {Teacher} */
 	export let teacher;
 
-	/** @type {Course[]} */
-	export let courses = [];
+	/** @type {Course} */
+	export let course;
 
 	/** @type {Book[]} */
 	export let books = [];
 
-	$: prices = books.map((book) => book.priceCents);
-	$: minimumPrice = prices.length ? Math.min(...prices) : null;
-	$: maximumPrice = prices.length ? Math.max(...prices) : null;
-	$: priceRange =
-		minimumPrice === null || maximumPrice === null
-			? 'Price not listed'
-			: minimumPrice === maximumPrice
-				? formatCad(minimumPrice)
-				: `${formatCad(minimumPrice)} to ${formatCad(maximumPrice)}`;
-	$: bookstoreCount = new Set(books.map((book) => book.bookstoreId)).size;
-	$: bookCountLabel = `${books.length} required ${books.length === 1 ? 'book' : 'books'}`;
-	$: bookstoreCountLabel = `${bookstoreCount} ${bookstoreCount === 1 ? 'bookstore' : 'bookstores'}`;
+	$: totalPrice = books.reduce((total, book) => total + book.priceCents, 0);
+	$: bookSummary =
+		books.length === 0
+			? 'No books listed'
+			: `${books.length} ${books.length === 1 ? 'book' : 'books'}, ${formatCad(totalPrice)} total`;
+	$: titleId = `course-${course.id}-title`;
+	$: detailsId = `course-${course.id}-details`;
 </script>
 
 <article class="teacher-card">
-	<a class="teacher-card-link" href={`/books/${teacher.slug}`}>
+	<a
+		class="teacher-card-link"
+		href={resolve('/books/[teacherSlug]/[courseId]', {
+			teacherSlug: teacher.slug,
+			courseId: course.id
+		})}
+		aria-labelledby={titleId}
+		aria-describedby={detailsId}
+	>
 		<div class="cover-field">
-			<span class="list-marker">Assigned reading</span>
+			<span class="card-forward" aria-hidden="true">
+				<svg viewBox="0 0 20 20">
+					<path d="M4 10h11M11 6l4 4-4 4" />
+				</svg>
+			</span>
 			<BookCoverStack {books} />
 		</div>
 
 		<div class="card-content">
 			<header>
-				<h3>{teacher.name}</h3>
+				<h2 id={titleId}>
+					<span class="course-code">{course.code}</span>
+					<span class="course-title">{course.title}</span>
+				</h2>
 			</header>
 
-			<div class="course-section">
-				<p class="section-label">Courses</p>
-				<ul class="course-list">
-					{#each courses as course (course.id)}
+			<div class="course-details" id={detailsId}>
+				<p class="teacher-name">{teacher.name}</p>
+
+				<ul class="book-list" aria-label={`Books for ${course.code}`}>
+					{#each books as book (book.id)}
 						<li>
-							<span class="course-code">{course.code}</span>
-							<span class="course-name">{course.title}</span>
+							<span>{book.title}</span>
+							<span class="book-price">{formatCad(book.priceCents)}</span>
 						</li>
 					{/each}
 				</ul>
+
+				<p class="book-summary">{bookSummary}</p>
 			</div>
-
-			<dl class="list-facts">
-				<div class="list-fact">
-					<dt>List size</dt>
-					<dd>{bookCountLabel}</dd>
-				</div>
-				<div class="list-fact">
-					<dt>Individual book prices</dt>
-					<dd>{priceRange}</dd>
-				</div>
-				<div class="list-fact">
-					<dt>Sources</dt>
-					<dd>{bookstoreCountLabel}</dd>
-				</div>
-			</dl>
-
-			<span class="card-action">
-				View assigned books
-				<svg viewBox="0 0 20 20" aria-hidden="true">
-					<path d="M4 10h11M11 6l4 4-4 4" />
-				</svg>
-			</span>
 		</div>
 	</a>
 </article>
@@ -99,237 +91,227 @@
 	}
 
 	.teacher-card-link {
+		position: relative;
 		display: grid;
 		grid-template-rows: auto 1fr;
 		min-width: 0;
 		height: 100%;
-		border: 1px solid rgb(5 13 46 / 20%);
-		border-radius: var(--radius-md);
-		background: var(--paper);
-		box-shadow: var(--shadow-sm);
+		background: transparent;
 		color: var(--graphite);
 		text-decoration: none;
-		transition:
-			border-color var(--motion-fast) var(--ease-out),
-			box-shadow var(--motion-base) var(--ease-out),
-			transform var(--motion-fast) var(--ease-out);
+		transition: color var(--motion-fast) var(--ease-out);
 	}
 
 	.teacher-card-link:focus-visible {
-		border-color: var(--club-blue);
 		outline: 3px solid var(--color-focus);
-		outline-offset: 4px;
-		box-shadow: var(--shadow-md);
+		outline-offset: 0.35rem;
 	}
 
 	.cover-field {
 		position: relative;
 		display: grid;
 		place-items: center;
-		min-height: clamp(14rem, 43vw, 17rem);
-		padding: 2.75rem var(--space-lg) var(--space-md);
-		border-block-end: 1px solid rgb(5 13 46 / 22%);
-		border-start-start-radius: calc(var(--radius-md) - 1px);
-		border-start-end-radius: calc(var(--radius-md) - 1px);
-		background: var(--sky);
+		min-height: clamp(15rem, 25vw, 18rem);
+		padding: var(--space-lg) var(--space-md) var(--space-xl);
+		background: transparent;
 	}
 
-	.list-marker {
+	.card-forward {
 		position: absolute;
-		inset-block-start: var(--space-sm);
-		inset-inline-start: var(--space-sm);
-		padding: 0.35rem 0.55rem;
-		border: 1px solid rgb(5 13 46 / 36%);
-		border-radius: var(--radius-pill);
-		background: var(--paper);
-		color: var(--midnight);
-		font-family: var(--font-mono);
-		font-size: 0.6875rem;
-		font-weight: 600;
-		letter-spacing: 0.08em;
-		line-height: 1.2;
-		text-transform: uppercase;
+		inset-block-start: 0;
+		inset-inline-end: 0;
+		display: grid;
+		width: 2.25rem;
+		height: 2.25rem;
+		place-items: center;
+		border: 1px solid rgb(var(--club-blue-rgb) / 30%);
+		border-radius: var(--radius-xs);
+		background: transparent;
+		color: var(--club-blue);
+		transition:
+			background-color var(--motion-fast) var(--ease-out),
+			border-color var(--motion-fast) var(--ease-out),
+			color var(--motion-fast) var(--ease-out),
+			transform var(--motion-fast) var(--ease-out);
+	}
+
+	.card-forward svg {
+		fill: none;
+		stroke: currentColor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.6;
+	}
+
+	.card-forward svg {
+		width: 1.05rem;
+		height: 1.05rem;
 	}
 
 	.card-content {
 		display: grid;
 		align-content: start;
 		min-width: 0;
-		padding: clamp(1.25rem, 5cqi, 1.75rem);
-		gap: var(--space-md);
+		padding: clamp(1.2rem, 5cqi, 1.6rem) 0 0;
+		border-block-start: 1px solid rgb(var(--midnight-rgb) / 20%);
+		gap: var(--space-sm);
 	}
 
-	.section-label,
-	dt,
+	.card-content header,
+	.card-content h2,
+	.course-details {
+		display: grid;
+		min-width: 0;
+	}
+
+	.card-content header,
+	.card-content h2 {
+		gap: var(--space-3xs);
+	}
+
+	.card-content h2,
+	.course-code,
+	.course-title,
+	.teacher-name,
+	.book-list,
+	.book-summary {
+		min-width: 0;
+		margin: 0;
+	}
+
 	.course-code {
 		color: var(--club-blue);
 		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 		font-weight: 600;
-		letter-spacing: 0.08em;
+		letter-spacing: 0.045em;
 		line-height: 1.4;
 		text-transform: uppercase;
 	}
 
-	h3 {
-		max-width: 22ch;
+	.course-title {
 		color: var(--midnight);
-		font-size: clamp(1.45rem, 7cqi, 2rem);
+		font-family: var(--font-display);
+		font-size: clamp(1.35rem, 6cqi, 1.7rem);
+		font-weight: 700;
+		letter-spacing: -0.035em;
+		line-height: 1.12;
 		overflow-wrap: anywhere;
+		transition: color var(--motion-fast) var(--ease-out);
 	}
 
-	.course-section {
-		display: grid;
-		gap: var(--space-2xs);
+	.course-details {
+		gap: var(--space-sm);
 	}
 
-	.course-list {
-		margin: 0;
+	.teacher-name {
+		color: rgb(var(--graphite-rgb) / 76%);
+		font-size: var(--text-sm);
+		line-height: 1.4;
+	}
+
+	.book-list {
 		padding: 0;
-		border-block-start: 1px solid rgb(5 13 46 / 18%);
+		border-block-start: 1px solid rgb(var(--midnight-rgb) / 16%);
 		list-style: none;
 	}
 
-	.course-list li {
-		display: grid;
-		grid-template-columns: minmax(4.5rem, auto) minmax(0, 1fr);
-		align-items: baseline;
-		column-gap: var(--space-sm);
-		padding-block: 0.6rem;
-		border-block-end: 1px solid rgb(5 13 46 / 18%);
-	}
-
-	.course-code {
-		font-variant-numeric: tabular-nums;
-		letter-spacing: 0.04em;
-	}
-
-	.course-name {
+	.book-list li {
+		display: flex;
+		justify-content: space-between;
 		min-width: 0;
+		padding-block: 0.55rem;
+		border-block-end: 1px solid rgb(var(--midnight-rgb) / 12%);
 		color: var(--midnight);
-		font-weight: 600;
+		font-size: 0.8125rem;
 		line-height: 1.35;
+		gap: var(--space-sm);
+	}
+
+	.book-list li span:first-child {
+		min-width: 0;
 		overflow-wrap: anywhere;
 	}
 
-	.list-facts {
-		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		margin: 0;
-		border-block: 1px solid rgb(5 13 46 / 18%);
-	}
-
-	.list-fact {
-		display: grid;
-		align-content: start;
-		min-width: 0;
-		padding: var(--space-xs);
-		gap: 0.35rem;
-	}
-
-	.list-fact + .list-fact {
-		border-inline-start: 1px solid rgb(5 13 46 / 18%);
-	}
-
-	dt,
-	dd {
-		min-width: 0;
-		margin: 0;
-		overflow-wrap: anywhere;
-	}
-
-	dt {
-		font-size: 0.625rem;
-	}
-
-	dd {
-		color: var(--midnight);
-		font-size: var(--text-sm);
+	.book-price {
+		flex: 0 0 auto;
 		font-variant-numeric: tabular-nums;
-		font-weight: 600;
-		line-height: 1.35;
-	}
-
-	.card-action {
-		display: inline-flex;
-		align-items: center;
-		justify-self: start;
-		color: var(--club-blue);
-		font-size: var(--text-sm);
 		font-weight: 700;
-		line-height: 1.3;
-		gap: var(--space-2xs);
+		white-space: nowrap;
 	}
 
-	.card-action svg {
-		width: 1.1rem;
-		height: 1.1rem;
-		fill: none;
-		stroke: currentColor;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-		stroke-width: 1.6;
-		transition: transform var(--motion-fast) var(--ease-out);
+	.book-summary {
+		color: var(--graphite);
+		font-size: 0.8125rem;
+		font-variant-numeric: tabular-nums;
+		font-weight: 600;
+		line-height: 1.35;
 	}
 
 	@media (hover: hover) and (pointer: fine) {
-		.teacher-card-link:hover {
-			border-color: var(--club-blue);
-			box-shadow: var(--shadow-md);
-			transform: translateY(-0.1875rem);
+		.teacher-card-link:hover .course-title {
+			color: var(--club-blue);
 		}
 
-		.teacher-card-link:hover .card-action svg {
-			transform: translateX(0.2rem);
+		.teacher-card-link:hover .card-forward {
+			border-color: var(--club-blue);
+			background: var(--club-blue);
+			color: var(--paper);
+			transform: translateX(0.15rem);
 		}
 	}
 
-	@container (max-width: 22rem) {
+	@container (max-width: 20rem) {
 		.cover-field {
-			min-height: 13.5rem;
+			min-height: 13rem;
 			padding-inline: var(--space-sm);
 		}
+	}
 
-		.list-facts {
-			grid-template-columns: 1fr;
+	@media (max-width: 45.999rem) and (min-width: 22.001rem) {
+		.teacher-card-link {
+			grid-template-columns: minmax(7.5rem, 0.72fr) minmax(0, 1.28fr);
+			grid-template-rows: none;
+			align-items: center;
+			gap: var(--space-lg);
 		}
 
-		.list-fact {
-			grid-template-columns: minmax(7rem, 0.8fr) minmax(0, 1.2fr);
-			align-items: baseline;
+		.cover-field {
+			min-height: 15rem;
+			padding: var(--space-md) var(--space-xs);
 		}
 
-		.list-fact + .list-fact {
-			border-block-start: 1px solid rgb(5 13 46 / 18%);
-			border-inline-start: 0;
+		.card-forward {
+			inset-inline-end: auto;
+			inset-inline-start: 0;
+		}
+
+		.card-content {
+			padding: 0 0 0 var(--space-lg);
+			border-block-start: 0;
+			border-inline-start: 1px solid rgb(var(--midnight-rgb) / 20%);
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
 		.teacher-card-link,
-		.card-action svg {
+		.card-forward,
+		.course-title {
 			transition: none;
-		}
-
-		.teacher-card-link:hover,
-		.teacher-card-link:hover .card-action svg {
-			transform: none;
 		}
 	}
 
 	@media (forced-colors: active) {
-		.teacher-card-link,
-		.list-marker,
-		.course-list,
-		.course-list li,
-		.list-facts,
-		.list-fact + .list-fact {
+		.card-content,
+		.card-forward,
+		.book-list,
+		.book-list li {
 			border-color: CanvasText;
 		}
 
-		.cover-field {
-			border-color: CanvasText;
+		.card-forward {
 			background: Canvas;
+			color: CanvasText;
 		}
 	}
 </style>

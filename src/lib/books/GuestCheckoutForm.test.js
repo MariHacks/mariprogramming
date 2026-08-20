@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import GuestCheckoutForm from './GuestCheckoutForm.svelte';
@@ -20,7 +20,10 @@ describe('GuestCheckoutForm', () => {
 		expect(email).toBeRequired();
 		expect(submit).toHaveAttribute('type', 'submit');
 		expect([...form.querySelectorAll('input, button')]).toEqual([name, email, submit]);
-		expect(form).toHaveTextContent('Payment details are entered on the next secure page.');
+		expect(form).toHaveTextContent(
+			"You'll enter your payment details on Stripe's secure checkout page."
+		);
+		expect(screen.queryByRole('heading', { name: 'Guest details' })).not.toBeInTheDocument();
 		expect(container.querySelectorAll('input')).toHaveLength(2);
 		expect(container).not.toHaveTextContent(/e-transfer|wayne's|marianopolis|map|fee|tax/i);
 
@@ -35,7 +38,7 @@ describe('GuestCheckoutForm', () => {
 	it('announces empty-field feedback and keeps the first invalid field understandable', async () => {
 		const view = render(GuestCheckoutForm);
 		const handleSubmit = vi.fn();
-		view.component.$on('submit', handleSubmit);
+		/** @type {any} */ (view.component).$on('submit', handleSubmit);
 		const name = screen.getByRole('textbox', { name: 'Name for pickup' });
 		const email = screen.getByRole('textbox', { name: 'Email for receipt' });
 
@@ -47,6 +50,8 @@ describe('GuestCheckoutForm', () => {
 		expect(status).toHaveTextContent('Enter an email for your receipt.');
 		expect(name).toHaveAttribute('aria-invalid', 'true');
 		expect(email).toHaveAttribute('aria-invalid', 'true');
+		expect(name).toHaveAccessibleDescription('Enter the name for pickup.');
+		expect(email).toHaveAccessibleDescription('Enter an email for your receipt.');
 		expect(document.activeElement).toBe(name);
 		expect(handleSubmit).not.toHaveBeenCalled();
 	});
@@ -54,7 +59,7 @@ describe('GuestCheckoutForm', () => {
 	it('blocks a malformed receipt email without pretending to verify the inbox', async () => {
 		const view = render(GuestCheckoutForm);
 		const handleSubmit = vi.fn();
-		view.component.$on('submit', handleSubmit);
+		/** @type {any} */ (view.component).$on('submit', handleSubmit);
 		const name = screen.getByRole('textbox', { name: 'Name for pickup' });
 		const email = screen.getByRole('textbox', { name: 'Email for receipt' });
 
@@ -73,7 +78,7 @@ describe('GuestCheckoutForm', () => {
 	it('dispatches one whitespace-normalized guest contact payload after valid submission', async () => {
 		const view = render(GuestCheckoutForm);
 		const handleSubmit = vi.fn();
-		view.component.$on('submit', handleSubmit);
+		/** @type {any} */ (view.component).$on('submit', handleSubmit);
 
 		await fireEvent.input(screen.getByRole('textbox', { name: 'Name for pickup' }), {
 			target: { value: '  Maya   Chen  ' }
@@ -98,7 +103,7 @@ describe('GuestCheckoutForm', () => {
 			}
 		});
 		const handleSubmit = vi.fn();
-		view.component.$on('submit', handleSubmit);
+		/** @type {any} */ (view.component).$on('submit', handleSubmit);
 		const form = screen.getByRole('form', { name: 'Guest details' });
 		const submit = screen.getByRole('button', { name: 'Preparing secure payment' });
 
@@ -113,10 +118,25 @@ describe('GuestCheckoutForm', () => {
 		expect(handleSubmit).not.toHaveBeenCalled();
 	});
 
+	it('keeps feedback mounted for its symmetric exit before removing it', async () => {
+		const view = render(GuestCheckoutForm);
+
+		await view.rerender({
+			submitting: false,
+			errorMessage: 'Secure payment could not start. Try again.'
+		});
+		const feedback = screen.getByRole('status');
+
+		await view.rerender({ submitting: false, errorMessage: '' });
+
+		expect(feedback).toBeInTheDocument();
+		await waitFor(() => expect(feedback).not.toBeInTheDocument(), { timeout: 1000 });
+	});
+
 	it('locks a valid handoff until the parent loading state completes', async () => {
 		const view = render(GuestCheckoutForm);
 		const handleSubmit = vi.fn();
-		view.component.$on('submit', handleSubmit);
+		/** @type {any} */ (view.component).$on('submit', handleSubmit);
 		const form = screen.getByRole('form', { name: 'Guest details' });
 
 		await fireEvent.input(screen.getByRole('textbox', { name: 'Name for pickup' }), {

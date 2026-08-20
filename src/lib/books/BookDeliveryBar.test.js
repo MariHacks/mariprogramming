@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
+import { compile } from 'svelte/compiler';
 import { writable } from 'svelte/store';
 import { afterEach, describe, expect, it } from 'vitest';
 import BookDeliveryBar from './BookDeliveryBar.svelte';
@@ -51,5 +52,29 @@ describe('BookDeliveryBar', () => {
 
 		expect(screen.getByRole('link', { name: 'Cart, 4 items' })).toBeInTheDocument();
 		expect(screen.queryByRole('link', { name: 'Cart, 3 items' })).not.toBeInTheDocument();
+	});
+
+	it('replays the shared fast state transition when the cart count changes', async () => {
+		/** @type {import('svelte/store').Writable<{ items: { bookId: string, quantity: number }[] }>} */
+		const cart = writable({ items: [] });
+		const { container } = render(BookDeliveryBar, { props: { cart } });
+		const initialCount = container.querySelector('.cart-count');
+		const { css } = compile(bookDeliveryBarSource, {
+			generate: 'client',
+			cssHash: () => 'scope'
+		});
+
+		cart.set({ items: [{ bookId: 'antigone', quantity: 1 }] });
+		await tick();
+
+		const updatedCount = container.querySelector('.cart-count');
+		expect(updatedCount).not.toBe(initialCount);
+		expect(css?.code).toMatch(
+			/\.cart-count[^{}]*\{[^{}]*animation:\s*cart-count-change var\(--motion-fast\) var\(--ease-out\) both/
+		);
+		const reducedMotionCss = css?.code.split('@media (prefers-reduced-motion: reduce)')[1] ?? '';
+		expect(reducedMotionCss).toContain('.cart-count');
+		expect(reducedMotionCss).toContain('animation-duration: var(--motion-press) !important');
+		expect(reducedMotionCss).toContain('transform: none !important');
 	});
 });

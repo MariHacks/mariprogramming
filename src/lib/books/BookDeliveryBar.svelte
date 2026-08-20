@@ -1,4 +1,6 @@
 <script>
+	import { resolve } from '$app/paths';
+
 	/**
 	 * @typedef {{ bookId: string, quantity: number }} CartItem
 	 * @typedef {{ items: CartItem[] }} Cart
@@ -13,21 +15,23 @@
 
 <nav class="book-delivery-bar" aria-label="Book Delivery navigation">
 	<div class="bar-frame">
-		<a class="service-link" href="/books">
+		<a class="service-link" href={resolve('/books', {})}>
 			<span class="service-index" aria-hidden="true"></span>
 			<span>Book Delivery</span>
 		</a>
 
-		<a class="cart-link" href="/books/cart" aria-label={cartLabel}>
+		<a class="cart-link" href={resolve('/books/cart', {})} aria-label={cartLabel}>
 			<span aria-hidden="true">Cart</span>
-			<span class="cart-count" aria-hidden="true">{itemCount}</span>
+			{#key itemCount}
+				<span class="cart-count" aria-hidden="true">{itemCount}</span>
+			{/key}
 		</a>
 	</div>
 </nav>
 
 <style>
 	.book-delivery-bar {
-		border-block-end: 1px solid rgb(5 13 46 / 32%);
+		border-block-end: 1px solid rgb(var(--midnight-rgb) / 32%);
 		background: var(--paper);
 		box-shadow: inset 0 0.25rem 0 var(--sky);
 		color: var(--midnight);
@@ -71,13 +75,13 @@
 		flex: 0 0 auto;
 		border: 1px solid var(--midnight);
 		background: var(--sky);
-		box-shadow: inset -0.22rem 0 0 rgb(5 13 46 / 18%);
+		box-shadow: inset -0.22rem 0 0 rgb(var(--midnight-rgb) / 18%);
 	}
 
 	.cart-link {
 		justify-content: flex-end;
 		gap: var(--space-2xs);
-		font-family: var(--font-mono);
+		font-family: var(--font-body);
 		font-size: var(--text-xs);
 		letter-spacing: 0.07em;
 		text-transform: uppercase;
@@ -95,9 +99,22 @@
 		color: var(--paper);
 		font-variant-numeric: tabular-nums;
 		letter-spacing: 0;
+		animation: cart-count-change var(--motion-fast) var(--ease-out) both;
 		transition:
 			background-color var(--motion-fast) var(--ease-out),
 			color var(--motion-fast) var(--ease-out);
+	}
+
+	@keyframes -global-cart-count-change {
+		from {
+			opacity: 0;
+			transform: translateY(0.2rem);
+		}
+
+		to {
+			opacity: 1;
+			transform: none;
+		}
 	}
 
 	.service-link:hover,
@@ -133,6 +150,11 @@
 		.cart-link,
 		.cart-count {
 			transition: none;
+		}
+
+		.cart-count {
+			animation-duration: var(--motion-press) !important;
+			transform: none !important;
 		}
 	}
 

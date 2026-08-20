@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { catalogue } from './catalogue';
-import { createCheckoutOrder } from './checkout';
+import { catalogue } from '../../test/fixtures/book-catalogue';
+import { createCheckoutOrder as createCheckoutOrderWithCatalogue } from './checkout';
+
+/** @param {unknown} request @param {typeof catalogue} [priceCatalogue] */
+function createCheckoutOrder(request, priceCatalogue = catalogue) {
+	return createCheckoutOrderWithCatalogue(request, priceCatalogue);
+}
 
 function validRequest(overrides = {}) {
 	return {

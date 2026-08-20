@@ -1,35 +1,36 @@
-# Book Delivery card checkout operations
+# Book Delivery operations
 
-Book Delivery uses Stripe-hosted Checkout for card payments. The club purchases paid orders manually; this release does not create automatic fulfillment, inventory, pickup-time, or e-Transfer workflows.
+Book Delivery uses Stripe-hosted card checkout and a manual purchasing workflow. The public service is closed in Production until the approvals and provider tests in [the deployment runbook](./book-delivery-deployment.md) are complete.
 
-## Configure Stripe in Vercel
+## Daily staff workflow
 
-1. In Vercel, add `STRIPE_SECRET_KEY` as a server-only environment variable. Never prefix it with `PUBLIC_`, commit it, add it to client code, or paste it into issue trackers or logs.
-2. Use a Stripe test-mode secret key for local development and Preview deployments. Use the live-mode secret key only in the Production environment after the launch checks below are complete.
-3. `STRIPE_WEBHOOK_SECRET` is intentionally reserved for a future verified fulfillment webhook. It is not needed for this manual-release flow.
-4. `BOOK_DELIVERY_ETRANSFER_ADDRESS` is reserved for a later, policy-backed e-Transfer option. Do not show e-Transfer until the club has confirmed its recipient address and payment-confirmation policy.
+1. Sign in with the verified `team@marihacks.com` Google account.
+2. Open the order ledger and work only from persisted payment status. A browser return from Stripe is not payment proof.
+3. For a paid order, move fulfillment through purchasing, received, ready for pickup, and picked up. Each step uses the current version and writes an audit row.
+4. Buy the listed books from the grouped bookstore purchase list. The system does not purchase inventory automatically.
+5. Follow the approved Wayne's Front Desk receiving and pickup procedure.
+6. Start refunds in Stripe Dashboard. The signed webhook mirrors the provider result into the order ledger.
 
-## Enable email receipts
+Staff can cancel only a pending, unstarted order after Stripe confirms that its Checkout Session is expired. A concurrent paid result wins.
 
-In the Stripe Dashboard, enable **Customer emails → Successful payments** and confirm the account branding and public contact details. Checkout sends the guest email to Stripe as both the Checkout customer email and the PaymentIntent receipt email.
+## Payment and receipt checks
 
-Test-mode payments do not automatically send receipts to arbitrary addresses. Stripe limits automatic test receipts to email addresses verified for the testing environment; otherwise, view or manually send the receipt from the Dashboard. Verify a receipt with an approved test address before launch.
+Stripe receives the guest email for Checkout and payment receipts. Before launch, enable successful payment emails, confirm account branding and support details, and test delivery with an address Stripe permits in test mode.
 
-## Manual purchasing workflow
+The order total is rebuilt on the server from active catalogue records. It includes selected books, one approved $5 to $7 service fee for each represented bookstore, and the configured tax rate. Browser prices are never accepted.
 
-After a successful card payment:
+## Automated recovery
 
-1. Open the paid Checkout Session or linked payment in the Stripe Dashboard.
-2. Confirm that the payment succeeded and review the server-created book, bookstore-service-fee, and tax line items.
-3. Use the Book Delivery metadata (`service`, `fulfillment`, and `book_count`) to identify the manual Dashboard workflow.
-4. Purchase the listed books manually, then follow the club's approved student-contact and Wayne's Front Desk pickup process.
-5. Handle cancellation, refunds, and student communication through the club's approved policy. A Stripe session alone does not promise inventory, delivery time, or completed pickup.
+Vercel runs the authenticated Book Delivery job daily while the service is closed. Before Book Delivery opens, move the job to an hourly scheduler. It:
 
-## Launch checks
+- reconciles expired or completed Stripe Sessions in a bounded batch;
+- fails a providerless attempt only after it has remained incomplete for one hour;
+- anonymizes due customer data 90 days after the configured terminal point;
+- clears expired confirmation capabilities and the HMAC-keyed auth, checkout, and staff rate-limit buckets;
+- writes maintenance and reconciliation audit records without customer identity.
 
-- Confirm the current legal and tax treatment for the service and book purchases.
-- Confirm Stripe business details, receipt branding, successful-payment email setting, and refund policy.
-- Complete a Stripe test-mode Checkout payment with a verified test email and inspect every book, fee, tax, receipt, success redirect, and cancellation redirect.
-- Rehearse the staff Dashboard review and manual purchasing workflow, including an unsuccessful or refunded payment.
-- Confirm the Wayne's Front Desk pickup process with the college before publishing card checkout.
-- Keep card checkout disabled in Production until the live-mode key, operational approvals, and the checks above are complete.
+A 503 response means the job needs a safe retry. Do not bypass authorization or raise batch limits to clear a backlog.
+
+## Incident priorities
+
+If payment, catalogue, or pickup behavior is uncertain, set `BOOK_DELIVERY_LAUNCH_STATE=coming-soon` before investigating. Keep signed webhooks and the authenticated scheduled job available for orders that already exist. Rotate an exposed credential at its provider and in Vercel, revoke the old value, and follow the rollback and recovery steps in the deployment runbook.

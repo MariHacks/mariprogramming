@@ -7,6 +7,8 @@ export default [
 	{
 		ignores: [
 			'.DS_Store',
+			'.superpowers/**',
+			'coverage/**',
 			'.vercel/**',
 			'.svelte-kit/**',
 			'build/**',
@@ -36,7 +38,9 @@ export default [
 	{
 		rules: {
 			'no-unexpected-multiline': 'error',
-			'svelte/require-each-key': 'error'
+			'svelte/require-each-key': 'error',
+			// Legacy-mode components explicitly reassign Maps to trigger updates.
+			'svelte/prefer-svelte-reactivity': 'off'
 		}
 	}
 ];

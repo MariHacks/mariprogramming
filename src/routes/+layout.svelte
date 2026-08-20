@@ -5,17 +5,18 @@
 	import SiteHeader from '$lib/components/site/SiteHeader.svelte';
 
 	$: pathname = $page.url.pathname;
+	$: isStaffRoute = pathname === '/staff' || pathname.startsWith('/staff/');
 </script>
 
 <a class="skip-link" href="#main-content">Skip to main content</a>
 
-<SiteHeader {pathname} />
+{#if !isStaffRoute}<SiteHeader {pathname} />{/if}
 
 <main id="main-content" tabindex="-1">
 	<slot></slot>
 </main>
 
-<SiteFooter />
+{#if !isStaffRoute}<SiteFooter />{/if}
 
 <style>
 	.skip-link {
@@ -24,17 +25,21 @@
 		left: var(--space-xs);
 		z-index: 100;
 		padding: 0.65rem 0.9rem;
-		border-radius: var(--radius-sm);
-		background: var(--paper);
-		box-shadow: var(--shadow-sm);
+		border: var(--rule-strong);
+		border-radius: var(--radius-xs);
+		background: var(--surface-raised);
 		color: var(--midnight);
 		font-weight: 600;
 		text-decoration: none;
 		transform: translateY(calc(-100% - var(--space-lg)));
-		transition: transform var(--motion-fast) var(--ease-out);
+		transition: transform var(--motion-base) var(--ease-out);
 	}
 
 	.skip-link:focus {
 		transform: translateY(0);
+	}
+
+	.skip-link:focus:active {
+		transform: translateY(var(--press-distance));
 	}
 </style>

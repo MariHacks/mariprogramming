@@ -1,5 +1,5 @@
 <script>
-	import { createEventDispatcher, tick } from 'svelte';
+	import { createEventDispatcher, onDestroy, tick } from 'svelte';
 
 	/** @type {boolean} */
 	export let submitting = false;
@@ -18,12 +18,32 @@
 	/** @type {HTMLInputElement} */
 	let emailInput;
 	let handoffPending = false;
+	let visibleParentError = '';
+	/** @type {ReturnType<typeof setTimeout> | undefined} */
+	let parentErrorExitTimer;
 
 	$: isSubmitting = Boolean(submitting);
 	$: parentError = typeof errorMessage === 'string' ? errorMessage.trim() : '';
+	$: syncParentError(parentError);
 	$: if (isSubmitting || parentError) handoffPending = false;
 	$: isBusy = isSubmitting || handoffPending;
 	$: hasValidationError = Boolean(nameError || emailError);
+
+	onDestroy(() => clearTimeout(parentErrorExitTimer));
+
+	/** @param {string} nextError */
+	function syncParentError(nextError) {
+		if (nextError) {
+			clearTimeout(parentErrorExitTimer);
+			parentErrorExitTimer = undefined;
+			visibleParentError = nextError;
+		} else if (visibleParentError && !parentErrorExitTimer) {
+			parentErrorExitTimer = setTimeout(() => {
+				visibleParentError = '';
+				parentErrorExitTimer = undefined;
+			}, 180);
+		}
+	}
 
 	/** @param {string} value */
 	function normalizeName(value) {
@@ -77,20 +97,19 @@
 
 <form
 	class="guest-checkout-form"
-	aria-labelledby="guest-details-title"
+	aria-label="Guest details"
 	aria-busy={isBusy ? 'true' : undefined}
 	novalidate
 	on:submit={submitGuestDetails}
 >
-	<header class="form-header">
-		<p class="utility-label">Guest checkout</p>
-		<h2 id="guest-details-title">Guest details</h2>
-		<p class="form-intro">Use the pickup name and receipt email you want attached to this order.</p>
-	</header>
-
-	{#if parentError}
-		<p class="form-feedback form-feedback--parent" role="status" aria-live="polite">
-			{parentError}
+	{#if visibleParentError}
+		<p
+			class="form-feedback form-feedback--parent"
+			class:is-exiting={!parentError}
+			role="status"
+			aria-live="polite"
+		>
+			{visibleParentError}
 		</p>
 	{/if}
 
@@ -147,7 +166,7 @@
 		<svg viewBox="0 0 16 16" aria-hidden="true">
 			<path d="M4.5 7V5.25a3.5 3.5 0 0 1 7 0V7M3.5 7h9v6h-9zM8 9.5v1" />
 		</svg>
-		<span>Payment details are entered on the next secure page.</span>
+		<span>You'll enter your payment details on Stripe's secure checkout page.</span>
 	</p>
 
 	<button class="submit-button" type="submit" disabled={isBusy}>
@@ -165,43 +184,23 @@
 <style>
 	.guest-checkout-form {
 		display: grid;
+		width: min(100%, 38rem);
 		min-width: 0;
-		padding: clamp(1.25rem, 4vw, 2rem);
-		border: 1px solid rgb(5 13 46 / 24%);
-		border-block-start: 0.375rem solid var(--sky);
-		border-radius: var(--radius-md);
-		background: var(--paper);
-		box-shadow: var(--shadow-sm);
+		padding-block-start: var(--space-md);
+		border-block-start: 0.25rem solid var(--club-blue);
 		color: var(--graphite);
-		gap: var(--space-md);
+		gap: clamp(1.25rem, 2vw, 1.5rem);
 	}
 
-	.form-header,
 	.form-fields,
 	.field {
 		display: grid;
 		min-width: 0;
 	}
 
-	.form-header {
-		gap: var(--space-2xs);
-	}
-
-	h2,
 	p,
 	span {
 		margin: 0;
-	}
-
-	h2 {
-		color: var(--midnight);
-		font-size: var(--text-xl);
-	}
-
-	.form-intro {
-		color: rgb(24 27 37 / 76%);
-		font-size: var(--text-sm);
-		line-height: 1.5;
 	}
 
 	.form-fields {
@@ -214,33 +213,36 @@
 
 	label {
 		color: var(--midnight);
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
+		font-family: var(--font-body);
+		font-size: var(--text-sm);
 		font-weight: 600;
-		letter-spacing: 0.06em;
+		letter-spacing: 0;
 		line-height: 1.35;
-		text-transform: uppercase;
 	}
 
 	input {
 		inline-size: 100%;
-		min-block-size: 3rem;
-		padding: 0.65rem 0.75rem;
-		border: 1px solid rgb(5 13 46 / 38%);
+		min-block-size: 3.25rem;
+		padding: 0.75rem 0.875rem;
+		border: 1px solid rgb(var(--midnight-rgb) / 38%);
 		border-radius: var(--radius-xs);
-		background: var(--paper);
+		background: var(--surface-raised);
 		color: var(--midnight);
 		font: inherit;
 		line-height: 1.35;
+		transition:
+			border-color var(--motion-fast) var(--ease-out),
+			background-color var(--motion-fast) var(--ease-out);
 	}
 
 	input[aria-invalid='true'] {
 		border-color: var(--coral);
-		background: rgb(223 91 72 / 7%);
+		background: rgb(var(--coral-rgb) / 7%);
 	}
 
 	input:disabled {
-		color: rgb(24 27 37 / 58%);
+		background: var(--mist);
+		color: rgb(var(--graphite-rgb) / 58%);
 		cursor: wait;
 	}
 
@@ -255,7 +257,7 @@
 		display: grid;
 		padding: var(--space-xs) var(--space-sm);
 		border-inline-start: 0.25rem solid var(--coral);
-		background: rgb(223 91 72 / 9%);
+		background: rgb(var(--coral-rgb) / 9%);
 		color: var(--midnight);
 		font-size: var(--text-sm);
 		font-weight: 600;
@@ -265,20 +267,47 @@
 
 	.form-feedback--parent {
 		border-inline-start-color: var(--club-blue);
-		background: rgb(153 194 255 / 26%);
+		background: rgb(var(--sky-rgb) / 26%);
+		animation: checkout-feedback-enter var(--motion-fast) var(--ease-out) both;
+	}
+
+	.form-feedback--parent.is-exiting {
+		animation: checkout-feedback-exit var(--motion-fast) var(--ease-out) both;
+	}
+
+	@keyframes checkout-feedback-enter {
+		from {
+			opacity: 0;
+			transform: translateY(-0.2rem);
+		}
+
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	@keyframes checkout-feedback-exit {
+		from {
+			opacity: 1;
+			transform: none;
+		}
+
+		to {
+			opacity: 0;
+			transform: translateY(-0.2rem);
+		}
 	}
 
 	.secure-handoff {
 		display: grid;
 		grid-template-columns: auto minmax(0, 1fr);
 		align-items: start;
-		padding: var(--space-sm);
-		border: 1px solid rgb(5 13 46 / 20%);
-		border-radius: var(--radius-xs);
-		background: var(--sky);
+		padding-block: var(--space-sm);
+		border-block: 1px solid rgb(var(--midnight-rgb) / 20%);
 		color: var(--midnight);
 		font-size: var(--text-sm);
-		font-weight: 600;
+		font-weight: 500;
 		line-height: 1.45;
 		gap: var(--space-xs);
 	}
@@ -315,13 +344,19 @@
 		text-align: start;
 		cursor: pointer;
 		transition:
-			background-color var(--motion-fast) var(--ease-out),
-			color var(--motion-fast) var(--ease-out);
+			background-color var(--motion-press) var(--ease-out),
+			color var(--motion-press) var(--ease-out),
+			transform var(--motion-press) var(--ease-out);
 	}
 
 	.submit-button:disabled {
 		background: var(--club-blue);
 		cursor: wait;
+	}
+
+	.submit-button:not(:disabled):active {
+		transform: translateY(var(--press-distance));
+		transition-duration: 0ms;
 	}
 
 	@media (hover: hover) and (pointer: fine) {
@@ -330,15 +365,20 @@
 		}
 	}
 
-	@media (max-width: 22rem) {
-		.guest-checkout-form {
-			padding: var(--space-md);
-		}
-	}
-
 	@media (prefers-reduced-motion: reduce) {
+		.form-feedback--parent,
+		input,
 		.submit-button {
 			transition: none;
+		}
+
+		.form-feedback--parent {
+			animation-duration: var(--motion-press);
+			transform: none;
+		}
+
+		.submit-button:not(:disabled):active {
+			transform: none;
 		}
 	}
 

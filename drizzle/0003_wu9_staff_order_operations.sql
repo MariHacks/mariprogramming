@@ -1,0 +1,3 @@
+CREATE INDEX "orders_staff_ledger_idx" ON "orders" USING btree ("payment_status","fulfillment_status","created_at" DESC NULLS LAST,"id" DESC NULLS LAST);--> statement-breakpoint
+CREATE INDEX "orders_staff_email_created_idx" ON "orders" USING btree (lower("customer_email"),"created_at" DESC NULLS LAST,"id" DESC NULLS LAST);--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_fulfillment_payment_consistent" CHECK ("orders"."fulfillment_status" = 'unstarted' OR "orders"."payment_status" IN ('paid', 'partially_refunded', 'refunded'));

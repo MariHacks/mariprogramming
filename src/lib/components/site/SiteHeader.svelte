@@ -1,432 +1,664 @@
 <script>
+	import { resolve } from '$app/paths';
 	import { clubContent } from '$lib/content/club';
+	import { createClubContactLinks } from '$lib/club-contact.js';
+	import SocialIcon from './SocialIcon.svelte';
 
 	/** @type {string} */
 	export let pathname;
 
-	const navigationLinks = [
-		{ label: 'Club', href: '/about-us' },
-		{ label: 'Workshops', href: '/our-workshops' },
-		{ label: 'Events', href: '/events' },
-		{ label: 'Resources', href: '/resources' },
-		{ label: 'Book Delivery', href: '/books', service: true }
+	const primaryLinks = [
+		{ label: 'About', href: '/about-us', external: false },
+		{ label: 'Events', href: '/events', external: false },
+		{ label: 'Workshops', href: '/our-workshops', external: false },
+		{ label: 'Resources', href: '/resources', external: false },
+		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false }
 	];
+	const compactLinks = primaryLinks.slice(0, 3);
+	const moreLinks = [
+		...primaryLinks.slice(3),
+		{ label: 'MariHacks', href: 'https://www.marihacks.com/', external: true }
+	];
+	const mobileLinks = [
+		...primaryLinks,
+		{ label: 'MariHacks', href: 'https://www.marihacks.com/', external: true }
+	];
+	const headerSocialLinks = clubContent.socialLinks.filter(({ label }) =>
+		['Instagram', 'Discord'].includes(label)
+	);
+	const contactLinks = createClubContactLinks();
 
-	let menuOpen = false;
+	let mobileOpen = false;
+	let moreOpen = false;
+	let previousPathname = pathname;
 	/** @type {HTMLButtonElement} */
-	let menuButton;
+	let mobileButton;
+	/** @type {HTMLButtonElement} */
+	let moreButton;
+	/** @type {HTMLElement} */
+	let mobileRoot;
+	/** @type {HTMLElement} */
+	let compactRoot;
 
-	/**
-	 * Keep a section current while a student moves through its nested routes.
-	 * @param {string} href
-	 */
+	$: if (pathname !== previousPathname) {
+		previousPathname = pathname;
+		mobileOpen = false;
+		moreOpen = false;
+	}
+
+	/** @param {string} href */
 	function isCurrent(href) {
+		if (href.startsWith('http') || href.includes('?')) return false;
 		return pathname === href || pathname.startsWith(`${href}/`);
 	}
 
 	/** @param {KeyboardEvent} event */
 	function handleKeydown(event) {
-		if (event.key !== 'Escape' || !menuOpen) return;
-
-		menuOpen = false;
-		menuButton.focus();
+		if (event.key !== 'Escape') return;
+		if (moreOpen) {
+			moreOpen = false;
+			moreButton.focus();
+		} else if (mobileOpen) {
+			mobileOpen = false;
+			mobileButton.focus();
+		}
 	}
 
-	function closeMenu() {
-		menuOpen = false;
+	/** @param {PointerEvent} event */
+	function handleOutsidePointer(event) {
+		if (!(event.target instanceof Node)) return;
+		if (moreOpen && !compactRoot.contains(event.target)) moreOpen = false;
+		if (mobileOpen && !mobileRoot.contains(event.target)) mobileOpen = false;
+	}
+
+	function closeDisclosures() {
+		mobileOpen = false;
+		moreOpen = false;
 	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
+<svelte:document on:pointerdown={handleOutsidePointer} />
 
-<header class="site-header">
+<header class="site-header" data-shell-version="editorial">
 	<div class="header-frame">
-		<a class="brand" href="/">
-			<img
-				class="brand-mark"
-				src="/logo-icon.svg"
-				alt="Marianopolis Programming Club, home"
-				width="173"
-				height="182"
-			/>
-			<span class="brand-name" aria-hidden="true">
-				<span class="brand-campus">Marianopolis</span>
+		<a
+			class="brand"
+			href={resolve('/', {})}
+			aria-label="Marianopolis Programming Club, home"
+			on:click={closeDisclosures}
+		>
+			<img class="brand-mark" src="/logo-icon.svg" alt="" width="173" height="182" />
+			<span class="brand-name">
+				<span>Marianopolis</span>
 				<span>Programming Club</span>
 			</span>
 		</a>
 
-		<button
-			bind:this={menuButton}
-			class="menu-toggle"
-			type="button"
-			aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
-			aria-controls="site-navigation"
-			aria-expanded={menuOpen}
-			on:click={() => (menuOpen = !menuOpen)}
-		>
-			<span class="menu-label" aria-hidden="true">{menuOpen ? 'Close' : 'Menu'}</span>
-			<span class:open={menuOpen} class="menu-icon" aria-hidden="true">
-				<span></span>
-				<span></span>
-			</span>
-		</button>
-
-		<nav
-			id="site-navigation"
-			class="primary-nav"
-			aria-label="Primary navigation"
-			data-open={menuOpen}
-		>
-			<ul class="nav-list">
-				{#each navigationLinks as link (link.href)}
-					<li class:service-route={link.service}>
+		<nav class="wide-navigation" aria-label="Primary navigation" data-navigation-mode="wide">
+			<ul class="navigation-list">
+				{#each primaryLinks as link (link.href)}
+					<li>
 						<a
-							class="nav-link"
 							class:current={isCurrent(link.href)}
-							href={link.href}
-							aria-current={isCurrent(link.href) ? 'page' : undefined}
-							on:click={closeMenu}
+							class="navigation-link"
+							href={resolve(link.href, {})}
+							aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a
 						>
-							{link.label}
-						</a>
 					</li>
 				{/each}
 			</ul>
-
-			<a
-				class="community-link"
-				href={clubContent.communityAction.url}
-				target="_blank"
-				rel="noopener noreferrer"
-				on:click={closeMenu}>{clubContent.communityAction.label}</a
-			>
 		</nav>
+
+		<div class="compact-shell" bind:this={compactRoot}>
+			<nav
+				class="compact-navigation"
+				aria-label="Compact navigation"
+				data-navigation-mode="compact"
+			>
+				<ul class="navigation-list">
+					{#each compactLinks as link (link.href)}
+						<li>
+							<a
+								class:current={isCurrent(link.href)}
+								class="navigation-link"
+								href={resolve(link.href, {})}
+								aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a
+							>
+						</li>
+					{/each}
+					<li class="more-item">
+						<button
+							bind:this={moreButton}
+							class:current={moreLinks.some(({ href }) => isCurrent(href))}
+							class="disclosure-button"
+							type="button"
+							aria-expanded={moreOpen}
+							aria-controls="compact-more-menu"
+							on:click={() => (moreOpen = !moreOpen)}
+						>
+							More
+							<svg viewBox="0 0 12 12" aria-hidden="true"><path d="m2.5 4.5 3.5 3 3.5-3" /></svg>
+						</button>
+						<div
+							id="compact-more-menu"
+							class="more-menu"
+							data-open={moreOpen}
+							aria-hidden={moreOpen ? undefined : 'true'}
+						>
+							{#each moreLinks as link (link.href)}
+								{#if link.external}
+									<a
+										class="menu-link"
+										href={link.href}
+										target="_blank"
+										rel="external noopener noreferrer"
+										tabindex={moreOpen ? undefined : -1}
+										on:click={closeDisclosures}>{link.label}</a
+									>
+								{:else}
+									<a
+										class:current={isCurrent(link.href)}
+										class="menu-link"
+										href={resolve(link.href, {})}
+										aria-current={isCurrent(link.href) ? 'page' : undefined}
+										tabindex={moreOpen ? undefined : -1}
+										on:click={closeDisclosures}>{link.label}</a
+									>
+								{/if}
+							{/each}
+						</div>
+					</li>
+				</ul>
+			</nav>
+		</div>
+
+		<div class="mobile-shell" bind:this={mobileRoot}>
+			<button
+				bind:this={mobileButton}
+				class="mobile-toggle"
+				type="button"
+				aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+				aria-expanded={mobileOpen}
+				aria-controls="mobile-navigation"
+				on:click={() => (mobileOpen = !mobileOpen)}
+			>
+				<span aria-hidden="true">{mobileOpen ? 'Close' : 'Menu'}</span>
+				<svg viewBox="0 0 16 16" aria-hidden="true">
+					{#if mobileOpen}<path d="m3 3 10 10M13 3 3 13" />{:else}<path d="M2 5h12M2 11h12" />{/if}
+				</svg>
+			</button>
+
+			<nav
+				id="mobile-navigation"
+				class="mobile-navigation"
+				aria-label="Mobile navigation"
+				data-navigation-mode="mobile"
+				data-open={mobileOpen}
+				aria-hidden={mobileOpen ? undefined : 'true'}
+			>
+				<ul class="mobile-list">
+					{#each mobileLinks as link (`${link.label}-${link.href}`)}
+						<li>
+							{#if link.external}
+								<a
+									class="menu-link"
+									href={link.href}
+									target="_blank"
+									rel="external noopener noreferrer"
+									tabindex={mobileOpen ? undefined : -1}
+									on:click={closeDisclosures}>{link.label}</a
+								>
+							{:else}
+								<a
+									class:current={isCurrent(link.href)}
+									class="menu-link"
+									href={resolve(link.href, {})}
+									aria-current={isCurrent(link.href) ? 'page' : undefined}
+									tabindex={mobileOpen ? undefined : -1}
+									on:click={closeDisclosures}>{link.label}</a
+								>
+							{/if}
+						</li>
+					{/each}
+					<li>
+						<a
+							class="menu-link"
+							href={contactLinks.inquiry.href}
+							tabindex={mobileOpen ? undefined : -1}>{contactLinks.inquiry.label}</a
+						>
+					</li>
+					<li>
+						<a class="menu-link" href={contactLinks.bug.href} tabindex={mobileOpen ? undefined : -1}
+							>{contactLinks.bug.label}</a
+						>
+					</li>
+				</ul>
+			</nav>
+		</div>
+
+		<nav class="header-contact" aria-label="Club contact">
+			<a href={contactLinks.inquiry.href}>{contactLinks.inquiry.label}</a>
+			<a href={contactLinks.bug.href}>{contactLinks.bug.label}</a>
+		</nav>
+
+		<div class="header-socials" aria-label="Club social links">
+			{#each headerSocialLinks as link (link.label)}
+				<a
+					class="social-link"
+					href={link.url}
+					aria-label={link.label}
+					target="_blank"
+					rel="external noopener noreferrer"><SocialIcon name={link.label} /></a
+				>
+			{/each}
+		</div>
+
+		<a
+			class="signup-link"
+			href={clubContent.signupUrl}
+			target="_blank"
+			rel="external noopener noreferrer"
+			on:click={closeDisclosures}>Sign up</a
+		>
 	</div>
 </header>
 
 <style>
 	.site-header {
 		position: relative;
-		z-index: 20;
-		border-bottom: 1px solid rgb(153 194 255 / 26%);
-		background: var(--midnight, #050d2e);
-		color: var(--paper, #f7f4ed);
+		z-index: 30;
+		height: 4.5rem;
+		border-bottom: 1px solid rgb(var(--midnight-rgb) / 20%);
+		background: #fff;
+		color: var(--midnight);
 	}
 
 	.header-frame {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-columns: auto minmax(0, 1fr) auto auto;
 		align-items: center;
 		width: 100%;
-		max-width: calc(
-			var(--layout-width, 78rem) + var(--page-gutter, 2rem) + var(--page-gutter, 2rem)
-		);
+		max-width: 90rem;
+		height: 100%;
 		margin-inline: auto;
-		padding-inline: clamp(1rem, 4vw, var(--page-gutter, 4rem));
+		padding-inline: clamp(1rem, 4.6vw, 3rem);
+		gap: clamp(0.4rem, 1vw, 1rem);
 	}
 
 	.brand {
 		display: inline-flex;
 		align-items: center;
-		width: fit-content;
-		max-width: 100%;
-		min-height: 4.75rem;
-		gap: 0.7rem;
-		color: var(--paper, #f7f4ed);
+		min-width: 0;
+		min-height: 2.75rem;
+		gap: 0.75rem;
+		color: inherit;
 		text-decoration: none;
 	}
 
 	.brand-mark {
-		width: 2rem;
-		height: 2.125rem;
-		flex: 0 0 auto;
+		width: 1.85rem;
+		height: 1.95rem;
 		object-fit: contain;
+		filter: brightness(0) saturate(100%) invert(11%) sepia(28%) saturate(1700%) hue-rotate(180deg)
+			brightness(90%) contrast(100%);
 	}
 
 	.brand-name {
 		display: grid;
-		min-width: 0;
-		font-family: var(--font-display, sans-serif);
-		font-size: 0.9rem;
-		font-weight: 600;
-		letter-spacing: -0.02em;
-		line-height: 1.15;
+		font-family: var(--font-display);
+		font-size: 0.875rem;
+		font-weight: 650;
+		letter-spacing: -0.025em;
+		line-height: 1.05;
 	}
 
-	.brand-campus {
-		color: var(--sky, #99c2ff);
-		font-family: var(--font-mono, monospace);
-		font-size: 0.58rem;
-		font-weight: 600;
-		letter-spacing: 0.13em;
-		line-height: 1.5;
-		text-transform: uppercase;
+	.wide-navigation {
+		justify-self: center;
 	}
 
-	.menu-toggle {
-		display: inline-flex;
+	.navigation-list,
+	.mobile-list {
+		display: flex;
 		align-items: center;
-		justify-content: center;
-		min-width: 5.5rem;
-		min-height: 2.75rem;
-		gap: 0.6rem;
-		padding: 0.55rem 0.75rem;
-		border: 1px solid rgb(153 194 255 / 52%);
-		border-radius: var(--radius-sm, 0.5rem);
-		background: transparent;
-		color: var(--paper, #f7f4ed);
-		cursor: pointer;
-	}
-
-	.menu-toggle:hover {
-		border-color: var(--sky, #99c2ff);
-		background: rgb(153 194 255 / 12%);
-	}
-
-	.menu-label {
-		font-family: var(--font-mono, monospace);
-		font-size: 0.7rem;
-		font-weight: 600;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-	}
-
-	.menu-icon {
-		display: grid;
-		width: 1rem;
-		gap: 0.3rem;
-	}
-
-	.menu-icon span {
-		display: block;
-		width: 100%;
-		height: 1px;
-		background: currentColor;
-		transform-origin: center;
-		transition: transform var(--motion-fast, 140ms) var(--ease-out, ease-out);
-	}
-
-	.menu-icon.open span:first-child {
-		transform: translateY(0.2rem) rotate(45deg);
-	}
-
-	.menu-icon.open span:last-child {
-		transform: translateY(-0.2rem) rotate(-45deg);
-	}
-
-	.primary-nav {
-		grid-column: 1 / -1;
-		padding-block: 0.75rem 1.25rem;
-		border-top: 1px solid rgb(153 194 255 / 18%);
-	}
-
-	.nav-list {
-		display: grid;
-		gap: 0.25rem;
 		margin: 0;
 		padding: 0;
 		list-style: none;
 	}
 
-	.nav-link,
-	.community-link {
-		display: flex;
-		align-items: center;
-		min-height: 3rem;
-		border-radius: var(--radius-xs, 0.25rem);
-		font-weight: 600;
-		text-decoration: none;
-	}
-
-	.nav-link {
+	.navigation-link,
+	.disclosure-button {
 		position: relative;
-		padding: 0.65rem 0.85rem 0.65rem 1.1rem;
-		color: var(--paper, #f7f4ed);
-		font-family: var(--font-mono, monospace);
-		font-size: 0.75rem;
-		letter-spacing: 0.035em;
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.75rem;
+		padding: 0.65rem clamp(0.45rem, 0.75vw, 0.8rem);
+		border: 0;
+		background: transparent;
+		color: inherit;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		line-height: 1;
+		text-decoration: none;
+		white-space: nowrap;
+		cursor: pointer;
 	}
 
-	.nav-link::before {
+	.navigation-link::after,
+	.disclosure-button::after {
 		position: absolute;
-		top: 0.75rem;
-		bottom: 0.75rem;
-		left: 0;
-		width: 2px;
+		right: 0.6rem;
+		bottom: 0.25rem;
+		left: 0.6rem;
+		height: 2px;
 		background: transparent;
 		content: '';
 	}
 
-	.nav-link:hover {
-		background: rgb(153 194 255 / 10%);
-		color: var(--sky, #99c2ff);
+	.navigation-link:hover,
+	.disclosure-button:hover,
+	.navigation-link.current,
+	.disclosure-button.current {
+		color: var(--club-blue);
 	}
 
-	.primary-nav .nav-link:focus-visible {
-		outline: 3px solid var(--color-focus, #df5b48);
-		outline-offset: 3px;
-		box-shadow: none;
+	.navigation-link.current::after,
+	.disclosure-button.current::after {
+		background: currentColor;
 	}
 
-	.nav-link.current {
-		background: rgb(153 194 255 / 14%);
-		color: var(--sky, #99c2ff);
+	.compact-shell,
+	.mobile-shell {
+		display: none;
 	}
 
-	.nav-link.current::before {
-		background: var(--sky, #99c2ff);
+	.more-item,
+	.mobile-shell {
+		position: relative;
 	}
 
-	.service-route {
-		margin-top: 0.55rem;
-		padding-top: 0.55rem;
-		border-top: 1px solid rgb(153 194 255 / 25%);
+	.disclosure-button {
+		gap: 0.3rem;
 	}
 
-	.community-link {
-		justify-content: center;
-		margin-top: 0.85rem;
-		padding: 0.65rem 1rem;
-		border: 1px solid var(--sky, #99c2ff);
-		background: var(--sky, #99c2ff);
-		color: var(--midnight, #050d2e);
+	.disclosure-button svg {
+		width: 0.75rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-linecap: square;
+		stroke-width: 1.4;
+	}
+
+	.more-menu,
+	.mobile-navigation {
+		position: absolute;
+		top: calc(100% + 0.875rem);
+		right: 0;
+		display: grid;
+		min-width: 14rem;
+		border: 1px solid rgb(var(--midnight-rgb) / 24%);
+		background: #fff;
+		box-shadow: 0 1rem 2.5rem rgb(var(--midnight-rgb) / 14%);
+		opacity: 0;
+		pointer-events: none;
+		transform: translateY(-0.35rem);
+		visibility: hidden;
+		transition:
+			opacity var(--motion-fast) var(--ease-out),
+			transform var(--motion-fast) var(--ease-out),
+			visibility 0s linear var(--motion-fast);
+	}
+
+	.more-menu[data-open='true'],
+	.mobile-navigation[data-open='true'] {
+		opacity: 1;
+		pointer-events: auto;
+		transform: none;
+		visibility: visible;
+		transition-delay: 0s;
+	}
+
+	.menu-link {
+		display: flex;
+		align-items: center;
+		min-height: 2.75rem;
+		padding: 0.7rem 1rem;
+		border-bottom: 1px solid rgb(var(--midnight-rgb) / 14%);
+		color: inherit;
 		font-size: 0.875rem;
+		font-weight: 500;
+		text-decoration: none;
 	}
 
-	.community-link:hover {
-		border-color: var(--paper, #f7f4ed);
-		background: var(--paper, #f7f4ed);
-		color: var(--midnight, #050d2e);
+	.menu-link:last-child {
+		border-bottom: 0;
 	}
 
-	@media (max-width: 69.999rem) {
-		.primary-nav {
+	.menu-link:hover,
+	.menu-link.current {
+		background: var(--mist);
+		color: var(--club-blue);
+	}
+
+	.header-contact {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		gap: 0.35rem 0.85rem;
+		max-width: 12.5rem;
+	}
+
+	.header-contact a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.75rem;
+		color: inherit;
+		font-size: 0.75rem;
+		font-weight: 650;
+		text-decoration: none;
+	}
+
+	.header-contact a:hover {
+		color: var(--club-blue);
+	}
+
+	.header-socials {
+		display: flex;
+		align-items: center;
+	}
+
+	.social-link {
+		display: grid;
+		width: 2.75rem;
+		height: 2.75rem;
+		color: inherit;
+		place-items: center;
+	}
+
+	.social-link:hover {
+		color: var(--club-blue);
+	}
+
+	.signup-link {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 2.75rem;
+		padding: 0.7rem 1.05rem;
+		border: 1px solid var(--club-blue);
+		background: var(--club-blue);
+		color: #fff;
+		font-size: 0.8125rem;
+		font-weight: 650;
+		line-height: 1;
+		text-decoration: none;
+		transition:
+			background-color var(--motion-fast) var(--ease-out),
+			border-color var(--motion-fast) var(--ease-out);
+	}
+
+	.signup-link:hover {
+		border-color: var(--midnight);
+		background: var(--midnight);
+	}
+
+	.mobile-toggle {
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.75rem;
+		padding: 0.6rem 0.75rem;
+		border: 0;
+		background: transparent;
+		color: inherit;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		gap: 0.5rem;
+		cursor: pointer;
+	}
+
+	.mobile-toggle svg {
+		width: 1rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-linecap: square;
+		stroke-width: 1.4;
+	}
+
+	@media (min-width: 43.75rem) and (max-width: 63.999rem) {
+		.header-frame {
+			grid-template-columns: auto minmax(0, 1fr) auto auto;
+			padding-inline: 1.25rem;
+			gap: 0.25rem;
+		}
+
+		.wide-navigation {
 			display: none;
 		}
 
-		.primary-nav[data-open='true'] {
+		.compact-shell,
+		.compact-navigation {
 			display: block;
 		}
+
+		.compact-shell {
+			justify-self: center;
+		}
+
+		.header-socials .social-link {
+			width: 2.75rem;
+		}
 	}
 
-	@media (min-width: 70rem) {
+	@media (max-width: 43.749rem) {
+		.site-header {
+			height: 4.25rem;
+		}
+
 		.header-frame {
-			grid-template-columns: auto minmax(0, 1fr);
-			gap: clamp(1.25rem, 2.5vw, 3rem);
-			min-height: 5.25rem;
-		}
-
-		.brand {
-			min-height: 5.25rem;
+			grid-template-columns: minmax(0, 1fr) auto auto;
+			padding-inline: 1rem;
 		}
 
 		.brand-mark {
-			width: 2.125rem;
-			height: 2.25rem;
+			width: 1.7rem;
+			height: 1.8rem;
 		}
 
 		.brand-name {
-			font-size: 0.95rem;
+			font-size: 0.72rem;
 		}
 
-		.menu-toggle {
+		.wide-navigation,
+		.compact-shell,
+		.header-contact,
+		.header-socials {
 			display: none;
 		}
 
-		.primary-nav {
-			display: flex;
-			grid-column: auto;
-			align-items: center;
-			justify-content: flex-end;
-			min-width: 0;
-			padding: 0;
-			border: 0;
+		.mobile-shell {
+			display: block;
+			grid-column: 2;
+			grid-row: 1;
 		}
 
-		.nav-list {
-			display: flex;
-			align-items: center;
-			min-width: 0;
-			gap: 0.1rem;
+		.signup-link {
+			grid-column: 3;
+			grid-row: 1;
+			padding-inline: 0.8rem;
 		}
 
-		.nav-link {
-			min-height: 2.75rem;
-			padding: 0.65rem clamp(0.55rem, 0.8vw, 0.8rem);
-			font-size: clamp(0.68rem, 0.15vw + 0.62rem, 0.75rem);
-			white-space: nowrap;
+		.mobile-navigation {
+			top: calc(100% + 0.7rem);
+			right: -4.9rem;
+			width: min(calc(100vw - 2rem), 22rem);
 		}
 
-		.nav-link::before {
-			top: auto;
-			right: 0.65rem;
-			bottom: 0.2rem;
-			left: 0.65rem;
-			width: auto;
-			height: 2px;
-		}
-
-		.service-route {
-			margin-top: 0;
-			margin-left: 0.5rem;
-			padding-top: 0;
-			padding-left: 0.5rem;
-			border-top: 0;
-			border-left: 1px solid rgb(153 194 255 / 32%);
-		}
-
-		.community-link {
-			min-height: 2.75rem;
-			margin-top: 0;
-			margin-left: clamp(0.65rem, 1.2vw, 1.1rem);
-			padding: 0.6rem clamp(0.75rem, 1vw, 1rem);
-			white-space: nowrap;
+		.mobile-list {
+			display: grid;
 		}
 	}
 
-	@media (max-width: 24rem) {
+	@media (max-width: 23.5rem) {
+		.header-frame {
+			gap: 0.35rem;
+		}
+
 		.brand {
-			gap: 0.5rem;
+			gap: 0.45rem;
 		}
 
 		.brand-mark {
-			width: 1.75rem;
-			height: 1.875rem;
+			width: 1.55rem;
+			height: 1.65rem;
+			flex: 0 0 auto;
 		}
 
 		.brand-name {
-			font-size: 0.82rem;
-			line-height: 1.05;
+			min-width: 0;
+			font-size: 0.625rem;
+			line-height: 1.08;
+			white-space: nowrap;
 		}
 
-		.brand-campus {
+		.mobile-toggle {
+			justify-content: center;
+			width: 2.75rem;
+			padding-inline: 0;
+		}
+
+		.mobile-toggle span {
 			display: none;
+		}
+
+		.signup-link {
+			padding-inline: 0.65rem;
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.menu-icon span {
-			transition: none;
+		.more-menu,
+		.mobile-navigation,
+		.signup-link {
+			transition-duration: 1ms;
 		}
 	}
 
 	@media (forced-colors: active) {
 		.site-header,
-		.primary-nav,
-		.service-route,
-		.menu-toggle,
-		.community-link {
+		.more-menu,
+		.mobile-navigation,
+		.signup-link {
 			border-color: CanvasText;
 		}
 
-		.nav-link.current::before {
-			background: Highlight;
+		.signup-link {
+			background: ButtonFace;
+			color: ButtonText;
 		}
 
-		.primary-nav .nav-link:focus-visible {
-			outline: 3px solid Highlight;
-			outline-offset: 3px;
-			box-shadow: none;
+		.navigation-link.current::after,
+		.disclosure-button.current::after {
+			background: Highlight;
 		}
 	}
 </style>

@@ -1,67 +1,65 @@
-import { cleanup, render, screen } from '@testing-library/svelte';
+import { cleanup, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import TeacherCard from './TeacherCard.svelte';
-import { catalogue, getTeacherBooks } from './catalogue';
+import { catalogue, getTeacherBooks } from '../../test/fixtures/book-catalogue';
 
 const teacher = catalogue.teachers[0];
-const courses = catalogue.courses.filter((course) => course.teacherId === teacher.id);
-const books = getTeacherBooks(teacher.id);
+const course = catalogue.courses.find((candidate) => candidate.id === 'french-101');
+if (!course) {
+	throw new Error('Expected the French 101 course fixture');
+}
+const books = getTeacherBooks(teacher.id).filter((book) => book.courseId === course.id);
 
 const props = {
 	teacher,
-	courses,
+	course,
 	books
 };
 
 afterEach(cleanup);
 
 describe('TeacherCard', () => {
-	it('uses one full-card link whose accessible name identifies the teacher and courses', () => {
+	it('uses one full-card link for one teacher-course pair', () => {
 		const { container } = render(TeacherCard, { props });
-		const link = screen.getByRole('link', {
-			name: /Mme Tremblay[\s\S]*French 101[\s\S]*French 102/i
-		});
+		const link = screen.getByRole('link', { name: 'FRE-101 French 101' });
 
-		expect(link).toHaveAttribute('href', '/books/mme-tremblay');
+		expect(link).toHaveAttribute('href', '/books/mme-tremblay/french-101');
+		expect(link).toHaveAccessibleDescription(
+			'Mme Tremblay Le Petit Prince $18.95 Bescherelle $29.95 2 books, $48.90 total'
+		);
 		expect(container.querySelectorAll('a[href], button, input, select, textarea')).toHaveLength(1);
 		expect(link.querySelector('a[href], button, input, select, textarea')).not.toBeInTheDocument();
 	});
 
-	it('shows every supplied course as visible scanning context', () => {
-		render(TeacherCard, { props });
+	it('shows every assigned book with its individual price', () => {
+		const { container } = render(TeacherCard, { props });
+		const bookList = screen.getByRole('list', { name: 'Books for FRE-101' });
+		const bookItems = within(bookList).getAllByRole('listitem');
 
-		expect(screen.getByRole('heading', { level: 3, name: 'Mme Tremblay' })).toBeInTheDocument();
-		expect(screen.getByText('French 101')).toBeVisible();
-		expect(screen.getByText('French 102')).toBeVisible();
-		expect(screen.getByText('FRE-101')).toBeVisible();
-		expect(screen.getByText('FRE-102')).toBeVisible();
+		expect(screen.getByRole('heading', { level: 2, name: 'FRE-101 French 101' })).toBeVisible();
+		expect(screen.getByText('Mme Tremblay')).toBeVisible();
+		expect(bookItems).toHaveLength(2);
+		expect(bookItems[0]).toHaveTextContent('Le Petit Prince $18.95');
+		expect(bookItems[1]).toHaveTextContent('Bescherelle $29.95');
+		expect(screen.getByText('2 books, $48.90 total')).toBeVisible();
+		expect(container).not.toHaveTextContent('Open course list');
 	});
 
-	it('derives list size, individual-price range, and distinct bookstore count from supplied books', () => {
-		render(TeacherCard, { props: { ...props, books: [books[0], books[2]] } });
-
-		expect(screen.getByText('2 required books')).toBeVisible();
-		expect(screen.getByText('$16.95 to $18.95')).toBeVisible();
-		expect(screen.getByText('2 bookstores')).toBeVisible();
-		expect(screen.queryByText('$29.95')).not.toBeInTheDocument();
-	});
-
-	it('keeps the cover stack decorative and out of the card name', () => {
+	it('keeps the visible cover stack decorative and out of the card name', () => {
 		const { container } = render(TeacherCard, { props });
 		const stack = container.querySelector('.book-cover-stack');
 
 		expect(stack).toHaveAttribute('aria-hidden', 'true');
-		expect(stack).toHaveAttribute('data-count', '3');
+		expect(stack).toHaveAttribute('data-count', '2');
+		expect(stack?.querySelectorAll('[data-size="card"]')).toHaveLength(2);
 		expect(screen.queryByRole('img')).not.toBeInTheDocument();
-		expect(screen.getByRole('link')).not.toHaveAccessibleName(
-			/Le Petit Prince|Bescherelle|Antigone/i
-		);
+		expect(screen.getByRole('link')).toHaveAccessibleName('FRE-101 French 101');
 	});
 
-	it('presents individual book prices without checkout-stage or retailer actions', () => {
+	it('removes decorative labels while keeping the card free of checkout-stage details', () => {
 		const { container } = render(TeacherCard, { props });
 
-		expect(screen.getByText('Individual book prices')).toBeVisible();
+		expect(container).not.toHaveTextContent(/assigned reading|courses|list size|sources/i);
 		expect(container).not.toHaveTextContent(/cart|checkout|pickup|tax|service fee/i);
 		expect(container).not.toHaveTextContent(/Renaud-Bray|Archambault/i);
 	});

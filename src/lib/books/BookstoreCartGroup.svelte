@@ -7,16 +7,17 @@
 	 * @typedef {{
 	 *   id: string,
 	 *   title: string,
-	 *   author: string,
-	 *   format: string,
+	 *   author: string | null,
+	 *   format?: string | null,
 	 *   coverUrl: string | null,
-	 *   coverTheme: string
+	 *   coverTheme?: string
 	 * }} Book
 	 */
 
 	/**
 	 * @typedef {{
 	 *   book: Book,
+	 *   courseId?: string,
 	 *   quantity: number,
 	 *   unitPriceCents: number,
 	 *   amountCents: number
@@ -41,23 +42,26 @@
 		return Number.isSafeInteger(quantity) && quantity >= 1 ? quantity : 1;
 	}
 
-	/** @param {string} bookId @param {number} quantity */
-	function requestQuantityChange(bookId, quantity) {
+	/** @param {string} bookId @param {number} quantity @param {string | undefined} courseId */
+	function requestQuantityChange(bookId, quantity, courseId) {
 		if (quantity < 1) return;
 
-		dispatch('quantitychange', { bookId, quantity });
+		dispatch('quantitychange', {
+			...(courseId === undefined ? {} : { courseId }),
+			bookId,
+			quantity
+		});
 	}
 
-	/** @param {string} bookId */
-	function requestRemove(bookId) {
-		dispatch('remove', { bookId });
+	/** @param {string} bookId @param {string | undefined} courseId */
+	function requestRemove(bookId, courseId) {
+		dispatch('remove', { ...(courseId === undefined ? {} : { courseId }), bookId });
 	}
 </script>
 
 <section class="bookstore-cart-group" aria-labelledby={`bookstore-heading-${bookstore.id}`}>
 	<header class="group-header">
 		<div class="bookstore-identity">
-			<p class="eyebrow">Source bookstore</p>
 			<h2 id={`bookstore-heading-${bookstore.id}`}>{bookstore.name}</h2>
 			<p class="book-count">{bookCountLabel}</p>
 		</div>
@@ -70,15 +74,15 @@
 		</dl>
 	</header>
 
-	<ol class="cart-lines">
-		{#each lines as line (line.book.id)}
+	<ol class="cart-lines" aria-label={`${bookstore.name} books`}>
+		{#each lines as line (`${line.courseId ?? ''}:${line.book.id}`)}
 			{@const quantity = resolvedQuantity(line.quantity)}
 			<li class="cart-line">
 				<div class="line-cover">
 					<BookCover
 						title={line.book.title}
 						src={line.book.coverUrl}
-						theme={line.book.coverTheme}
+						theme={line.book.coverTheme ?? 'sky'}
 						size="compact"
 					/>
 				</div>
@@ -88,7 +92,7 @@
 						<h3>{line.book.title}</h3>
 						<p class="byline">
 							<span>{line.book.author}</span>
-							<span>{line.book.format}</span>
+							{#if line.book.format}<span>{line.book.format}</span>{/if}
 						</p>
 					</header>
 
@@ -114,13 +118,15 @@
 							type="button"
 							aria-label={`Decrease quantity for ${line.book.title}`}
 							disabled={quantity <= 1}
-							on:click={() => requestQuantityChange(line.book.id, quantity - 1)}>−</button
+							on:click={() => requestQuantityChange(line.book.id, quantity - 1, line.courseId)}
+							>−</button
 						>
 						<output aria-label={`Quantity for ${line.book.title}`}>{quantity}</output>
 						<button
 							type="button"
 							aria-label={`Increase quantity for ${line.book.title}`}
-							on:click={() => requestQuantityChange(line.book.id, quantity + 1)}>+</button
+							on:click={() => requestQuantityChange(line.book.id, quantity + 1, line.courseId)}
+							>+</button
 						>
 					</div>
 
@@ -128,7 +134,7 @@
 						class="remove-button"
 						type="button"
 						aria-label={`Remove ${line.book.title}`}
-						on:click={() => requestRemove(line.book.id)}>Remove</button
+						on:click={() => requestRemove(line.book.id, line.courseId)}>Remove</button
 					>
 				</div>
 			</li>
@@ -139,21 +145,19 @@
 <style>
 	.bookstore-cart-group {
 		min-width: 0;
-		border: 1px solid rgb(5 13 46 / 24%);
-		border-radius: var(--radius-md);
-		background: var(--paper);
-		box-shadow: var(--shadow-sm);
+		border-block-start: 0.25rem solid var(--midnight);
+		border-block-end: 1px solid rgb(var(--midnight-rgb) / 32%);
+		background: transparent;
 		color: var(--graphite);
-		overflow: hidden;
 	}
 
 	.group-header {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(11rem, auto);
+		grid-template-columns: minmax(0, 1fr) minmax(13rem, auto);
 		align-items: end;
-		padding: var(--space-md);
-		border-block-end: 1px solid rgb(5 13 46 / 22%);
-		background: var(--sky);
+		padding: var(--space-sm) var(--space-xs);
+		border-block-end: 1px solid rgb(var(--midnight-rgb) / 28%);
+		background: transparent;
 		gap: var(--space-md);
 	}
 
@@ -163,7 +167,6 @@
 		gap: 0.25rem;
 	}
 
-	.eyebrow,
 	.book-count,
 	h2,
 	h3,
@@ -174,13 +177,12 @@
 		margin: 0;
 	}
 
-	.eyebrow,
 	dt {
 		color: var(--club-blue);
-		font-family: var(--font-mono);
-		font-size: 0.625rem;
+		font-family: var(--font-body);
+		font-size: 0.6875rem;
 		font-weight: 600;
-		letter-spacing: 0.08em;
+		letter-spacing: 0.1em;
 		line-height: 1.35;
 		text-transform: uppercase;
 	}
@@ -192,13 +194,13 @@
 	}
 
 	h2 {
-		font-size: clamp(1.35rem, 3vw, 1.8rem);
-		letter-spacing: -0.045em;
-		line-height: 1.08;
+		font-size: clamp(1.35rem, 2.4vw, 1.65rem);
+		letter-spacing: -0.035em;
+		line-height: 1.12;
 	}
 
 	.book-count {
-		color: rgb(5 13 46 / 72%);
+		color: rgb(var(--midnight-rgb) / 72%);
 		font-size: var(--text-sm);
 		font-weight: 600;
 		line-height: 1.35;
@@ -206,8 +208,8 @@
 
 	.fee-line {
 		min-width: 0;
-		padding: var(--space-xs) 0 var(--space-xs) var(--space-md);
-		border-inline-start: 1px solid rgb(5 13 46 / 28%);
+		padding: var(--space-2xs) 0 var(--space-2xs) var(--space-sm);
+		border-inline-start: 1px solid rgb(var(--midnight-rgb) / 22%);
 	}
 
 	.fee-line div {
@@ -244,11 +246,11 @@
 
 	.cart-line {
 		display: grid;
-		grid-template-columns: auto minmax(0, 1fr) minmax(12.5rem, auto);
+		grid-template-columns: auto minmax(0, 1fr) minmax(11.75rem, auto);
 		align-items: center;
 		min-width: 0;
-		padding: var(--space-md);
-		border-block-end: 1px solid rgb(5 13 46 / 16%);
+		padding: var(--space-md) var(--space-xs);
+		border-block-end: 1px solid rgb(var(--midnight-rgb) / 16%);
 		gap: var(--space-md);
 	}
 
@@ -259,12 +261,8 @@
 	.line-cover {
 		display: grid;
 		place-items: center;
-		align-self: stretch;
-		min-width: 4.5rem;
-		padding: var(--space-xs);
-		border: 1px solid rgb(5 13 46 / 18%);
-		border-radius: var(--radius-xs);
-		background: var(--sky);
+		align-self: start;
+		min-width: 4rem;
 	}
 
 	.line-details,
@@ -274,7 +272,7 @@
 	}
 
 	.line-details {
-		gap: var(--space-sm);
+		gap: var(--space-xs);
 	}
 
 	.line-details header {
@@ -282,15 +280,15 @@
 	}
 
 	h3 {
-		font-size: clamp(1.1rem, 2vw, 1.3rem);
+		font-size: clamp(1.05rem, 1.8vw, 1.2rem);
 		letter-spacing: -0.035em;
-		line-height: 1.15;
+		line-height: 1.2;
 	}
 
 	.byline {
 		display: flex;
 		flex-wrap: wrap;
-		color: rgb(24 27 37 / 76%);
+		color: rgb(var(--graphite-rgb) / 76%);
 		font-size: var(--text-sm);
 		line-height: 1.4;
 		gap: 0.25rem var(--space-sm);
@@ -299,9 +297,7 @@
 	.line-prices {
 		display: flex;
 		min-width: 0;
-		border-block-start: 1px solid rgb(5 13 46 / 16%);
-		padding-block-start: var(--space-xs);
-		gap: var(--space-lg);
+		gap: var(--space-md);
 	}
 
 	.line-prices div {
@@ -311,11 +307,11 @@
 
 	.line-actions {
 		display: grid;
-		grid-template-columns: minmax(8.25rem, 1fr) auto;
+		grid-template-columns: minmax(8.5rem, 1fr) auto;
 		align-items: center;
-		min-width: 12.5rem;
-		padding-inline-start: var(--space-md);
-		border-inline-start: 1px solid rgb(5 13 46 / 18%);
+		min-width: 11.75rem;
+		padding-inline-start: var(--space-sm);
+		border-inline-start: 1px solid rgb(var(--midnight-rgb) / 18%);
 		gap: var(--space-xs);
 	}
 
@@ -323,10 +319,10 @@
 		display: grid;
 		grid-template-columns: 2.75rem minmax(2.75rem, 1fr) 2.75rem;
 		min-width: 0;
-		border: 1px solid rgb(5 13 46 / 30%);
+		border: 1px solid rgb(var(--midnight-rgb) / 30%);
 		border-radius: var(--radius-xs);
 		overflow: hidden;
-		background: var(--paper);
+		background: var(--surface-raised);
 	}
 
 	.quantity-control button,
@@ -352,11 +348,11 @@
 
 	.quantity-control button:first-child,
 	.quantity-control output {
-		border-inline-end: 1px solid rgb(5 13 46 / 20%);
+		border-inline-end: 1px solid rgb(var(--midnight-rgb) / 20%);
 	}
 
 	.quantity-control button:disabled {
-		color: rgb(24 27 37 / 35%);
+		color: rgb(var(--graphite-rgb) / 35%);
 		cursor: not-allowed;
 	}
 
@@ -364,10 +360,10 @@
 		min-width: 2.75rem;
 		min-height: 2.75rem;
 		padding: 0.45rem 0.65rem;
-		border: 1px solid rgb(5 13 46 / 30%);
+		border: 1px solid rgb(var(--danger-rgb) / 54%);
 		border-radius: var(--radius-xs);
-		background: transparent;
-		color: var(--club-blue);
+		background: rgb(var(--danger-rgb) / 4%);
+		color: var(--danger);
 		font: inherit;
 		font-size: var(--text-sm);
 		font-weight: 700;
@@ -385,13 +381,13 @@
 	}
 
 	@media (hover: hover) and (pointer: fine) {
-		.quantity-control button:not(:disabled):hover,
-		.remove-button:hover {
-			background: var(--sky);
+		.quantity-control button:not(:disabled):hover {
+			background: rgb(var(--sky-rgb) / 44%);
 		}
 
 		.remove-button:hover {
-			color: var(--midnight);
+			background: var(--danger);
+			color: var(--paper);
 		}
 	}
 
@@ -399,12 +395,12 @@
 		.group-header {
 			grid-template-columns: 1fr;
 			align-items: start;
-			gap: var(--space-sm);
+			gap: var(--space-xs);
 		}
 
 		.fee-line {
 			padding: var(--space-sm) 0 0;
-			border-block-start: 1px solid rgb(5 13 46 / 24%);
+			border-block-start: 1px solid rgb(var(--midnight-rgb) / 24%);
 			border-inline-start: 0;
 		}
 
@@ -423,7 +419,7 @@
 		.cart-line {
 			grid-template-columns: auto minmax(0, 1fr);
 			align-items: start;
-			padding: var(--space-sm);
+			padding: var(--space-sm) var(--space-xs);
 			gap: var(--space-sm);
 		}
 
@@ -443,7 +439,7 @@
 			grid-template-columns: minmax(0, 1fr) auto;
 			min-width: 0;
 			padding: var(--space-sm) 0 0;
-			border-block-start: 1px solid rgb(5 13 46 / 18%);
+			border-block-start: 1px solid rgb(var(--midnight-rgb) / 18%);
 			border-inline-start: 0;
 		}
 	}
@@ -479,7 +475,6 @@
 		.group-header,
 		.fee-line,
 		.cart-line,
-		.line-cover,
 		.line-prices,
 		.line-actions,
 		.quantity-control,
@@ -490,7 +485,6 @@
 		}
 
 		.group-header,
-		.line-cover,
 		.quantity-control,
 		.remove-button {
 			background: Canvas;

@@ -20,7 +20,26 @@ async function expectNoHorizontalOverflow(page) {
 test.describe('Book Delivery cart boundary', () => {
 	test.use({ viewport: { width: 1440, height: 900 } });
 
-	test('keeps cart navigation inside Book Delivery and starts with a teacher-first catalogue', async ({
+	test('opens one teacher-course card into a checklist containing only that course', async ({
+		page
+	}) => {
+		await page.goto('/books');
+
+		const french101Card = page.getByRole('link', {
+			name: 'FRE-101 French 101'
+		});
+		await expect(french101Card).toHaveAttribute('href', '/books/mme-tremblay/french-101');
+		await french101Card.click();
+
+		await expect(page).toHaveURL('/books/mme-tremblay/french-101');
+		await expect(page.getByRole('heading', { level: 1, name: /FRE-101 French 101/ })).toBeVisible();
+		await expect(page.getByRole('checkbox', { name: 'Select Le Petit Prince' })).toBeChecked();
+		await expect(page.getByRole('checkbox', { name: 'Select Bescherelle' })).toBeChecked();
+		await expect(page.getByRole('checkbox', { name: 'Select Antigone' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'Add 2 books to cart' })).toBeEnabled();
+	});
+
+	test('keeps cart navigation inside Book Delivery and starts with a course catalogue', async ({
 		page
 	}) => {
 		await page.goto('/');
@@ -30,9 +49,7 @@ test.describe('Book Delivery cart boundary', () => {
 		await expectNoCartControls(page);
 
 		await page.goto('/books');
-		await expect(
-			page.getByRole('heading', { level: 1, name: 'Start with your teacher' })
-		).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1, name: 'Choose your course' })).toBeVisible();
 
 		const bookDeliveryNavigation = page.getByRole('navigation', {
 			name: 'Book Delivery navigation'
@@ -46,7 +63,14 @@ test.describe('Book Delivery cart boundary', () => {
 		await expectNoHorizontalOverflow(page);
 	});
 
-	test('keeps the server-rendered teacher checklist inert without JavaScript', async ({
+	test('recovers a legacy teacher-only route at the course catalogue', async ({ page }) => {
+		await page.goto('/books/mme-tremblay');
+
+		await expect(page).toHaveURL('/books');
+		await expect(page.getByRole('heading', { level: 1, name: 'Choose your course' })).toBeVisible();
+	});
+
+	test('keeps the server-rendered course checklist inert without JavaScript', async ({
 		browser,
 		baseURL
 	}) => {
@@ -54,64 +78,60 @@ test.describe('Book Delivery cart boundary', () => {
 
 		try {
 			const page = await context.newPage();
-			await page.goto(`${baseURL}/books/mme-tremblay`);
+			await page.goto(`${baseURL}/books/mme-tremblay/french-101`);
 
-			await expect(page.getByRole('region', { name: 'Course book checklist' })).toHaveAttribute(
+			await expect(page.getByRole('region', { name: 'Books for this course' })).toHaveAttribute(
 				'aria-busy',
 				'true'
 			);
 
-			const antigone = page.getByRole('checkbox', { name: 'Select Antigone' });
-			await expect(antigone).toBeChecked();
-			await expect(antigone).toBeDisabled();
+			const petitPrince = page.getByRole('checkbox', { name: 'Select Le Petit Prince' });
+			await expect(petitPrince).toBeChecked();
+			await expect(petitPrince).toBeDisabled();
 			await expect(
-				page.getByRole('button', { name: 'Increase quantity for Antigone' })
+				page.getByRole('button', { name: 'Increase quantity for Le Petit Prince' })
 			).toBeDisabled();
-			await expect(page.getByRole('button', { name: 'Add 3 books to cart' })).toBeDisabled();
+			await expect(page.getByRole('button', { name: 'Add 2 books to cart' })).toBeDisabled();
 
-			const checkedBeforeSpace = await antigone.evaluate((checkbox) => checkbox.checked);
-			await antigone.press('Space');
-			expect(await antigone.evaluate((checkbox) => checkbox.checked)).toBe(checkedBeforeSpace);
+			const checkedBeforeSpace = await petitPrince.evaluate((checkbox) => checkbox.checked);
+			await petitPrince.press('Space');
+			expect(await petitPrince.evaluate((checkbox) => checkbox.checked)).toBe(checkedBeforeSpace);
 		} finally {
 			await context.close();
 		}
 	});
 
-	test('adds only the still-selected books from a fresh teacher list by keyboard', async ({
+	test('adds only the still-selected books from a fresh course list by keyboard', async ({
 		page
 	}) => {
-		await page.goto('/books/mme-tremblay');
-		await expect(
-			page.getByRole('heading', { level: 1, name: 'Books for Mme Tremblay' })
-		).toBeVisible();
+		await page.goto('/books/mme-tremblay/french-101');
+		await expect(page.getByRole('heading', { level: 1, name: 'FRE-101 French 101' })).toBeVisible();
 		await expectNoHorizontalOverflow(page);
-		await expect(page.getByRole('region', { name: 'Course book checklist' })).toHaveAttribute(
+		await expect(page.getByRole('region', { name: 'Books for this course' })).toHaveAttribute(
 			'aria-busy',
 			'false'
 		);
 
-		const antigone = page.getByRole('checkbox', { name: 'Select Antigone' });
-		await expect(antigone).toBeChecked();
-		await antigone.focus();
-		await expect(antigone).toBeFocused();
+		const bescherelle = page.getByRole('checkbox', { name: 'Select Bescherelle' });
+		await expect(bescherelle).toBeChecked();
+		await bescherelle.focus();
+		await expect(bescherelle).toBeFocused();
 		await page.keyboard.press('Space');
-		await expect(antigone).not.toBeChecked();
-		await expect(page.getByText('2 titles selected', { exact: true })).toBeVisible();
+		await expect(bescherelle).not.toBeChecked();
+		await expect(page.getByText('1 title selected', { exact: true })).toBeVisible();
 
-		await page.getByRole('button', { name: 'Add 2 books to cart' }).click();
+		await page.getByRole('button', { name: 'Add 1 book to cart' }).click();
 
 		const cartLink = page
 			.getByRole('navigation', { name: 'Book Delivery navigation' })
-			.getByRole('link', { name: 'Cart, 2 items' });
+			.getByRole('link', { name: 'Cart, 1 item' });
 		await expect(cartLink).toBeVisible();
 		await cartLink.click();
 
 		await expect(page).toHaveURL('/books/cart');
-		await expect(
-			page.getByRole('heading', { level: 1, name: 'Your book delivery cart' })
-		).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1, name: 'Your cart' })).toBeVisible();
 		await expect(page.getByRole('heading', { level: 3, name: 'Le Petit Prince' })).toBeVisible();
-		await expect(page.getByRole('heading', { level: 3, name: 'Bescherelle' })).toBeVisible();
+		await expect(page.getByText('Bescherelle', { exact: true })).toHaveCount(0);
 		await expect(page.getByText('Antigone', { exact: true })).toHaveCount(0);
 		await expectNoHorizontalOverflow(page);
 	});
@@ -120,13 +140,11 @@ test.describe('Book Delivery cart boundary', () => {
 test.describe('Book Delivery at a narrow width', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 
-	test('keeps the catalogue, teacher list, and populated cart within the viewport', async ({
+	test('keeps the catalogue, course list, and populated cart within the viewport', async ({
 		page
 	}) => {
 		await page.goto('/books');
-		await expect(
-			page.getByRole('heading', { level: 1, name: 'Start with your teacher' })
-		).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1, name: 'Choose your course' })).toBeVisible();
 		await expect(
 			page
 				.getByRole('navigation', { name: 'Book Delivery navigation' })
@@ -134,24 +152,18 @@ test.describe('Book Delivery at a narrow width', () => {
 		).toBeVisible();
 		await expectNoHorizontalOverflow(page);
 
-		await page
-			.getByRole('link', { name: /Mme Tremblay[\s\S]*French 101[\s\S]*French 102/i })
-			.click();
-		await expect(
-			page.getByRole('heading', { level: 1, name: 'Books for Mme Tremblay' })
-		).toBeVisible();
+		await page.getByRole('link', { name: 'FRE-101 French 101' }).click();
+		await expect(page.getByRole('heading', { level: 1, name: 'FRE-101 French 101' })).toBeVisible();
 		await expectNoHorizontalOverflow(page);
 
-		await page.getByRole('button', { name: 'Add 3 books to cart' }).click();
+		await page.getByRole('button', { name: 'Add 2 books to cart' }).click();
 		await page
 			.getByRole('navigation', { name: 'Book Delivery navigation' })
-			.getByRole('link', { name: 'Cart, 3 items' })
+			.getByRole('link', { name: 'Cart, 2 items' })
 			.click();
 
 		await expect(page).toHaveURL('/books/cart');
-		await expect(
-			page.getByRole('heading', { level: 1, name: 'Your book delivery cart' })
-		).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1, name: 'Your cart' })).toBeVisible();
 		await expect(page.getByRole('region', { name: 'Renaud-Bray' })).toBeVisible();
 		await expect(page.getByRole('complementary', { name: 'Order summary' })).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Continue to order review' })).toBeVisible();

@@ -1,196 +1,167 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { _createOrderConfirmationLoader, load, prerender } from './+page.server.js';
 
-vi.mock('$lib/server/books/stripe', () => ({
-	createStripeClient: vi.fn(),
-	retrieveStripeCheckoutSession: vi.fn()
-}));
+const REFERENCE = 'MPC-ABCDEFGHJK23';
+const CAPABILITY = Buffer.alloc(32, 7).toString('base64url');
+const COOKIE_NAME = `__Secure-mpc_book_confirmation_${REFERENCE}`;
+const NOW = new Date('2026-08-13T18:00:00.000Z');
+const persistedConfirmation = Object.freeze({
+	state: 'paid',
+	orderReference: REFERENCE,
+	receiptEmail: 'a***@example.com',
+	currency: 'cad',
+	fulfillmentStatus: 'unstarted',
+	bookSubtotalCents: 1800,
+	serviceFeeCents: 500,
+	taxCents: 345,
+	totalCents: 2645,
+	refundedAmountCents: 0,
+	books: [],
+	fees: [],
+	browserCleanup: null
+});
 
-import { createStripeClient, retrieveStripeCheckoutSession } from '$lib/server/books/stripe';
-import { load, prerender } from './+page.server.js';
-
-const SESSION_ID = 'cs_test_order_confirmation_123';
-const stripeClient = /** @type {ReturnType<typeof createStripeClient>} */ (
-	/** @type {unknown} */ ({
-		checkout: {
-			sessions: {
-				create: vi.fn(),
-				retrieve: vi.fn()
-			}
-		}
-	})
-);
-const mockCreateStripeClient = vi.mocked(createStripeClient);
-const mockRetrieveStripeCheckoutSession = vi.mocked(retrieveStripeCheckoutSession);
-
-/** @param {string | undefined} [sessionId] */
-function confirmationEvent(sessionId) {
-	const url = new URL('https://club.example/books/order-confirmation');
-	if (sessionId !== undefined) {
-		url.searchParams.set('session_id', sessionId);
-	}
-
-	return { url };
+/** @param {{ reference?: string, capability?: string, url?: string }} [options] */
+function event(options = {}) {
+	const reference = Object.prototype.hasOwnProperty.call(options, 'reference')
+		? options.reference
+		: REFERENCE;
+	const capability = Object.prototype.hasOwnProperty.call(options, 'capability')
+		? options.capability
+		: CAPABILITY;
+	const url = options.url;
+	const headers = vi.fn();
+	return {
+		params: reference === undefined ? {} : { orderReference: reference },
+		cookies: { get: vi.fn((name) => (name === COOKIE_NAME ? capability : undefined)) },
+		parent: vi.fn().mockResolvedValue({ launchState: 'live' }),
+		setHeaders: headers,
+		url: new URL(url ?? `https://club.example/books/order-confirmation/${REFERENCE}`),
+		headers
+	};
 }
 
-function paidSession(overrides = {}) {
+function dependencies(overrides = {}) {
+	const transaction = { execute: vi.fn() };
 	return {
-		id: SESSION_ID,
-		status: 'complete',
-		payment_status: 'paid',
-		customer_email: 'maya.chen@marianopolis.edu',
-		customer_details: { email: 'maya.chen@marianopolis.edu' },
-		line_items: {
-			object: 'list',
-			data: [
-				{
-					id: 'li_book_123',
-					description: 'Le Petit Prince',
-					quantity: 2,
-					amount_subtotal: 3790,
-					amount_total: 3790,
-					currency: 'cad',
-					price: { id: 'price_book_123', unit_amount: 1895 }
-				},
-				{
-					id: 'li_fee_123',
-					description: 'Renaud-Bray pickup service',
-					quantity: 1,
-					amount_subtotal: 500,
-					amount_total: 500,
-					currency: 'cad',
-					price: { id: 'price_fee_123', unit_amount: 500 }
-				}
-			]
-		},
-		metadata: { internal_note: 'must not reach the browser' },
-		payment_intent: { id: 'pi_sensitive_123' },
+		readEnvironment: vi.fn(() => ({ databaseUrl: 'postgresql://runtime' })),
+		runTransaction: vi.fn((operation) => operation(transaction)),
+		loadConfirmation: vi.fn().mockResolvedValue(persistedConfirmation),
+		getNow: vi.fn(() => NOW),
 		...overrides
 	};
 }
 
-beforeEach(() => {
-	mockCreateStripeClient.mockReset();
-	mockRetrieveStripeCheckoutSession.mockReset();
-	mockCreateStripeClient.mockReturnValue(stripeClient);
-});
-
 describe('order confirmation server load', () => {
 	it('is never prerendered', () => {
 		expect(prerender).toBe(false);
+		expect(typeof load).toBe('function');
 	});
 
-	it('returns a minimal paid display model only after a verified complete paid session', async () => {
-		mockRetrieveStripeCheckoutSession.mockResolvedValue(paidSession());
+	it('awaits the launch boundary before reading a cookie, configuration, or database', async () => {
+		const blocked = event();
+		blocked.parent.mockRejectedValue(Object.assign(new Error('redirect'), { status: 303 }));
+		const deps = dependencies();
+		const loader = _createOrderConfirmationLoader(deps);
 
-		const result = await load(confirmationEvent(SESSION_ID));
+		await expect(loader(blocked)).rejects.toMatchObject({ status: 303 });
+		expect(blocked.cookies.get).not.toHaveBeenCalled();
+		expect(deps.readEnvironment).not.toHaveBeenCalled();
+		expect(deps.runTransaction).not.toHaveBeenCalled();
+	});
 
-		expect(result).toEqual({
-			confirmation: {
-				status: 'paid',
-				orderReference: SESSION_ID,
-				receiptEmail: 'maya.chen@marianopolis.edu',
-				lineItems: [
-					{ title: 'Le Petit Prince', quantity: 2 },
-					{ title: 'Renaud-Bray pickup service', quantity: 1 }
-				]
-			}
+	it('returns only the capability-authorized persisted receipt', async () => {
+		const request = event({
+			url: `https://club.example/books/order-confirmation/${REFERENCE}?session_id=cs_test_ignored`
 		});
-		expect(mockRetrieveStripeCheckoutSession).toHaveBeenCalledWith(stripeClient, SESSION_ID);
+		const deps = dependencies();
+		const loader = _createOrderConfirmationLoader(deps);
+
+		await expect(loader(request)).resolves.toEqual({ confirmation: persistedConfirmation });
+		expect(request.cookies.get).toHaveBeenCalledWith(COOKIE_NAME);
+		expect(deps.loadConfirmation).toHaveBeenCalledWith(expect.anything(), {
+			publicReference: REFERENCE,
+			capability: CAPABILITY,
+			now: NOW
+		});
+		expect(deps.runTransaction).toHaveBeenCalledWith(expect.any(Function), {
+			databaseUrl: 'postgresql://runtime'
+		});
+		expect(JSON.stringify(deps.loadConfirmation.mock.calls)).not.toContain('cs_test_ignored');
 	});
 
 	it.each([
-		['a missing session ID', undefined, 'missing'],
-		['a malformed session ID', 'not-a-checkout-session', 'invalid'],
-		['an oversized session ID', `cs_${'a'.repeat(254)}`, 'invalid']
+		['a missing route reference', { reference: undefined }],
+		['a malformed route reference', { reference: 'MPC-invalid' }],
+		['a missing capability cookie', { capability: undefined }],
+		['a malformed capability cookie', { capability: 'not-a-capability' }]
 	])(
-		'returns a safe recovery model for %s without calling Stripe',
-		async (_case, sessionId, reason) => {
-			const result = await load(confirmationEvent(sessionId));
+		'returns one generic recovery model for %s before database access',
+		async (_label, options) => {
+			const request = event(options);
+			const deps = dependencies();
+			const loader = _createOrderConfirmationLoader(deps);
 
-			expect(result).toEqual({
-				confirmation: { status: 'recovery', reason, returnPath: '/books/cart' }
+			await expect(loader(request)).resolves.toEqual({
+				confirmation: { status: 'unavailable', returnPath: '/books/cart' }
 			});
-			expect(mockCreateStripeClient).not.toHaveBeenCalled();
-			expect(mockRetrieveStripeCheckoutSession).not.toHaveBeenCalled();
+			expect(deps.readEnvironment).not.toHaveBeenCalled();
+			expect(deps.runTransaction).not.toHaveBeenCalled();
 		}
 	);
 
-	it('keeps an unpaid session in recovery even when the session is otherwise complete', async () => {
-		mockRetrieveStripeCheckoutSession.mockResolvedValue(
-			paidSession({ payment_status: 'unpaid', status: 'complete' })
-		);
-
-		const result = await load(confirmationEvent(SESSION_ID));
-
-		expect(result).toEqual({
-			confirmation: { status: 'recovery', reason: 'unpaid', returnPath: '/books/cart' }
+	it('uses generic recovery when cookie access fails', async () => {
+		const request = event();
+		request.cookies.get.mockImplementation(() => {
+			throw new Error('cookie unavailable');
 		});
-	});
+		const deps = dependencies();
+		const loader = _createOrderConfirmationLoader(deps);
 
-	it('keeps an expired Checkout Session in a distinct non-success recovery state', async () => {
-		mockRetrieveStripeCheckoutSession.mockResolvedValue(
-			paidSession({ payment_status: 'paid', status: 'expired' })
-		);
-
-		const result = await load(confirmationEvent(SESSION_ID));
-
-		expect(result).toEqual({
-			confirmation: { status: 'recovery', reason: 'expired', returnPath: '/books/cart' }
+		await expect(loader(request)).resolves.toEqual({
+			confirmation: { status: 'unavailable', returnPath: '/books/cart' }
 		});
+		expect(deps.runTransaction).not.toHaveBeenCalled();
 	});
 
 	it.each([
-		['an open session reported as paid', { status: 'open', payment_status: 'paid' }],
-		['an unknown session status reported as paid', { status: 'unknown', payment_status: 'paid' }]
-	])('keeps %s in non-success recovery', async (_case, sessionOverrides) => {
-		mockRetrieveStripeCheckoutSession.mockResolvedValue(paidSession(sessionOverrides));
-
-		const result = await load(confirmationEvent(SESSION_ID));
-
-		expect(result).toEqual({
-			confirmation: { status: 'recovery', reason: 'unpaid', returnPath: '/books/cart' }
+		['a cross-order or unknown capability', null],
+		['database unavailability', new Error('sensitive database detail')],
+		['a malformed repository result', { state: 'invented' }]
+	])('uses the same generic recovery model for %s', async (_label, result) => {
+		const request = event();
+		const loadConfirmation = vi.fn(async () => {
+			if (result instanceof Error) throw result;
+			return result;
 		});
+		const loader = _createOrderConfirmationLoader(dependencies({ loadConfirmation }));
+
+		const response = await loader(request);
+
+		expect(response).toEqual({
+			confirmation: { status: 'unavailable', returnPath: '/books/cart' }
+		});
+		expect(JSON.stringify(response)).not.toContain('sensitive database detail');
 	});
 
-	it('keeps a paid session with a missing session status in non-success recovery', async () => {
-		const session = paidSession({ payment_status: 'paid' });
-		Reflect.deleteProperty(session, 'status');
-		mockRetrieveStripeCheckoutSession.mockResolvedValue(session);
+	it('sets private no-cache, no-store, noindex, and no-referrer policy for every rendered state', async () => {
+		for (const loadConfirmation of [
+			vi.fn().mockResolvedValue(persistedConfirmation),
+			vi.fn().mockResolvedValue(null),
+			vi.fn().mockRejectedValue(new Error('unavailable'))
+		]) {
+			const request = event();
+			const loader = _createOrderConfirmationLoader(dependencies({ loadConfirmation }));
 
-		const result = await load(confirmationEvent(SESSION_ID));
+			await loader(request);
 
-		expect(result).toEqual({
-			confirmation: { status: 'recovery', reason: 'unpaid', returnPath: '/books/cart' }
-		});
-	});
-
-	it('maps unavailable and provider-error sessions to a non-success response', async () => {
-		for (const providerResult of [null, new Error('provider detail must stay private')]) {
-			mockRetrieveStripeCheckoutSession.mockReset();
-			mockRetrieveStripeCheckoutSession.mockImplementation(async () => {
-				if (providerResult instanceof Error) throw providerResult;
-				return providerResult;
+			expect(request.headers).toHaveBeenCalledWith({
+				'cache-control': 'private, no-cache, no-store, max-age=0, must-revalidate',
+				expires: '0',
+				pragma: 'no-cache',
+				'referrer-policy': 'no-referrer',
+				'x-robots-tag': 'noindex, nofollow'
 			});
-
-			const result = await load(confirmationEvent(SESSION_ID));
-			const serialized = JSON.stringify(result);
-
-			expect(result).toEqual({
-				confirmation: { status: 'recovery', reason: 'unavailable', returnPath: '/books/cart' }
-			});
-			expect(serialized).not.toContain('provider detail');
 		}
-	});
-
-	it('does not accept a paid response whose session identity differs from the requested ID', async () => {
-		mockRetrieveStripeCheckoutSession.mockResolvedValue(
-			paidSession({ id: 'cs_test_different_session_456' })
-		);
-
-		const result = await load(confirmationEvent(SESSION_ID));
-
-		expect(result).toEqual({
-			confirmation: { status: 'recovery', reason: 'unavailable', returnPath: '/books/cart' }
-		});
 	});
 });

@@ -6,15 +6,15 @@
 	/**
 	 * @typedef {{
 	 *   id: string,
-	 *   courseId: string,
+	 *   courseId?: string,
 	 *   title: string,
-	 *   author: string,
-	 *   format: string,
+	 *   author: string | null,
+	 *   format?: string | null,
 	 *   priceCents: number,
-	 *   bookstoreId: string,
+	 *   bookstoreId?: string,
 	 *   storefrontUrl: string | null,
 	 *   coverUrl: string | null,
-	 *   coverTheme: string
+	 *   coverTheme?: string
 	 * }} Book
 	 */
 
@@ -40,6 +40,7 @@
 		typeof book.storefrontUrl === 'string' && book.storefrontUrl.trim()
 			? book.storefrontUrl.trim()
 			: null;
+	$: headingId = `book-${book.id}-title`;
 
 	/** @param {Event} event */
 	function requestSelectionChange(event) {
@@ -62,22 +63,29 @@
 	}
 </script>
 
-<article class:book-row--unselected={!selected} class="book-row">
+<article class:book-row--unselected={!selected} class="book-row" aria-labelledby={headingId}>
 	<div class="book-row__cover">
-		<BookCover title={book.title} src={book.coverUrl} theme={book.coverTheme} size="compact" />
+		<BookCover
+			title={book.title}
+			src={book.coverUrl}
+			theme={book.coverTheme ?? 'sky'}
+			size="compact"
+		/>
 	</div>
 
 	<div class="book-row__details">
 		<header>
-			<h3>{book.title}</h3>
+			<h3 id={headingId}>{book.title}</h3>
 			<p class="book-row__author">{book.author}</p>
 		</header>
 
 		<dl class="book-row__facts">
-			<div>
-				<dt>Format</dt>
-				<dd>{book.format}</dd>
-			</div>
+			{#if book.format}
+				<div>
+					<dt>Format</dt>
+					<dd>{book.format}</dd>
+				</div>
+			{/if}
 			<div>
 				<dt>Bookstore</dt>
 				<dd>{bookstoreName}</dd>
@@ -124,7 +132,7 @@
 				class="storefront-link"
 				href={storefrontUrl}
 				target="_blank"
-				rel="noreferrer"
+				rel="external noreferrer"
 				aria-label={`View at ${bookstoreName}, opens in a new tab`}
 			>
 				View at {bookstoreName}
@@ -139,36 +147,26 @@
 <style>
 	.book-row {
 		display: grid;
-		grid-template-columns: auto minmax(0, 1fr) minmax(10.5rem, auto);
+		grid-template-columns: auto minmax(0, 1fr) minmax(12rem, auto);
 		align-items: center;
 		min-width: 0;
-		padding: var(--space-md);
-		border: 1px solid rgb(5 13 46 / 22%);
-		border-inline-start: 0.3rem solid var(--sky);
-		border-radius: var(--radius-sm);
-		background: var(--paper);
-		box-shadow: var(--shadow-sm);
+		padding: var(--space-lg) var(--space-xs);
+		border-block-end: 1px solid rgb(var(--midnight-rgb) / 16%);
+		background: transparent;
 		color: var(--graphite);
 		gap: var(--space-md);
-		transition:
-			border-color var(--motion-fast) var(--ease-out),
-			background-color var(--motion-fast) var(--ease-out);
+		transition: background-color var(--motion-fast) var(--ease-out);
 	}
 
 	.book-row--unselected {
-		border-inline-start-color: rgb(5 13 46 / 28%);
-		background: color-mix(in srgb, var(--paper) 90%, var(--sky));
+		background: rgb(var(--sky-rgb) / 12%);
 	}
 
 	.book-row__cover {
 		display: grid;
 		place-items: center;
-		align-self: stretch;
-		min-width: 4.5rem;
-		padding: var(--space-xs);
-		border: 1px solid rgb(5 13 46 / 18%);
-		border-radius: var(--radius-xs);
-		background: var(--sky);
+		align-self: start;
+		min-width: 3.25rem;
 	}
 
 	.book-row__details,
@@ -178,7 +176,7 @@
 	}
 
 	.book-row__details {
-		gap: var(--space-sm);
+		gap: 0.6rem;
 	}
 
 	.book-row__details header {
@@ -195,15 +193,15 @@
 
 	h3 {
 		color: var(--midnight);
-		font-size: clamp(1.1rem, 2vw, 1.35rem);
+		font-size: clamp(1.15rem, 2vw, 1.4rem);
 		font-weight: 700;
-		letter-spacing: -0.035em;
+		letter-spacing: -0.03em;
 		line-height: 1.14;
 		overflow-wrap: anywhere;
 	}
 
 	.book-row__author {
-		color: rgb(24 27 37 / 76%);
+		color: rgb(var(--graphite-rgb) / 76%);
 		font-size: var(--text-sm);
 		line-height: 1.4;
 		overflow-wrap: anywhere;
@@ -212,9 +210,7 @@
 	.book-row__facts {
 		display: flex;
 		min-width: 0;
-		border-block-start: 1px solid rgb(5 13 46 / 16%);
-		padding-block-start: var(--space-xs);
-		gap: clamp(var(--space-sm), 3vw, var(--space-lg));
+		gap: clamp(var(--space-sm), 3vw, 1.75rem);
 	}
 
 	.book-row__facts div {
@@ -225,9 +221,9 @@
 
 	dt {
 		color: var(--club-blue);
-		font-family: var(--font-mono);
+		font-family: var(--font-body);
 		font-size: 0.625rem;
-		font-weight: 600;
+		font-weight: 700;
 		letter-spacing: 0.07em;
 		line-height: 1.3;
 		text-transform: uppercase;
@@ -249,21 +245,22 @@
 	.book-row__actions {
 		display: grid;
 		justify-items: stretch;
-		min-width: 10.5rem;
-		padding-inline-start: var(--space-md);
-		border-inline-start: 1px solid rgb(5 13 46 / 18%);
+		min-width: 12rem;
+		padding-inline-start: var(--space-lg);
+		border-inline-start: 1px solid rgb(var(--midnight-rgb) / 18%);
 		gap: var(--space-xs);
 	}
 
 	.selection-control {
 		display: flex;
 		align-items: center;
+		justify-content: center;
 		min-height: 2.75rem;
 		padding: 0.45rem 0.65rem;
-		border: 1px solid rgb(5 13 46 / 30%);
-		border-radius: var(--radius-xs);
-		background: var(--paper);
-		color: var(--midnight);
+		border: 1px solid var(--midnight);
+		border-radius: var(--radius-sm);
+		background: var(--midnight);
+		color: var(--paper);
 		font-size: var(--text-sm);
 		font-weight: 700;
 		line-height: 1.2;
@@ -275,18 +272,37 @@
 		width: 1.1rem;
 		height: 1.1rem;
 		margin: 0;
-		accent-color: var(--club-blue);
+		accent-color: var(--paper);
 		cursor: pointer;
+	}
+
+	.selection-control:has(input:disabled) {
+		cursor: not-allowed;
+		opacity: 0.58;
+	}
+
+	.selection-control:has(input:disabled) input {
+		cursor: not-allowed;
+	}
+
+	.book-row--unselected .selection-control {
+		border-color: rgb(var(--club-blue-rgb) / 56%);
+		background: var(--surface-raised);
+		color: var(--club-blue);
+	}
+
+	.book-row--unselected .selection-control input {
+		accent-color: var(--club-blue);
 	}
 
 	.quantity-control {
 		display: grid;
 		grid-template-columns: 2.75rem minmax(2.75rem, 1fr) 2.75rem;
 		min-width: 0;
-		border: 1px solid rgb(5 13 46 / 30%);
-		border-radius: var(--radius-xs);
+		border: 1px solid rgb(var(--midnight-rgb) / 22%);
+		border-radius: var(--radius-sm);
 		overflow: hidden;
-		background: var(--paper);
+		background: var(--surface-raised);
 	}
 
 	.quantity-control button,
@@ -313,18 +329,18 @@
 
 	.quantity-control button:first-child,
 	.quantity-control output {
-		border-inline-end: 1px solid rgb(5 13 46 / 20%);
+		border-inline-end: 1px solid rgb(var(--midnight-rgb) / 20%);
 	}
 
 	.quantity-control button:disabled {
-		color: rgb(24 27 37 / 35%);
+		color: rgb(var(--graphite-rgb) / 35%);
 		cursor: not-allowed;
 	}
 
 	.storefront-link {
 		display: inline-flex;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: flex-start;
 		min-height: 2.75rem;
 		color: var(--club-blue);
 		font-size: 0.8125rem;
@@ -354,9 +370,20 @@
 	}
 
 	@media (hover: hover) and (pointer: fine) {
-		.selection-control:hover,
+		.book-row:hover {
+			background: rgb(var(--sky-rgb) / 16%);
+		}
+
+		.selection-control:not(:has(input:disabled)):hover,
 		.quantity-control button:not(:disabled):hover {
-			background: var(--sky);
+			background: var(--club-blue);
+			color: var(--paper);
+		}
+
+		.book-row--unselected .selection-control:not(:has(input:disabled)):hover {
+			border-color: var(--club-blue);
+			background: var(--club-blue);
+			color: var(--paper);
 		}
 
 		.storefront-link:hover {
@@ -368,14 +395,13 @@
 		.book-row {
 			grid-template-columns: auto minmax(0, 1fr);
 			align-items: start;
-			padding: var(--space-sm);
+			padding: var(--space-md) 0;
 			gap: var(--space-sm);
 		}
 
 		.book-row__cover {
 			align-self: start;
 			min-width: 0;
-			padding: 0.35rem;
 		}
 
 		.book-row__facts {
@@ -388,7 +414,7 @@
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 			min-width: 0;
 			padding: var(--space-sm) 0 0;
-			border-block-start: 1px solid rgb(5 13 46 / 18%);
+			border-block-start: 1px solid rgb(var(--midnight-rgb) / 18%);
 			border-inline-start: 0;
 		}
 
@@ -426,7 +452,6 @@
 	@media (forced-colors: active) {
 		.book-row,
 		.book-row__cover,
-		.book-row__facts,
 		.book-row__actions,
 		.selection-control,
 		.quantity-control,

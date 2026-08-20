@@ -6,7 +6,7 @@
 	 *   id: string,
 	 *   title: string,
 	 *   coverUrl: string | null,
-	 *   coverTheme: string
+	 *   coverTheme?: string
 	 * }} StackBook
 	 */
 
@@ -25,7 +25,7 @@
 			<BookCover
 				title={book.title}
 				src={book.coverUrl}
-				theme={book.coverTheme}
+				theme={book.coverTheme ?? 'sky'}
 				size="card"
 				decorative
 			/>

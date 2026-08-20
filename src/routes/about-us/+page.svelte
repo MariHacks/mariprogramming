@@ -1,10 +1,9 @@
 <script>
-	import ContentCard from '$lib/components/site/ContentCard.svelte';
+	import { resolve } from '$app/paths';
 	import SectionIntro from '$lib/components/site/SectionIntro.svelte';
 	import { clubContent } from '$lib/content/club';
 
-	const firstWorkshop = clubContent.workshops[0];
-	const firstResource = clubContent.resources[0];
+	const discordUrl = clubContent.socialLinks.find(({ label }) => label === 'Discord')?.url;
 </script>
 
 <svelte:head>
@@ -12,209 +11,162 @@
 	<meta name="description" content={clubContent.mission} />
 </svelte:head>
 
-<section class="about-hero surface-paper">
-	<div class="page-container hero-grid">
+<section class="about-page surface-paper">
+	<div class="page-container about-frame">
 		<SectionIntro
-			eyebrow="About the club"
-			title="You can start before you know how to code."
-			summary={clubContent.mission}
+			title="About the club"
+			summary="The Programming Club is a peer learning community for Marianopolis students."
 		/>
 
-		<aside class="entry-note" aria-labelledby="entry-note-title">
-			<p class="utility-label">Before you begin</p>
-			<h2 id="entry-note-title">No experience required</h2>
-			<p>
-				You do not need a portfolio, a finished project, or the right vocabulary. Pick one topic
-				that interests you and use the material at your own pace.
-			</p>
-		</aside>
-	</div>
-</section>
-
-<section class="learning-section surface-navy" aria-labelledby="learning-title">
-	<div class="page-container learning-grid">
-		<header class="learning-copy">
-			<p class="eyebrow">How we learn together</p>
-			<h2 id="learning-title">Use the path that matches your starting point</h2>
-			<p>
-				Club workshop material breaks programming into focused topics. Resource guides offer a
-				self-paced route when you would rather explore first.
-			</p>
-		</header>
-
-		<div class="starting-points" aria-label="Learning starting points">
-			<ContentCard
-				title={firstWorkshop.title}
-				summary={firstWorkshop.description}
-				meta="Workshop starting point"
-				variant="paper"
-			/>
-			<ContentCard
-				title={firstResource.title}
-				summary={firstResource.description}
-				meta="Self-paced starting point"
-				variant="paper"
-			/>
-		</div>
-	</div>
-</section>
-
-<section class="next-step surface-paper" aria-labelledby="next-step-title">
-	<div class="page-container">
-		<div class="next-step-panel">
-			<header>
-				<p class="eyebrow">Your next move</p>
-				<h2 id="next-step-title">Start where you feel comfortable</h2>
-			</header>
-
-			<div class="next-step-copy">
-				<p>
-					Follow the club for updates and conversation. If you prefer to look around first, begin
-					with a short workshop from the archive.
-				</p>
-				<div class="action-row">
-					<a
-						class="button-primary"
-						href={clubContent.communityAction.url}
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						{clubContent.communityAction.label}
-					</a>
-					<a class="button-secondary" href="/our-workshops">Browse beginner workshops</a>
-				</div>
+		<div class="about-reading">
+			<div class="about-copy">
+				<p>Members can get help while they build and use original workshop material.</p>
+				<p>Mini-competitions are being prepared. Members can also take part in MariHacks.</p>
+				<p class="beginner-note">You do not need programming experience to join.</p>
 			</div>
+
+			<nav aria-label="Club starting points">
+				<ul class="destination-list">
+					<li>
+						<a
+							class="destination-link destination-link-primary"
+							href={clubContent.signupUrl}
+							target="_blank"
+							rel="external noopener noreferrer"
+						>
+							<span>Join the club</span>
+							<span aria-hidden="true">↗</span>
+						</a>
+					</li>
+					<li>
+						<a class="destination-link" href={resolve('/our-workshops', {})}>
+							<span>Browse workshops</span>
+							<span aria-hidden="true">→</span>
+						</a>
+					</li>
+					<li>
+						<a class="destination-link" href={resolve('/resources', {})}>
+							<span>Browse resources</span>
+							<span aria-hidden="true">→</span>
+						</a>
+					</li>
+					<li>
+						<a
+							class="destination-link"
+							href={discordUrl}
+							target="_blank"
+							rel="external noopener noreferrer"
+						>
+							<span>Join Discord</span>
+							<span aria-hidden="true">↗</span>
+						</a>
+					</li>
+				</ul>
+			</nav>
 		</div>
 	</div>
 </section>
 
 <style>
-	.about-hero {
-		padding-block: clamp(4.5rem, 10vw, 8rem);
+	.about-page {
+		min-height: calc(100vh - 4.5rem - 4.9375rem);
+		border-block-end: var(--rule);
 	}
 
-	.hero-grid {
+	.about-frame {
 		display: grid;
-		align-items: end;
-		gap: clamp(3rem, 8vw, 8rem);
-	}
-
-	.hero-grid :global(.section-intro) {
-		max-width: 50rem;
-	}
-
-	.entry-note {
-		display: grid;
-		align-content: start;
-		min-width: 0;
-		padding: var(--space-lg) 0 0;
-		border-block-start: 1px solid var(--color-border-strong);
-		gap: var(--space-md);
-	}
-
-	.entry-note h2 {
-		max-width: 14ch;
-		font-size: var(--text-2xl);
-	}
-
-	.entry-note > p:not(.utility-label) {
-		line-height: 1.6;
-		text-wrap: pretty;
-	}
-
-	.learning-section {
-		padding-block: var(--section-space);
-	}
-
-	.learning-grid {
-		display: grid;
-		align-items: start;
+		padding-block: clamp(3.5rem, 7vw, 6rem);
 		gap: clamp(2.5rem, 7vw, 6rem);
 	}
 
-	.learning-copy {
-		display: grid;
+	.about-frame :global(.section-intro) {
 		align-content: start;
-		gap: var(--space-md);
-	}
-
-	.learning-copy h2 {
-		max-width: 17ch;
-	}
-
-	.learning-copy > p:not(.eyebrow) {
-		max-width: 34rem;
-		color: rgb(247 244 237 / 78%);
-		line-height: 1.6;
-		text-wrap: pretty;
-	}
-
-	.starting-points {
-		display: grid;
-		min-width: 0;
-		gap: var(--space-md);
-	}
-
-	.next-step {
-		padding-block: var(--section-space);
-	}
-
-	.next-step-panel {
-		display: grid;
-		min-width: 0;
-		padding-block: clamp(2rem, 5vw, 3.5rem);
-		border-block: 1px solid var(--color-border-strong);
-		gap: clamp(2rem, 7vw, 6rem);
-	}
-
-	.next-step-panel > header,
-	.next-step-copy {
-		display: grid;
-		align-content: start;
-		gap: var(--space-md);
-	}
-
-	.next-step-panel h2 {
-		max-width: 16ch;
-	}
-
-	.next-step-copy > p {
 		max-width: 36rem;
+	}
+
+	.about-reading {
+		display: grid;
+		align-content: start;
+		min-width: 0;
+		gap: clamp(2rem, 5vw, 3.5rem);
+	}
+
+	.about-copy {
+		display: grid;
+		padding-block-start: var(--space-md);
+		border-block-start: var(--rule-strong);
+		gap: var(--space-sm);
+	}
+
+	.about-copy p {
+		max-width: 43rem;
 		font-size: var(--text-lg);
-		line-height: 1.6;
+		line-height: 1.55;
 		text-wrap: pretty;
 	}
 
-	.action-row {
-		display: flex;
-		align-items: stretch;
-		flex-wrap: wrap;
-		gap: var(--space-xs);
+	.beginner-note {
+		color: var(--midnight);
+		font-weight: 600;
 	}
 
-	@media (min-width: 46rem) {
-		.starting-points {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
+	.destination-list {
+		margin: 0;
+		padding: 0;
+		border-block: var(--rule);
+		list-style: none;
+	}
+
+	.destination-list li {
+		max-width: none;
+	}
+
+	.destination-list li + li {
+		border-block-start: var(--rule);
+	}
+
+	.destination-link {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) max-content;
+		align-items: center;
+		min-height: 3.5rem;
+		padding: 0.7rem var(--space-2xs);
+		color: var(--graphite);
+		font-size: var(--text-sm);
+		font-weight: 600;
+		line-height: 1.35;
+		text-decoration: none;
+		column-gap: var(--space-sm);
+		transition:
+			background-color var(--motion-fast) var(--ease-out),
+			color var(--motion-fast) var(--ease-out),
+			transform var(--motion-press) var(--ease-out);
+	}
+
+	.destination-link-primary {
+		color: var(--club-blue);
+		font-weight: 700;
+	}
+
+	.destination-link:hover {
+		background: var(--mist);
+		color: var(--club-blue);
+	}
+
+	.destination-link:active {
+		transform: translateY(var(--press-distance));
 	}
 
 	@media (min-width: 52rem) {
-		.hero-grid {
-			grid-template-columns: minmax(0, 1.55fr) minmax(17rem, 0.65fr);
-		}
-
-		.learning-grid {
-			grid-template-columns: minmax(18rem, 0.72fr) minmax(0, 1.28fr);
-		}
-
-		.next-step-panel {
-			grid-template-columns: minmax(0, 0.8fr) minmax(19rem, 1.2fr);
+		.about-frame {
+			grid-template-columns: minmax(15rem, 0.68fr) minmax(0, 1.32fr);
+			align-items: start;
 		}
 	}
 
-	@media (max-width: 24rem) {
-		.action-row :is(.button-primary, .button-secondary) {
-			width: 100%;
+	@media (max-width: 43.749rem) {
+		.about-page {
+			min-height: calc(100vh - 4.25rem - 6.5rem);
 		}
 	}
 </style>

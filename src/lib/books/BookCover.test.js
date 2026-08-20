@@ -52,12 +52,21 @@ describe('BookCover', () => {
 		});
 
 		const cover = screen.getByRole('img', {
-			name: 'Cover placeholder for The Great Gatsby'
+			name: 'Cover of The Great Gatsby'
 		});
 
 		expect(cover.tagName).toBe('DIV');
 		expect(cover).toHaveTextContent('The Great Gatsby');
 		expect(container.querySelector('[aria-label]:not([role])')).not.toBeInTheDocument();
+	});
+
+	it('keeps generated cover copy to the title', () => {
+		const { container } = render(BookCover, {
+			props: { title: 'Antigone', src: null, theme: 'midnight' }
+		});
+
+		expect(container).toHaveTextContent('Antigone');
+		expect(container).not.toHaveTextContent('Book list');
 	});
 
 	it('removes duplicate semantics from decorative sourced and generated covers', () => {

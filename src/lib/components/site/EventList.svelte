@@ -17,28 +17,18 @@
 	function formatEventDate(startsAt) {
 		return eventDateFormatter.format(new Date(startsAt));
 	}
-
-	/**
-	 * @param {number} index
-	 * @returns {string}
-	 */
-	function formatEventIndex(index) {
-		return String(index + 1).padStart(2, '0');
-	}
 </script>
 
 {#if events.length}
 	<ul class="event-list" aria-label="Confirmed events">
-		{#each events as event, index (event.id)}
+		{#each events as event (event.id)}
 			<li>
 				<article class="event-record">
 					<div class="event-date">
-						<p class="card-meta">Event {formatEventIndex(index)}</p>
 						<time datetime={event.startsAt}>{formatEventDate(event.startsAt)}</time>
 					</div>
 
 					<div class="event-details">
-						<p class="confirmation-label">Confirmed</p>
 						<h3>{event.title}</h3>
 						{#if event.description}
 							<p class="event-description">{event.description}</p>
@@ -50,144 +40,133 @@
 	</ul>
 {:else}
 	<section class="empty-state" aria-label="Event schedule status">
-		<div class="empty-register">
-			<p class="card-meta">Schedule status</p>
-			<p class="status-word" aria-hidden="true">Planning</p>
-		</div>
-
-		<div class="empty-copy">
-			<h3>New events are being planned</h3>
-			<p>Dates will appear here after they are confirmed.</p>
-			<a
-				class="button-secondary"
-				href={clubContent.communityAction.url}
-				target="_blank"
-				rel="noopener noreferrer"
-			>
-				{clubContent.communityAction.label}
-			</a>
-		</div>
+		<h3>No upcoming events are listed.</h3>
+		<a
+			class="empty-action"
+			href={clubContent.communityAction.url}
+			target="_blank"
+			rel="external noopener noreferrer"
+		>
+			<span>{clubContent.communityAction.label}</span>
+			<span aria-hidden="true">↗</span>
+		</a>
 	</section>
 {/if}
 
 <style>
 	.event-list {
-		display: grid;
 		width: 100%;
 		min-width: 0;
 		margin: 0;
 		padding: 0;
-		border-block-start: 1px solid var(--color-border-strong);
+		border-block: var(--rule-strong);
 		list-style: none;
 	}
 
 	.event-list > li {
+		max-width: none;
 		min-width: 0;
-		border-block-end: 1px solid var(--color-border-strong);
 	}
 
-	.event-record,
-	.empty-state {
+	.event-list > li + li {
+		border-block-start: var(--rule);
+	}
+
+	.event-record {
 		display: grid;
-		grid-template-columns: minmax(11rem, 0.68fr) minmax(0, 1.32fr);
 		width: 100%;
 		min-width: 0;
-		border-inline-start: 0.375rem solid var(--sky);
-		background: var(--paper);
-		color: var(--graphite);
 	}
 
 	.event-date,
-	.empty-register {
+	.event-details {
 		display: grid;
 		align-content: start;
 		min-width: 0;
-		padding: clamp(1.25rem, 3vw, 2rem);
-		background: rgb(153 194 255 / 28%);
-		gap: var(--space-xs);
+		padding-block: var(--space-md);
 	}
 
 	.event-date time {
-		max-width: 19ch;
-		color: var(--midnight);
-		font-family: var(--font-display);
-		font-size: var(--text-lg);
+		max-width: 22ch;
+		color: var(--quiet-steel);
+		font-size: var(--text-sm);
+		font-variant-numeric: tabular-nums;
 		font-weight: 600;
+		line-height: 1.45;
+	}
+
+	.event-details {
+		gap: var(--space-xs);
+	}
+
+	.event-details h3,
+	.empty-state h3 {
+		max-width: 30ch;
+		font-size: var(--text-xl);
 		letter-spacing: -0.025em;
-		line-height: 1.3;
-		text-wrap: balance;
-	}
-
-	.event-details,
-	.empty-copy {
-		display: grid;
-		align-content: center;
-		min-width: 0;
-		padding: clamp(1.5rem, 4vw, 2.5rem);
-		gap: var(--space-sm);
-	}
-
-	.confirmation-label {
-		width: fit-content;
-		max-width: 100%;
-		padding: 0.25rem 0.55rem;
-		border: 1px solid rgb(13 33 115 / 32%);
-		border-radius: var(--radius-pill);
-		background: rgb(153 194 255 / 30%);
-		color: var(--club-blue);
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		font-weight: 600;
-		letter-spacing: 0.08em;
-		line-height: 1.35;
-		text-transform: uppercase;
-	}
-
-	h3 {
-		max-width: 28ch;
-		font-size: var(--text-2xl);
+		line-height: 1.2;
 		overflow-wrap: anywhere;
 	}
 
-	.event-description,
-	.empty-copy > p {
-		max-width: 54ch;
-		line-height: 1.6;
+	.event-description {
+		max-width: 50rem;
+		color: var(--quiet-steel);
+		line-height: 1.55;
 		text-wrap: pretty;
 	}
 
 	.empty-state {
-		border-block: 1px solid var(--color-border-strong);
-		box-shadow: var(--shadow-sm);
+		display: grid;
+		align-items: center;
+		min-width: 0;
+		padding-block: var(--space-md);
+		border-block: var(--rule-strong);
+		gap: var(--space-md);
 	}
 
-	.status-word {
-		color: var(--midnight);
-		font-family: var(--font-display);
-		font-size: var(--text-xl);
-		font-weight: 600;
-		letter-spacing: -0.035em;
-		line-height: 1.2;
-	}
-
-	.empty-copy .button-secondary {
+	.empty-action {
+		display: inline-grid;
+		grid-template-columns: minmax(0, auto) max-content;
+		align-items: center;
 		justify-self: start;
-		margin-block-start: var(--space-xs);
+		min-height: var(--control-height);
+		padding-block: 0.45rem;
+		border-block-end: 1px solid currentColor;
+		color: var(--club-blue);
+		font-size: var(--text-sm);
+		font-weight: 600;
+		line-height: 1.25;
+		text-decoration: none;
+		column-gap: var(--space-xs);
+		transition:
+			border-color var(--motion-fast) var(--ease-out),
+			color var(--motion-fast) var(--ease-out),
+			transform var(--motion-press) var(--ease-out);
 	}
 
-	@media (max-width: 42rem) {
-		.event-record,
+	.empty-action:hover {
+		border-color: var(--midnight);
+		color: var(--midnight);
+	}
+
+	.empty-action:active {
+		transform: translateY(var(--press-distance));
+	}
+
+	@media (min-width: 42rem) {
+		.event-record {
+			grid-template-columns: minmax(10rem, 0.58fr) minmax(0, 1.42fr);
+			column-gap: var(--space-lg);
+		}
+
+		.event-details {
+			padding-inline-start: var(--space-lg);
+			border-inline-start: var(--rule);
+		}
+
 		.empty-state {
-			grid-template-columns: minmax(0, 1fr);
-		}
-
-		.event-date,
-		.empty-register {
-			border-block-end: 1px solid var(--color-border);
-		}
-
-		.event-date time {
-			max-width: 30ch;
+			grid-template-columns: minmax(0, 1fr) max-content;
+			column-gap: var(--space-lg);
 		}
 	}
 </style>

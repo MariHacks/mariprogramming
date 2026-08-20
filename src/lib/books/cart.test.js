@@ -20,6 +20,17 @@ const fixture = {
 };
 
 describe('cart mutations', () => {
+	it('rejects missing book IDs and non-positive additions', () => {
+		expect(() => createCart([''])).toThrow(/non-empty string/i);
+		expect(() => createCart([{ bookId: 'antigone', quantity: 0 }])).toThrow(/greater than zero/i);
+		expect(() => createCart([{ courseId: '', bookId: 'antigone', quantity: 1 }])).toThrow(
+			/course ID.*non-empty string/i
+		);
+		expect(() =>
+			createCart([{ courseId: /** @type {any} */ (42), bookId: 'antigone', quantity: 1 }])
+		).toThrow(/course ID.*non-empty string/i);
+	});
+
 	it('creates one canonical line per book and merges duplicate quantities', () => {
 		expect(
 			createCart([
@@ -77,6 +88,9 @@ describe('cart mutations', () => {
 	it('sets a positive integer quantity and removes the line at zero or below', () => {
 		const cart = createCart(['antigone']);
 
+		expect(setBookQuantity(createCart(), 'antigone', 2)).toEqual({
+			items: [{ bookId: 'antigone', quantity: 2 }]
+		});
 		expect(setBookQuantity(cart, 'antigone', 4)).toEqual({
 			items: [{ bookId: 'antigone', quantity: 4 }]
 		});
@@ -106,9 +120,126 @@ describe('cart mutations', () => {
 			])
 		).toThrow(/merged book quantity.*safe integer/i);
 	});
+
+	it('keeps the same book assignment distinct across two courses', () => {
+		const cart = createCart([
+			{ courseId: 'course-a', bookId: 'shared-book', quantity: 1 },
+			{ courseId: 'course-b', bookId: 'shared-book', quantity: 2 }
+		]);
+
+		expect(cart).toEqual({
+			items: [
+				{ courseId: 'course-a', bookId: 'shared-book', quantity: 1 },
+				{ courseId: 'course-b', bookId: 'shared-book', quantity: 2 }
+			]
+		});
+		expect(setBookQuantity(cart, 'shared-book', 4, 'course-a')).toEqual({
+			items: [
+				{ courseId: 'course-a', bookId: 'shared-book', quantity: 4 },
+				{ courseId: 'course-b', bookId: 'shared-book', quantity: 2 }
+			]
+		});
+		expect(setBookSelected(cart, 'shared-book', false, 'course-b')).toEqual({
+			items: [{ courseId: 'course-a', bookId: 'shared-book', quantity: 1 }]
+		});
+		expect(setBookSelected(createCart(), 'shared-book', true, 'course-a')).toEqual({
+			items: [{ courseId: 'course-a', bookId: 'shared-book', quantity: 1 }]
+		});
+		expect(setBookQuantity(createCart(), 'shared-book', 3, 'course-a')).toEqual({
+			items: [{ courseId: 'course-a', bookId: 'shared-book', quantity: 3 }]
+		});
+	});
 });
 
 describe('calculateCart', () => {
+	it('matches price rows by course and book instead of an ambiguous book ID', () => {
+		const result = calculateCart(
+			{
+				taxRateBps: 0,
+				bookstores: [{ id: 'store', name: 'Store', serviceFeeCents: 500 }],
+				books: [
+					{
+						id: 'shared-book',
+						courseId: 'course-a',
+						title: 'Course A edition',
+						priceCents: 1000,
+						bookstoreId: 'store'
+					},
+					{
+						id: 'shared-book',
+						courseId: 'course-b',
+						title: 'Course B edition',
+						priceCents: 2000,
+						bookstoreId: 'store'
+					}
+				]
+			},
+			createCart([
+				{ courseId: 'course-a', bookId: 'shared-book', quantity: 1 },
+				{ courseId: 'course-b', bookId: 'shared-book', quantity: 1 }
+			])
+		);
+
+		expect(result.lines).toEqual([
+			expect.objectContaining({
+				courseId: 'course-a',
+				bookId: 'shared-book',
+				title: 'Course A edition',
+				amountCents: 1000
+			}),
+			expect.objectContaining({
+				courseId: 'course-b',
+				bookId: 'shared-book',
+				title: 'Course B edition',
+				amountCents: 2000
+			})
+		]);
+		expect(result.fees).toHaveLength(1);
+		expect(result.totalCents).toBe(3500);
+		expect(() =>
+			calculateCart(
+				{
+					taxRateBps: 0,
+					bookstores: [{ id: 'store', name: 'Store', serviceFeeCents: 500 }],
+					books: [
+						{
+							id: 'shared-book',
+							courseId: 'course-a',
+							title: 'A',
+							priceCents: 1000,
+							bookstoreId: 'store'
+						},
+						{
+							id: 'shared-book',
+							courseId: 'course-b',
+							title: 'B',
+							priceCents: 1000,
+							bookstoreId: 'store'
+						}
+					]
+				},
+				createCart(['shared-book'])
+			)
+		).toThrow(/ambiguous book/i);
+		expect(
+			calculateCart(
+				{
+					taxRateBps: 0,
+					bookstores: [{ id: 'store', name: 'Store', serviceFeeCents: 500 }],
+					books: [
+						{
+							id: 'single-book',
+							courseId: 'course-a',
+							title: 'Single edition',
+							priceCents: 1000,
+							bookstoreId: 'store'
+						}
+					]
+				},
+				createCart(['single-book'])
+			).lines[0]
+		).toMatchObject({ courseId: 'course-a', bookId: 'single-book' });
+	});
 	it('charges one service fee for multiple books from the same bookstore', () => {
 		const result = calculateCart(fixture, {
 			items: [
@@ -315,5 +446,22 @@ describe('calculateCart', () => {
 		]);
 		expect(result.taxCents).toBe(359);
 		expect(result.totalCents).toBe(2754);
+	});
+
+	it('rejects a bookstore identifier that changes while pricing a line', () => {
+		let readCount = 0;
+		const unstableBook = {
+			id: 'unstable',
+			title: 'Unstable',
+			priceCents: 1000,
+			get bookstoreId() {
+				readCount += 1;
+				return readCount === 1 ? 'renaud-bray' : 'missing-store';
+			}
+		};
+
+		expect(() =>
+			calculateCart({ ...fixture, books: [unstableBook] }, createCart(['unstable']))
+		).toThrow(/unknown bookstore: missing-store/i);
 	});
 });

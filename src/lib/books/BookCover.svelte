@@ -38,10 +38,9 @@
 		data-theme={resolvedTheme}
 		data-size={resolvedSize}
 		role={decorative ? undefined : 'img'}
-		aria-label={decorative ? undefined : `Cover placeholder for ${title}`}
+		aria-label={decorative ? undefined : `Cover of ${title}`}
 		aria-hidden={decorative ? 'true' : undefined}
 	>
-		<span class="cover-kicker">Book list</span>
 		<span class="cover-title">{title}</span>
 		<span class="cover-rule" aria-hidden="true"></span>
 	</div>
@@ -53,12 +52,12 @@
 		flex: 0 0 auto;
 		max-width: 100%;
 		aspect-ratio: 2 / 3;
-		border: 1px solid var(--cover-border, rgb(5 13 46 / 34%));
+		border: 1px solid var(--cover-border, rgb(var(--midnight-rgb) / 34%));
 		border-radius: var(--radius-xs);
 		background: var(--cover-background, var(--sky));
 		box-shadow:
-			0 1px 1px rgb(5 13 46 / 16%),
-			0 0.45rem 1rem rgb(5 13 46 / 14%);
+			0 1px 1px rgb(var(--midnight-rgb) / 16%),
+			0 0.45rem 1rem rgb(var(--midnight-rgb) / 14%);
 		color: var(--cover-ink, var(--midnight));
 	}
 
@@ -78,10 +77,10 @@
 	.book-cover--fallback {
 		position: relative;
 		display: grid;
-		grid-template-rows: auto minmax(0, 1fr) auto;
+		grid-template-rows: minmax(0, 1fr) auto;
 		isolation: isolate;
 		overflow: hidden;
-		padding: 0.9rem 0.8rem 0.8rem 1.25rem;
+		padding: 0.8rem 0.8rem 0.8rem 1.25rem;
 		gap: 0.65rem;
 	}
 
@@ -97,39 +96,30 @@
 
 	.book-cover--sky {
 		--cover-background: var(--sky);
-		--cover-border: rgb(5 13 46 / 38%);
+		--cover-border: rgb(var(--midnight-rgb) / 38%);
 		--cover-ink: var(--midnight);
 		--cover-spine: var(--club-blue);
 	}
 
 	.book-cover--coral {
-		--cover-background: var(--coral);
-		--cover-border: rgb(5 13 46 / 42%);
-		--cover-ink: var(--midnight);
-		--cover-spine: var(--paper);
+		--cover-background: var(--club-blue);
+		--cover-border: rgb(var(--midnight-rgb) / 42%);
+		--cover-ink: var(--paper);
+		--cover-spine: var(--sky);
 	}
 
 	.book-cover--midnight {
 		--cover-background: var(--midnight);
-		--cover-border: rgb(5 13 46 / 58%);
+		--cover-border: rgb(var(--midnight-rgb) / 58%);
 		--cover-ink: var(--paper);
 		--cover-spine: var(--sky);
 	}
 
 	.book-cover--paper {
 		--cover-background: var(--paper);
-		--cover-border: rgb(5 13 46 / 38%);
+		--cover-border: rgb(var(--midnight-rgb) / 38%);
 		--cover-ink: var(--midnight);
-		--cover-spine: var(--coral);
-	}
-
-	.cover-kicker {
-		font-family: var(--font-mono);
-		font-size: 0.625rem;
-		font-weight: 600;
-		letter-spacing: 0.1em;
-		line-height: 1.25;
-		text-transform: uppercase;
+		--cover-spine: var(--club-blue);
 	}
 
 	.cover-title {
@@ -141,7 +131,7 @@
 		font-family: var(--font-display);
 		font-size: clamp(0.9rem, 2.8vw, 1.125rem);
 		font-weight: 700;
-		letter-spacing: -0.045em;
+		letter-spacing: -0.035em;
 		line-height: 1.08;
 		overflow-wrap: anywhere;
 		-webkit-box-orient: vertical;
@@ -164,10 +154,6 @@
 
 	.book-cover--compact.book-cover--fallback::before {
 		width: 0.28rem;
-	}
-
-	.book-cover--compact .cover-kicker {
-		display: none;
 	}
 
 	.book-cover--compact .cover-title {

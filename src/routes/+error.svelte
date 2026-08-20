@@ -1,34 +1,32 @@
 <script>
+	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 	import SectionIntro from '$lib/components/site/SectionIntro.svelte';
 	import { clubContent } from '$lib/content/club';
+	import { createClubContactLinks } from '$lib/club-contact.js';
 
 	const recoveryRoutes = [
 		{ label: 'Browse workshops', href: '/our-workshops' },
 		{ label: 'Check events', href: '/events' },
 		{ label: 'Open resources', href: '/resources' }
 	];
+	const contactLinks = createClubContactLinks();
 
 	$: isNotFound = $page.status === 404;
 	$: heading = isNotFound ? 'We couldn’t find that page.' : 'This page is unavailable.';
-	$: summary = isNotFound
-		? 'The address may have changed. Return home or choose another club path.'
-		: 'We couldn’t load this page. Return home or choose another club path.';
+	$: summary = isNotFound ? 'The address may have changed.' : 'We couldn’t load this page.';
 	$: pageTitle = isNotFound ? 'Page not found' : 'Page unavailable';
 </script>
 
 <svelte:head>
 	<title>{pageTitle} | {clubContent.name}</title>
-	<meta
-		name="description"
-		content="Return to a useful Marianopolis Programming Club page after an unavailable route."
-	/>
+	<meta name="description" content="Marianopolis Programming Club page unavailable." />
 </svelte:head>
 
 <section class="error-page surface-paper">
 	<div class="page-container recovery-layout">
 		<div class="recovery-copy">
-			<SectionIntro eyebrow="Route recovery" title={heading} {summary} />
+			<SectionIntro title={heading} {summary} />
 
 			<div class="status-reference">
 				<p class="status-code">Status {$page.status}</p>
@@ -37,12 +35,11 @@
 				{/if}
 			</div>
 
-			<a class="button-primary home-action" href="/">Return to club home</a>
+			<a class="button-primary home-action" href={resolve('/', {})}>Return to club home</a>
 		</div>
 
 		<aside class="recovery-index" aria-labelledby="recovery-index-title">
 			<div class="index-heading">
-				<p class="utility-label">Club index</p>
 				<h2 id="recovery-index-title">Try another path</h2>
 			</div>
 
@@ -50,7 +47,7 @@
 				<ul class="route-list">
 					{#each recoveryRoutes as route (route.href)}
 						<li>
-							<a aria-label={route.label} href={route.href}>
+							<a aria-label={route.label} href={resolve(route.href, {})}>
 								<span>{route.label}</span>
 								<code aria-hidden="true">{route.href}</code>
 							</a>
@@ -60,8 +57,15 @@
 			</nav>
 
 			<div class="community-path">
-				<p>Need a current club update?</p>
-				<a href={clubContent.communityAction.url} target="_blank" rel="noopener noreferrer">
+				<nav class="error-contact" aria-label="Club contact">
+					<a href={contactLinks.inquiry.href}>{contactLinks.inquiry.label}</a>
+					<a href={contactLinks.bug.href}>{contactLinks.bug.label}</a>
+				</nav>
+				<a
+					href={clubContent.communityAction.url}
+					target="_blank"
+					rel="external noopener noreferrer"
+				>
 					{clubContent.communityAction.label}
 				</a>
 			</div>
@@ -98,7 +102,7 @@
 		max-width: 100%;
 		padding-block: var(--space-xs);
 		border-block: 1px solid var(--color-border);
-		font-family: var(--font-mono);
+		font-family: var(--font-body);
 		font-size: var(--text-xs);
 		line-height: 1.5;
 	}
@@ -107,6 +111,7 @@
 		flex: none;
 		padding-inline-end: var(--space-sm);
 		color: var(--club-blue);
+		font-family: var(--font-mono);
 		font-weight: 600;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
@@ -116,7 +121,7 @@
 		min-width: 0;
 		padding-inline-start: var(--space-sm);
 		border-inline-start: 1px solid var(--color-border-strong);
-		color: rgb(24 27 37 / 72%);
+		color: rgb(var(--graphite-rgb) / 72%);
 		overflow-wrap: anywhere;
 	}
 
@@ -145,18 +150,14 @@
 		font-size: var(--text-2xl);
 	}
 
-	.recovery-index .utility-label {
-		color: var(--sky);
-	}
-
 	.route-list {
 		padding: 0;
-		border-block-start: 1px solid rgb(247 244 237 / 24%);
+		border-block-start: 1px solid rgb(var(--paper-rgb) / 24%);
 		list-style: none;
 	}
 
 	.route-list li {
-		border-block-end: 1px solid rgb(247 244 237 / 24%);
+		border-block-end: 1px solid rgb(var(--paper-rgb) / 24%);
 	}
 
 	.route-list a {
@@ -178,20 +179,30 @@
 		max-width: 100%;
 		padding: 0;
 		background: transparent;
-		color: rgb(153 194 255 / 76%);
+		color: rgb(var(--sky-rgb) / 76%);
 		font-size: var(--text-xs);
 		overflow-wrap: anywhere;
 	}
 
 	.community-path {
 		display: grid;
-		padding-block-start: var(--space-xs);
-		gap: var(--space-2xs);
+		gap: var(--space-sm);
 	}
 
-	.community-path p {
-		color: rgb(247 244 237 / 72%);
-		font-size: var(--text-sm);
+	.error-contact {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem 1.25rem;
+	}
+
+	.error-contact a {
+		width: fit-content;
+		max-width: 100%;
+		color: var(--sky);
+		font-weight: 600;
+		text-decoration-color: rgb(var(--sky-rgb) / 55%);
+		text-decoration-thickness: 0.1em;
+		text-underline-offset: 0.2em;
 	}
 
 	.community-path a {
@@ -199,7 +210,7 @@
 		max-width: 100%;
 		color: var(--sky);
 		font-weight: 600;
-		text-decoration-color: rgb(153 194 255 / 55%);
+		text-decoration-color: rgb(var(--sky-rgb) / 55%);
 		text-decoration-thickness: 0.1em;
 		text-underline-offset: 0.2em;
 		overflow-wrap: anywhere;

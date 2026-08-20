@@ -149,9 +149,9 @@ test.describe('Book Delivery guest order review', () => {
 		await page.goto('/books/checkout');
 
 		await expect(page.getByRole('heading', { level: 1, name: 'Your cart is empty' })).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Return to cart' })).toHaveAttribute(
+		await expect(page.getByRole('link', { name: 'Browse courses' })).toHaveAttribute(
 			'href',
-			'/books/cart'
+			'/books'
 		);
 		await expect(page.getByRole('form', { name: 'Guest details' })).toHaveCount(0);
 		await expectNoPickupContext(page);
@@ -192,15 +192,17 @@ for (const confirmationCase of [
 		await expect(
 			page.getByRole('heading', { level: 1, name: 'Payment not confirmed' })
 		).toBeVisible();
-		await expect(page.getByRole('status')).toHaveText('Payment not confirmed');
+		await expect(page.getByRole('status')).toHaveCount(0);
 		await expect(page.getByText('Payment confirmed', { exact: true })).toHaveCount(0);
 		await expectNoPickupContext(page);
+		await expect(page.getByRole('link', { name: 'Browse courses' })).toHaveAttribute(
+			'href',
+			'/books'
+		);
 
 		await page.getByRole('link', { name: 'Return to your cart' }).click();
 		await expect(page).toHaveURL('/books/cart');
-		await expect(
-			page.getByRole('heading', { level: 1, name: 'Your book delivery cart' })
-		).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1, name: 'Your cart' })).toBeVisible();
 		await expect(page.getByRole('heading', { level: 3, name: 'Le Petit Prince' })).toBeVisible();
 	});
 }

@@ -1,0 +1,17 @@
+{
+	"source": {
+		"file": "IMG_3519.jpg",
+		"folder": "MariHacks supplied photo folder",
+		"dimensions": [4612, 3459]
+	},
+	"role": "Homepage right-hand 4:3 hero crop",
+	"alt": "Two MariHacks organizers working side by side on laptops.",
+	"derivatives": [
+		{ "file": "organizers-working-1600.avif", "dimensions": [1600, 1200] },
+		{ "file": "organizers-working-1600.webp", "dimensions": [1600, 1200] },
+		{ "file": "organizers-working-960.avif", "dimensions": [960, 720] },
+		{ "file": "organizers-working-960.webp", "dimensions": [960, 720] },
+		{ "file": "organizers-working-640.avif", "dimensions": [640, 480] },
+		{ "file": "organizers-working-640.webp", "dimensions": [640, 480] }
+	]
+}

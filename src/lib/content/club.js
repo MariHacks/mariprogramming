@@ -1,3 +1,5 @@
+import { CLUB_TEAM_EMAIL } from '$lib/club-contact.js';
+
 const communityAction = {
 	label: 'Follow on Instagram',
 	url: 'https://www.instagram.com/mari_programming_club/',
@@ -7,9 +9,12 @@ const communityAction = {
 
 export const clubContent = {
 	name: 'Marianopolis Programming Club',
+	contactEmail: CLUB_TEAM_EMAIL,
+	signupUrl:
+		'https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header',
 	communityAction,
 	mission:
-		'A welcoming place for Marianopolis students to learn programming, build together, and share software, with no experience required.',
+		'Learn programming with other Marianopolis students. You do not need programming experience to join.',
 	socialLinks: [
 		{
 			label: 'GitHub',
@@ -20,6 +25,11 @@ export const clubContent = {
 			label: communityAction.socialLabel,
 			url: communityAction.url,
 			icon: communityAction.icon
+		},
+		{
+			label: 'Discord',
+			url: 'https://discord.gg/c6JJw9d',
+			icon: '/socials/discord.svg'
 		},
 		{
 			label: 'MariHacks',
@@ -33,7 +43,7 @@ export const clubContent = {
 			id: 'intro-python',
 			title: 'Intro to Python',
 			track: 'Python foundations',
-			term: '2023–2024',
+			term: '2023-2024',
 			description: 'Variables, data types, operations, conditions, and loops.',
 			links: [
 				{
@@ -50,7 +60,7 @@ export const clubContent = {
 			id: 'functions-and-lists',
 			title: 'Functions and lists',
 			track: 'Python foundations',
-			term: '2023–2024',
+			term: '2023-2024',
 			description: 'Loops, lists, functions, dictionaries, and reusable problem-solving patterns.',
 			links: [
 				{
@@ -63,7 +73,7 @@ export const clubContent = {
 			id: 'collections',
 			title: 'Working with lists and dictionaries',
 			track: 'Python foundations',
-			term: '2023–2024',
+			term: '2023-2024',
 			description: 'Comprehensions, tuples, destructuring, and ways to transform collections.',
 			links: [
 				{
@@ -76,7 +86,7 @@ export const clubContent = {
 			id: 'strings-and-files',
 			title: 'Strings and files',
 			track: 'Python foundations',
-			term: '2023–2024',
+			term: '2023-2024',
 			description:
 				'Character codes, string operations, and the basics of reading and writing files.',
 			links: [
@@ -90,7 +100,7 @@ export const clubContent = {
 			id: 'numpy',
 			title: 'NumPy',
 			track: 'Python libraries',
-			term: '2023–2024',
+			term: '2023-2024',
 			description:
 				'Array shapes, dimensions, operations, and the foundations of numerical computing.',
 			links: [
@@ -104,7 +114,7 @@ export const clubContent = {
 			id: 'matplotlib',
 			title: 'Matplotlib',
 			track: 'Python libraries',
-			term: '2023–2024',
+			term: '2023-2024',
 			description: 'Generate, label, and customize plots with Python.',
 			links: [
 				{
@@ -117,7 +127,7 @@ export const clubContent = {
 			id: 'python-review',
 			title: 'Python review',
 			track: 'Python foundations',
-			term: '2023–2024',
+			term: '2023-2024',
 			description: 'Review core Python concepts and practice applying them to short problems.',
 			links: [
 				{
@@ -138,7 +148,7 @@ export const clubContent = {
 			id: 'object-oriented-python',
 			title: 'Object-oriented Python',
 			track: 'Python foundations',
-			term: '2023–2024',
+			term: '2023-2024',
 			description: 'Classes, objects, and how object-oriented programs organize related behavior.',
 			links: [
 				{
@@ -155,7 +165,7 @@ export const clubContent = {
 			id: 'hackathon-python-libraries',
 			title: 'Python libraries for hackathons',
 			track: 'Hackathon preparation',
-			term: '2023–2024',
+			term: '2023-2024',
 			description: 'Explore useful Python libraries for building a hackathon project quickly.',
 			links: [
 				{

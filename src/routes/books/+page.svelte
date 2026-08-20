@@ -1,13 +1,12 @@
 <script>
 	import TeacherCard from '$lib/books/TeacherCard.svelte';
-	import SectionIntro from '$lib/components/site/SectionIntro.svelte';
 	import { clubContent } from '$lib/content/club';
 
 	/** @type {import('./$types').PageData} */
 	export let data;
 
 	const metaDescription =
-		'Browse teacher-organized French and English course book lists from the Marianopolis Programming Club.';
+		'Browse French and English course book lists from the Marianopolis Programming Club.';
 </script>
 
 <svelte:head>
@@ -16,124 +15,182 @@
 </svelte:head>
 
 <div class="catalogue-page surface-paper">
-	<section class="catalogue-hero">
-		<div class="page-container hero-inner">
-			<div class="intro-copy">
-				<SectionIntro
-					eyebrow="Book Delivery"
-					title="Start with your teacher"
-					summary="Choose the instructor shown on your schedule to see the books assigned to each French or English course."
-				/>
+	{#if data.launchState === 'live'}
+		<section class="catalogue-hero">
+			<div class="page-container hero-inner">
+				<h1>Choose your course</h1>
+				<p>Open a course to choose individual books.</p>
 			</div>
-		</div>
-	</section>
+		</section>
 
-	<section class="teacher-directory surface-navy" aria-labelledby="teacher-directory-heading">
-		<div class="page-container directory-inner">
-			<header class="directory-header">
-				<div class="directory-title">
-					<p class="utility-label">Course list directory</p>
-					<h2 id="teacher-directory-heading">Available teacher lists</h2>
-				</div>
-				<p class="directory-note">Match the course code on your schedule before opening a list.</p>
-			</header>
-
-			<ul class="teacher-grid">
-				{#each data.teacherSummaries as summary (summary.teacher.id)}
-					<li>
-						<TeacherCard
-							teacher={summary.teacher}
-							courses={summary.courses}
-							books={summary.books}
-						/>
-					</li>
-				{/each}
-			</ul>
-		</div>
-	</section>
+		<section class="course-directory" aria-label="Course book lists">
+			<div class="page-container directory-inner">
+				{#if data.courseSummaries.length > 0}
+					<ul class="course-grid">
+						{#each data.courseSummaries as summary (summary.id)}
+							<li>
+								<TeacherCard teacher={summary.teacher} course={summary} books={summary.books} />
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<div class="empty-catalogue">
+						<p>No course lists are available.</p>
+						<a class="button-primary" href="/books/request">Request a book</a>
+					</div>
+				{/if}
+				<p class="request-cta">
+					<a href="/books/request">Can't find a book?</a>
+				</p>
+			</div>
+		</section>
+	{:else}
+		<section class="launch-notice" aria-labelledby="book-delivery-status">
+			<div class="page-container launch-notice__inner">
+				<p class="launch-status">Coming Soon</p>
+				<h1 id="book-delivery-status">Book Delivery is coming soon</h1>
+				<p>We are preparing course book lists and campus pickup.</p>
+			</div>
+		</section>
+	{/if}
 </div>
 
 <style>
 	.catalogue-page {
 		min-height: 100%;
+		background: var(--paper);
+	}
+
+	.launch-notice {
+		display: grid;
+		min-height: min(38rem, calc(100vh - 8rem));
+		align-items: center;
+		border-block-end: 1px solid rgb(var(--midnight-rgb) / 18%);
+	}
+
+	.launch-notice__inner {
+		display: grid;
+		max-width: 45rem;
+		padding-block: clamp(4rem, 12vw, 8rem);
+		gap: 1rem;
+	}
+
+	.launch-status {
+		margin: 0;
+		color: var(--club-blue);
+		font-size: var(--text-sm);
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	.launch-notice h1 {
+		max-width: 14ch;
+	}
+
+	.launch-notice__inner > p:last-child {
+		max-width: 34rem;
+		margin: 0;
+		color: var(--graphite);
+		font-size: var(--text-lg);
+		line-height: 1.5;
 	}
 
 	.catalogue-hero {
-		border-block-end: 1px solid rgb(5 13 46 / 18%);
+		border-block-end: 1px solid rgb(var(--midnight-rgb) / 18%);
 	}
 
 	.hero-inner {
-		padding-block: clamp(4.5rem, 9vw, 8rem);
-	}
-
-	.intro-copy {
-		width: min(100%, 58rem);
-	}
-
-	.teacher-directory {
-		border-block-start: 0.375rem solid var(--sky);
-	}
-
-	.directory-inner {
-		padding-block: clamp(3.5rem, 7vw, 6.5rem);
-	}
-
-	.directory-header {
 		display: grid;
-		align-items: end;
-		padding-block-end: clamp(1.5rem, 4vw, 2.5rem);
-		border-block-end: 1px solid rgb(153 194 255 / 34%);
-		gap: var(--space-md);
-	}
-
-	.directory-title {
-		display: grid;
-		min-width: 0;
+		justify-items: start;
+		padding-block: clamp(3.25rem, 7vw, 5.75rem) clamp(2.25rem, 4vw, 3.5rem);
 		gap: var(--space-sm);
 	}
 
-	.directory-title h2 {
-		max-width: 18ch;
-		font-size: var(--text-3xl);
+	.hero-inner h1 {
+		max-width: 12ch;
 	}
 
-	.directory-note {
-		max-width: 38ch;
-		color: rgb(247 244 237 / 76%);
+	.hero-inner p {
+		max-width: 36rem;
+		margin: 0;
+		color: var(--graphite);
 		font-size: var(--text-lg);
-		line-height: 1.55;
-		text-wrap: pretty;
+		line-height: 1.45;
 	}
 
-	.teacher-grid {
+	.course-directory {
+		background: var(--paper);
+	}
+
+	.directory-inner {
+		padding-block: clamp(2rem, 5vw, 4rem) clamp(3rem, 7vw, 6rem);
+	}
+
+	.course-grid {
 		display: grid;
-		margin: clamp(2rem, 5vw, 3.5rem) 0 0;
+		width: 100%;
+		margin: 0 auto;
 		padding: 0;
-		gap: clamp(1.5rem, 3vw, 2.5rem);
+		border-block-start: 1px solid rgb(var(--midnight-rgb) / 24%);
 		list-style: none;
 	}
 
-	.teacher-grid li {
+	.course-grid li {
 		min-width: 0;
+		padding: clamp(1.5rem, 4vw, 2.5rem) 0;
+		border-block-end: 1px solid rgb(var(--midnight-rgb) / 24%);
 	}
 
-	@media (min-width: 48rem) {
-		.directory-header {
-			grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.55fr);
-			column-gap: var(--space-xl);
+	.empty-catalogue,
+	.request-cta {
+		display: grid;
+		justify-items: start;
+		gap: 1rem;
+		margin: 0;
+		padding-block: var(--space-xl);
+		color: var(--graphite);
+		font-size: var(--text-lg);
+		line-height: 1.45;
+	}
+
+	.empty-catalogue {
+		border-block: 1px solid rgb(var(--midnight-rgb) / 24%);
+	}
+
+	@media (min-width: 46rem) {
+		.course-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.course-grid li {
+			padding-inline: clamp(1.5rem, 3vw, 2.5rem);
+		}
+
+		.course-grid li:nth-child(even) {
+			border-inline-start: 1px solid rgb(var(--midnight-rgb) / 18%);
 		}
 	}
 
-	@media (min-width: 62rem) {
-		.teacher-grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+	@media (min-width: 72rem) {
+		.course-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+
+		.course-grid li:nth-child(even) {
+			border-inline-start: 0;
+		}
+
+		.course-grid li:not(:nth-child(3n + 1)) {
+			border-inline-start: 1px solid rgb(var(--midnight-rgb) / 18%);
 		}
 	}
 
 	@media (forced-colors: active) {
 		.catalogue-hero,
-		.teacher-directory,
-		.directory-header {
+		.course-grid,
+		.course-grid li,
+		.empty-catalogue {
 			border-color: CanvasText;
 		}
 	}

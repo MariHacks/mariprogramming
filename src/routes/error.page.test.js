@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/svelte';
+import { cleanup, render, screen, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clubContent } from '$lib/content/club';
 
@@ -63,7 +63,7 @@ describe('club error route', () => {
 
 		expect(communityLink).toHaveAttribute('href', clubContent.communityAction.url);
 		expect(communityLink).toHaveAttribute('target', '_blank');
-		expect(communityLink).toHaveAttribute('rel', 'noopener noreferrer');
+		expect(communityLink).toHaveAttribute('rel', 'external noopener noreferrer');
 	});
 
 	it('handles an unavailable page without interpreting an error message as markup', () => {
@@ -90,5 +90,18 @@ describe('club error route', () => {
 		expect(
 			screen.queryByRole('link', { name: /cart|checkout|book delivery/i })
 		).not.toBeInTheDocument();
+	});
+
+	it('keeps inquiry and bug mailto links visible without JavaScript', () => {
+		render(ErrorPage);
+		const contact = screen.getByRole('navigation', { name: 'Club contact' });
+		expect(within(contact).getByRole('link', { name: 'Email the team' })).toHaveAttribute(
+			'href',
+			'mailto:team@marihacks.com?subject=Programming%20Club%20inquiry'
+		);
+		expect(within(contact).getByRole('link', { name: 'Report a bug' })).toHaveAttribute(
+			'href',
+			'mailto:team@marihacks.com?subject=Programming%20Club%20bug%20report'
+		);
 	});
 });

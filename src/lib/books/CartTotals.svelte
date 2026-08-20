@@ -50,13 +50,11 @@
 		display: grid;
 		width: 100%;
 		min-width: 0;
-		padding: clamp(1.5rem, 4vw, 2.25rem);
-		border: 1px solid rgb(153 194 255 / 44%);
-		border-block-start: 0.375rem solid var(--sky);
-		border-radius: var(--radius-md);
+		padding: clamp(1.25rem, 3vw, 1.75rem);
+		border-block-start: 0.25rem solid var(--sky);
 		background: var(--midnight);
 		color: var(--paper);
-		gap: var(--space-lg);
+		gap: var(--space-md);
 	}
 
 	h2 {
@@ -67,19 +65,19 @@
 	.ledger {
 		display: grid;
 		margin: 0;
-		border-block-start: 1px solid rgb(153 194 255 / 34%);
+		border-block-start: 1px solid rgb(var(--sky-rgb) / 34%);
 	}
 
 	.ledger-row {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) max-content;
 		align-items: baseline;
-		padding-block: var(--space-xs);
+		padding-block: 0.625rem;
 		gap: var(--space-sm);
 	}
 
 	.ledger-row + .ledger-row {
-		border-block-start: 1px solid rgb(247 244 237 / 16%);
+		border-block-start: 1px solid rgb(var(--paper-rgb) / 16%);
 	}
 
 	dt,
@@ -96,7 +94,7 @@
 
 	dd {
 		color: var(--paper);
-		font-family: var(--font-mono);
+		font-family: var(--font-body);
 		font-size: var(--text-sm);
 		font-variant-numeric: tabular-nums;
 		font-weight: 600;
@@ -111,8 +109,8 @@
 
 	.total-row {
 		align-items: center;
-		margin-block-start: var(--space-xs);
-		padding-block: var(--space-md) var(--space-xs);
+		margin-block-start: var(--space-2xs);
+		padding-block: var(--space-sm) 0;
 	}
 
 	.ledger-row + .total-row {
@@ -128,9 +126,9 @@
 
 	.total-row dd {
 		font-family: var(--font-display);
-		font-size: clamp(1.625rem, 1.25rem + 1.8vw, 2.5rem);
+		font-size: clamp(1.625rem, 1.4rem + 1vw, 2.125rem);
 		font-variant-numeric: tabular-nums;
-		letter-spacing: -0.05em;
+		letter-spacing: -0.035em;
 		line-height: 1;
 	}
 

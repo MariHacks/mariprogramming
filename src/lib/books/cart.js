@@ -1,8 +1,8 @@
 /**
- * @typedef {{ bookId: string, quantity: number }} CartItem
+ * @typedef {{ courseId?: string, bookId: string, quantity: number }} CartItem
  * @typedef {{ items: CartItem[] }} Cart
  * @typedef {string | CartItem} BookSelection
- * @typedef {{ id: string, title: string, priceCents: number, bookstoreId: string }} PricedBook
+ * @typedef {{ id: string, courseId?: string, title: string, priceCents: number, bookstoreId: string }} PricedBook
  * @typedef {{ id: string, name: string, serviceFeeCents: number }} PricedBookstore
  * @typedef {{ taxRateBps: number, books: PricedBook[], bookstores: PricedBookstore[] }} PriceCatalogue
  */
@@ -14,6 +14,20 @@ function assertBookId(bookId) {
 	if (typeof bookId !== 'string' || bookId.length === 0) {
 		throw new Error('Book ID must be a non-empty string');
 	}
+}
+
+/** @param {unknown} courseId */
+function assertCourseId(courseId) {
+	if (courseId !== undefined && (typeof courseId !== 'string' || courseId.length === 0)) {
+		throw new Error('Course ID must be a non-empty string');
+	}
+}
+
+/** @param {string | undefined} courseId @param {string} bookId */
+export function cartSelectionKey(courseId, bookId) {
+	assertCourseId(courseId);
+	assertBookId(bookId);
+	return JSON.stringify([courseId ?? null, bookId]);
 }
 
 /**
@@ -68,22 +82,27 @@ function mergeSelections(items, selections) {
 
 	for (const selection of [...items, ...selections]) {
 		const bookId = typeof selection === 'string' ? selection : selection.bookId;
+		const courseId = typeof selection === 'string' ? undefined : selection.courseId;
 		const quantity = typeof selection === 'string' ? 1 : selection.quantity;
 
 		assertBookId(bookId);
+		assertCourseId(courseId);
 		assertIntegerQuantity(quantity);
 		if (quantity <= 0) {
 			throw new Error('Added book quantity must be greater than zero');
 		}
 
-		quantities.set(
+		const key = cartSelectionKey(courseId, bookId);
+		const existing = quantities.get(key);
+		quantities.set(key, {
+			...(courseId === undefined ? {} : { courseId }),
 			bookId,
-			addSafeIntegers(quantities.get(bookId) ?? 0, quantity, 'Merged book quantity')
-		);
+			quantity: addSafeIntegers(existing?.quantity ?? 0, quantity, 'Merged book quantity')
+		});
 	}
 
 	return {
-		items: Array.from(quantities, ([bookId, quantity]) => ({ bookId, quantity }))
+		items: Array.from(quantities.values())
 	};
 }
 
@@ -108,51 +127,70 @@ export function addBooks(cart, selections) {
  * @param {Cart} cart
  * @param {string} bookId
  * @param {boolean} selected
+ * @param {string} [courseId]
  * @returns {Cart}
  */
-export function setBookSelected(cart, bookId, selected) {
+export function setBookSelected(cart, bookId, selected, courseId) {
 	assertBookId(bookId);
+	assertCourseId(courseId);
 	const canonicalCart = createCart(cart.items);
+	const key = cartSelectionKey(courseId, bookId);
 
 	if (!selected) {
 		return {
-			items: canonicalCart.items.filter((item) => item.bookId !== bookId)
+			items: canonicalCart.items.filter(
+				(item) => cartSelectionKey(item.courseId, item.bookId) !== key
+			)
 		};
 	}
 
-	if (canonicalCart.items.some((item) => item.bookId === bookId)) {
+	if (canonicalCart.items.some((item) => cartSelectionKey(item.courseId, item.bookId) === key)) {
 		return canonicalCart;
 	}
 
-	return addBooks(canonicalCart, [bookId]);
+	return addBooks(canonicalCart, [
+		courseId === undefined ? bookId : { courseId, bookId, quantity: 1 }
+	]);
 }
 
 /**
  * @param {Cart} cart
  * @param {string} bookId
  * @param {number} quantity
+ * @param {string} [courseId]
  * @returns {Cart}
  */
-export function setBookQuantity(cart, bookId, quantity) {
+export function setBookQuantity(cart, bookId, quantity, courseId) {
 	assertBookId(bookId);
+	assertCourseId(courseId);
 	assertIntegerQuantity(quantity);
 	const canonicalCart = createCart(cart.items);
+	const key = cartSelectionKey(courseId, bookId);
 
 	if (quantity <= 0) {
 		return {
-			items: canonicalCart.items.filter((item) => item.bookId !== bookId)
+			items: canonicalCart.items.filter(
+				(item) => cartSelectionKey(item.courseId, item.bookId) !== key
+			)
 		};
 	}
 
-	const existingItem = canonicalCart.items.find((item) => item.bookId === bookId);
+	const existingItem = canonicalCart.items.find(
+		(item) => cartSelectionKey(item.courseId, item.bookId) === key
+	);
 	if (!existingItem) {
 		return {
-			items: [...canonicalCart.items, { bookId, quantity }]
+			items: [
+				...canonicalCart.items,
+				{ ...(courseId === undefined ? {} : { courseId }), bookId, quantity }
+			]
 		};
 	}
 
 	return {
-		items: canonicalCart.items.map((item) => (item.bookId === bookId ? { bookId, quantity } : item))
+		items: canonicalCart.items.map((item) =>
+			cartSelectionKey(item.courseId, item.bookId) === key ? { ...item, quantity } : item
+		)
 	};
 }
 
@@ -162,15 +200,31 @@ export function setBookQuantity(cart, bookId, quantity) {
  */
 export function calculateCart(priceCatalogue, cart) {
 	assertNonNegativeSafeInteger(priceCatalogue.taxRateBps, 'Tax rate basis points');
-	const booksById = new Map(priceCatalogue.books.map((book) => [book.id, book]));
+	const booksBySelection = new Map(
+		priceCatalogue.books.map((book) => [cartSelectionKey(book.courseId, book.id), book])
+	);
+	const booksById = new Map();
+	for (const book of priceCatalogue.books) {
+		const matches = booksById.get(book.id) ?? [];
+		matches.push(book);
+		booksById.set(book.id, matches);
+	}
 	const bookstoresById = new Map(
 		priceCatalogue.bookstores.map((bookstore) => [bookstore.id, bookstore])
 	);
 	const representedBookstores = new Set();
-	const lines = createCart(cart.items).items.map(({ bookId, quantity }) => {
-		const book = booksById.get(bookId);
+	const lines = createCart(cart.items).items.map(({ courseId, bookId, quantity }) => {
+		const candidates = booksById.get(bookId) ?? [];
+		const book =
+			courseId === undefined
+				? candidates.length === 1
+					? candidates[0]
+					: undefined
+				: booksBySelection.get(cartSelectionKey(courseId, bookId));
 		if (!book) {
-			throw new Error(`Unknown book: ${bookId}`);
+			throw new Error(
+				candidates.length > 1 ? `Ambiguous book: ${bookId}` : `Unknown book: ${bookId}`
+			);
 		}
 
 		if (!bookstoresById.has(book.bookstoreId)) {
@@ -180,6 +234,9 @@ export function calculateCart(priceCatalogue, cart) {
 		assertNonNegativeSafeInteger(book.priceCents, 'Book price in cents');
 		representedBookstores.add(book.bookstoreId);
 		return {
+			...(courseId === undefined && book.courseId === undefined
+				? {}
+				: { courseId: courseId ?? book.courseId }),
 			bookId: book.id,
 			title: book.title,
 			bookstoreId: book.bookstoreId,

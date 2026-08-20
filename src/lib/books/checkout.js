@@ -1,5 +1,4 @@
 import { calculateCart, createCart } from './cart';
-import { catalogue } from './catalogue';
 
 const REQUEST_FIELDS = ['items', 'name', 'email'];
 const ITEM_FIELDS = ['bookId', 'quantity'];
@@ -181,9 +180,9 @@ function createFeeDescriptor(fee) {
  * Rebuilds a trusted checkout order from browser-supplied IDs, quantities, and guest contact only.
  *
  * @param {unknown} request
- * @param {import('./catalogue').Catalogue} [priceCatalogue]
+ * @param {import('./cart').PriceCatalogue} priceCatalogue
  */
-export function createCheckoutOrder(request, priceCatalogue = catalogue) {
+export function createCheckoutOrder(request, priceCatalogue) {
 	if (!isPlainObject(request)) {
 		throw new Error('Checkout request must be an object');
 	}

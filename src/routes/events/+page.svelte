@@ -1,17 +1,18 @@
 <script>
+	import { resolve } from '$app/paths';
 	import EventList from '$lib/components/site/EventList.svelte';
 	import SectionIntro from '$lib/components/site/SectionIntro.svelte';
 	import { clubContent, getUpcomingEvents } from '$lib/content/club';
 
-	// The helper's shared typedef describes only its filter fields; the records retain their full shape.
-	const upcomingEvents = /** @type {Array<{
-	 * id: string,
-	 * startsAt: string,
-	 * title: string,
-	 * description?: string
-	 * }>} */ (/** @type {unknown} */ (getUpcomingEvents(clubContent.events)));
-	const metaDescription =
-		'Find confirmed Marianopolis Programming Club event dates and use the workshop archive between sessions.';
+	const upcomingEvents =
+		/** @type {Array<{
+		 * id: string,
+		 * startsAt: string,
+		 * title: string,
+		 * description?: string
+		 * }>} */ (/** @type {unknown} */ (getUpcomingEvents(clubContent.events)));
+	const metaDescription = 'Confirmed Marianopolis Programming Club event dates.';
+	const discordUrl = clubContent.socialLinks.find(({ label }) => label === 'Discord')?.url;
 </script>
 
 <svelte:head>
@@ -19,164 +20,124 @@
 	<meta name="description" content={metaDescription} />
 </svelte:head>
 
-<section class="events-hero surface-paper">
-	<div class="page-container hero-grid">
-		<SectionIntro
-			eyebrow="Club schedule"
-			title="Events, once they’re confirmed"
-			summary="Every confirmed club event will appear here with its date, time, and details."
-		/>
+<section class="events-page surface-paper">
+	<div class="page-container events-frame">
+		<SectionIntro title="Events" />
 
-		<aside class="listing-standard" aria-label="Event listing standard">
-			<p class="utility-label">Listing standard</p>
-			<p class="standard-title">Dates you can plan around</p>
-			<p>We publish an event only after its time and format are set.</p>
-		</aside>
-	</div>
-</section>
+		<section class="schedule" aria-labelledby="schedule-title">
+			<h2 id="schedule-title">Upcoming</h2>
+			<EventList events={upcomingEvents} />
+		</section>
 
-<section class="schedule-section surface-paper" aria-labelledby="schedule-title">
-	<div class="page-container schedule-frame">
-		<header class="schedule-heading">
-			<div>
-				<p class="eyebrow">Current listings</p>
-				<h2 id="schedule-title">Programming Club schedule</h2>
-			</div>
-			<p>Use this list for the date, time, and latest details of every upcoming event.</p>
-		</header>
-
-		<EventList events={upcomingEvents} />
-	</div>
-</section>
-
-<section class="between-events surface-navy" aria-labelledby="between-events-title">
-	<div class="page-container between-events-grid">
-		<div>
-			<p class="eyebrow">Learn between events</p>
-			<h2 id="between-events-title">Work through a past workshop</h2>
-		</div>
-
-		<div class="between-events-copy">
-			<p>The archive has original club slides and exercises you can use at your own pace.</p>
-			<a class="button-secondary" href="/our-workshops">Browse workshop archive</a>
-		</div>
+		<nav class="event-alternatives" aria-label="Other ways to take part">
+			<a class="archive-link" href={resolve('/our-workshops', {})}>
+				<span>Browse workshop archive</span>
+				<span aria-hidden="true">→</span>
+			</a>
+			<a class="archive-link" href={discordUrl} target="_blank" rel="external noopener noreferrer">
+				<span>Join Discord</span>
+				<span aria-hidden="true">↗</span>
+			</a>
+		</nav>
 	</div>
 </section>
 
 <style>
-	.events-hero {
-		padding-block: clamp(4.5rem, 10vw, 8rem);
+	.events-page {
+		min-height: calc(100vh - 4.5rem - 4.9375rem);
+		border-block-end: var(--rule);
 	}
 
-	.hero-grid {
+	.events-frame {
 		display: grid;
-		align-items: end;
-		gap: clamp(3rem, 8vw, 8rem);
+		padding-block: clamp(3.5rem, 7vw, 6rem);
+		gap: clamp(2.5rem, 6vw, 5rem);
 	}
 
-	.hero-grid :global(.section-intro) {
-		max-width: 52rem;
+	.events-frame :global(.section-intro) {
+		align-content: start;
+		max-width: 36rem;
 	}
 
-	.listing-standard {
+	.schedule {
 		display: grid;
-		min-width: 0;
-		padding-block-start: var(--space-md);
-		border-block-start: 1px solid var(--color-border-strong);
-		gap: var(--space-sm);
-	}
-
-	.standard-title {
-		max-width: 18ch;
-		color: var(--midnight);
-		font-family: var(--font-display);
-		font-size: var(--text-xl);
-		font-weight: 600;
-		letter-spacing: -0.025em;
-		line-height: 1.2;
-		text-wrap: balance;
-	}
-
-	.listing-standard > p:last-child {
-		max-width: 32rem;
-		line-height: 1.6;
-		text-wrap: pretty;
-	}
-
-	.schedule-section {
-		padding-block: 0 var(--section-space);
-	}
-
-	.schedule-frame {
-		display: grid;
-		min-width: 0;
-		padding-block-start: clamp(2rem, 5vw, 3.5rem);
-		border-block-start: 1px solid var(--color-border-strong);
-		gap: clamp(2rem, 5vw, 3.5rem);
-	}
-
-	.schedule-heading {
-		display: grid;
-		align-items: end;
-		min-width: 0;
-		gap: var(--space-lg);
-	}
-
-	.schedule-heading > div {
-		display: grid;
-		min-width: 0;
-		gap: var(--space-sm);
-	}
-
-	.schedule-heading h2 {
-		max-width: 20ch;
-	}
-
-	.schedule-heading > p {
-		max-width: 34rem;
-		line-height: 1.6;
-		text-wrap: pretty;
-	}
-
-	.between-events {
-		padding-block: var(--section-space);
-	}
-
-	.between-events-grid {
-		display: grid;
-		align-items: start;
-		gap: clamp(2rem, 7vw, 6rem);
-	}
-
-	.between-events-grid > div {
-		display: grid;
+		align-content: start;
 		min-width: 0;
 		gap: var(--space-md);
 	}
 
-	.between-events-grid h2 {
-		max-width: 19ch;
+	.schedule > h2 {
+		font-family: var(--font-body);
+		font-size: var(--text-sm);
+		font-weight: 700;
+		letter-spacing: 0;
+		line-height: 1.4;
 	}
 
-	.between-events-copy {
-		justify-items: start;
+	.archive-link {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) max-content;
+		align-items: center;
+		min-height: 3.75rem;
+		padding: 0.75rem var(--space-2xs);
+		border-block: var(--rule);
+		color: var(--club-blue);
+		font-size: var(--text-sm);
+		font-weight: 700;
+		line-height: 1.35;
+		text-decoration: none;
+		column-gap: var(--space-sm);
+		transition:
+			background-color var(--motion-fast) var(--ease-out),
+			color var(--motion-fast) var(--ease-out),
+			transform var(--motion-press) var(--ease-out);
 	}
 
-	.between-events-copy p {
-		max-width: 34rem;
-		color: rgb(247 244 237 / 78%);
-		line-height: 1.6;
-		text-wrap: pretty;
+	.event-alternatives {
+		display: grid;
+		border-block: var(--rule);
+	}
+
+	.event-alternatives .archive-link {
+		border-block: 0;
+	}
+
+	.event-alternatives .archive-link + .archive-link {
+		border-block-start: var(--rule);
+	}
+
+	.archive-link:hover {
+		background: var(--mist);
+		color: var(--midnight);
+	}
+
+	.archive-link:active {
+		transform: translateY(var(--press-distance));
 	}
 
 	@media (min-width: 52rem) {
-		.hero-grid {
-			grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.65fr);
+		.events-frame {
+			grid-template-columns: minmax(15rem, 0.68fr) minmax(0, 1.32fr);
+			align-items: start;
 		}
 
-		.schedule-heading,
-		.between-events-grid {
-			grid-template-columns: minmax(0, 0.9fr) minmax(19rem, 1.1fr);
+		.schedule,
+		.event-alternatives {
+			grid-column: 2;
+		}
+
+		.schedule {
+			grid-row: 1;
+		}
+
+		.event-alternatives {
+			margin-block-start: calc(-1 * var(--space-lg));
+		}
+	}
+
+	@media (max-width: 43.749rem) {
+		.events-page {
+			min-height: calc(100vh - 4.25rem - 6.5rem);
 		}
 	}
 </style>

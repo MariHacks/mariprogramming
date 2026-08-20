@@ -1,60 +1,134 @@
-import { cleanup, render, screen } from '@testing-library/svelte';
+import { cleanup, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
+import SiteHeader from '$lib/components/site/SiteHeader.svelte';
 import { clubContent } from '$lib/content/club';
 import HomePage from './+page.svelte';
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+});
 
 describe('home route', () => {
-	it('introduces the club, then gives students an ordered path through its current work', () => {
-		const { container } = render(HomePage);
+	it('keeps one Sign up action in the complete page shell', () => {
+		render(SiteHeader, { props: { pathname: '/' } });
+		render(HomePage);
 
-		expect(
-			screen.getByRole('heading', { level: 1, name: 'Learn programming. Build together.' })
-		).toBeInTheDocument();
-		expect(container.querySelectorAll('h1')).toHaveLength(1);
-		expect(screen.getByText(clubContent.mission)).toBeInTheDocument();
+		const signupLinks = screen.getAllByRole('link', { name: 'Sign up' });
+		const heroSignup = screen.getByRole('link', { name: 'Join the club' });
 
-		expect(
-			screen.getAllByRole('heading', { level: 2 }).map(({ textContent }) => textContent)
-		).toEqual(['Start with Python foundations', 'Upcoming events', 'Book Delivery']);
-		expect(screen.getByRole('heading', { level: 3, name: 'Intro to Python' })).toBeInTheDocument();
-		expect(
-			screen.getByText('Variables, data types, operations, conditions, and loops.')
-		).toBeInTheDocument();
+		expect(signupLinks).toHaveLength(1);
+		expect(signupLinks[0]).toHaveAttribute('href', clubContent.signupUrl);
+		expect(signupLinks[0]).toHaveAttribute('target', '_blank');
+		expect(signupLinks[0]).toHaveAttribute('rel', 'external noopener noreferrer');
+		expect(heroSignup).toHaveAttribute('href', clubContent.signupUrl);
 	});
 
-	it('turns the empty event schedule into a useful current community path', () => {
+	it('states that beginners can join', () => {
 		render(HomePage);
 
 		expect(
-			screen.getByRole('heading', { level: 3, name: 'New events are being planned' })
+			screen.getByText('Open to all Marianopolis students. No experience required.')
 		).toBeInTheDocument();
-
-		const communityLinks = screen.getAllByRole('link', {
-			name: clubContent.communityAction.label
-		});
-
-		expect(communityLinks.length).toBeGreaterThan(0);
-		for (const link of communityLinks) {
-			expect(link).toHaveAttribute('href', clubContent.communityAction.url);
-			expect(link).toHaveAttribute('target', '_blank');
-			expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-		}
 	});
 
-	it('introduces Book Delivery without exposing commerce controls on the club home page', () => {
+	it('reproduces the reference homepage structure in reading order', () => {
 		const { container } = render(HomePage);
-
-		expect(screen.getByRole('link', { name: 'Explore Book Delivery' })).toHaveAttribute(
-			'href',
-			'/books'
+		const regions = [...container.querySelectorAll('[data-home-section]')].map((node) =>
+			node.getAttribute('data-home-section')
 		);
-		expect(container).toHaveTextContent(/course books organized by teacher/i);
-		expect(container).not.toHaveTextContent(/\bcart\b|checkout|pickup/i);
+
+		expect(regions).toEqual(['hero', 'activities', 'archive-delivery', 'programming-hub']);
+		expect(
+			screen.getByRole('heading', { level: 1, name: 'Come build something with us.' })
+		).toBeVisible();
+		expect(
+			screen.getByRole('img', {
+				name: 'Two MariHacks organizers working side by side on laptops.'
+			})
+		).toHaveAttribute('src', '/images/marihacks/organizers-working-1600.webp');
 	});
 
-	it('describes the redesigned club home page in document metadata', () => {
+	it('indexes the documented club activities with useful destinations', () => {
+		render(HomePage);
+
+		expect(screen.getByRole('heading', { level: 2, name: 'Peer Help' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { level: 2, name: 'Workshops' })).toBeInTheDocument();
+		expect(
+			screen.getByRole('heading', { level: 2, name: 'Mini-Competitions' })
+		).toBeInTheDocument();
+		expect(screen.getByRole('heading', { level: 2, name: 'MariHacks' })).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Visit MariHacks' })).toHaveAttribute(
+			'href',
+			'https://www.marihacks.com/'
+		);
+		expect(screen.getAllByText('Coming Soon')).toHaveLength(2);
+		expect(screen.queryByRole('link', { name: /current challenge/i })).not.toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Mini-Competitions status' })).toHaveAttribute(
+			'href',
+			'/mini-competitions'
+		);
+	});
+
+	it('uses real workshop material as evidence', () => {
+		render(HomePage);
+
+		expect(screen.getByRole('link', { name: 'Intro to Python' })).toHaveAttribute(
+			'href',
+			'/our-workshops'
+		);
+		expect(screen.getByRole('link', { name: 'Functions and lists' })).toHaveAttribute(
+			'href',
+			'/our-workshops'
+		);
+		expect(
+			screen.getByRole('link', { name: 'Working with lists and dictionaries' })
+		).toHaveAttribute('href', '/our-workshops');
+		expect(screen.getByRole('heading', { level: 2, name: 'Workshop archive' })).toBeVisible();
+	});
+
+	it('keeps Book Delivery on the homepage as a closed coming-soon preview', () => {
+		const { container } = render(HomePage);
+		const delivery = screen.getByRole('region', { name: 'Book Delivery' });
+
+		expect(
+			within(delivery).getByRole('heading', { level: 2, name: 'Book Delivery' })
+		).toBeVisible();
+		expect(within(delivery).getByText('Coming Soon')).toBeVisible();
+		expect(delivery).toHaveTextContent('required French and English course books');
+		expect(within(delivery).queryByRole('link')).not.toBeInTheDocument();
+		expect(container.querySelectorAll('a[href^="/books"]')).toHaveLength(0);
+	});
+
+	it('keeps the programming hub useful without adding card filler', () => {
+		const { container } = render(HomePage);
+		const hub = screen.getByRole('region', { name: 'Programming Hub' });
+
+		expect(screen.getByRole('heading', { level: 2, name: 'Programming Hub' })).toBeVisible();
+		expect(within(hub).getByRole('link', { name: 'Ask in Discord' })).toHaveAttribute(
+			'href',
+			clubContent.socialLinks.find(({ label }) => label === 'Discord')?.url
+		);
+		expect(screen.getByRole('link', { name: 'Browse resources' })).toHaveAttribute(
+			'href',
+			'/resources'
+		);
+		expect(container.querySelectorAll('.card')).toHaveLength(0);
+	});
+
+	it('does not present lesson counts, event dates, or unsupported metrics', () => {
+		const { container } = render(HomePage);
+		const copy = container.textContent ?? '';
+
+		expect(copy).not.toMatch(/Lesson\s+\d+\s+of\s+\d+/i);
+		expect(copy).not.toMatch(
+			/\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}\b/i
+		);
+		expect(copy).not.toMatch(/\b\d+\+?\s+(?:members|projects|events)\b/i);
+		expect(copy).not.toMatch(/Open Lab Hours|Project Showcases|Study Buddies|Past Winners/i);
+		expect(copy).not.toMatch(/[\u2013\u2014\u00b7\u2022]/);
+	});
+
+	it('describes the club in document metadata', () => {
 		render(HomePage);
 
 		expect(document.title).toBe(clubContent.name);

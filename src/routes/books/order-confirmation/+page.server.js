@@ -1,130 +1,96 @@
-// The project JS include omits SvelteKit's generated ambient declarations; Vite still resolves this server-only module.
-// @ts-ignore
-import { env } from '$env/dynamic/private';
-import { createStripeClient, retrieveStripeCheckoutSession } from '$lib/server/books/stripe';
+import { readOrderConfirmationEnvironment } from '$lib/server/config/environment';
+import { withDatabaseTransaction } from '$lib/server/db/transaction';
+import {
+	confirmationCookieName,
+	loadOrderConfirmationInTransaction
+} from '$lib/server/orders/confirmation';
 
-const MAX_SESSION_ID_LENGTH = 255;
-const MAX_LINE_ITEMS = 65;
-const MAX_LINE_TITLE_LENGTH = 240;
-const MAX_RECEIPT_EMAIL_LENGTH = 254;
-const RETURN_PATH = '/books/cart';
+const PUBLIC_REFERENCE_PATTERN = /^MPC-[A-HJ-NP-Z2-9]{12}$/u;
+const CAPABILITY_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
+const CONFIRMATION_STATES = new Set([
+	'processing',
+	'paid',
+	'partially_refunded',
+	'refunded',
+	'expired',
+	'failed',
+	'cancelled'
+]);
+const PRIVATE_HEADERS = Object.freeze({
+	'cache-control': 'private, no-cache, no-store, max-age=0, must-revalidate',
+	expires: '0',
+	pragma: 'no-cache',
+	'referrer-policy': 'no-referrer',
+	'x-robots-tag': 'noindex, nofollow'
+});
 
 export const prerender = false;
 
-/**
- * @param {unknown} value
- * @returns {value is Record<string, unknown>}
- */
-function isRecord(value) {
-	return value !== null && typeof value === 'object' && !Array.isArray(value);
+function unavailable() {
+	return { confirmation: { status: 'unavailable', returnPath: '/books/cart' } };
 }
 
-/**
- * @param {unknown} value
- */
-function isCheckoutSessionId(value) {
+/** @param {unknown} value @param {string} reference */
+function isConfirmation(value, reference) {
 	return (
-		typeof value === 'string' &&
-		value.length <= MAX_SESSION_ID_LENGTH &&
-		/^cs_[A-Za-z0-9_]+$/u.test(value)
+		value !== null &&
+		typeof value === 'object' &&
+		!Array.isArray(value) &&
+		CONFIRMATION_STATES.has(/** @type {any} */ (value).state) &&
+		/** @type {any} */ (value).orderReference === reference
 	);
 }
 
 /**
- * @param {'missing' | 'invalid' | 'unpaid' | 'expired' | 'unavailable'} reason
+ * @param {Record<string, any>} [dependencies]
  */
-function recovery(reason) {
-	return {
-		confirmation: {
-			status: 'recovery',
-			reason,
-			returnPath: RETURN_PATH
+export function _createOrderConfirmationLoader(dependencies = {}) {
+	const readEnvironment =
+		dependencies.readEnvironment ?? (() => readOrderConfirmationEnvironment());
+	const runTransaction = dependencies.runTransaction ?? withDatabaseTransaction;
+	const loadConfirmation = dependencies.loadConfirmation ?? loadOrderConfirmationInTransaction;
+	const getNow = dependencies.getNow ?? (() => new Date());
+
+	return async function orderConfirmationLoad(
+		/** @type {{ params?: { orderReference?: string }, cookies?: { get: (name: string) => string | undefined }, parent: () => Promise<unknown>, setHeaders: (headers: Record<string, string>) => void }} */ {
+			params,
+			cookies,
+			parent,
+			setHeaders
+		}
+	) {
+		await parent();
+		setHeaders(PRIVATE_HEADERS);
+		const publicReference = params?.orderReference;
+		if (typeof publicReference !== 'string' || !PUBLIC_REFERENCE_PATTERN.test(publicReference)) {
+			return unavailable();
+		}
+		let capability;
+		try {
+			capability = cookies?.get(confirmationCookieName(publicReference));
+		} catch {
+			return unavailable();
+		}
+		if (typeof capability !== 'string' || !CAPABILITY_PATTERN.test(capability)) {
+			return unavailable();
+		}
+
+		try {
+			const runtime = readEnvironment();
+			const confirmation = await runTransaction(
+				(/** @type {unknown} */ transaction) =>
+					loadConfirmation(transaction, {
+						publicReference,
+						capability,
+						now: getNow()
+					}),
+				{ databaseUrl: runtime.databaseUrl }
+			);
+			return isConfirmation(confirmation, publicReference) ? { confirmation } : unavailable();
+		} catch {
+			return unavailable();
 		}
 	};
 }
 
-/**
- * @param {unknown} value
- * @param {number} maximumLength
- */
-function normalizeDisplayText(value, maximumLength) {
-	if (typeof value !== 'string') return null;
-
-	const normalized = value.trim().replace(/\s+/gu, ' ');
-	return normalized && normalized.length <= maximumLength ? normalized : null;
-}
-
-/**
- * @param {unknown} value
- */
-function normalizeReceiptEmail(value) {
-	const email = normalizeDisplayText(value, MAX_RECEIPT_EMAIL_LENGTH);
-	return email?.includes('@') ? email : null;
-}
-
-/**
- * @param {Record<string, unknown>} session
- */
-function projectReceiptEmail(session) {
-	const customerDetails = isRecord(session.customer_details) ? session.customer_details : null;
-
-	return (
-		normalizeReceiptEmail(customerDetails?.email) ?? normalizeReceiptEmail(session.customer_email)
-	);
-}
-
-/**
- * @param {Record<string, unknown>} session
- */
-function projectLineItems(session) {
-	const lineItems = isRecord(session.line_items) ? session.line_items : null;
-	if (!Array.isArray(lineItems?.data)) return [];
-
-	return lineItems.data.slice(0, MAX_LINE_ITEMS).flatMap((line) => {
-		if (!isRecord(line)) return [];
-
-		const title = normalizeDisplayText(line.description, MAX_LINE_TITLE_LENGTH);
-		const quantity = line.quantity;
-		if (
-			!title ||
-			typeof quantity !== 'number' ||
-			!Number.isSafeInteger(quantity) ||
-			quantity < 1 ||
-			quantity > 99
-		) {
-			return [];
-		}
-
-		return [{ title, quantity }];
-	});
-}
-
-/** @param {{ url: URL }} event */
-export async function load({ url }) {
-	const sessionId = url.searchParams.get('session_id');
-
-	if (sessionId === null) return recovery('missing');
-	if (!isCheckoutSessionId(sessionId)) return recovery('invalid');
-
-	try {
-		const stripe = createStripeClient(env.STRIPE_SECRET_KEY);
-		const session = await retrieveStripeCheckoutSession(stripe, sessionId);
-
-		if (!isRecord(session) || session.id !== sessionId) return recovery('unavailable');
-		if (session.status === 'expired') return recovery('expired');
-		if (session.status !== 'complete' || session.payment_status !== 'paid') {
-			return recovery('unpaid');
-		}
-
-		return {
-			confirmation: {
-				status: 'paid',
-				orderReference: sessionId,
-				receiptEmail: projectReceiptEmail(session),
-				lineItems: projectLineItems(session)
-			}
-		};
-	} catch {
-		return recovery('unavailable');
-	}
-}
+export const load = _createOrderConfirmationLoader();

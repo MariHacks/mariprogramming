@@ -10,3 +10,9 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .worktrees/
 .vercel/
+coverage/
+.vercel
+.env*
+!.env.example
+tmp/
+test-results/

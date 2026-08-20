@@ -1,7 +1,9 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { compile } from 'svelte/compiler';
 import BookRow from './BookRow.svelte';
-import { catalogue } from './catalogue';
+import bookRowSource from './BookRow.svelte?raw';
+import { catalogue } from '../../test/fixtures/book-catalogue';
 
 const book = {
 	...catalogue.books[0],
@@ -18,12 +20,20 @@ const props = {
 
 afterEach(cleanup);
 
+/** @param {string | undefined} value */
+function cssLengthToPixels(value) {
+	if (value?.endsWith('rem')) return Number.parseFloat(value) * 16;
+	return Number.parseFloat(value ?? 'NaN');
+}
+
 describe('BookRow', () => {
 	it('presents a meaningful left cover and the complete book record', () => {
 		const { container } = render(BookRow, { props });
+		const row = screen.getByRole('article', { name: 'Le Petit Prince' });
 		const cover = screen.getByRole('img', { name: 'Cover of Le Petit Prince' });
 		const details = /** @type {HTMLElement} */ (container.querySelector('.book-row__details'));
 
+		expect(row).toContainElement(cover);
 		expect(cover).toHaveAttribute('src', '/covers/le-petit-prince.webp');
 		expect(cover.compareDocumentPosition(details)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 		expect(screen.getByRole('heading', { level: 3, name: 'Le Petit Prince' })).toBeVisible();
@@ -36,7 +46,7 @@ describe('BookRow', () => {
 	it('reflects parent selection and requests a selection change with the book ID', async () => {
 		const view = render(BookRow, { props });
 		const handleSelectionChange = vi.fn();
-		view.component.$on('selectionchange', handleSelectionChange);
+		/** @type {any} */ (view.component).$on('selectionchange', handleSelectionChange);
 		const checkbox = screen.getByRole('checkbox', { name: 'Select Le Petit Prince' });
 
 		expect(checkbox).toBeChecked();
@@ -84,7 +94,7 @@ describe('BookRow', () => {
 	it('requests bounded quantity changes without owning the parent state', async () => {
 		const view = render(BookRow, { props });
 		const handleQuantityChange = vi.fn();
-		view.component.$on('quantitychange', handleQuantityChange);
+		/** @type {any} */ (view.component).$on('quantitychange', handleQuantityChange);
 
 		await fireEvent.click(
 			screen.getByRole('button', { name: 'Decrease quantity for Le Petit Prince' })
@@ -102,7 +112,7 @@ describe('BookRow', () => {
 	it('does not request a quantity below one', async () => {
 		const view = render(BookRow, { props: { ...props, quantity: 1 } });
 		const handleQuantityChange = vi.fn();
-		view.component.$on('quantitychange', handleQuantityChange);
+		/** @type {any} */ (view.component).$on('quantitychange', handleQuantityChange);
 		const decrement = screen.getByRole('button', {
 			name: 'Decrease quantity for Le Petit Prince'
 		});
@@ -120,7 +130,25 @@ describe('BookRow', () => {
 
 		expect(link).toHaveAttribute('href', 'https://www.renaud-bray.com/books/le-petit-prince');
 		expect(link).toHaveAttribute('target', '_blank');
-		expect(link).toHaveAttribute('rel', 'noreferrer');
+		expect(link).toHaveAttribute('rel', 'external noreferrer');
+	});
+
+	it('keeps quantity and retailer actions at least 44 pixels tall and wide', () => {
+		const { css } = compile(bookRowSource, { generate: 'client', cssHash: () => 'scope' });
+		const compiledCss = css?.code ?? '';
+		const quantityHeight = compiledCss.match(
+			/\.quantity-control[^{}]*button[^{}]*,\s*\.quantity-control[^{}]*output[^{}]*\{[^{}]*min-height:\s*(?<value>[^;}]+)/
+		)?.groups?.value;
+		const quantityWidth = compiledCss.match(
+			/\.quantity-control[^{}]*button[^{}]*\{[^{}]*min-width:\s*(?<value>[^;}]+)/
+		)?.groups?.value;
+		const retailerHeight = compiledCss.match(
+			/\.storefront-link[^{}]*\{[^{}]*min-height:\s*(?<value>[^;}]+)/
+		)?.groups?.value;
+
+		expect(cssLengthToPixels(quantityWidth)).toBeGreaterThanOrEqual(44);
+		expect(cssLengthToPixels(quantityHeight)).toBeGreaterThanOrEqual(44);
+		expect(cssLengthToPixels(retailerHeight)).toBeGreaterThanOrEqual(44);
 	});
 
 	it.each([null, '', '   '])('omits the retailer action for %j URLs', (storefrontUrl) => {

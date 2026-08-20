@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { catalogue, getTeacherBooks, getTeacherBySlug } from './catalogue';
+import { catalogue, getTeacherBooks, getTeacherBySlug } from '../../test/fixtures/book-catalogue';
 
 describe('book catalogue', () => {
 	it('represents Mme Tremblay as the teacher for both required French course lists', () => {

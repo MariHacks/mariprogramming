@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/svelte';
+import { cleanup, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import CartTotals from './CartTotals.svelte';
 
@@ -15,19 +15,26 @@ const summary = {
 afterEach(cleanup);
 
 describe('CartTotals', () => {
-	it('renders the supplied ledger labels and CAD amounts', () => {
+	it('renders every supplied money line in ledger order', () => {
 		render(CartTotals, { props: { summary } });
+		const orderSummary = screen.getByRole('complementary', { name: 'Order summary' });
 
-		expect(screen.getByText('Book subtotal')).toBeVisible();
-		expect(screen.getByText('$48.90')).toBeVisible();
-		expect(screen.getByText('Renaud-Bray service fee')).toBeVisible();
-		expect(screen.getByText('$5.00')).toBeVisible();
-		expect(screen.getByText('Archambault service fee')).toBeVisible();
-		expect(screen.getByText('$7.00')).toBeVisible();
-		expect(screen.getByText('Taxes')).toBeVisible();
-		expect(screen.getByText('$9.11')).toBeVisible();
-		expect(screen.getByText('Order total')).toBeVisible();
-		expect(screen.getByText('$70.01')).toBeVisible();
+		expect(
+			within(orderSummary)
+				.getAllByRole('term')
+				.map((term) => term.textContent)
+		).toEqual([
+			'Book subtotal',
+			'Renaud-Bray service fee',
+			'Archambault service fee',
+			'Taxes',
+			'Order total'
+		]);
+		expect(
+			within(orderSummary)
+				.getAllByRole('definition')
+				.map((definition) => definition.textContent)
+		).toEqual(['$48.90', '$5.00', '$7.00', '$9.11', '$70.01']);
 	});
 
 	it('keeps supplied fee labels in order and renders each one once', () => {
