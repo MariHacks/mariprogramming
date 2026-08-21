@@ -24,6 +24,7 @@ import {
 	SECURITY_REASON_CODES
 } from '$lib/server/security/security-logger';
 import { createDiscordSink } from '$lib/server/notify/discord.js';
+import { createPostmarkSink } from '$lib/server/notify/postmark.js';
 import { createNotificationRelay } from '$lib/server/notify/relay.js';
 
 const MAX_WEBHOOK_BYTES = 64 * 1024;
@@ -48,11 +49,13 @@ async function drainNotifications() {
  * @param {() => { databaseUrl: string, appOrigin: string, discordWebhookUrl: string | null }} [readEnvironment]
  * @param {typeof createDiscordSink} [createSink]
  * @param {typeof createNotificationRelay} [createRelay]
+ * @param {typeof createPostmarkSink} [createEmailSink]
  */
 export async function _drainStripeNotifications(
 	readEnvironment = () => readNotificationRelayEnvironment(env),
 	createSink = createDiscordSink,
-	createRelay = createNotificationRelay
+	createRelay = createNotificationRelay,
+	createEmailSink = createPostmarkSink
 ) {
 	try {
 		const runtime = readEnvironment();
@@ -63,6 +66,19 @@ export async function _drainStripeNotifications(
 			limit: 2,
 			budgetMs: 2000
 		});
+		if (runtime.postmarkServerToken) {
+			const emailSink = createEmailSink({
+				serverToken: runtime.postmarkServerToken,
+				appOrigin: runtime.appOrigin,
+				capabilityKey: runtime.bookCheckoutCapabilityKey
+			});
+			await createRelay({
+				databaseUrl: runtime.databaseUrl,
+				sink: emailSink,
+				sinkName: 'postmark',
+				actions: ['stripe_completed_applied']
+			}).drain({ limit: 2, budgetMs: 2000 });
+		}
 	} catch {
 		// Stripe has committed before optional notification delivery starts.
 	}

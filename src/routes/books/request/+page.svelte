@@ -7,7 +7,11 @@
 
 	const contact = $derived(data.contact ?? createClubContactLinks());
 	const teachers = $derived(data.teachers ?? []);
-	const courses = $derived(data.courses ?? []);
+	const courses = $derived(
+		/** @type {Array<{ id: string, teacherId: string, code: string, title: string }>} */ (
+			data.courses ?? []
+		)
+	);
 	const fields = $derived(new Set(/** @type {any} */ (form)?.fields ?? []));
 
 	let interactive = $state(false);
@@ -15,6 +19,21 @@
 	let courseChoice = $state('');
 	const showTeacherOther = $derived(!interactive || teacherChoice === 'other');
 	const showCourseOther = $derived(!interactive || courseChoice === 'other');
+	const visibleCourses = $derived(
+		teacherChoice && teacherChoice !== 'other'
+			? courses.filter((course) => course.teacherId === teacherChoice)
+			: courses
+	);
+
+	$effect(() => {
+		if (
+			courseChoice &&
+			courseChoice !== 'other' &&
+			!visibleCourses.some((course) => course.id === courseChoice)
+		) {
+			courseChoice = '';
+		}
+	});
 
 	onMount(() => {
 		interactive = true;
@@ -30,9 +49,9 @@
 	<h1 id="request-heading">Request a book we do not carry</h1>
 	<p class="lede">
 		Tell us the teacher, course, and titles. Attach a course outline if you have one. Questions:
-		<a href={contact.inquiry.href}>{contact.inquiry.label}</a>
+		<a href={contact.inquiry.href} rel="external">{contact.inquiry.label}</a>
 		or
-		<a href={contact.bug.href}>{contact.bug.label}</a>.
+		<a href={contact.bug.href} rel="external">{contact.bug.label}</a>.
 	</p>
 
 	{#if data.unavailable}
@@ -112,7 +131,7 @@
 						aria-invalid={fields.has('course') ? 'true' : undefined}
 					>
 						<option value="">Select a course</option>
-						{#each courses as course (course.id)}
+						{#each visibleCourses as course (course.id)}
 							<option value={course.id}>{course.code}: {course.title}</option>
 						{/each}
 						<option value="other">Other</option>

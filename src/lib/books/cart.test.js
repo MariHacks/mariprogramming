@@ -240,6 +240,25 @@ describe('calculateCart', () => {
 			).lines[0]
 		).toMatchObject({ courseId: 'course-a', bookId: 'single-book' });
 	});
+	it('charges GST on the book subtotal only and leaves the service fee untaxed', () => {
+		const result = calculateCart(
+			{ ...fixture, taxRateBps: 500 },
+			{
+				items: [
+					{ bookId: 'le-petit-prince', quantity: 1 },
+					{ bookId: 'bescherelle', quantity: 1 }
+				]
+			}
+		);
+
+		expect(result.bookSubtotalCents).toBe(4890);
+		expect(result.fees).toEqual([
+			{ bookstoreId: 'renaud-bray', label: 'Renaud-Bray pickup service', amountCents: 500 }
+		]);
+		expect(result.taxCents).toBe(245);
+		expect(result.totalCents).toBe(5635);
+	});
+
 	it('charges one service fee for multiple books from the same bookstore', () => {
 		const result = calculateCart(fixture, {
 			items: [
@@ -250,9 +269,9 @@ describe('calculateCart', () => {
 
 		expect(result).toEqual({
 			bookSubtotalCents: 4890,
-			taxCents: 807,
+			taxCents: 733,
 			fees: [{ bookstoreId: 'renaud-bray', label: 'Renaud-Bray pickup service', amountCents: 500 }],
-			totalCents: 6197,
+			totalCents: 6123,
 			lines: [
 				{
 					bookId: 'le-petit-prince',
@@ -285,8 +304,8 @@ describe('calculateCart', () => {
 			{ bookstoreId: 'renaud-bray', label: 'Renaud-Bray pickup service', amountCents: 500 },
 			{ bookstoreId: 'archambault', label: 'Archambault pickup service', amountCents: 700 }
 		]);
-		expect(result.taxCents).toBe(1450);
-		expect(result.totalCents).toBe(11130);
+		expect(result.taxCents).toBe(1270);
+		expect(result.totalCents).toBe(10950);
 	});
 
 	it('returns exact zero totals for an empty cart', () => {
@@ -444,8 +463,8 @@ describe('calculateCart', () => {
 		expect(result.fees).toEqual([
 			{ bookstoreId: 'renaud-bray', label: 'Renaud-Bray pickup service', amountCents: 500 }
 		]);
-		expect(result.taxCents).toBe(359);
-		expect(result.totalCents).toBe(2754);
+		expect(result.taxCents).toBe(284);
+		expect(result.totalCents).toBe(2679);
 	});
 
 	it('rejects a bookstore identifier that changes while pricing a line', () => {

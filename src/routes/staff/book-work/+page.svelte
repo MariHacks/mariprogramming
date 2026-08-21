@@ -14,10 +14,14 @@
 	{#if form?.message}<p class="message" role="status">{form.message}</p>{/if}
 	{#if form?.errorSummary}<p class="error" role="alert">{form.errorSummary}</p>{/if}
 
-	{#if data.board.totalRows === 0}
+	{#if data.unavailable}
+		<p class="error" role="alert">
+			Book work is unavailable right now. Reload this page to try again.
+		</p>
+	{:else if data.board.totalRows === 0}
 		<p class="empty">There is no outstanding book work.</p>
 	{:else}
-		{#each data.board.groups as group}
+		{#each data.board.groups as group (group.bookstore?.id ?? 'unassigned')}
 			<section class="group">
 				<h2>{group.bookstore?.name ?? 'Unassigned'}</h2>
 				<div class="table-wrap">
@@ -29,7 +33,7 @@
 							>
 						</thead>
 						<tbody>
-							{#each group.rows as row}
+							{#each group.rows as row (`${row.ref.kind}:${row.ref.lineId ?? row.ref.itemId}`)}
 								<tr>
 									<td
 										><strong>{row.title}</strong>{#if row.author}<small>{row.author}</small
@@ -51,7 +55,7 @@
 													required
 												>
 													<option value="">Choose</option>
-													{#each data.board.bookstores as store}
+													{#each data.board.bookstores as store (store.id)}
 														<option value={store.id}>{store.name}</option>
 													{/each}
 												</select>

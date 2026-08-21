@@ -146,7 +146,9 @@ export async function submitRequestInTransaction(
 			})
 		];
 		if (rates.some((result) => !result.allowed)) {
-			throw new BookWorkRateLimitError(Math.max(...rates.map((result) => result.retryAfterSeconds)));
+			throw new BookWorkRateLimitError(
+				Math.max(...rates.map((result) => result.retryAfterSeconds))
+			);
 		}
 	}
 	const reference = makeReference();
@@ -472,7 +474,11 @@ export function createBookWorkRepository({
 				);
 				const courseRows = resultRows(
 					await tx(database).execute(
-						sql`SELECT id::text AS id, code, title FROM courses WHERE active = true ORDER BY code ASC, title ASC, id ASC`
+						sql`SELECT c.id::text AS id, c.teacher_id::text AS "teacherId", t.name AS "teacherName", c.code, c.title
+							FROM courses c
+							INNER JOIN teachers t ON t.id = c.teacher_id
+							WHERE c.active = true AND t.active = true
+							ORDER BY t.name ASC, c.code ASC, c.title ASC, c.id ASC`
 					)
 				);
 				return Object.freeze({
@@ -481,7 +487,13 @@ export function createBookWorkRepository({
 					),
 					courses: Object.freeze(
 						courseRows.map((row) =>
-							Object.freeze({ id: row.id, code: row.code, title: row.title })
+							Object.freeze({
+								id: row.id,
+								teacherId: row.teacherId,
+								teacherName: row.teacherName,
+								code: row.code,
+								title: row.title
+							})
 						)
 					)
 				});

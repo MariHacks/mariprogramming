@@ -451,7 +451,14 @@ describe('staff catalogue repository reads', () => {
 			[courseRow({ teacherActive: false })],
 			[bookstoreRow()],
 			[bookRow({ bookstoreActive: false })],
-			[assignmentRow({ courseActive: false, teacherActive: false, bookActive: false, bookstoreActive: false })]
+			[
+				assignmentRow({
+					courseActive: false,
+					teacherActive: false,
+					bookActive: false,
+					bookstoreActive: false
+				})
+			]
 		];
 		const { repository, operations } = repositoryWith(results);
 

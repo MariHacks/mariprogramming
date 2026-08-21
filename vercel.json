@@ -33,7 +33,7 @@
 		},
 		{
 			"path": "/api/cron/notify-relay",
-			"schedule": "*/5 * * * *"
+			"schedule": "32 3 * * *"
 		}
 	]
 }

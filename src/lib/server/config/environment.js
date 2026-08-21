@@ -49,6 +49,8 @@ const DISALLOWED_HOST_SUFFIX_LABELS = new Set([
 
 /** @typedef {{ databaseUrl: string }} OrderConfirmationEnvironment */
 
+/** @typedef {{ appOrigin: string, databaseUrl: string }} OrderConfirmationAccessEnvironment */
+
 /** @typedef {{ appOrigin: string }} StaffSignInEnvironment */
 
 /** @typedef {{ stripeSecretKey: string, stripeMode: 'test' | 'live' }} StaffOrderCancellationEnvironment */
@@ -91,10 +93,14 @@ const DISALLOWED_HOST_SUFFIX_LABELS = new Set([
  *   appOrigin: string,
  *   databaseUrl: string,
  *   cronSecret: string,
- *   discordWebhookUrl: string | null
+ *   discordWebhookUrl: string | null,
+ *   postmarkServerToken: string | null,
+ *   bookCheckoutCapabilityKey: string | null
  * }} ClubEventDeliveryEnvironment */
 
 const DISCORD_WEBHOOK_PATH_PATTERN = /^\/api\/webhooks\/[0-9]{17,20}\/[A-Za-z0-9_-]{20,128}$/u;
+const POSTMARK_SERVER_TOKEN_PATTERN =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 export class ServerConfigurationError extends Error {
 	constructor() {
@@ -334,6 +340,21 @@ export function readOrderConfirmationEnvironment(source = privateEnvironment) {
 }
 
 /**
+ * Reads only the canonical origin and database used to exchange an emailed confirmation
+ * capability for the existing reference-scoped HttpOnly cookie.
+ *
+ * @param {unknown} [source]
+ * @returns {Readonly<OrderConfirmationAccessEnvironment>}
+ */
+export function readOrderConfirmationAccessEnvironment(source = privateEnvironment) {
+	if (!isEnvironmentRecord(source)) invalidConfiguration();
+	return Object.freeze({
+		appOrigin: applicationOrigin(requiredString(source, 'APP_ORIGIN')),
+		databaseUrl: postgresUrl(requiredString(source, 'DATABASE_URL'))
+	});
+}
+
+/**
  * Keeps the public staff sign-in and recovery page available without reading database, provider,
  * session, payment, launch, or maintenance configuration. Protected auth endpoints still use the
  * complete authentication runtime.
@@ -456,6 +477,16 @@ function optionalDiscordWebhookUrl(source) {
 	}
 }
 
+/** @param {unknown} source */
+function optionalPostmarkServerToken(source) {
+	const raw = /** @type {Record<string, unknown>} */ (source).POSTMARK_SERVER_TOKEN;
+	if (raw === undefined || raw === null || raw === '') return null;
+	if (typeof raw !== 'string' || raw !== raw.trim() || !POSTMARK_SERVER_TOKEN_PATTERN.test(raw)) {
+		return invalidConfiguration();
+	}
+	return raw;
+}
+
 /**
  * Reads only the database and optional Discord incoming webhook used by club-event delivery.
  * A missing URL skips delivery. An invalid non-empty URL is a configuration error for this
@@ -469,11 +500,16 @@ export function readClubEventDeliveryEnvironment(source = privateEnvironment) {
 		return invalidConfiguration();
 	}
 
+	const postmarkServerToken = optionalPostmarkServerToken(source);
 	return Object.freeze({
 		appOrigin: applicationOrigin(requiredString(source, 'APP_ORIGIN')),
 		databaseUrl: postgresUrl(requiredString(source, 'DATABASE_URL')),
 		cronSecret: requiredString(source, 'CRON_SECRET', MIN_SECRET_LENGTH),
-		discordWebhookUrl: optionalDiscordWebhookUrl(source)
+		discordWebhookUrl: optionalDiscordWebhookUrl(source),
+		postmarkServerToken,
+		bookCheckoutCapabilityKey: postmarkServerToken
+			? requiredString(source, 'BOOK_CHECKOUT_CAPABILITY_KEY', MIN_SECRET_LENGTH)
+			: null
 	});
 }
 

@@ -45,11 +45,34 @@ describe('club facts', () => {
 			parseClubFact({
 				action: 'book_pickup_recorded',
 				orderReference: 'MPC-ABCDEFGH2345',
-				nextState: { quantity: 2 },
+				nextState: { quantity: 2, remaining: 1 },
 				titles: ['Calculus'],
 				bookstores: ['Campus Books']
 			})
-		).toMatchObject({ kind: 'book_picked_up', count: 2 });
+		).toMatchObject({ kind: 'book_picked_up', count: 2, remaining: 1 });
+		expect(
+			parseClubFact({
+				action: 'book_pickup_recorded',
+				requestReference: 'REQ-ABCDEFGH2345',
+				nextState: { quantity: 1, remaining: 0 },
+				requestTitles: ['Calculus'],
+				requestBookstore: 'Campus Books'
+			})
+		).toMatchObject({
+			kind: 'book_picked_up',
+			reference: 'REQ-ABCDEFGH2345',
+			titles: ['Calculus'],
+			bookstores: ['Campus Books']
+		});
+		expect(
+			parseClubFact({
+				action: 'book_pickup_recorded',
+				requestReference: 'REQ-ABCDEFGH2345',
+				nextState: { quantity: 1, remaining: 0 },
+				requestTitles: ['Calculus'],
+				requestBookstore: 'Campus Books'
+			})
+		).not.toHaveProperty('remaining');
 		expect(
 			parseClubFact({
 				action: 'book_request_assigned',
@@ -88,14 +111,18 @@ describe('club facts', () => {
 			teacher: null,
 			course: null
 		});
-		expect(parseClubFact({ action: 'book_pickup_recorded', requestReference: 'REQ-ABCDEFGH2345' })).toMatchObject({
+		expect(
+			parseClubFact({ action: 'book_pickup_recorded', requestReference: 'REQ-ABCDEFGH2345' })
+		).toMatchObject({
 			kind: 'book_picked_up',
 			reference: 'REQ-ABCDEFGH2345',
 			count: 0,
 			titles: [],
 			bookstores: []
 		});
-		expect(parseClubFact({ action: 'book_request_assigned', requestReference: 'REQ-ABCDEFGH2345' })).toMatchObject({
+		expect(
+			parseClubFact({ action: 'book_request_assigned', requestReference: 'REQ-ABCDEFGH2345' })
+		).toMatchObject({
 			kind: 'book_request_assigned',
 			count: 0,
 			bookstores: []
@@ -130,6 +157,16 @@ describe('discord sink', () => {
 		expect(body).toContain('Mme Tremblay');
 		expect(body).not.toContain('sam@example.com');
 		expect(body).not.toContain('Sam Tremblay');
+		await expect(
+			sink.deliver({
+				kind: 'book_picked_up',
+				reference: 'REQ-ABCDEFGH2345',
+				remaining: 0,
+				titles: [],
+				bookstores: []
+			})
+		).resolves.toEqual({ disposition: 'delivered' });
+		expect(body).toContain('0 copies');
 	});
 
 	it('retries when Discord is down', async () => {

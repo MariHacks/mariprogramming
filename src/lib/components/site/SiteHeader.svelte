@@ -224,43 +224,59 @@
 					<li>
 						<a
 							class="menu-link"
-							href={contactLinks.inquiry.href}
-							tabindex={mobileOpen ? undefined : -1}>{contactLinks.inquiry.label}</a
+							href={contactLinks.bug.href}
+							rel="external"
+							tabindex={mobileOpen ? undefined : -1}>{contactLinks.bug.label}</a
 						>
 					</li>
 					<li>
-						<a class="menu-link" href={contactLinks.bug.href} tabindex={mobileOpen ? undefined : -1}
-							>{contactLinks.bug.label}</a
+						<a
+							class="menu-link"
+							href={contactLinks.inquiry.href}
+							rel="external"
+							aria-label={contactLinks.inquiry.label}
+							tabindex={mobileOpen ? undefined : -1}
 						>
+							<SocialIcon name="Mail" />
+						</a>
 					</li>
 				</ul>
 			</nav>
 		</div>
 
-		<nav class="header-contact" aria-label="Club contact">
-			<a href={contactLinks.inquiry.href}>{contactLinks.inquiry.label}</a>
-			<a href={contactLinks.bug.href}>{contactLinks.bug.label}</a>
-		</nav>
+		<div class="header-actions">
+			<nav class="header-contact" aria-label="Club contact">
+				<a href={contactLinks.bug.href} rel="external">{contactLinks.bug.label}</a>
+			</nav>
 
-		<div class="header-socials" aria-label="Club social links">
-			{#each headerSocialLinks as link (link.label)}
+			<div class="header-socials" aria-label="Club social links">
 				<a
 					class="social-link"
-					href={link.url}
-					aria-label={link.label}
-					target="_blank"
-					rel="external noopener noreferrer"><SocialIcon name={link.label} /></a
+					href={contactLinks.inquiry.href}
+					rel="external"
+					aria-label={contactLinks.inquiry.label}
 				>
-			{/each}
-		</div>
+					<SocialIcon name="Mail" />
+				</a>
+				{#each headerSocialLinks as link (link.label)}
+					<a
+						class="social-link"
+						href={link.url}
+						aria-label={link.label}
+						target="_blank"
+						rel="external noopener noreferrer"><SocialIcon name={link.label} /></a
+					>
+				{/each}
+			</div>
 
-		<a
-			class="signup-link"
-			href={clubContent.signupUrl}
-			target="_blank"
-			rel="external noopener noreferrer"
-			on:click={closeDisclosures}>Sign up</a
-		>
+			<a
+				class="signup-link"
+				href={clubContent.signupUrl}
+				target="_blank"
+				rel="external noopener noreferrer"
+				on:click={closeDisclosures}>Sign up</a
+			>
+		</div>
 	</div>
 </header>
 
@@ -276,7 +292,7 @@
 
 	.header-frame {
 		display: grid;
-		grid-template-columns: auto minmax(0, 1fr) auto auto;
+		grid-template-columns: auto minmax(0, 1fr) auto;
 		align-items: center;
 		width: 100%;
 		max-width: 90rem;
@@ -440,12 +456,20 @@
 		color: var(--club-blue);
 	}
 
+	.header-actions {
+		display: flex;
+		flex-wrap: nowrap;
+		align-items: center;
+		justify-self: end;
+		flex: 0 0 auto;
+		gap: 0.15rem;
+	}
+
 	.header-contact {
 		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-end;
-		gap: 0.35rem 0.85rem;
-		max-width: 12.5rem;
+		flex-wrap: nowrap;
+		align-items: center;
+		padding-inline-end: 0.15rem;
 	}
 
 	.header-contact a {
@@ -456,6 +480,7 @@
 		font-size: 0.75rem;
 		font-weight: 650;
 		text-decoration: none;
+		white-space: nowrap;
 	}
 
 	.header-contact a:hover {
@@ -492,6 +517,8 @@
 		font-weight: 650;
 		line-height: 1;
 		text-decoration: none;
+		white-space: nowrap;
+		margin-inline-start: 0.45rem;
 		transition:
 			background-color var(--motion-fast) var(--ease-out),
 			border-color var(--motion-fast) var(--ease-out);
@@ -526,7 +553,7 @@
 
 	@media (min-width: 43.75rem) and (max-width: 63.999rem) {
 		.header-frame {
-			grid-template-columns: auto minmax(0, 1fr) auto auto;
+			grid-template-columns: auto minmax(0, 1fr) auto;
 			padding-inline: 1.25rem;
 			gap: 0.25rem;
 		}
@@ -542,10 +569,6 @@
 
 		.compact-shell {
 			justify-self: center;
-		}
-
-		.header-socials .social-link {
-			width: 2.75rem;
 		}
 	}
 
@@ -577,13 +600,9 @@
 
 		.mobile-shell {
 			display: block;
-			grid-column: 2;
-			grid-row: 1;
 		}
 
 		.signup-link {
-			grid-column: 3;
-			grid-row: 1;
 			padding-inline: 0.8rem;
 		}
 

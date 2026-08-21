@@ -68,8 +68,36 @@ function event() {
 describe('staff book work load', () => {
 	it('authorizes staff and opens the pickup board', async () => {
 		const { handlers, repository } = setup();
-		await expect(handlers.load({ locals: { staff: STAFF } })).resolves.toEqual({ board: BOARD });
+		await expect(handlers.load({ locals: { staff: STAFF } })).resolves.toEqual({
+			board: BOARD,
+			unavailable: false
+		});
 		expect(repository.openBoard).toHaveBeenCalledOnce();
+	});
+
+	it('returns an unavailable board when the pickup query fails', async () => {
+		const { handlers } = setup({
+			repository: {
+				openBoard: vi.fn(async () => {
+					throw new Error('Failed query: SELECT FROM book_pickups');
+				})
+			}
+		});
+		await expect(handlers.load({ locals: { staff: STAFF } })).resolves.toEqual({
+			board: { totalRows: 0, groups: [], bookstores: [] },
+			unavailable: true
+		});
+	});
+
+	it('returns an unavailable board when staff configuration cannot be read', async () => {
+		const { handlers } = setup({
+			readEnvironment: vi.fn(() => {
+				throw new Error('Server configuration is unavailable');
+			})
+		});
+		await expect(handlers.load({ locals: { staff: STAFF } })).resolves.toMatchObject({
+			unavailable: true
+		});
 	});
 });
 
@@ -87,6 +115,21 @@ describe('staff book work pickup', () => {
 				version: 4
 			})
 		);
+	});
+
+	it('drains Discord after a successful pickup', async () => {
+		const drain = vi.fn(async () => ({ delivered: 1 }));
+		const { handlers } = setup({
+			readRelayEnvironment: vi.fn(() => ({
+				databaseUrl: RUNTIME.databaseUrl,
+				appOrigin: 'https://club.example.com',
+				cronSecret: 'cron-secret-with-at-least-32-characters',
+				discordWebhookUrl: ''
+			})),
+			createNotificationRelay: vi.fn(() => ({ drain }))
+		});
+		await expect(handlers.actions.pickup(event())).resolves.toMatchObject({ success: true });
+		await vi.waitFor(() => expect(drain).toHaveBeenCalled());
 	});
 
 	it('records a request-item pickup using the request identity', async () => {
@@ -173,6 +216,27 @@ describe('staff book work assign', () => {
 				version: 4
 			})
 		);
+	});
+
+	it('drains Discord after a successful assign and swallows drain failures', async () => {
+		const drain = vi.fn(async () => {
+			throw new Error('discord down');
+		});
+		const createSink = vi.fn(() => ({ deliver: vi.fn() }));
+		const { handlers } = setup({
+			readRelayEnvironment: vi.fn(() => ({
+				databaseUrl: RUNTIME.databaseUrl,
+				appOrigin: 'https://club.example.com',
+				cronSecret: 'cron-secret-with-at-least-32-characters',
+				discordWebhookUrl:
+					'https://discord.com/api/webhooks/123456789012345678/testdiscordtokenvaluefortests'
+			})),
+			createDiscordSink: createSink,
+			createNotificationRelay: vi.fn(() => ({ drain }))
+		});
+		await expect(handlers.actions.assign(event())).resolves.toMatchObject({ success: true });
+		await vi.waitFor(() => expect(drain).toHaveBeenCalled());
+		expect(createSink).toHaveBeenCalledOnce();
 	});
 
 	it('maps staff mutation failures to a generic assignment error', async () => {

@@ -59,11 +59,8 @@ test('persists a live guest checkout and exposes it only through an authenticate
 	).toBeChecked();
 	const cleanCode = page.getByRole('checkbox', { name: 'Select Clean Code' });
 	await cleanCode.uncheck();
-	await page.getByRole('button', { name: 'Add 1 book to cart' }).click();
-	await page
-		.getByRole('navigation', { name: 'Book Delivery navigation' })
-		.getByRole('link', { name: 'Cart, 1 item' })
-		.click();
+	await page.getByRole('button', { name: 'Add to cart' }).click();
+	await page.getByRole('link', { name: 'Go to cart' }).click();
 
 	await expect(page.getByRole('heading', { level: 1, name: 'Your cart' })).toBeVisible();
 	await expect(

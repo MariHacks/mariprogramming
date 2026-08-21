@@ -23,7 +23,7 @@ export default defineConfig({
 	projects: [
 		{
 			name: 'live-chromium',
-			use: { ...devices['Desktop Chrome'] }
+			use: { ...devices['Desktop Chrome'], channel: 'chrome' }
 		}
 	],
 	webServer: {

@@ -133,7 +133,7 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 		const migrations = (await readdir(MIGRATIONS_DIRECTORY))
 			.filter((name) => name.endsWith('.sql'))
 			.sort();
-		expect(migrations).toHaveLength(6);
+		expect(migrations).toHaveLength(7);
 		const migrationSql = [];
 		for (const migrationName of migrations) {
 			const migration = await readFile(join(MIGRATIONS_DIRECTORY, migrationName), 'utf8');
@@ -169,6 +169,11 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 		).toBe('20');
 		expect(query("SELECT count(*) FROM pg_constraint WHERE contype IN ('c', 'f')")).toBe('87');
 		expect(query("SELECT count(*) FROM pg_indexes WHERE schemaname = 'public'")).toBe('79');
+		expect(
+			query(
+				"SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'event_deliveries_sink_valid'"
+			)
+		).toContain("'postmark'");
 	});
 
 	it('commits and rolls back atomically', () => {
@@ -622,9 +627,9 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 			concurrentSql(insert('pickup-race-b', 2))
 		]);
 		expect(race.sort()).toEqual([0, 1]);
-		expect(query(`SELECT sum(quantity) FROM book_pickups WHERE request_item_id = '${itemId}'`)).toBe(
-			'2'
-		);
+		expect(
+			query(`SELECT sum(quantity) FROM book_pickups WHERE request_item_id = '${itemId}'`)
+		).toBe('2');
 		expect(sql('UPDATE book_pickups SET quantity = quantity').status).not.toBe(0);
 		expect(sql('DELETE FROM book_pickups').status).not.toBe(0);
 	}, 10000);

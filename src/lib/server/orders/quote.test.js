@@ -146,8 +146,8 @@ describe('multi-course canonical checkout quote', () => {
 			currency: 'cad',
 			subtotalCents: 5000,
 			serviceFeeCents: 500,
-			taxCents: 824,
-			totalCents: 6324,
+			taxCents: 749,
+			totalCents: 6249,
 			taxRateBps: 1498,
 			lines: [
 				expect.objectContaining({ kind: 'book', label: 'Book A', courseId: COURSE_A }),

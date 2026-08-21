@@ -43,6 +43,13 @@
 			"when": 1787220000000,
 			"tag": "0005_book_work_and_notify",
 			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1787270400000,
+			"tag": "0006_postmark_order_confirmations",
+			"breakpoints": true
 		}
 	]
 }

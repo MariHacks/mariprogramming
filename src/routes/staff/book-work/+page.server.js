@@ -1,14 +1,23 @@
 // @ts-nocheck
 import { fail } from '@sveltejs/kit';
 import { requireStaff } from '$lib/server/auth/authorization.js';
-import { readStaffCatalogueEnvironment } from '$lib/server/config/environment.js';
+import {
+	readNotificationRelayEnvironment,
+	readStaffCatalogueEnvironment
+} from '$lib/server/config/environment.js';
 import {
 	BookWorkConflictError,
 	BookWorkNotFoundError,
 	BookWorkValidationError,
 	createBookWorkRepository
 } from '$lib/server/books/work-repository.js';
+import { createDiscordSink } from '$lib/server/notify/discord.js';
+import { createNotificationRelay } from '$lib/server/notify/relay.js';
 import { guardStaffMutation, StaffActionRequestError } from '$lib/server/staff/request.js';
+
+function emptyBoard() {
+	return Object.freeze({ totalRows: 0, groups: [], bookstores: [] });
+}
 
 function failure(error) {
 	if (error instanceof BookWorkConflictError) {
@@ -29,14 +38,43 @@ function failure(error) {
 export function _createBookWorkHandlers(dependencies = {}) {
 	const authorize = dependencies.authorize ?? requireStaff;
 	const readEnvironment = dependencies.readEnvironment ?? readStaffCatalogueEnvironment;
+	const readRelayEnvironment =
+		dependencies.readRelayEnvironment ?? readNotificationRelayEnvironment;
 	const createRepository = dependencies.createRepository ?? createBookWorkRepository;
 	const guardMutation = dependencies.guardMutation ?? guardStaffMutation;
+	const createSink = dependencies.createDiscordSink ?? createDiscordSink;
+	const createRelay = dependencies.createNotificationRelay ?? createNotificationRelay;
+
+	async function drainQuietly() {
+		try {
+			const runtime = readRelayEnvironment();
+			const sink = runtime.discordWebhookUrl
+				? createSink({
+						webhookUrl: runtime.discordWebhookUrl,
+						appOrigin: runtime.appOrigin
+					})
+				: null;
+			await createRelay({ databaseUrl: runtime.databaseUrl, sink }).drain({
+				limit: 2,
+				budgetMs: 2000
+			});
+		} catch {
+			// Staff work is durable before notification delivery starts.
+		}
+	}
 
 	return {
 		async load({ locals }) {
 			authorize(locals);
-			const runtime = readEnvironment();
-			return { board: await createRepository({ databaseUrl: runtime.databaseUrl }).openBoard() };
+			try {
+				const runtime = readEnvironment();
+				return {
+					board: await createRepository({ databaseUrl: runtime.databaseUrl }).openBoard(),
+					unavailable: false
+				};
+			} catch {
+				return { board: emptyBoard(), unavailable: true };
+			}
 		},
 		actions: {
 			async pickup(event) {
@@ -78,6 +116,7 @@ export function _createBookWorkHandlers(dependencies = {}) {
 							requestId: guarded.requestId
 						}
 					});
+					void drainQuietly();
 					return {
 						success: true,
 						message: result.replayed
@@ -115,6 +154,7 @@ export function _createBookWorkHandlers(dependencies = {}) {
 							requestId: guarded.requestId
 						}
 					});
+					void drainQuietly();
 					return { success: true, message: 'Request assigned.' };
 				} catch (error) {
 					return failure(error);

@@ -564,7 +564,7 @@ export const eventDeliveries = pgTable(
 		index('event_deliveries_claimable_idx')
 			.on(table.sink, table.nextAttemptAt)
 			.where(sql`${table.status} IN ('pending', 'in_flight')`),
-		check('event_deliveries_sink_valid', sql`${table.sink} = 'discord'`),
+		check('event_deliveries_sink_valid', sql`${table.sink} IN ('discord', 'postmark')`),
 		check(
 			'event_deliveries_status_valid',
 			sql`${table.status} IN ('pending', 'in_flight', 'delivered', 'skipped', 'dead')`

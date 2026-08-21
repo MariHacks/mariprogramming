@@ -26,7 +26,15 @@ const APPROVED_DEPENDENCY_SOURCE_MAP_INVENTORIES = Object.freeze({
 	}),
 	'drizzle-orm': Object.freeze({
 		version: '0.45.2',
-		digest: '45fa191d3db7586c4486206f2895e6cf5a907decc6be49145a6a1e6ee3af9435'
+		digest: 'd753610aa3f24e2b543a11a2ced922dcaedd8be17e23e65d758ab2b26fa734ab'
+	}),
+	'pg-cloudflare': Object.freeze({
+		version: '1.4.0',
+		digest: '479d7e4d2b894b68233672f01261e7ced3d52e7261bc2219b633e74787da7a0b'
+	}),
+	'pg-protocol': Object.freeze({
+		version: '1.16.0',
+		digest: 'abb0ba0bccd6d1a8edc92c05f9b13af4b9a7c5abaa0dbb662163f44b41e5331f'
 	}),
 	stripe: Object.freeze({
 		version: '22.5.0',

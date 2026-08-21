@@ -36,8 +36,8 @@ describe('createCheckoutOrder', () => {
 		});
 		expect(order.summary).toMatchObject({
 			bookSubtotalCents: 8875,
-			taxCents: 1509,
-			totalCents: 11584
+			taxCents: 1329,
+			totalCents: 11404
 		});
 		expect(request).toEqual(before);
 	});
@@ -87,8 +87,8 @@ describe('createCheckoutOrder', () => {
 				id: 'tax',
 				label: 'Tax',
 				quantity: 1,
-				unitAmountCents: 1509,
-				amountCents: 1509
+				unitAmountCents: 1329,
+				amountCents: 1329
 			}
 		]);
 	});
@@ -149,7 +149,7 @@ describe('createCheckoutOrder', () => {
 		});
 
 		expect(() => createCheckoutOrder(requestWithPrice)).toThrow(/unsupported/i);
-		expect(createCheckoutOrder(validRequest()).summary.totalCents).toBe(11584);
+		expect(createCheckoutOrder(validRequest()).summary.totalCents).toBe(11404);
 	});
 
 	it.each([

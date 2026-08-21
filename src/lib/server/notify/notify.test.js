@@ -25,6 +25,129 @@ describe('notification facts', () => {
 });
 
 describe('Discord notification sink', () => {
+	it('posts a readable embed for a book request instead of a raw action name', async () => {
+		const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
+		const sink = createDiscordSink({
+			webhookUrl: 'https://discord.com/api/webhooks/123/token',
+			appOrigin: 'https://club.example.com',
+			fetchImpl,
+			getNow: () => new Date('2026-08-20T18:15:00.000Z')
+		});
+		await sink.deliver({
+			kind: 'book_request_submitted',
+			reference: 'REQ-ABCDEFGHJKM2',
+			count: 2,
+			titles: ['Convenience Store Woman', 'Mansfield Park'],
+			teacher: 'Philip Dann',
+			course: '603-101-MQ Composition and Literature',
+			bookstores: [],
+			studentEmail: 'student@example.com'
+		});
+		const posted = JSON.parse(fetchImpl.mock.calls[0][1].body);
+		expect(posted.allowed_mentions).toEqual({ parse: [] });
+		expect(posted.embeds).toHaveLength(1);
+		const embed = posted.embeds[0];
+		expect(embed.title).toBe('Book request received');
+		expect(embed.description).toBe('A student asked for titles that are not in the catalogue yet.');
+		expect(embed.url).toBe('https://club.example.com/staff/book-work');
+		expect(embed.color).toBe(0xdf5b48);
+		expect(embed.timestamp).toBe('2026-08-20T18:15:00.000Z');
+		expect(embed.footer).toEqual({ text: 'Open staff book work · no student names or emails' });
+		expect(embed.fields).toEqual([
+			{ name: 'Reference', value: '`REQ-ABCDEFGHJKM2`', inline: true },
+			{ name: 'Copies', value: '2 copies', inline: true },
+			{ name: 'Teacher', value: 'Philip Dann', inline: true },
+			{ name: 'Course', value: '603-101-MQ Composition and Literature', inline: true },
+			{
+				name: 'Titles',
+				value: '1. Convenience Store Woman\n2. Mansfield Park'
+			}
+		]);
+		expect(JSON.stringify(posted)).not.toContain('student@example.com');
+		expect(JSON.stringify(posted)).not.toContain('book request submitted');
+	});
+
+	it('names fulfillment, payment, assignment, and pickup in staff language', async () => {
+		/** @param {Record<string, unknown>} fact */
+		async function embedFor(fact) {
+			const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
+			const sink = createDiscordSink({
+				webhookUrl: 'https://discord.com/api/webhooks/123/token',
+				appOrigin: 'https://club.example.com',
+				fetchImpl,
+				getNow: () => new Date('2026-08-20T18:15:00.000Z')
+			});
+			await sink.deliver(fact);
+			return JSON.parse(fetchImpl.mock.calls[0][1].body).embeds[0];
+		}
+
+		const paid = await embedFor({
+			kind: 'order_paid',
+			reference: 'MPC-ABCDEFGH2345',
+			count: 1,
+			titles: ['Convenience Store Woman'],
+			bookstores: ["The Book Stop (Follett's)"]
+		});
+		expect(paid.title).toBe('Order paid');
+		expect(paid.description).toBe('Stripe marked this order paid. Buy the listed titles next.');
+		expect(paid.color).toBe(0x2f6f4e);
+		expect(paid.fields).toEqual(
+			expect.arrayContaining([
+				{ name: 'Copies', value: '1 copy', inline: true },
+				{ name: 'Titles', value: '1. Convenience Store Woman' },
+				{ name: 'Bookstores', value: "The Book Stop (Follett's)" }
+			])
+		);
+
+		const fulfillment = await embedFor({
+			kind: 'fulfillment_advanced',
+			to: 'ready_for_pickup',
+			reference: 'MPC-ABCDEFGH2345',
+			count: 1,
+			titles: ['Convenience Store Woman'],
+			bookstores: ["The Book Stop (Follett's)"]
+		});
+		expect(fulfillment.title).toBe('Fulfillment updated');
+		expect(fulfillment.description).toBe('Status is now ready for pickup.');
+		expect(fulfillment.color).toBe(0xc48a2a);
+
+		const assigned = await embedFor({
+			kind: 'book_request_assigned',
+			reference: 'REQ-ABCDEFGHJKM2',
+			count: 1,
+			titles: ["Le Chef-d'oeuvre inconnu"],
+			bookstores: ['Independent bookstore']
+		});
+		expect(assigned.title).toBe('Request assigned');
+		expect(assigned.description).toBe('Staff assigned this request to a bookstore.');
+		expect(assigned.color).toBe(0x3d6b99);
+
+		const pickup = await embedFor({
+			kind: 'book_picked_up',
+			reference: 'MPC-ABCDEFGH2345',
+			count: 1,
+			remaining: 2,
+			titles: ['Convenience Store Woman'],
+			bookstores: ["The Book Stop (Follett's)"]
+		});
+		expect(pickup.title).toBe('Pickup recorded');
+		expect(pickup.description).toBe('Recorded 1 copy. 2 copies still outstanding.');
+		expect(pickup.color).toBe(0x6b5a3a);
+		expect(pickup.fields).toEqual(
+			expect.arrayContaining([{ name: 'Still outstanding', value: '2 copies', inline: true }])
+		);
+
+		const finishedPickup = await embedFor({
+			kind: 'book_picked_up',
+			reference: 'REQ-ABCDEFGHJKM2',
+			count: 2,
+			titles: ['Convenience Store Woman'],
+			bookstores: ["The Book Stop (Follett's)"]
+		});
+		expect(finishedPickup.description).toBe('Recorded 2 copies.');
+		expect(finishedPickup.fields.some((field) => field.name === 'Still outstanding')).toBe(false);
+	});
+
 	it('sends only operational fields and excludes student email', async () => {
 		const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
 		const sink = createDiscordSink({
@@ -66,11 +189,12 @@ describe('Discord notification sink', () => {
 		const sink = createDiscordSink({
 			webhookUrl: 'https://discord.com/api/webhooks/123/token',
 			appOrigin: 'https://club.example.com',
-			fetchImpl: vi.fn(async () =>
-				new Response(JSON.stringify({ message: 'rate limited' }), {
-					status: 429,
-					headers: { 'content-type': 'application/json' }
-				})
+			fetchImpl: vi.fn(
+				async () =>
+					new Response(JSON.stringify({ message: 'rate limited' }), {
+						status: 429,
+						headers: { 'content-type': 'application/json' }
+					})
 			)
 		});
 		await expect(sink.deliver({ kind: 'order_paid' })).resolves.toMatchObject({
@@ -251,10 +375,7 @@ describe('notification relay', () => {
 			enrollDeliveriesInTransaction(null, { now: new Date(), limit: 1 })
 		).rejects.toThrow('Notification database is unavailable');
 		await expect(
-			enrollDeliveriesInTransaction(
-				{ execute: async () => null },
-				{ now: new Date(), limit: 1 }
-			)
+			enrollDeliveriesInTransaction({ execute: async () => null }, { now: new Date(), limit: 1 })
 		).rejects.toThrow('Notification database is unavailable');
 	});
 

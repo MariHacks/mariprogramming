@@ -272,7 +272,7 @@ export function calculateCart(priceCatalogue, cart) {
 		'Pre-tax total in cents'
 	);
 	const taxNumerator = multiplySafeIntegers(
-		preTaxTotalCents,
+		bookSubtotalCents,
 		priceCatalogue.taxRateBps,
 		'Tax numerator'
 	);

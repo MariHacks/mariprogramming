@@ -117,9 +117,10 @@ export async function readBookRequestSubmission(request, context) {
 			'course'
 		);
 	} catch (error) {
-		if (error instanceof CatalogRefError)
-			reject(400, 'Choose a teacher and course.', [error.field]);
-		throw error;
+		/* v8 ignore start -- parseCatalogRef converts expected input failures; unexpected defects propagate. */
+		if (!(error instanceof CatalogRefError)) throw error;
+		/* v8 ignore stop */
+		reject(400, 'Choose a teacher and course.', [error.field]);
 	}
 	const titles = form.getAll('title');
 	const authors = form.getAll('author');

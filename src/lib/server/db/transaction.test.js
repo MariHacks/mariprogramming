@@ -51,9 +51,7 @@ describe('request-scoped database transactions', () => {
 		try {
 			const pool = createRequestPool('postgresql://local:secret@127.0.0.1:5432/app');
 			expect(pool.constructor.name).toBe('BoundPool');
-			expect(pool.options.connectionString).toBe(
-				'postgresql://local:secret@127.0.0.1:5432/app'
-			);
+			expect(pool.options.connectionString).toBe('postgresql://local:secret@127.0.0.1:5432/app');
 			await pool.end();
 
 			const database = createTransactionDatabase(/** @type {any} */ ({}));

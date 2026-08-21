@@ -58,8 +58,8 @@
 
 			<div class="community-path">
 				<nav class="error-contact" aria-label="Club contact">
-					<a href={contactLinks.inquiry.href}>{contactLinks.inquiry.label}</a>
-					<a href={contactLinks.bug.href}>{contactLinks.bug.label}</a>
+					<a href={contactLinks.inquiry.href} rel="external">{contactLinks.inquiry.label}</a>
+					<a href={contactLinks.bug.href} rel="external">{contactLinks.bug.label}</a>
 				</nav>
 				<a
 					href={clubContent.communityAction.url}

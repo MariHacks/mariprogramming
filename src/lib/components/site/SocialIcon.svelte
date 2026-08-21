@@ -9,6 +9,11 @@
 		<circle cx="12" cy="12" r="4" />
 		<circle class="icon-dot" cx="17.5" cy="6.7" r="1" fill="currentColor" stroke="none" />
 	</svg>
+{:else if name === 'Mail'}
+	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true" focusable="false">
+		<rect x="3.5" y="5.5" width="17" height="13" rx="1.75" />
+		<path d="m5 8 7 5 7-5" />
+	</svg>
 {:else if name === 'Discord'}
 	<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
 		<path

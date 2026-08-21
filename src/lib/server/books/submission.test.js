@@ -239,6 +239,43 @@ describe('book request multipart boundary', () => {
 		).rejects.toMatchObject({ fields: ['title', 'quantity'] });
 	});
 
+	it('rejects non-text identity and title fields while treating optional file values as empty', async () => {
+		const identityForm = await requestWith().formData();
+		identityForm.set('name', new File(['Student'], 'name.txt'));
+		await expect(
+			readBookRequestSubmission(
+				new Request('https://books.example.com/books/request', {
+					method: 'POST',
+					body: identityForm
+				}),
+				{ clientAddress: '127.0.0.1' }
+			)
+		).rejects.toMatchObject({ fields: ['name'] });
+
+		const titleForm = await requestWith().formData();
+		titleForm.set('title', new File(['Calculus'], 'title.txt'));
+		await expect(
+			readBookRequestSubmission(
+				new Request('https://books.example.com/books/request', { method: 'POST', body: titleForm }),
+				{ clientAddress: '127.0.0.1' }
+			)
+		).rejects.toMatchObject({ fields: ['title'] });
+
+		const optionalForm = await requestWith().formData();
+		optionalForm.set('author', new File(['Author'], 'author.txt'));
+		optionalForm.set('isbn', new File(['9780000000000'], 'isbn.txt'));
+		optionalForm.set('notes', new File(['Note'], 'note.txt'));
+		await expect(
+			readBookRequestSubmission(
+				new Request('https://books.example.com/books/request', {
+					method: 'POST',
+					body: optionalForm
+				}),
+				{ clientAddress: '127.0.0.1' }
+			)
+		).resolves.toMatchObject({ items: [{ author: null, isbn: null }], note: null });
+	});
+
 	it('rejects an outline larger than 2 MiB', async () => {
 		const form = await requestWith().formData();
 		form.set(

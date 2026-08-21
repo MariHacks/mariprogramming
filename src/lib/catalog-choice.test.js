@@ -25,15 +25,16 @@ describe('CatalogChoice parser', () => {
 	});
 
 	it('treats a blank identifier as absent on the other arm', () => {
-		expect(
-			parseCatalogChoice({ kind: 'other', id: '', label: 'Self-directed' })
-		).toEqual({ kind: 'other', label: 'Self-directed' });
+		expect(parseCatalogChoice({ kind: 'other', id: '', label: 'Self-directed' })).toEqual({
+			kind: 'other',
+			label: 'Self-directed'
+		});
 	});
 
 	it('returns the snapshot label for either arm', () => {
-		expect(
-			catalogChoiceLabel({ kind: 'catalog', id: TEACHER_ID, label: 'Ada Lovelace' })
-		).toBe('Ada Lovelace');
+		expect(catalogChoiceLabel({ kind: 'catalog', id: TEACHER_ID, label: 'Ada Lovelace' })).toBe(
+			'Ada Lovelace'
+		);
 		expect(catalogChoiceLabel({ kind: 'other', label: 'Other course' })).toBe('Other course');
 	});
 
@@ -54,8 +55,8 @@ describe('CatalogChoice parser', () => {
 	});
 
 	it('rejects a label longer than the field bound', () => {
-		expect(() =>
-			parseCatalogChoice({ kind: 'other', label: 'A'.repeat(201) })
-		).toThrow(CatalogChoiceError);
+		expect(() => parseCatalogChoice({ kind: 'other', label: 'A'.repeat(201) })).toThrow(
+			CatalogChoiceError
+		);
 	});
 });

@@ -22,11 +22,13 @@ export function createClubContactLinks() {
 	return Object.freeze({
 		inquiry: Object.freeze({
 			label: 'Email the team',
-			href: clubContactMailto('inquiry')
+			href: clubContactMailto('inquiry'),
+			rel: 'external'
 		}),
 		bug: Object.freeze({
 			label: 'Report a bug',
-			href: clubContactMailto('bug')
+			href: clubContactMailto('bug'),
+			rel: 'external'
 		})
 	});
 }

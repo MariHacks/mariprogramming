@@ -40,9 +40,7 @@ describe('staff book request outline download', () => {
 		});
 		expect(response.status).toBe(200);
 		expect(response.headers.get('content-type')).toBe('application/pdf');
-		expect(response.headers.get('content-disposition')).toBe(
-			'attachment; filename="outline.pdf"'
-		);
+		expect(response.headers.get('content-disposition')).toBe('attachment; filename="outline.pdf"');
 		expect(response.headers.get('cache-control')).toBe('private, no-store');
 		expect(new Uint8Array(await response.arrayBuffer())).toEqual(BYTES);
 		expect(current.repository.readOutline).toHaveBeenCalledWith(REQUEST_ID);

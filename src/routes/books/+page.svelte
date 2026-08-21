@@ -1,4 +1,5 @@
 <script>
+	import { resolve } from '$app/paths';
 	import TeacherCard from '$lib/books/TeacherCard.svelte';
 	import { clubContent } from '$lib/content/club';
 
@@ -36,11 +37,11 @@
 				{:else}
 					<div class="empty-catalogue">
 						<p>No course lists are available.</p>
-						<a class="button-primary" href="/books/request">Request a book</a>
+						<a class="button-primary" href={resolve('/books/request', {})}>Request a book</a>
 					</div>
 				{/if}
 				<p class="request-cta">
-					<a href="/books/request">Can't find a book?</a>
+					<a href={resolve('/books/request', {})}>Can't find a book?</a>
 				</p>
 			</div>
 		</section>

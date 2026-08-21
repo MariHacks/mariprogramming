@@ -9,12 +9,24 @@ function requestData() {
 	return /** @type {any} */ ({
 		launchState: 'live',
 		unavailable: false,
-		teachers: [{ id: '10000000-0000-4000-8000-000000000001', name: 'Mme Tremblay' }],
+		teachers: [
+			{ id: '10000000-0000-4000-8000-000000000001', name: 'Mme Tremblay' },
+			{ id: '10000000-0000-4000-8000-000000000002', name: 'Mr Bennett' }
+		],
 		courses: [
 			{
 				id: '20000000-0000-4000-8000-000000000001',
+				teacherId: '10000000-0000-4000-8000-000000000001',
+				teacherName: 'Mme Tremblay',
 				code: 'FRE-101',
 				title: 'French 101'
+			},
+			{
+				id: '20000000-0000-4000-8000-000000000002',
+				teacherId: '10000000-0000-4000-8000-000000000002',
+				teacherName: 'Mr Bennett',
+				code: 'ENG-103',
+				title: 'Literary Themes'
 			}
 		],
 		clientRequestId: '30000000-0000-4000-8000-000000000001',
@@ -51,7 +63,10 @@ describe('book request form', () => {
 		);
 		expect(screen.getByRole('combobox', { name: 'Catalogue teacher' })).toBeVisible();
 		expect(screen.getAllByRole('option', { name: 'Other' })).toHaveLength(2);
-		expect(screen.getByRole('button', { name: 'Submit request' })).toHaveAttribute('type', 'submit');
+		expect(screen.getByRole('button', { name: 'Submit request' })).toHaveAttribute(
+			'type',
+			'submit'
+		);
 	});
 
 	it('reveals the other teacher and course textboxes after Other is selected', async () => {
@@ -67,5 +82,23 @@ describe('book request form', () => {
 		expect(screen.getByLabelText('Other teacher')).toBeVisible();
 		await user.selectOptions(screen.getByRole('combobox', { name: 'Catalogue course' }), 'other');
 		expect(screen.getByLabelText('Other course')).toBeVisible();
+	});
+
+	it('limits the course dropdown to the selected teacher', async () => {
+		const user = userEvent.setup();
+		render(RequestPage, {
+			props: {
+				data: requestData(),
+				form: /** @type {any} */ ({})
+			}
+		});
+		expect(screen.getByRole('option', { name: 'FRE-101: French 101' })).toBeVisible();
+		expect(screen.getByRole('option', { name: 'ENG-103: Literary Themes' })).toBeVisible();
+		await user.selectOptions(
+			screen.getByRole('combobox', { name: 'Catalogue teacher' }),
+			'10000000-0000-4000-8000-000000000001'
+		);
+		expect(screen.getByRole('option', { name: 'FRE-101: French 101' })).toBeVisible();
+		expect(screen.queryByRole('option', { name: 'ENG-103: Literary Themes' })).toBeNull();
 	});
 });

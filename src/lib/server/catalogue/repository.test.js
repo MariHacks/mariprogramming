@@ -335,8 +335,8 @@ describe('canonical catalogue quote', () => {
 			currency: 'cad',
 			subtotalCents: 4500,
 			serviceFeeCents: 1200,
-			taxCents: 854,
-			totalCents: 6554,
+			taxCents: 674,
+			totalCents: 6374,
 			taxRateBps: 1498
 		});
 		expect(quote.lines).toEqual([
@@ -381,7 +381,7 @@ describe('canonical catalogue quote', () => {
 		).resolves.toMatchObject({
 			subtotalCents: 1000,
 			serviceFeeCents: 500,
-			totalCents: 1725
+			totalCents: 1650
 		});
 		expect(runTransaction).not.toHaveBeenCalled();
 		expect(operations).toEqual([{ joins: expect.any(Array), locked: true, ordered: true }]);

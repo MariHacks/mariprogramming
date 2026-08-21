@@ -1,4 +1,5 @@
 <script>
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { createClubContactLinks } from '$lib/club-contact.js';
 
@@ -22,10 +23,10 @@
 		<p class="lede">Your request is in. Keep any confirmation we emailed you.</p>
 	{/if}
 	<p>
-		Questions: <a href={contact.inquiry.href}>{contact.inquiry.label}</a>.
+		Questions: <a href={contact.inquiry.href} rel="external">{contact.inquiry.label}</a>.
 	</p>
 	<p>
-		<a class="text-link" href="/books">Back to the book catalogue</a>
+		<a class="text-link" href={resolve('/books', {})}>Back to the book catalogue</a>
 	</p>
 </section>
 

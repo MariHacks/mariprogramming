@@ -1,0 +1,18 @@
+{
+	"title": "Choose the visual world",
+	"question": "Approve the contemporary technical journal direction, re-roll it, or steer it before implementation.",
+	"options": [
+		{
+			"id": "technical-journal",
+			"label": "The Student Technical Journal",
+			"kicker": "RECOMMENDED DIRECTION",
+			"lineage": "A contemporary university journal crossed with a precise independent bookstore",
+			"body": "The club becomes the editorial lead: a compact recruitment header, one decisive statement, real workshop and community evidence arranged with rules and columns, and no decorative card grid. Cool white, ink navy, and one electric blue replace beige and soft pastels. Inter Tight and Inter keep the direct modern typography of your references. Book Delivery uses open teacher-course compositions with stacked covers; checkout becomes an edge-to-edge two-column workspace with a bright form pane and a deep-ink order rail. Motion is limited to 140–220 ms press, focus, cart, and route feedback. Risk: the system needs disciplined copy and spacing so editorial restraint does not become emptiness again.",
+			"hero": "/var/folders/tx/fjslh7k95fx2bszwrh87q7pr0000gn/T/codex-clipboard-f08c8aaa-8f43-478a-aa97-623a33aedf1b.png",
+			"board": "/var/folders/tx/fjslh7k95fx2bszwrh87q7pr0000gn/T/codex-clipboard-c5af8215-1321-4607-aaa6-14a5df534186.png"
+		}
+	],
+	"reroll": true,
+	"canon": true,
+	"steer": true
+}

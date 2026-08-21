@@ -488,7 +488,7 @@ function buildQuote(rows, selections, taxRateBps, approvedHostnames) {
 		0
 	);
 	const preTaxCents = addCents(subtotalCents, serviceFeeCents);
-	const taxCents = safeCents(Math.round(multiplyCents(preTaxCents, taxRateBps) / 10000));
+	const taxCents = safeCents(Math.round(multiplyCents(subtotalCents, taxRateBps) / 10000));
 	return freezeQuote({
 		currency: 'cad',
 		subtotalCents,

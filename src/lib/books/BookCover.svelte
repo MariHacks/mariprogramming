@@ -59,11 +59,13 @@
 			0 1px 1px rgb(var(--midnight-rgb) / 16%),
 			0 0.45rem 1rem rgb(var(--midnight-rgb) / 14%);
 		color: var(--cover-ink, var(--midnight));
+		overflow: hidden;
 	}
 
 	img.book-cover {
-		height: auto;
+		aspect-ratio: 2 / 3;
 		object-fit: cover;
+		object-position: center top;
 	}
 
 	.book-cover--compact {

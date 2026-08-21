@@ -9,6 +9,9 @@ vi.mock('$lib/server/config/environment.js', () => ({
 vi.mock('$lib/server/notify/discord.js', () => ({
 	createDiscordSink: vi.fn(() => ({ deliver: vi.fn() }))
 }));
+vi.mock('$lib/server/notify/postmark.js', () => ({
+	createPostmarkSink: vi.fn(() => ({ deliver: vi.fn() }))
+}));
 vi.mock('$lib/server/notify/relay.js', () => ({
 	createNotificationRelay: vi.fn()
 }));
@@ -21,7 +24,9 @@ const RUNTIME = Object.freeze({
 	appOrigin: 'https://club.example.com',
 	databaseUrl: 'postgresql://runtime:password@db.example.com/books',
 	cronSecret: 'cron-secret-with-at-least-32-characters',
-	discordWebhookUrl: null
+	discordWebhookUrl: null,
+	postmarkServerToken: null,
+	bookCheckoutCapabilityKey: null
 });
 
 describe('notify relay cron', () => {
@@ -31,11 +36,13 @@ describe('notify relay cron', () => {
 			Object.freeze({ enrolled: 1, attempted: 1, delivered: 1, retrying: 0, dead: 0, skipped: 0 })
 		);
 		vi.mocked(createNotificationRelay).mockReturnValue({ drain });
-		const response = await GET(/** @type {any} */ ({
-			request: new Request('https://club.example.com/api/cron/notify-relay', {
-				headers: { authorization: `Bearer ${RUNTIME.cronSecret}` }
+		const response = await GET(
+			/** @type {any} */ ({
+				request: new Request('https://club.example.com/api/cron/notify-relay', {
+					headers: { authorization: `Bearer ${RUNTIME.cronSecret}` }
+				})
 			})
-		}));
+		);
 		expect(response.status).toBe(200);
 		await expect(response.json()).resolves.toMatchObject({ delivered: 1 });
 		expect(drain).toHaveBeenCalledOnce();
@@ -43,9 +50,11 @@ describe('notify relay cron', () => {
 
 	it('rejects a missing bearer secret', async () => {
 		vi.mocked(readNotificationRelayEnvironment).mockReturnValue(RUNTIME);
-		const response = await GET(/** @type {any} */ ({
-			request: new Request('https://club.example.com/api/cron/notify-relay')
-		}));
+		const response = await GET(
+			/** @type {any} */ ({
+				request: new Request('https://club.example.com/api/cron/notify-relay')
+			})
+		);
 		expect(response.status).toBe(401);
 	});
 
@@ -53,11 +62,13 @@ describe('notify relay cron', () => {
 		vi.mocked(readNotificationRelayEnvironment).mockImplementation(() => {
 			throw new Error('missing cron secret');
 		});
-		const response = await GET(/** @type {any} */ ({
-			request: new Request('https://club.example.com/api/cron/notify-relay', {
-				headers: { authorization: `Bearer ${RUNTIME.cronSecret}` }
+		const response = await GET(
+			/** @type {any} */ ({
+				request: new Request('https://club.example.com/api/cron/notify-relay', {
+					headers: { authorization: `Bearer ${RUNTIME.cronSecret}` }
+				})
 			})
-		}));
+		);
 		expect(response.status).toBe(503);
 	});
 
@@ -68,11 +79,13 @@ describe('notify relay cron', () => {
 				throw new Error('database down');
 			})
 		});
-		const response = await GET(/** @type {any} */ ({
-			request: new Request('https://club.example.com/api/cron/notify-relay', {
-				headers: { authorization: `Bearer ${RUNTIME.cronSecret}` }
+		const response = await GET(
+			/** @type {any} */ ({
+				request: new Request('https://club.example.com/api/cron/notify-relay', {
+					headers: { authorization: `Bearer ${RUNTIME.cronSecret}` }
+				})
 			})
-		}));
+		);
 		expect(response.status).toBe(503);
 	});
 
@@ -93,12 +106,70 @@ describe('notify relay cron', () => {
 				skipped: 0
 			}))
 		});
-		const response = await GET(/** @type {any} */ ({
-			request: new Request('https://club.example.com/api/cron/notify-relay', {
-				headers: { authorization: `Bearer ${RUNTIME.cronSecret}` }
+		const response = await GET(
+			/** @type {any} */ ({
+				request: new Request('https://club.example.com/api/cron/notify-relay', {
+					headers: { authorization: `Bearer ${RUNTIME.cronSecret}` }
+				})
 			})
-		}));
+		);
 		expect(response.status).toBe(200);
 		expect(createDiscordSink).toHaveBeenCalledOnce();
+	});
+
+	it('drains paid-order email through Postmark when configured', async () => {
+		vi.clearAllMocks();
+		const { createPostmarkSink } = await import('$lib/server/notify/postmark.js');
+		vi.mocked(readNotificationRelayEnvironment).mockReturnValue({
+			...RUNTIME,
+			postmarkServerToken: '00000000-0000-4000-8000-000000000000',
+			bookCheckoutCapabilityKey: 'confirmation-capability-key-with-at-least-32-characters'
+		});
+		const drains = [
+			vi.fn(async () => ({
+				enrolled: 0,
+				attempted: 0,
+				delivered: 0,
+				retrying: 0,
+				dead: 0,
+				skipped: 0
+			})),
+			vi.fn(async () => ({
+				enrolled: 1,
+				attempted: 1,
+				delivered: 1,
+				retrying: 0,
+				dead: 0,
+				skipped: 0
+			}))
+		];
+		vi.mocked(createNotificationRelay)
+			.mockReturnValueOnce({ drain: drains[0] })
+			.mockReturnValueOnce({ drain: drains[1] });
+
+		const response = await GET(
+			/** @type {any} */ ({
+				request: new Request('https://club.example.com/api/cron/notify-relay', {
+					headers: { authorization: `Bearer ${RUNTIME.cronSecret}` }
+				})
+			})
+		);
+
+		expect(response.status).toBe(200);
+		expect(createPostmarkSink).toHaveBeenCalledWith(
+			expect.objectContaining({
+				serverToken: '00000000-0000-4000-8000-000000000000',
+				appOrigin: RUNTIME.appOrigin,
+				capabilityKey: 'confirmation-capability-key-with-at-least-32-characters'
+			})
+		);
+		expect(createNotificationRelay).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({
+				sinkName: 'postmark',
+				actions: ['stripe_completed_applied']
+			})
+		);
+		expect(drains[1]).toHaveBeenCalledOnce();
 	});
 });

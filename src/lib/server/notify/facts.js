@@ -17,7 +17,11 @@ export function parseClubFact(source) {
 	if (source.action === 'stripe_completed_applied') {
 		return Object.freeze({
 			kind: 'order_paid',
+			orderId: source.orderId,
+			attemptId: source.attemptId,
 			reference: source.orderReference,
+			recipient: source.orderEmail,
+			totalCents: Number(source.orderTotalCents ?? 0),
 			count: Number(source.orderBookCount ?? 0),
 			titles: Object.freeze(source.orderTitles ?? []),
 			bookstores: Object.freeze(source.orderBookstores ?? [])
@@ -45,12 +49,20 @@ export function parseClubFact(source) {
 		});
 	}
 	if (source.action === 'book_pickup_recorded') {
+		const remaining = Number(state.remaining);
 		return Object.freeze({
 			kind: 'book_picked_up',
 			reference: source.orderReference ?? source.requestReference,
 			count: Number(state.quantity ?? 0),
-			titles: Object.freeze(source.titles ?? []),
-			bookstores: Object.freeze(source.bookstores ?? [])
+			...(Number.isFinite(remaining) && remaining > 0 ? { remaining } : {}),
+			titles: Object.freeze(source.titles?.length ? source.titles : (source.requestTitles ?? [])),
+			bookstores: Object.freeze(
+				source.bookstores?.length
+					? source.bookstores
+					: source.requestBookstore
+						? [source.requestBookstore]
+						: []
+			)
 		});
 	}
 	if (source.action === 'book_request_assigned') {

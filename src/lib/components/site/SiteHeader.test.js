@@ -49,6 +49,30 @@ describe('SiteHeader', () => {
 		expect(signUpLinks[0]).toHaveAttribute('rel', 'external noopener noreferrer');
 	});
 
+	it('keeps the utility cluster on one header row so Sign up cannot wrap under the bar', () => {
+		expect(siteHeaderSource).toMatch(
+			/\.header-frame\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto;/u
+		);
+		expect(siteHeaderSource).not.toMatch(
+			/\.header-frame\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto auto/u
+		);
+		expect(siteHeaderSource).toMatch(/\.header-actions\s*\{[^}]*flex-wrap:\s*nowrap/u);
+		expect(siteHeaderSource).toMatch(/\.signup-link\s*\{[^}]*white-space:\s*nowrap/u);
+		expect(siteHeaderSource).not.toMatch(/\.header-contact\s*\{[^}]*max-width:\s*12\.5rem/u);
+	});
+
+	it('places the mailbox with Instagram and Discord after Report a bug', () => {
+		const { container } = render(SiteHeader, { props: { pathname: '/' } });
+		const actions = container.querySelector('.header-actions');
+		const socials = actions?.querySelector('.header-socials');
+
+		expect(actions?.querySelector('.header-contact')).not.toBeNull();
+		expect(actions?.querySelector('.signup-link')).not.toBeNull();
+		expect(
+			[...(socials?.querySelectorAll('a') ?? [])].map((link) => link.getAttribute('aria-label'))
+		).toEqual(['Email the team', 'Instagram', 'Discord']);
+	});
+
 	it('provides full, compact, and mobile navigation structures for the three responsive modes', () => {
 		const { container } = render(SiteHeader, { props: { pathname: '/resources' } });
 
@@ -276,6 +300,11 @@ describe('SiteHeader', () => {
 
 	it('exposes inquiry and bug mailto links in public chrome', () => {
 		render(SiteHeader, { props: { pathname: '/' } });
+		expect(
+			within(screen.getByRole('navigation', { name: 'Club contact' }))
+				.getAllByRole('link')
+				.map((link) => link.getAttribute('aria-label') || link.textContent?.trim())
+		).toEqual(['Report a bug']);
 		const contactLinks = screen.getAllByRole('link', { name: 'Email the team' });
 		expect(contactLinks.length).toBeGreaterThan(0);
 		for (const link of contactLinks) {
@@ -283,12 +312,16 @@ describe('SiteHeader', () => {
 				'href',
 				'mailto:team@marihacks.com?subject=Programming%20Club%20inquiry'
 			);
+			expect(link).toHaveAttribute('rel', 'external');
+			expect(link.querySelector('svg')).not.toBeNull();
+			expect(within(link).queryByText('Email the team')).not.toBeInTheDocument();
 		}
 		for (const link of screen.getAllByRole('link', { name: 'Report a bug' })) {
 			expect(link).toHaveAttribute(
 				'href',
 				'mailto:team@marihacks.com?subject=Programming%20Club%20bug%20report'
 			);
+			expect(link).toHaveAttribute('rel', 'external');
 		}
 	});
 });

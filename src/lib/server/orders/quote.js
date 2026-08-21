@@ -120,7 +120,7 @@ export async function quoteCheckoutCoursesInTransaction(transaction, canonicalRe
 			0
 		);
 		const preTax = addCents(subtotalCents, serviceFeeCents);
-		const taxCents = safeCents(Math.round(safeCents(preTax * taxRateBps) / 10000));
+		const taxCents = safeCents(Math.round(safeCents(subtotalCents * taxRateBps) / 10000));
 		return freezeQuote({
 			currency: 'cad',
 			subtotalCents,

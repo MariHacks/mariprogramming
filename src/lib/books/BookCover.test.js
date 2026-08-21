@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 import BookCover from './BookCover.svelte';
+import bookCoverSource from './BookCover.svelte?raw';
 
 /** @type {Array<[string, 'compact' | 'card']>} */
 const coverVariants = [
@@ -11,6 +12,12 @@ const coverVariants = [
 ];
 
 describe('BookCover', () => {
+	it('forces sourced covers into a 2:3 book rectangle instead of the image intrinsic ratio', () => {
+		expect(bookCoverSource).toMatch(/img\.book-cover\s*\{[^}]*aspect-ratio:\s*2\s*\/\s*3/u);
+		expect(bookCoverSource).not.toMatch(/img\.book-cover\s*\{[^}]*height:\s*auto/u);
+		expect(bookCoverSource).toMatch(/img\.book-cover\s*\{[^}]*object-fit:\s*cover/u);
+	});
+
 	it('gives a sourced card cover a descriptive name without deferring its load', () => {
 		render(BookCover, {
 			props: {

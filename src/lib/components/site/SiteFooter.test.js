@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import { clubContent } from '$lib/content/club';
 import SiteFooter from './SiteFooter.svelte';
+import siteFooterSource from './SiteFooter.svelte?raw';
 
 afterEach(cleanup);
 
@@ -75,20 +76,40 @@ describe('SiteFooter', () => {
 			expect(within(link).queryByText(label)).not.toBeInTheDocument();
 		}
 
-		expect(communityNavigation.querySelectorAll('a')).toHaveLength(expectedDestinations.length);
+		expect(communityNavigation.querySelectorAll('a')).toHaveLength(expectedDestinations.length + 1);
+		expect(
+			[...communityNavigation.querySelectorAll('a')].map(
+				(link) => link.getAttribute('aria-label') || link.textContent?.trim()
+			)
+		).toEqual(['Email the team', 'Instagram', 'Discord']);
 	});
 
 	it('exposes inquiry and bug mailto links without JavaScript', () => {
 		render(SiteFooter);
 		const contact = screen.getByRole('navigation', { name: 'Club contact' });
-		expect(within(contact).getByRole('link', { name: 'Email the team' })).toHaveAttribute(
+		expect(
+			within(contact)
+				.getAllByRole('link')
+				.map((link) => link.getAttribute('aria-label') || link.textContent?.trim())
+		).toEqual(['Report a bug']);
+		const inquiry = screen.getByRole('link', { name: 'Email the team' });
+		expect(inquiry).toHaveAttribute(
 			'href',
 			'mailto:team@marihacks.com?subject=Programming%20Club%20inquiry'
 		);
-		expect(within(contact).getByRole('link', { name: 'Report a bug' })).toHaveAttribute(
+		expect(inquiry).toHaveAttribute('rel', 'external');
+		expect(inquiry.querySelector('svg')).not.toBeNull();
+		expect(within(inquiry).queryByText('Email the team')).not.toBeInTheDocument();
+		const bug = within(contact).getByRole('link', { name: 'Report a bug' });
+		expect(bug).toHaveAttribute(
 			'href',
 			'mailto:team@marihacks.com?subject=Programming%20Club%20bug%20report'
 		);
+		expect(bug).toHaveAttribute('rel', 'external');
+	});
+
+	it('keeps footer community icons on the paper ink instead of browser link colors', () => {
+		expect(siteFooterSource).toMatch(/\.social-link\s*\{[^}]*color:\s*inherit/u);
 	});
 
 	it('keeps imagery supplementary in a compact one-row desktop frame', () => {

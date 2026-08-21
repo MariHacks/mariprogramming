@@ -23,11 +23,13 @@ describe('club contact', () => {
 		const links = createClubContactLinks();
 		expect(links.inquiry).toEqual({
 			label: 'Email the team',
-			href: 'mailto:team@marihacks.com?subject=Programming%20Club%20inquiry'
+			href: 'mailto:team@marihacks.com?subject=Programming%20Club%20inquiry',
+			rel: 'external'
 		});
 		expect(links.bug).toEqual({
 			label: 'Report a bug',
-			href: 'mailto:team@marihacks.com?subject=Programming%20Club%20bug%20report'
+			href: 'mailto:team@marihacks.com?subject=Programming%20Club%20bug%20report',
+			rel: 'external'
 		});
 		expect(Object.isFrozen(links)).toBe(true);
 		expect(Object.isFrozen(links.inquiry)).toBe(true);

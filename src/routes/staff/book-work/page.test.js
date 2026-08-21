@@ -84,4 +84,20 @@ describe('staff book work board', () => {
 		expect(screen.getByText('There is no outstanding book work.')).toBeVisible();
 		expect(screen.getByRole('status')).toHaveTextContent('Request assigned.');
 	});
+
+	it('announces unavailability without leaking query internals', () => {
+		render(BookWorkPage, {
+			props: {
+				data: /** @type {any} */ ({
+					board: { totalRows: 0, bookstores: [], groups: [] },
+					unavailable: true
+				}),
+				form: /** @type {any} */ ({})
+			}
+		});
+		expect(screen.getByRole('alert')).toHaveTextContent(
+			'Book work is unavailable right now. Reload this page to try again.'
+		);
+		expect(document.body).not.toHaveTextContent(/Failed query|book_pickups|postgres|secret/i);
+	});
 });

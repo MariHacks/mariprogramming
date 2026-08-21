@@ -10,9 +10,7 @@ describe('catalogue references', () => {
 			source: 'catalog',
 			id: ID
 		});
-		expect(
-			parseCatalogRef({ selection: '', freeText: 'Independent study' }, 'course')
-		).toEqual({
+		expect(parseCatalogRef({ selection: '', freeText: 'Independent study' }, 'course')).toEqual({
 			source: 'other',
 			name: 'Independent study'
 		});

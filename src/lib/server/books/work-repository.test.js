@@ -135,7 +135,15 @@ describe('book work repository', () => {
 			.fn()
 			.mockResolvedValueOnce({ rows: [{ id: REQUEST_ID, name: 'Mme Tremblay' }] })
 			.mockResolvedValueOnce({
-				rows: [{ id: LINE_ID, code: 'FRE-101', title: 'French 101' }]
+				rows: [
+					{
+						id: LINE_ID,
+						teacherId: REQUEST_ID,
+						teacherName: 'Mme Tremblay',
+						code: 'FRE-101',
+						title: 'French 101'
+					}
+				]
 			});
 		const repository = createBookWorkRepository({
 			databaseUrl: 'postgresql://runtime:password@db.example.com/books',
@@ -143,7 +151,15 @@ describe('book work repository', () => {
 		});
 		await expect(repository.listFormOptions()).resolves.toEqual({
 			teachers: [{ id: REQUEST_ID, name: 'Mme Tremblay' }],
-			courses: [{ id: LINE_ID, code: 'FRE-101', title: 'French 101' }]
+			courses: [
+				{
+					id: LINE_ID,
+					teacherId: REQUEST_ID,
+					teacherName: 'Mme Tremblay',
+					code: 'FRE-101',
+					title: 'French 101'
+				}
+			]
 		});
 		expect(queryText(sql`SELECT 1`)).toContain('SELECT');
 	});
@@ -563,8 +579,7 @@ describe('book work repository', () => {
 			databaseUrl: 'postgresql://runtime:password@db.example.com/books',
 			getNow: () => NOW,
 			makeReference: () => 'REQ-ABCDEFGH2345',
-			runTransaction: async (operation) =>
-				operation(tx([[], [{ id: REQUEST_ID }], [], []]))
+			runTransaction: async (operation) => operation(tx([[], [{ id: REQUEST_ID }], [], []]))
 		});
 		await expect(repository.submitRequest(otherSubmission())).resolves.toMatchObject({
 			publicReference: 'REQ-ABCDEFGH2345',

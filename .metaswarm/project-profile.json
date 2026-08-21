@@ -1,0 +1,31 @@
+{
+	"metaswarm_version": "1.0.0",
+	"distribution": "plugin",
+	"installed_at": "2026-08-13T05:24:25Z",
+	"updated_at": "2026-08-13T05:24:25Z",
+	"detection": {
+		"language": "JavaScript",
+		"framework": "SvelteKit",
+		"test_runner": "vitest",
+		"linter": "eslint",
+		"formatter": "prettier",
+		"package_manager": "npm",
+		"type_checker": "svelte-check",
+		"ci": null,
+		"git_hooks": null
+	},
+	"choices": {
+		"coverage_threshold": 100,
+		"external_tools": false,
+		"visual_review": true,
+		"ci_pipeline": false,
+		"git_hooks": false
+	},
+	"commands": {
+		"test": "npx vitest run",
+		"coverage": "npx vitest run --coverage",
+		"lint": "npm run lint",
+		"typecheck": "npm run check",
+		"format_check": "npx prettier --check ."
+	}
+}

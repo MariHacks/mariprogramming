@@ -541,6 +541,33 @@ describe('POST /api/stripe/webhook provider and transaction ordering', () => {
 		expect(drain).toHaveBeenCalledTimes(2);
 	});
 
+	it('drains a Postmark confirmation after the paid reducer commits', async () => {
+		const drain = vi.fn(async () => ({}));
+		const createDiscord = vi.fn();
+		const createRelay = vi.fn(() => ({ drain }));
+		const createPostmark = vi.fn(() => ({ deliver: vi.fn() }));
+		await _drainStripeNotifications(
+			() => ({
+				databaseUrl: 'postgresql://db.example/books',
+				appOrigin: 'https://club.example.com',
+				discordWebhookUrl: null,
+				postmarkServerToken: '00000000-0000-4000-8000-000000000000',
+				bookCheckoutCapabilityKey: 'confirmation-capability-key-with-at-least-32-characters'
+			}),
+			createDiscord,
+			createRelay,
+			createPostmark
+		);
+		expect(createPostmark).toHaveBeenCalledOnce();
+		expect(createRelay).toHaveBeenCalledWith(
+			expect.objectContaining({
+				sinkName: 'postmark',
+				actions: ['stripe_completed_applied']
+			})
+		);
+		expect(drain).toHaveBeenCalledTimes(2);
+	});
+
 	it('closes refund preflight before retrieving the stored Session and starting the final reducer', async () => {
 		/** @type {string[]} */
 		const sequence = [];

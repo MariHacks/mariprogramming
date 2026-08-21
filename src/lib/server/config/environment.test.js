@@ -6,6 +6,7 @@ import {
 	readClubEventDeliveryEnvironment,
 	readMigrationEnvironment,
 	readNotificationRelayEnvironment,
+	readOrderConfirmationAccessEnvironment,
 	readBookWorkEnvironment,
 	readOrderConfirmationEnvironment,
 	readRuntimeEnvironment,
@@ -160,6 +161,22 @@ describe('private server environment', () => {
 
 		expect(configuration).toEqual({ databaseUrl: validEnvironment.DATABASE_URL });
 		expect(Object.isFrozen(configuration)).toBe(true);
+	});
+
+	it('reads only the origin and database required by an emailed confirmation link', () => {
+		expect(
+			readOrderConfirmationAccessEnvironment({
+				APP_ORIGIN: validEnvironment.APP_ORIGIN,
+				DATABASE_URL: validEnvironment.DATABASE_URL
+			})
+		).toEqual({
+			appOrigin: validEnvironment.APP_ORIGIN,
+			databaseUrl: validEnvironment.DATABASE_URL
+		});
+	});
+
+	it('rejects a non-object emailed confirmation environment', () => {
+		expect(() => readOrderConfirmationAccessEnvironment(null)).toThrow(ServerConfigurationError);
 	});
 
 	it.each([
@@ -509,7 +526,9 @@ describe('private server environment', () => {
 			appOrigin: validEnvironment.APP_ORIGIN,
 			databaseUrl: validEnvironment.DATABASE_URL,
 			cronSecret: validEnvironment.CRON_SECRET,
-			discordWebhookUrl: null
+			discordWebhookUrl: null,
+			postmarkServerToken: null,
+			bookCheckoutCapabilityKey: null
 		});
 		expect(Object.isFrozen(configuration)).toBe(true);
 	});
@@ -535,6 +554,52 @@ describe('private server environment', () => {
 			DISCORD_WEBHOOK_URL: discordWebhookUrl
 		});
 		expect(configuration.discordWebhookUrl).toBe(discordWebhookUrl);
+	});
+
+	it('reads an optional Postmark token with the capability key used for tracking links', () => {
+		const configuration = readClubEventDeliveryEnvironment({
+			APP_ORIGIN: validEnvironment.APP_ORIGIN,
+			DATABASE_URL: validEnvironment.DATABASE_URL,
+			CRON_SECRET: validEnvironment.CRON_SECRET,
+			POSTMARK_SERVER_TOKEN: '00000000-0000-4000-8000-000000000000',
+			BOOK_CHECKOUT_CAPABILITY_KEY: validEnvironment.BOOK_CHECKOUT_CAPABILITY_KEY
+		});
+		expect(configuration).toMatchObject({
+			postmarkServerToken: '00000000-0000-4000-8000-000000000000',
+			bookCheckoutCapabilityKey: validEnvironment.BOOK_CHECKOUT_CAPABILITY_KEY
+		});
+	});
+
+	it.each([
+		'not-a-token',
+		' 00000000-0000-4000-8000-000000000000',
+		'00000000-0000-4000-8000-000000000000 '
+	])('rejects an invalid Postmark token without leaking it: %j', (token) => {
+		let thrown;
+		try {
+			readClubEventDeliveryEnvironment({
+				APP_ORIGIN: validEnvironment.APP_ORIGIN,
+				DATABASE_URL: validEnvironment.DATABASE_URL,
+				CRON_SECRET: validEnvironment.CRON_SECRET,
+				POSTMARK_SERVER_TOKEN: token,
+				BOOK_CHECKOUT_CAPABILITY_KEY: validEnvironment.BOOK_CHECKOUT_CAPABILITY_KEY
+			});
+		} catch (error) {
+			thrown = error;
+		}
+		expect(thrown).toBeInstanceOf(ServerConfigurationError);
+		expect(JSON.stringify(thrown)).not.toContain(token);
+	});
+
+	it('requires the capability key only when Postmark delivery is configured', () => {
+		expect(() =>
+			readClubEventDeliveryEnvironment({
+				APP_ORIGIN: validEnvironment.APP_ORIGIN,
+				DATABASE_URL: validEnvironment.DATABASE_URL,
+				CRON_SECRET: validEnvironment.CRON_SECRET,
+				POSTMARK_SERVER_TOKEN: '00000000-0000-4000-8000-000000000000'
+			})
+		).toThrow(ServerConfigurationError);
 	});
 
 	it.each([

@@ -159,7 +159,7 @@ describe('Book Delivery order review', () => {
 			within(orderSummary)
 				.getAllByRole('definition')
 				.map((definition) => definition.textContent)
-		).toEqual(['$35.90', '$5.00', '$7.00', '$7.18', '$55.08']);
+		).toEqual(['$35.90', '$5.00', '$7.00', '$5.38', '$53.28']);
 		expect(within(orderAndPickup).getByRole('region', { name: 'Pickup location' })).toBeVisible();
 		expect(
 			within(orderAndPickup).getByText("Wayne's Front Desk", { selector: '.pickup-spot' })

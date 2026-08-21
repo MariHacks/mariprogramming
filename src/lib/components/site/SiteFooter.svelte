@@ -19,28 +19,39 @@
 			</span>
 		</a>
 
-		<nav class="contact" aria-label="Club contact">
-			<a href={contactLinks.inquiry.href}>{contactLinks.inquiry.label}</a>
-			<a href={contactLinks.bug.href}>{contactLinks.bug.label}</a>
-		</nav>
+		<div class="footer-actions">
+			<nav class="contact" aria-label="Club contact">
+				<a href={contactLinks.bug.href} rel="external">{contactLinks.bug.label}</a>
+			</nav>
 
-		<nav class="community" aria-label="Club community">
-			<ul class="social-list">
-				{#each footerSocialLinks as link (link.label)}
+			<nav class="community" aria-label="Club community">
+				<ul class="social-list">
 					<li>
 						<a
 							class="social-link"
-							href={link.url}
-							aria-label={link.label}
-							target="_blank"
-							rel="external noopener noreferrer"
+							href={contactLinks.inquiry.href}
+							rel="external"
+							aria-label={contactLinks.inquiry.label}
 						>
-							<SocialIcon name={link.label} />
+							<SocialIcon name="Mail" />
 						</a>
 					</li>
-				{/each}
-			</ul>
-		</nav>
+					{#each footerSocialLinks as link (link.label)}
+						<li>
+							<a
+								class="social-link"
+								href={link.url}
+								aria-label={link.label}
+								target="_blank"
+								rel="external noopener noreferrer"
+							>
+								<SocialIcon name={link.label} />
+							</a>
+						</li>
+					{/each}
+				</ul>
+			</nav>
+		</div>
 	</div>
 </footer>
 
@@ -53,7 +64,7 @@
 
 	.footer-frame {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto auto;
+		grid-template-columns: minmax(0, 1fr) auto;
 		align-items: center;
 		width: 100%;
 		max-width: calc(
@@ -96,15 +107,23 @@
 		letter-spacing: 0;
 	}
 
+	.footer-actions {
+		display: flex;
+		flex-wrap: nowrap;
+		align-items: center;
+		justify-self: end;
+		gap: 0.15rem;
+	}
+
 	.community {
 		justify-self: end;
 	}
 
 	.contact {
 		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-end;
-		gap: 0.75rem 1.25rem;
+		flex-wrap: nowrap;
+		align-items: center;
+		padding-inline-end: 0.15rem;
 	}
 
 	.contact a {
@@ -117,12 +136,13 @@
 		font-weight: 600;
 		text-decoration-color: rgb(var(--sky-rgb, 183 215 255) / 55%);
 		text-underline-offset: 0.2em;
+		white-space: nowrap;
 	}
 
 	.social-list {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
+		gap: 0;
 		margin: 0;
 		padding: 0;
 		list-style: none;
@@ -134,6 +154,7 @@
 		height: 2.75rem;
 		border: 1px solid transparent;
 		border-radius: var(--radius-xs, 0.125rem);
+		color: inherit;
 		place-items: center;
 		transition:
 			background-color var(--motion-fast, 140ms) var(--ease-out, ease-out),
@@ -162,8 +183,9 @@
 			padding-block: 1rem;
 		}
 
-		.contact {
-			grid-column: 1 / -1;
+		.footer-actions {
+			flex-wrap: wrap;
+			justify-self: stretch;
 			justify-content: flex-start;
 		}
 

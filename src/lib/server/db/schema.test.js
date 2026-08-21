@@ -1,4 +1,4 @@
-import { getTableConfig } from 'drizzle-orm/pg-core';
+import { getTableConfig, PgDialect } from 'drizzle-orm/pg-core';
 import { describe, expect, it } from 'vitest';
 import * as schema from './schema';
 
@@ -283,6 +283,11 @@ describe('consolidated database schema', () => {
 			'event_deliveries_status_valid',
 			'event_deliveries_version_positive'
 		]);
+		const sinkCheck = getTableConfig(schema.eventDeliveries).checks.find(
+			(constraint) => constraint.name === 'event_deliveries_sink_valid'
+		);
+		if (!sinkCheck) throw new Error('Missing event delivery sink constraint');
+		expect(new PgDialect().sqlToQuery(sinkCheck.value).sql).toContain(`IN ('discord', 'postmark')`);
 		expect(getTableConfig(schema.orderLines).columns.map((column) => column.name)).not.toContain(
 			'picked_up_quantity'
 		);

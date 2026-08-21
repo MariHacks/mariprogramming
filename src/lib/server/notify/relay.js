@@ -23,18 +23,21 @@ function rows(value) {
 	return value.rows;
 }
 
-export async function enrollDeliveriesInTransaction(raw, { now, limit }) {
+export async function enrollDeliveriesInTransaction(
+	raw,
+	{ now, limit, sinkName = 'discord', actions = ANNOUNCED_ACTIONS }
+) {
 	const tx = transaction(raw);
 	const result = rows(
 		await tx.execute(sql`INSERT INTO event_deliveries
 			(audit_id, sink, status, next_attempt_at, created_at, updated_at)
-			SELECT a.id, 'discord', 'pending', ${now}, ${now}, ${now}
+			SELECT a.id, ${sinkName}, 'pending', ${now}, ${now}, ${now}
 			FROM audit_log a
-			LEFT JOIN event_deliveries d ON d.audit_id = a.id AND d.sink = 'discord'
+			LEFT JOIN event_deliveries d ON d.audit_id = a.id AND d.sink = ${sinkName}
 			WHERE d.audit_id IS NULL
 				AND a.created_at >= ${new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)}
 				AND a.action IN (${sql.join(
-					ANNOUNCED_ACTIONS.map((action) => sql`${action}`),
+					actions.map((action) => sql`${action}`),
 					sql`, `
 				)})
 			ORDER BY a.created_at LIMIT ${limit}
@@ -43,12 +46,12 @@ export async function enrollDeliveriesInTransaction(raw, { now, limit }) {
 	return result.length;
 }
 
-export async function leaseDeliveriesInTransaction(raw, { now, limit }) {
+export async function leaseDeliveriesInTransaction(raw, { now, limit, sinkName = 'discord' }) {
 	const tx = transaction(raw);
 	return rows(
 		await tx.execute(sql`WITH claimed AS (
 			SELECT audit_id, sink FROM event_deliveries
-			WHERE sink = 'discord' AND attempts < ${MAX_ATTEMPTS}
+			WHERE sink = ${sinkName} AND attempts < ${MAX_ATTEMPTS}
 				AND ((status = 'pending' AND next_attempt_at <= ${now})
 					OR (status = 'in_flight' AND leased_until < ${now}))
 			ORDER BY next_attempt_at LIMIT ${limit} FOR UPDATE SKIP LOCKED
@@ -60,6 +63,8 @@ export async function leaseDeliveriesInTransaction(raw, { now, limit }) {
 			RETURNING d.audit_id, d.attempts
 		)
 		SELECT u.audit_id, u.attempts, a.action, a.next_state,
+			o.id AS order_id, ca.id AS attempt_id, o.customer_email AS order_email,
+			o.total_cents AS order_total_cents,
 			o.public_reference AS order_reference,
 			r.public_reference AS request_reference,
 			b.name AS request_bookstore,
@@ -75,6 +80,7 @@ export async function leaseDeliveriesInTransaction(raw, { now, limit }) {
 			COALESCE(c.code || ' ' || c.title, r.course_name) AS request_course
 		FROM updated u JOIN audit_log a ON a.id = u.audit_id
 		LEFT JOIN orders o ON o.id = a.order_id
+		LEFT JOIN checkout_attempts ca ON ca.order_id = o.id
 		LEFT JOIN book_requests r ON r.id = a.resource_id AND a.resource_type = 'book_request'
 		LEFT JOIN bookstores b ON b.id = r.bookstore_id
 		LEFT JOIN teachers t ON t.id = r.teacher_id
@@ -84,6 +90,10 @@ export async function leaseDeliveriesInTransaction(raw, { now, limit }) {
 		attempts: Number(row.attempts),
 		action: row.action,
 		nextState: row.next_state,
+		orderId: row.order_id,
+		attemptId: row.attempt_id,
+		orderEmail: row.order_email,
+		orderTotalCents: Number(row.order_total_cents ?? 0),
 		orderReference: row.order_reference,
 		requestReference: row.request_reference,
 		requestBookstore: row.request_bookstore,
@@ -98,7 +108,10 @@ export async function leaseDeliveriesInTransaction(raw, { now, limit }) {
 	}));
 }
 
-export async function settleDeliveryInTransaction(raw, { auditId, outcome, attempts, now }) {
+export async function settleDeliveryInTransaction(
+	raw,
+	{ auditId, outcome, attempts, now, sinkName = 'discord' }
+) {
 	const tx = transaction(raw);
 	const terminal = ['delivered', 'dead', 'skipped'].includes(outcome.disposition);
 	const dead = outcome.disposition === 'retry' && attempts >= MAX_ATTEMPTS;
@@ -111,15 +124,17 @@ export async function settleDeliveryInTransaction(raw, { auditId, outcome, attem
 		leased_until = NULL, settled_at = ${terminal || dead ? now : null},
 		next_attempt_at = ${new Date(now.getTime() + seconds * 1000)},
 		failure_reason = ${outcome.reason ?? null}, version = version + 1, updated_at = ${now}
-		WHERE audit_id = ${auditId} AND sink = 'discord' AND status = 'in_flight'`);
+		WHERE audit_id = ${auditId} AND sink = ${sinkName} AND status = 'in_flight'`);
 }
 
 /**
- * @param {{ databaseUrl: string, sink: any | null, runTransaction?: typeof withDatabaseTransaction, getNow?: () => Date }} configuration
+ * @param {{ databaseUrl: string, sink: any | null, sinkName?: 'discord' | 'postmark', actions?: readonly string[], runTransaction?: typeof withDatabaseTransaction, getNow?: () => Date }} configuration
  */
 export function createNotificationRelay({
 	databaseUrl,
 	sink,
+	sinkName = 'discord',
+	actions = ANNOUNCED_ACTIONS,
 	runTransaction = withDatabaseTransaction,
 	getNow = () => new Date()
 }) {
@@ -128,8 +143,10 @@ export function createNotificationRelay({
 		async drain({ limit = 20, budgetMs = 8000 } = {}) {
 			const summary = { enrolled: 0, attempted: 0, delivered: 0, retrying: 0, dead: 0, skipped: 0 };
 			const now = getNow();
-			summary.enrolled = await run((tx) => enrollDeliveriesInTransaction(tx, { now, limit }));
-			const leased = await run((tx) => leaseDeliveriesInTransaction(tx, { now, limit }));
+			summary.enrolled = await run((tx) =>
+				enrollDeliveriesInTransaction(tx, { now, limit, sinkName, actions })
+			);
+			const leased = await run((tx) => leaseDeliveriesInTransaction(tx, { now, limit, sinkName }));
 			const deadline = Date.now() + budgetMs;
 			for (const source of leased) {
 				if (Date.now() >= deadline) break;
@@ -154,7 +171,8 @@ export function createNotificationRelay({
 						auditId: source.auditId,
 						outcome,
 						attempts: source.attempts,
-						now: getNow()
+						now: getNow(),
+						sinkName
 					})
 				);
 			}
