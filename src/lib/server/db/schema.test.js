@@ -81,7 +81,7 @@ describe('consolidated database schema', () => {
 		expect(checkNames(schema.teachers)).toEqual(['teachers_version_positive']);
 		expect(indexNames(schema.courses)).toEqual([
 			'courses_active_idx',
-			'courses_teacher_code_unique_idx',
+			'courses_teacher_code_section_unique_idx',
 			'courses_teacher_idx'
 		]);
 		expect(checkNames(schema.courses)).toEqual(['courses_version_positive']);
@@ -98,7 +98,11 @@ describe('consolidated database schema', () => {
 			'books_bookstore_idx',
 			'books_isbn_unique_idx'
 		]);
-		expect(checkNames(schema.books)).toEqual(['books_price_nonnegative', 'books_version_positive']);
+		expect(checkNames(schema.books)).toEqual([
+			'books_price_nonnegative',
+			'books_source_date_shape',
+			'books_version_positive'
+		]);
 		expect(indexNames(schema.courseBooks)).toEqual([
 			'course_books_active_idx',
 			'course_books_book_idx',
@@ -110,6 +114,12 @@ describe('consolidated database schema', () => {
 			'course_books_version_positive'
 		]);
 
+		expect(getTableConfig(schema.courses).columns.map((column) => column.name)).toEqual(
+			expect.arrayContaining(['section'])
+		);
+		expect(getTableConfig(schema.books).columns.map((column) => column.name)).toEqual(
+			expect.arrayContaining(['edition', 'notes', 'source_date'])
+		);
 		for (const table of [
 			schema.teachers,
 			schema.courses,

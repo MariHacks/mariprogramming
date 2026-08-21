@@ -61,13 +61,18 @@ export const courses = pgTable(
 			.references(() => teachers.id, { onDelete: 'restrict' }),
 		code: varchar('code', { length: 64 }).notNull(),
 		title: varchar('title', { length: 200 }).notNull(),
+		section: varchar('section', { length: 80 }).default('').notNull(),
 		active: boolean('active').default(true).notNull(),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
 	},
 	(table) => [
-		uniqueIndex('courses_teacher_code_unique_idx').on(table.teacherId, table.code),
+		uniqueIndex('courses_teacher_code_section_unique_idx').on(
+			table.teacherId,
+			table.code,
+			table.section
+		),
 		index('courses_teacher_idx').on(table.teacherId),
 		index('courses_active_idx').on(table.active),
 		check('courses_version_positive', sql`${table.version} > 0`)
@@ -100,15 +105,16 @@ export const books = pgTable(
 	'books',
 	{
 		id: uuid('id').defaultRandom().primaryKey(),
-		bookstoreId: uuid('bookstore_id')
-			.notNull()
-			.references(() => bookstores.id, { onDelete: 'restrict' }),
+		bookstoreId: uuid('bookstore_id').references(() => bookstores.id, { onDelete: 'restrict' }),
 		title: varchar('title', { length: 240 }).notNull(),
 		author: varchar('author', { length: 200 }),
 		isbn: varchar('isbn', { length: 32 }),
-		retailerUrl: varchar('retailer_url', { length: 2048 }).notNull(),
+		edition: varchar('edition', { length: 240 }),
+		notes: varchar('notes', { length: 500 }),
+		sourceDate: varchar('source_date', { length: 10 }),
+		retailerUrl: varchar('retailer_url', { length: 2048 }),
 		coverUrl: varchar('cover_url', { length: 2048 }),
-		priceCents: integer('price_cents').notNull(),
+		priceCents: integer('price_cents'),
 		active: boolean('active').default(true).notNull(),
 		version: version(),
 		createdAt: createdAt(),
@@ -118,7 +124,11 @@ export const books = pgTable(
 		uniqueIndex('books_isbn_unique_idx').on(table.isbn),
 		index('books_bookstore_idx').on(table.bookstoreId),
 		index('books_active_idx').on(table.active),
-		check('books_price_nonnegative', sql`${table.priceCents} >= 0`),
+		check('books_price_nonnegative', sql`${table.priceCents} IS NULL OR ${table.priceCents} >= 0`),
+		check(
+			'books_source_date_shape',
+			sql`${table.sourceDate} IS NULL OR ${table.sourceDate} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'`
+		),
 		check('books_version_positive', sql`${table.version} > 0`)
 	]
 );

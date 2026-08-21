@@ -3,5 +3,5 @@ import { requireStaff } from '$lib/server/auth/authorization.js';
 
 export function load({ locals }) {
 	requireStaff(locals);
-	redirect(303, '/staff/catalogue/teachers');
+	redirect(303, '/staff/catalogue/entries');
 }

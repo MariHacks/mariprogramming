@@ -11,13 +11,13 @@ describe('staff catalogue index', () => {
 		);
 	});
 
-	it('redirects authorized staff to teachers', () => {
+	it('redirects authorized staff to catalogue entries', () => {
 		expect(() =>
 			load({
 				locals: {
 					staff: { userId: 'staff-user', email: 'team@marihacks.com' }
 				}
 			})
-		).toThrowError(expect.objectContaining({ status: 303, location: '/staff/catalogue/teachers' }));
+		).toThrowError(expect.objectContaining({ status: 303, location: '/staff/catalogue/entries' }));
 	});
 });

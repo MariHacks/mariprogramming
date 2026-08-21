@@ -27,7 +27,7 @@ describe('protected staff shell', () => {
 		expect(screen.getByRole('presentation')).toHaveClass('brand-mark');
 		expect(screen.getByRole('link', { name: 'Catalogue' })).toHaveAttribute(
 			'href',
-			'/staff/catalogue/teachers'
+			'/staff/catalogue/entries'
 		);
 		expect(screen.getByRole('link', { name: 'Orders' })).toHaveAttribute('href', '/staff');
 		expect(screen.getByRole('link', { name: 'Book work' })).toHaveAttribute(

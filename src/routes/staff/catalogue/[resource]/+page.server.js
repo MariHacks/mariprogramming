@@ -1,4 +1,14 @@
 import { error, fail } from '@sveltejs/kit';
+import {
+	MIOS_CATALOGUE_BOOKSTORES,
+	MIOS_CATALOGUE_CONTACT,
+	MIOS_CATALOGUE_ENTRIES,
+	MIOS_CATALOGUE_NOTICES,
+	MIOS_CATALOGUE_SKIPPED,
+	MIOS_CATALOGUE_SOURCE,
+	miosEntryFormValues,
+	miosEntryKey
+} from '$lib/books/mios-catalogue.js';
 import { requireStaff } from '$lib/server/auth/authorization.js';
 import {
 	StaffCatalogueConflictError,
@@ -11,7 +21,39 @@ import { StaffActionRequestError, guardStaffMutation } from '$lib/server/staff/r
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const VERSION_PATTERN = /^[1-9]\d{0,8}$/u;
+const MIOS_IMPORT_INTENT = 'mios-2026-08-20';
 const RESOURCE_CONFIGURATION = Object.freeze({
+	entries: Object.freeze({
+		type: 'course_book',
+		label: 'Catalogue entry',
+		createFields: [
+			'courseCode',
+			'section',
+			'title',
+			'instructor',
+			'author',
+			'bookTitle',
+			'edition',
+			'isbn',
+			'bookstore',
+			'notes',
+			'sourceDate'
+		],
+		updateFields: [
+			'courseCode',
+			'section',
+			'title',
+			'instructor',
+			'author',
+			'bookTitle',
+			'edition',
+			'isbn',
+			'bookstore',
+			'notes',
+			'sourceDate'
+		],
+		options: []
+	}),
 	teachers: Object.freeze({
 		type: 'teacher',
 		label: 'Teacher',
@@ -148,7 +190,17 @@ export function _createStaffCatalogueHandlers(dependencies = {}) {
 				selected,
 				mode: editId ? 'edit' : add ? 'add' : null,
 				options,
-				unavailable: false
+				unavailable: false,
+				...(resource === 'entries'
+					? {
+							sourceEntries: MIOS_CATALOGUE_ENTRIES,
+							skippedPacks: MIOS_CATALOGUE_SKIPPED,
+							source: MIOS_CATALOGUE_SOURCE,
+							contact: MIOS_CATALOGUE_CONTACT,
+							bookstores: MIOS_CATALOGUE_BOOKSTORES,
+							notices: MIOS_CATALOGUE_NOTICES
+						}
+					: {})
 			};
 		} catch (failure) {
 			if (failure instanceof StaffCatalogueUnavailableError) {
@@ -297,13 +349,102 @@ export function _createStaffCatalogueHandlers(dependencies = {}) {
 		}
 	}
 
+	/** @param {any} event */
+	async function importSource(event) {
+		const resource = event.params.resource;
+		if (resource !== 'entries') {
+			authorize(event.locals);
+			error(404, 'Catalogue view not found');
+		}
+		configurationFor(resource);
+		let guarded;
+		try {
+			guarded = await guardMutation(event, {
+				action: 'catalogue_import_course_book',
+				fields: ['intent']
+			});
+		} catch (failure) {
+			if (failure instanceof StaffActionRequestError) {
+				return fail(failure.status, {
+					errorSummary: requestErrorSummary(failure),
+					fieldErrors: {},
+					values: {},
+					action: 'importSource'
+				});
+			}
+			throw failure;
+		}
+		if (guarded.form.intent !== MIOS_IMPORT_INTENT) {
+			return fail(400, {
+				errorSummary: 'Reload this page and try again.',
+				fieldErrors: {},
+				values: { intent: guarded.form.intent },
+				action: 'importSource'
+			});
+		}
+		const actor = {
+			userId: guarded.staff.userId,
+			email: guarded.staff.email,
+			requestId: guarded.requestId
+		};
+		try {
+			const repository = openRepository(resource, guarded.runtime, createRepository);
+			const listing = await repository.listStaffCatalogue('entries', '');
+			const keys = new Set(listing.records.map((row) => miosEntryKey(row)));
+			let imported = 0;
+			for (const entry of MIOS_CATALOGUE_ENTRIES) {
+				if (keys.has(miosEntryKey(entry))) continue;
+				await repository.createStaffCatalogueRecord('entries', miosEntryFormValues(entry), actor);
+				imported += 1;
+			}
+			return {
+				success: true,
+				message:
+					imported === 0
+						? 'Teacher list already loaded.'
+						: `Loaded ${imported} catalogue ${imported === 1 ? 'entry' : 'entries'}.`
+			};
+		} catch (failure) {
+			if (failure instanceof StaffCatalogueValidationError) {
+				const formError = failure.fieldErrors._form;
+				const fieldErrors = Object.fromEntries(
+					Object.entries(failure.fieldErrors).filter(([field]) => field !== '_form')
+				);
+				return fail(400, {
+					errorSummary: formError ?? 'Check the highlighted fields.',
+					fieldErrors,
+					values: { intent: guarded.form.intent },
+					action: 'importSource'
+				});
+			}
+			if (failure instanceof StaffCatalogueConflictError) {
+				return fail(409, {
+					errorSummary: 'This entry changed. Reload it before saving again.',
+					fieldErrors: {},
+					values: { intent: guarded.form.intent },
+					action: 'importSource'
+				});
+			}
+			if (failure instanceof StaffCatalogueUnavailableError) {
+				return fail(503, {
+					errorSummary: 'Catalogue changes are unavailable. Try again.',
+					fieldErrors: {},
+					values: { intent: guarded.form.intent },
+					action: 'importSource'
+				});
+			}
+			throw failure;
+		}
+	}
+
 	return Object.freeze({
 		load,
 		actions: Object.freeze({
 			create: (/** @type {any} */ event) => mutate(event, 'create'),
 			update: (/** @type {any} */ event) => mutate(event, 'update'),
 			activate: (/** @type {any} */ event) => mutate(event, 'activate'),
-			deactivate: (/** @type {any} */ event) => mutate(event, 'deactivate')
+			deactivate: (/** @type {any} */ event) => mutate(event, 'deactivate'),
+			importSource
 		})
 	});
 }

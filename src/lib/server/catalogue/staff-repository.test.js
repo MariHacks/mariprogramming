@@ -90,6 +90,54 @@ function bookRow(overrides = {}) {
 	};
 }
 
+function entryRow(overrides = {}) {
+	return {
+		id: IDS.assignment,
+		courseId: IDS.course,
+		bookId: IDS.book,
+		position: 0,
+		active: true,
+		version: 1,
+		createdAt: NOW,
+		updatedAt: NOW,
+		courseCode: '603-101-MQ',
+		section: '01',
+		title: 'Composition and Literature: Intro to College English',
+		instructor: 'Philip Dann',
+		teacherId: IDS.teacher,
+		author: 'Sayaka Murata',
+		bookTitle: 'Convenience Store Woman',
+		edition: null,
+		isbn: '9780802129628',
+		bookstore: "The Book Stop (Follett's), Concordia Loyola",
+		bookstoreId: IDS.store,
+		notes: null,
+		sourceDate: '2026-08-20',
+		courseActive: true,
+		teacherActive: true,
+		bookActive: true,
+		bookstoreActive: true,
+		...overrides
+	};
+}
+
+function entryInput(overrides = {}) {
+	return {
+		courseCode: '603-101-MQ',
+		section: '01',
+		title: 'Composition and Literature: Intro to College English',
+		instructor: 'Philip Dann',
+		author: 'Sayaka Murata',
+		bookTitle: 'Convenience Store Woman',
+		edition: '',
+		isbn: '978-0-8021-2962-8',
+		bookstore: "The Book Stop (Follett's), Concordia Loyola",
+		notes: '',
+		sourceDate: '2026-08-20',
+		...overrides
+	};
+}
+
 function assignmentRow(overrides = {}) {
 	return {
 		id: IDS.assignment,
@@ -130,6 +178,7 @@ function chain(result, operation) {
 	const builder = {
 		from: vi.fn(() => builder),
 		innerJoin: vi.fn(() => builder),
+		leftJoin: vi.fn(() => builder),
 		where: vi.fn(() => builder),
 		orderBy: vi.fn(() => builder),
 		limit: vi.fn(() => builder),
@@ -239,7 +288,37 @@ describe('staff catalogue form normalization', () => {
 			{ courseId: IDS.course, bookId: IDS.book, position: '12' },
 			{ courseId: IDS.course, bookId: IDS.book, position: 12 }
 		],
-		['assignments', 'update', { position: '1' }, { position: 1 }]
+		['assignments', 'update', { position: '1' }, { position: 1 }],
+		[
+			'entries',
+			'create',
+			{
+				courseCode: '603-101-MQ',
+				section: '01',
+				title: 'Composition and Literature: Intro to College English',
+				instructor: 'Philip Dann',
+				author: 'Sayaka Murata',
+				bookTitle: 'Convenience Store Woman',
+				edition: '',
+				isbn: '978-0-8021-2962-8',
+				bookstore: "The Book Stop (Follett's), Concordia Loyola",
+				notes: '',
+				sourceDate: '2026-08-20'
+			},
+			{
+				courseCode: '603-101-MQ',
+				section: '01',
+				title: 'Composition and Literature: Intro to College English',
+				instructor: 'Philip Dann',
+				author: 'Sayaka Murata',
+				bookTitle: 'Convenience Store Woman',
+				edition: null,
+				isbn: '9780802129628',
+				bookstore: "The Book Stop (Follett's), Concordia Loyola",
+				notes: null,
+				sourceDate: '2026-08-20'
+			}
+		]
 	])('normalizes %s %s without floating point money', (resource, mode, input, expected) => {
 		expect(normalizeStaffCatalogueInput(resource, mode, input, new Set(HOSTS))).toEqual(expected);
 	});
@@ -319,6 +398,20 @@ describe('staff catalogue form normalization', () => {
 			'update',
 			{ courseId: IDS.course, bookId: IDS.book, position: '1' },
 			'_form'
+		],
+		[
+			'invalid catalogue source date',
+			'entries',
+			'create',
+			entryInput({ sourceDate: '20 Aug 2026' }),
+			'sourceDate'
+		],
+		[
+			'instructor that cannot slugify',
+			'entries',
+			'create',
+			entryInput({ instructor: '!!!' }),
+			'instructor'
 		]
 	])('rejects %s with a field-specific error', (_label, resource, mode, input, field) => {
 		const failure = (() => {
@@ -437,6 +530,52 @@ describe('staff catalogue form normalization', () => {
 		['CSC 205', 'CSC 205']
 	])('normalizes bounded search %j', (value, expected) => {
 		expect(normalizeStaffCatalogueSearch(value)).toBe(expected);
+	});
+
+	it('allows a blank section and source date on catalogue entries', () => {
+		expect(
+			normalizeStaffCatalogueInput(
+				'entries',
+				'create',
+				entryInput({ section: '', sourceDate: '' }),
+				new Set(HOSTS)
+			)
+		).toMatchObject({ section: '', sourceDate: null });
+	});
+
+	it('allows blank ISBN and bookstore on catalogue entries', () => {
+		expect(
+			normalizeStaffCatalogueInput(
+				'entries',
+				'create',
+				{
+					courseCode: '602-UF2-MQ',
+					section: '08, 09',
+					title: "Comparaison d'oeuvres littéraires",
+					instructor: 'Tessa Morin Cabana',
+					author: 'Mireille Gagné',
+					bookTitle: "Le lièvre d'Amérique",
+					edition: 'Le livre de poche 2022',
+					isbn: '',
+					bookstore: '',
+					notes: 'store not named',
+					sourceDate: '2026-08-20'
+				},
+				new Set(HOSTS)
+			)
+		).toEqual({
+			courseCode: '602-UF2-MQ',
+			section: '08, 09',
+			title: "Comparaison d'oeuvres littéraires",
+			instructor: 'Tessa Morin Cabana',
+			author: 'Mireille Gagné',
+			bookTitle: "Le lièvre d'Amérique",
+			edition: 'Le livre de poche 2022',
+			isbn: null,
+			bookstore: null,
+			notes: 'store not named',
+			sourceDate: '2026-08-20'
+		});
 	});
 
 	it.each([null, 'x'.repeat(101), 'line\nbreak', '\0'])('rejects unsafe search %#', (value) => {
@@ -571,7 +710,20 @@ describe('staff catalogue repository reads', () => {
 		['invalid course state', 'assignments', assignmentRow({ courseActive: 'yes' })],
 		['invalid teacher state', 'assignments', assignmentRow({ teacherActive: 'yes' })],
 		['invalid book state', 'assignments', assignmentRow({ bookActive: 'yes' })],
-		['invalid bookstore state', 'assignments', assignmentRow({ bookstoreActive: 'yes' })]
+		['invalid bookstore state', 'assignments', assignmentRow({ bookstoreActive: 'yes' })],
+		['invalid entry course id', 'entries', entryRow({ courseId: 'bad' })],
+		['invalid entry book id', 'entries', entryRow({ bookId: 'bad' })],
+		['noninteger entry position', 'entries', entryRow({ position: 1.5 })],
+		['negative entry position', 'entries', entryRow({ position: -1 })],
+		['invalid entry course state', 'entries', entryRow({ courseActive: 'yes' })],
+		['entry bookstore leftovers', 'entries', entryRow({ bookstore: null, bookstoreId: IDS.store })],
+		['invalid entry bookstore state', 'entries', entryRow({ bookstoreActive: 'yes' })],
+		['oversized entry section', 'entries', entryRow({ section: 's'.repeat(81) })],
+		[
+			'book leftover store name',
+			'books',
+			bookRow({ bookstoreId: null, bookstoreName: 'Campus Books', bookstoreActive: null })
+		]
 	])('fails closed for corrupt stored data: %s', async (_label, resource, row) => {
 		const { repository } = repositoryWith([[row]]);
 		await expect(repository.listStaffCatalogue(resource, '')).rejects.toBeInstanceOf(
@@ -962,6 +1114,379 @@ describe('staff catalogue repository mutations', () => {
 		expect(operations[2].values.action).toBe('catalogue.teacher.activated');
 	});
 
+	it('lists catalogue entries, including rows with no bookstore or ISBN', async () => {
+		const { repository } = repositoryWith([
+			[entryRow()],
+			[
+				entryRow({
+					id: '50000000-0000-4000-8000-000000000002',
+					bookTitle: "Le lièvre d'Amérique",
+					instructor: 'Tessa Morin Cabana',
+					author: 'Mireille Gagné',
+					isbn: null,
+					bookstore: null,
+					bookstoreId: null,
+					bookstoreActive: null,
+					notes: 'store not named',
+					section: '08, 09',
+					courseCode: '602-UF2-MQ',
+					title: "Comparaison d'oeuvres littéraires"
+				})
+			]
+		]);
+		await expect(repository.listStaffCatalogue('entries', '')).resolves.toEqual({
+			records: [
+				expect.objectContaining({
+					id: IDS.assignment,
+					courseCode: '603-101-MQ',
+					section: '01',
+					instructor: 'Philip Dann',
+					bookTitle: 'Convenience Store Woman',
+					isbn: '9780802129628',
+					bookstore: "The Book Stop (Follett's), Concordia Loyola"
+				})
+			],
+			totalCount: 1
+		});
+		await expect(repository.listStaffCatalogue('entries', 'tessa')).resolves.toMatchObject({
+			records: [
+				expect.objectContaining({
+					bookTitle: "Le lièvre d'Amérique",
+					isbn: null,
+					bookstore: null,
+					notes: 'store not named'
+				})
+			],
+			totalCount: 1
+		});
+	});
+
+	it('lists unsellable books that have no store, price, or retailer URL', async () => {
+		const { repository } = repositoryWith([
+			[
+				bookRow({
+					bookstoreId: null,
+					bookstoreName: null,
+					bookstoreActive: null,
+					priceCents: null,
+					retailerUrl: null,
+					coverUrl: null
+				})
+			]
+		]);
+		await expect(repository.listStaffCatalogue('books', '')).resolves.toEqual({
+			records: [
+				expect.objectContaining({
+					id: IDS.book,
+					bookstoreId: null,
+					bookstoreName: null,
+					priceCents: null,
+					retailerUrl: null,
+					effectiveActive: true,
+					blockedBy: []
+				})
+			],
+			totalCount: 1
+		});
+	});
+
+	it('creates a catalogue entry by finding or inserting related rows in one transaction', async () => {
+		const { repository, operations } = repositoryWith([
+			[],
+			[teacherRow({ name: 'Philip Dann', slug: 'philip-dann' })],
+			[],
+			[
+				courseRow({
+					code: '603-101-MQ',
+					title: 'Composition and Literature: Intro to College English'
+				})
+			],
+			[],
+			[bookstoreRow({ name: "The Book Stop (Follett's), Concordia Loyola" })],
+			[],
+			[bookRow({ title: 'Convenience Store Woman' })],
+			[],
+			[{ id: IDS.assignment, version: 1, active: true }],
+			[]
+		]);
+		await expect(
+			repository.createStaffCatalogueRecord('entries', entryInput(), actor)
+		).resolves.toEqual({
+			id: IDS.assignment,
+			active: true,
+			version: 1
+		});
+		expect(operations.map(({ kind }) => kind)).toEqual([
+			'select',
+			'insert',
+			'select',
+			'insert',
+			'select',
+			'insert',
+			'select',
+			'insert',
+			'select',
+			'insert',
+			'insert'
+		]);
+		expect(operations[1].values).toMatchObject({ slug: 'philip-dann', name: 'Philip Dann' });
+		expect(operations[5].values).toMatchObject({
+			name: "The Book Stop (Follett's), Concordia Loyola",
+			serviceFeeCents: 500
+		});
+		expect(operations[7].values).toMatchObject({
+			title: 'Convenience Store Woman',
+			isbn: '9780802129628',
+			retailerUrl: null,
+			priceCents: null
+		});
+		expect(operations[9].values).toMatchObject({
+			courseId: IDS.course,
+			bookId: IDS.book,
+			position: 0
+		});
+		expect(operations[10].values).toMatchObject({
+			resourceType: 'course_book',
+			action: 'catalogue.course_book.created'
+		});
+	});
+
+	it('reuses matching teacher, course, store, and ISBN rows when adding another copy', async () => {
+		const { repository, operations } = repositoryWith([
+			[teacherRow({ name: 'Philip Dann', slug: 'philip-dann' })],
+			[
+				courseRow({
+					code: '603-101-MQ',
+					title: 'Composition and Literature: Intro to College English'
+				})
+			],
+			[bookstoreRow({ name: "The Book Stop (Follett's), Concordia Loyola" })],
+			[bookRow({ title: 'Convenience Store Woman' })],
+			[bookRow({ title: 'Convenience Store Woman' })],
+			[{ position: 2 }, { position: 'bad' }],
+			[{ id: IDS.assignment, version: 1, active: true }],
+			[]
+		]);
+		await expect(
+			repository.createStaffCatalogueRecord('entries', entryInput(), actor)
+		).resolves.toMatchObject({ id: IDS.assignment });
+		expect(operations.map(({ kind }) => kind)).toEqual([
+			'select',
+			'select',
+			'select',
+			'select',
+			'update',
+			'select',
+			'insert',
+			'insert'
+		]);
+		expect(operations[6].values.position).toBe(3);
+	});
+
+	it('creates an entry with blank ISBN and bookstore and refreshes related labels', async () => {
+		const { repository, operations } = repositoryWith([
+			[teacherRow({ name: 'Tessa', slug: 'tessa-morin-cabana' })],
+			[teacherRow({ name: 'Tessa Morin Cabana', slug: 'tessa-morin-cabana' })],
+			[courseRow({ code: '602-UF2-MQ', title: 'Old title', section: '08, 09' })],
+			[courseRow({ code: '602-UF2-MQ', title: "Comparaison d'oeuvres littéraires" })],
+			[bookRow({ title: "Le lièvre d'Amérique" })],
+			[],
+			[{ id: IDS.assignment, version: 1, active: true }],
+			[]
+		]);
+		await expect(
+			repository.createStaffCatalogueRecord(
+				'entries',
+				entryInput({
+					courseCode: '602-UF2-MQ',
+					section: '08, 09',
+					title: "Comparaison d'oeuvres littéraires",
+					instructor: 'Tessa Morin Cabana',
+					author: 'Mireille Gagné',
+					bookTitle: "Le lièvre d'Amérique",
+					edition: 'Le livre de poche 2022',
+					isbn: '',
+					bookstore: '',
+					notes: 'store not named'
+				}),
+				actor
+			)
+		).resolves.toMatchObject({ id: IDS.assignment });
+		expect(operations[1].kind).toBe('update');
+		expect(operations[3].kind).toBe('update');
+		expect(operations[4].values).toMatchObject({
+			title: "Le lièvre d'Amérique",
+			isbn: null,
+			bookstoreId: null
+		});
+		expect(operations.map(({ kind }) => kind)).not.toContain('leftJoin');
+	});
+
+	it('updates a catalogue entry in place without writing ISBN-less store rows', async () => {
+		const { repository, operations } = repositoryWith([
+			[entryRow()],
+			[teacherRow({ name: 'Philip Dann', slug: 'philip-dann' })],
+			[
+				courseRow({
+					code: '603-101-MQ',
+					title: 'Composition and Literature: Intro to College English'
+				})
+			],
+			[bookstoreRow({ name: "The Book Stop (Follett's), Concordia Loyola" })],
+			[bookRow({ title: 'Convenience Store Woman' })],
+			[{ id: IDS.assignment, version: 2, active: true }],
+			[]
+		]);
+		await expect(
+			repository.updateStaffCatalogueRecord(
+				'entries',
+				IDS.assignment,
+				1,
+				entryInput({ notes: 'class Mio confirmed' }),
+				actor
+			)
+		).resolves.toEqual({ id: IDS.assignment, active: true, version: 2 });
+		expect(operations[0].lock).toBe('update');
+		expect(operations[4].values).toMatchObject({
+			notes: 'class Mio confirmed',
+			isbn: '9780802129628'
+		});
+		expect(operations[5].values).toMatchObject({
+			courseId: IDS.course,
+			bookId: IDS.book,
+			version: 2
+		});
+	});
+
+	it('rejects a no-op catalogue entry edit', async () => {
+		const repository = repositoryWith([[entryRow()]]).repository;
+		await expect(
+			repository.updateStaffCatalogueRecord('entries', IDS.assignment, 1, entryInput(), actor)
+		).rejects.toMatchObject({ fieldErrors: { _form: expect.any(String) } });
+	});
+
+	it('fails closed when related catalogue inserts return malformed rows', async () => {
+		await expect(
+			repositoryWith([
+				[],
+				[{ id: 'bad', version: 1, active: true }]
+			]).repository.createStaffCatalogueRecord('entries', entryInput(), actor)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+		await expect(
+			repositoryWith([[null]]).repository.createStaffCatalogueRecord('entries', entryInput(), actor)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+		await expect(
+			repositoryWith([
+				[teacherRow({ name: 'Old Name', slug: 'philip-dann' })],
+				[]
+			]).repository.createStaffCatalogueRecord('entries', entryInput(), actor)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+		await expect(
+			repositoryWith([
+				[teacherRow({ name: 'Philip Dann', slug: 'philip-dann' })],
+				[courseRow({ title: 'Old' })],
+				[]
+			]).repository.createStaffCatalogueRecord('entries', entryInput(), actor)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+		await expect(
+			repositoryWith([
+				[teacherRow({ name: 'Philip Dann', slug: 'philip-dann' })],
+				[
+					courseRow({
+						code: '603-101-MQ',
+						title: 'Composition and Literature: Intro to College English'
+					})
+				],
+				[bookstoreRow({ name: "The Book Stop (Follett's), Concordia Loyola" })],
+				[bookRow()],
+				[]
+			]).repository.createStaffCatalogueRecord('entries', entryInput(), actor)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+		await expect(
+			repositoryWith([
+				[entryRow()],
+				[teacherRow({ name: 'Philip Dann', slug: 'philip-dann' })],
+				[
+					courseRow({
+						code: '603-101-MQ',
+						title: 'Composition and Literature: Intro to College English'
+					})
+				],
+				[bookstoreRow({ name: "The Book Stop (Follett's), Concordia Loyola" })],
+				[]
+			]).repository.updateStaffCatalogueRecord(
+				'entries',
+				IDS.assignment,
+				1,
+				entryInput({ notes: 'changed' }),
+				actor
+			)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+		await expect(
+			repositoryWith([
+				[],
+				[teacherRow({ name: 'Philip Dann' })],
+				[null]
+			]).repository.createStaffCatalogueRecord(
+				'entries',
+				entryInput({ isbn: '', bookstore: '' }),
+				actor
+			)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+		await expect(
+			repositoryWith([
+				[],
+				[teacherRow({ name: 'Philip Dann', slug: 'philip-dann' })],
+				[],
+				[
+					courseRow({
+						code: '603-101-MQ',
+						title: 'Composition and Literature: Intro to College English'
+					})
+				],
+				[bookRow()],
+				null
+			]).repository.createStaffCatalogueRecord(
+				'entries',
+				entryInput({ isbn: '', bookstore: '' }),
+				actor
+			)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+		await expect(
+			repositoryWith([
+				[teacherRow(), teacherRow({ id: IDS.otherTeacher })]
+			]).repository.createStaffCatalogueRecord('entries', entryInput(), actor)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+		await expect(
+			repositoryWith([[{ id: 'bad-id' }]]).repository.createStaffCatalogueRecord(
+				'entries',
+				entryInput(),
+				actor
+			)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+	});
+
+	it('reports blocked ancestry on catalogue entries', async () => {
+		const { repository } = repositoryWith([
+			[
+				entryRow({
+					courseActive: false,
+					teacherActive: false,
+					bookActive: false,
+					bookstoreActive: false
+				})
+			]
+		]);
+		await expect(repository.listStaffCatalogue('entries', '')).resolves.toMatchObject({
+			records: [
+				{
+					effectiveActive: false,
+					blockedBy: ['course', 'teacher', 'book', 'bookstore']
+				}
+			]
+		});
+	});
+
 	it('maps uniqueness to validation and redacts audit or database failures', async () => {
 		const unique = Object.assign(new Error('duplicate private value'), { code: '23505' });
 		const uniqueRepository = repositoryWith([unique]).repository;
@@ -999,5 +1524,88 @@ describe('staff catalogue repository mutations', () => {
 				StaffCatalogueUnavailableError
 			);
 		}
+	});
+
+	it('creates an assignment only after both relationships exist', async () => {
+		const { repository, operations } = repositoryWith([
+			[{ id: IDS.course }],
+			[{ id: IDS.book }],
+			[{ id: IDS.assignment, version: 1, active: true }],
+			[]
+		]);
+		await expect(
+			repository.createStaffCatalogueRecord(
+				'assignments',
+				{ courseId: IDS.course, bookId: IDS.book, position: '0' },
+				actor
+			)
+		).resolves.toEqual({ id: IDS.assignment, active: true, version: 1 });
+		expect(operations.map(({ lock }) => lock)).toEqual(['key share', 'key share', null, null]);
+	});
+
+	it('searches unsellable books and notes-less entries including empty labels', async () => {
+		const { repository } = repositoryWith([
+			[
+				bookRow({
+					bookstoreId: null,
+					bookstoreName: null,
+					bookstoreActive: null,
+					author: null,
+					isbn: null,
+					priceCents: null,
+					retailerUrl: null,
+					coverUrl: null
+				})
+			],
+			[
+				entryRow({
+					author: null,
+					edition: null,
+					isbn: null,
+					bookstore: null,
+					bookstoreId: null,
+					bookstoreActive: null,
+					notes: null,
+					instructor: 'Blair Morris',
+					bookTitle: 'Macbeth'
+				})
+			]
+		]);
+		await expect(repository.listStaffCatalogue('books', 'programming')).resolves.toMatchObject({
+			totalCount: 1,
+			records: [expect.objectContaining({ bookstoreName: null, author: null })]
+		});
+		await expect(repository.listStaffCatalogue('entries', 'macbeth')).resolves.toMatchObject({
+			records: [expect.objectContaining({ bookTitle: 'Macbeth', author: null, notes: null })]
+		});
+	});
+
+	it('rejects a non-array lookup while creating a catalogue entry', async () => {
+		await expect(
+			repositoryWith([null]).repository.createStaffCatalogueRecord('entries', entryInput(), actor)
+		).rejects.toBeInstanceOf(StaffCatalogueUnavailableError);
+	});
+
+	it('stamps updates with the real clock when none is provided', async () => {
+		const { transaction, operations } = scriptedTransaction([
+			[teacherRow()],
+			[teacherRow({ name: 'Ada Byron', version: 2 })],
+			[]
+		]);
+		const repository = createStaffCatalogueRepository({
+			databaseUrl: 'postgresql://staff:secret@db.example.com/club',
+			approvedHostnames: HOSTS,
+			runTransaction: vi.fn((operation) => operation(transaction))
+		});
+		await expect(
+			repository.updateStaffCatalogueRecord(
+				'teachers',
+				IDS.teacher,
+				1,
+				{ slug: 'ada-lovelace', name: 'Ada Byron' },
+				actor
+			)
+		).resolves.toMatchObject({ version: 2 });
+		expect(operations[1].values.updatedAt).toBeInstanceOf(Date);
 	});
 });

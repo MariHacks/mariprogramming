@@ -109,6 +109,26 @@ const assignment = Object.freeze({
 	blockedBy: [],
 	version: 5
 });
+const catalogueEntry = Object.freeze({
+	id: IDS.assignment,
+	courseId: IDS.course,
+	bookId: IDS.book,
+	courseCode: '603-101-MQ',
+	section: '01',
+	title: 'Composition and Literature: Intro to College English',
+	instructor: 'Philip Dann',
+	author: 'Sayaka Murata',
+	bookTitle: 'Convenience Store Woman',
+	edition: '',
+	isbn: '9780802129628',
+	bookstore: "The Book Stop (Follett's), Concordia Loyola",
+	notes: '',
+	sourceDate: '2026-08-20',
+	active: true,
+	effectiveActive: true,
+	blockedBy: [],
+	version: 1
+});
 
 function data(resource, overrides = {}) {
 	return {
@@ -156,6 +176,10 @@ describe('staff catalogue workspace', () => {
 
 		expect(screen.getByRole('heading', { level: 1, name: 'Catalogue' })).toBeVisible();
 		expect(screen.getByRole('navigation', { name: 'Catalogue resources' })).toBeVisible();
+		expect(screen.getByRole('link', { name: 'Entries' })).toHaveAttribute(
+			'href',
+			'/staff/catalogue/entries'
+		);
 		expect(screen.getByRole('link', { name: 'Teachers' })).toHaveAttribute('aria-current', 'page');
 		expect(screen.getByRole('link', { name: 'Assignments' })).toHaveAttribute(
 			'href',
@@ -200,7 +224,8 @@ describe('staff catalogue workspace', () => {
 		['courses', course, 'CSC 205'],
 		['bookstores', bookstore, 'Campus Books'],
 		['books', book, 'The C Programming Language'],
-		['assignments', assignment, 'CSC 205: The C Programming Language']
+		['assignments', assignment, 'CSC 205: The C Programming Language'],
+		['entries', catalogueEntry, '603-101-MQ 01: Convenience Store Woman']
 	])('renders a labeled operational row for %s', (resource, record, accessibleName) => {
 		render(CataloguePage, {
 			props: {
@@ -217,6 +242,108 @@ describe('staff catalogue workspace', () => {
 			}
 		});
 		expect(screen.getByRole('row', { name: new RegExp(accessibleName, 'i') })).toBeVisible();
+	});
+
+	it('adds, edits, and displays Mios catalogue entries including blank ISBN and store', () => {
+		render(CataloguePage, {
+			props: {
+				data: data('entries', {
+					records: [catalogueEntry],
+					totalCount: 1,
+					selected: {
+						...catalogueEntry,
+						isbn: null,
+						bookstore: null,
+						notes: 'store not named'
+					},
+					mode: 'edit',
+					skippedPacks: [
+						{
+							instructor: 'Newell',
+							courseCode: '603-101-MQ',
+							section: '24',
+							reason: 'course pack',
+							outOfCatalog: true
+						}
+					],
+					source: {
+						teacher: 'Mios',
+						date: '2026-08-20',
+						updatedAtLabel: '19:09 America/Toronto'
+					},
+					contact: { email: 'team@marihacks.com', instagram: '@marihacks' },
+					notices: ['Petruzziello: unnamed independent store with a student discount.'],
+					bookstores: [
+						{
+							name: 'Zone libre',
+							address: '262 rue Sainte-Catherine Est (métro Berri-UQAM)',
+							notes: 'Laurence Sylvain literary works (10–15% student discount).'
+						}
+					]
+				})
+			}
+		});
+
+		expect(screen.getByRole('link', { name: 'Entries' })).toHaveAttribute('aria-current', 'page');
+		expect(screen.getByRole('heading', { level: 2, name: 'Edit catalogue entry' })).toBeVisible();
+		expect(screen.getByLabelText('Course code')).toHaveValue('603-101-MQ');
+		expect(screen.getByLabelText('Section, optional')).toHaveValue('01');
+		expect(screen.getByLabelText('Instructor')).toHaveValue('Philip Dann');
+		expect(screen.getByLabelText('Book title')).toHaveValue('Convenience Store Woman');
+		expect(screen.getByLabelText('ISBN, optional')).toHaveValue('');
+		expect(screen.getByLabelText('Bookstore, optional')).toHaveValue('');
+		expect(screen.getByLabelText('Notes, optional')).toHaveValue('store not named');
+		expect(screen.getByLabelText('ISBN, optional')).not.toBeRequired();
+		expect(screen.getByLabelText('Bookstore, optional')).not.toBeRequired();
+		expect(screen.getByText(/teacher Mios, 2026-08-20/)).toBeVisible();
+		expect(screen.getByRole('link', { name: 'team@marihacks.com' })).toHaveAttribute(
+			'href',
+			'mailto:team@marihacks.com'
+		);
+		expect(screen.getByText(/ · @marihacks/)).toBeVisible();
+		expect(screen.getByText(/Petruzziello/)).toBeVisible();
+		expect(screen.getByRole('heading', { level: 3, name: 'Out of catalog' })).toBeVisible();
+		expect(screen.getByText(/Newell 603-101-MQ 24: course pack/)).toBeVisible();
+		expect(screen.getByRole('heading', { level: 3, name: 'Bookstores' })).toBeVisible();
+		expect(screen.getByText('Zone libre')).toBeVisible();
+		expect(
+			screen.getByRole('link', { name: 'Edit 603-101-MQ 01: Convenience Store Woman' })
+		).toBeVisible();
+	});
+
+	it('shows the unsaved Mios list and a load action when no entries are stored yet', () => {
+		render(CataloguePage, {
+			props: {
+				data: data('entries', {
+					sourceEntries: [
+						{
+							courseCode: '603-103-MQ',
+							section: '19',
+							title: '(title not in Mio)',
+							instructor: 'Blair Morris',
+							author: '',
+							bookTitle: 'Macbeth',
+							edition: '',
+							isbn: '',
+							bookstore: 'The Book Stop, Concordia Loyola',
+							notes: 'class Mio; no edition/ISBN',
+							sourceDate: '2026-08-16'
+						}
+					],
+					skippedPacks: [],
+					source: { teacher: 'Mios', date: '2026-08-20', updatedAtLabel: '19:09 America/Toronto' },
+					contact: { email: 'team@marihacks.com', instagram: '@marihacks' }
+				})
+			}
+		});
+		expect(screen.getByText(/Showing the Mios teacher list before it is saved/)).toBeVisible();
+		expect(screen.getByRole('cell', { name: /603-103-MQ 19: Macbeth/ })).toBeVisible();
+		expect(screen.getByText('Load the teacher list to edit.')).toBeVisible();
+		expect(screen.getByRole('button', { name: 'Load Mios teacher list' })).toHaveAttribute(
+			'formaction',
+			'?/importSource'
+		);
+		expect(screen.queryByRole('link', { name: /Edit/ })).not.toBeInTheDocument();
 	});
 
 	it('opens a complete book editor with relationship and URL fields', () => {

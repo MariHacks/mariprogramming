@@ -2,6 +2,7 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
+import { MIOS_CATALOGUE_ENTRIES } from '$lib/books/mios-catalogue.js';
 import {
 	StaffCatalogueConflictError,
 	StaffCatalogueUnavailableError,
@@ -73,7 +74,16 @@ function valueFor(field) {
 		price: '42.99',
 		courseId: ID,
 		bookId: ID,
-		position: '0'
+		position: '0',
+		intent: 'mios-2026-08-20',
+		courseCode: '603-101-MQ',
+		section: '01',
+		instructor: 'Philip Dann',
+		bookTitle: 'Convenience Store Woman',
+		edition: '',
+		bookstore: "The Book Stop (Follett's), Concordia Loyola",
+		notes: '',
+		sourceDate: '2026-08-20'
 	}[field];
 }
 
@@ -130,12 +140,28 @@ describe('staff catalogue resource load', () => {
 		expect(setupResult.staffRepository.getStaffCatalogueRecord).toHaveBeenCalledWith('courses', ID);
 	});
 
+	it('exposes the Mios snapshot on the entries view so later lists can be edited in the same form', async () => {
+		const setupResult = setup();
+		await expect(setupResult.handlers.load(event('entries'))).resolves.toMatchObject({
+			resource: 'entries',
+			sourceEntries: expect.arrayContaining([
+				expect.objectContaining({ bookTitle: 'Convenience Store Woman' })
+			]),
+			skippedPacks: expect.arrayContaining([
+				expect.objectContaining({ instructor: 'Newell', outOfCatalog: true })
+			]),
+			contact: { email: 'team@marihacks.com', instagram: '@marihacks' },
+			source: expect.objectContaining({ date: '2026-08-20' })
+		});
+	});
+
 	it.each([
 		['teachers', {}],
 		['courses', { teachers: [] }],
 		['bookstores', {}],
 		['books', { bookstores: [] }],
-		['assignments', { courses: [], books: [] }]
+		['assignments', { courses: [], books: [] }],
+		['entries', {}]
 	])('loads exact relationship options for %s', async (resource, options) => {
 		const setupResult = setup();
 		await expect(setupResult.handlers.load(event(resource))).resolves.toMatchObject({ options });
@@ -262,9 +288,15 @@ describe('staff catalogue named actions', () => {
 		await expect(setupResult.handlers.actions.activate(event('teachers'))).rejects.toBe(unexpected);
 	});
 
-	it('exports only create, update, activate, and deactivate mutations', () => {
+	it('exports create, update, activate, deactivate, and importSource mutations', () => {
 		const { handlers } = setup();
-		expect(Object.keys(handlers.actions)).toEqual(['create', 'update', 'activate', 'deactivate']);
+		expect(Object.keys(handlers.actions)).toEqual([
+			'create',
+			'update',
+			'activate',
+			'deactivate',
+			'importSource'
+		]);
 		expect(handlers.actions).not.toHaveProperty('default');
 		expect(handlers.actions).not.toHaveProperty('delete');
 	});
@@ -274,7 +306,23 @@ describe('staff catalogue named actions', () => {
 		['courses', ['teacherId', 'code', 'title']],
 		['bookstores', ['name', 'serviceFee']],
 		['books', ['bookstoreId', 'title', 'author', 'isbn', 'retailerUrl', 'coverUrl', 'price']],
-		['assignments', ['courseId', 'bookId', 'position']]
+		['assignments', ['courseId', 'bookId', 'position']],
+		[
+			'entries',
+			[
+				'courseCode',
+				'section',
+				'title',
+				'instructor',
+				'author',
+				'bookTitle',
+				'edition',
+				'isbn',
+				'bookstore',
+				'notes',
+				'sourceDate'
+			]
+		]
 	])('creates %s through its exact action fields', async (resource, fields) => {
 		const setupResult = setup();
 		await expect(setupResult.handlers.actions.create(event(resource))).resolves.toEqual({
@@ -283,7 +331,7 @@ describe('staff catalogue named actions', () => {
 			selectedId: ID
 		});
 		expect(setupResult.guardMutation).toHaveBeenCalledWith(expect.anything(), {
-			action: `catalogue_create_${resource === 'assignments' ? 'course_book' : resource.slice(0, -1)}`,
+			action: `catalogue_create_${resource === 'assignments' || resource === 'entries' ? 'course_book' : resource.slice(0, -1)}`,
 			fields
 		});
 		expect(setupResult.staffRepository.createStaffCatalogueRecord).toHaveBeenCalledWith(
@@ -456,5 +504,160 @@ describe('staff catalogue named actions', () => {
 		const response = await setupResult.handlers.actions.update(event('teachers'));
 		expect(response.status).toBe(400);
 		expect(setupResult.staffRepository.updateStaffCatalogueRecord).not.toHaveBeenCalled();
+	});
+
+	it('authorizes before rejecting import on a non-entry resource', async () => {
+		const setupResult = setup();
+		await expect(
+			setupResult.handlers.actions.importSource(event('teachers'))
+		).rejects.toMatchObject({
+			status: 404
+		});
+		expect(setupResult.authorize).toHaveBeenCalledOnce();
+		expect(setupResult.guardMutation).not.toHaveBeenCalled();
+	});
+
+	it('imports missing Mios rows through create and skips keys already stored', async () => {
+		const setupResult = setup({
+			repository: {
+				listStaffCatalogue: vi.fn(async () => ({
+					records: [
+						{
+							instructor: 'Philip Dann',
+							courseCode: '603-101-MQ',
+							section: '01',
+							bookTitle: 'Convenience Store Woman'
+						}
+					],
+					totalCount: 1
+				}))
+			}
+		});
+		await expect(setupResult.handlers.actions.importSource(event('entries'))).resolves.toEqual({
+			success: true,
+			message: `Loaded ${MIOS_CATALOGUE_ENTRIES.length - 1} catalogue entries.`
+		});
+		expect(setupResult.guardMutation).toHaveBeenCalledWith(expect.anything(), {
+			action: 'catalogue_import_course_book',
+			fields: ['intent']
+		});
+		expect(setupResult.staffRepository.createStaffCatalogueRecord).toHaveBeenCalledTimes(
+			MIOS_CATALOGUE_ENTRIES.length - 1
+		);
+		expect(setupResult.staffRepository.createStaffCatalogueRecord).toHaveBeenCalledWith(
+			'entries',
+			expect.objectContaining({
+				bookTitle: 'Macbeth',
+				isbn: '',
+				instructor: 'Blair Morris'
+			}),
+			expect.objectContaining({ email: STAFF.email, requestId: REQUEST_ID })
+		);
+		expect(setupResult.staffRepository.createStaffCatalogueRecord).not.toHaveBeenCalledWith(
+			'entries',
+			expect.objectContaining({ bookTitle: 'Convenience Store Woman' }),
+			expect.anything()
+		);
+	});
+
+	it('reports that the teacher list is already loaded', async () => {
+		const setupResult = setup({
+			repository: {
+				listStaffCatalogue: vi.fn(async () => ({
+					records: MIOS_CATALOGUE_ENTRIES,
+					totalCount: MIOS_CATALOGUE_ENTRIES.length
+				}))
+			}
+		});
+		await expect(setupResult.handlers.actions.importSource(event('entries'))).resolves.toEqual({
+			success: true,
+			message: 'Teacher list already loaded.'
+		});
+		expect(setupResult.staffRepository.createStaffCatalogueRecord).not.toHaveBeenCalled();
+	});
+
+	it('uses the singular loaded message when one Mios row is missing', async () => {
+		const setupResult = setup({
+			repository: {
+				listStaffCatalogue: vi.fn(async () => ({
+					records: MIOS_CATALOGUE_ENTRIES.slice(0, -1),
+					totalCount: MIOS_CATALOGUE_ENTRIES.length - 1
+				}))
+			}
+		});
+		await expect(setupResult.handlers.actions.importSource(event('entries'))).resolves.toEqual({
+			success: true,
+			message: 'Loaded 1 catalogue entry.'
+		});
+		expect(setupResult.staffRepository.createStaffCatalogueRecord).toHaveBeenCalledOnce();
+	});
+
+	it('rejects a mismatched import intent without writing rows', async () => {
+		const setupResult = setup({
+			guardMutation: vi.fn(async () => ({
+				staff: STAFF,
+				form: { intent: 'other-list' },
+				requestId: REQUEST_ID,
+				runtime: {
+					databaseUrl: 'postgresql://staff:secret@db.example.com/club',
+					approvedHostnames: ['shop.example.com']
+				}
+			}))
+		});
+		const response = await setupResult.handlers.actions.importSource(event('entries'));
+		expect(response.status).toBe(400);
+		expect(setupResult.staffRepository.createStaffCatalogueRecord).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		[new StaffCatalogueValidationError({ bookTitle: 'Enter a title.' }), 400],
+		[new StaffCatalogueValidationError({ _form: 'There are no changes to save.' }), 400],
+		[new StaffCatalogueConflictError(), 409],
+		[new StaffCatalogueUnavailableError(), 503],
+		[new StaffActionRequestError(429, 30), 429]
+	])('maps import failure %s to a bounded response', async (failure, status) => {
+		const setupResult =
+			failure instanceof StaffActionRequestError
+				? setup({
+						guardMutation: vi.fn(async () => {
+							throw failure;
+						})
+					})
+				: setup({
+						repository: {
+							createStaffCatalogueRecord: vi.fn(async () => {
+								throw failure;
+							})
+						}
+					});
+		const response = await setupResult.handlers.actions.importSource(event('entries'));
+		expect(response.status).toBe(status);
+		expect(JSON.stringify(response.data)).not.toMatch(/database|secret|session/i);
+	});
+
+	it('does not misclassify an unexpected import failure', async () => {
+		const unexpected = new TypeError('programming error');
+		const setupResult = setup({
+			guardMutation: vi.fn(async () => {
+				throw unexpected;
+			})
+		});
+		await expect(setupResult.handlers.actions.importSource(event('entries'))).rejects.toBe(
+			unexpected
+		);
+	});
+
+	it('does not misclassify an unexpected import repository failure', async () => {
+		const unexpected = new TypeError('programming error');
+		const setupResult = setup({
+			repository: {
+				createStaffCatalogueRecord: vi.fn(async () => {
+					throw unexpected;
+				})
+			}
+		});
+		await expect(setupResult.handlers.actions.importSource(event('entries'))).rejects.toBe(
+			unexpected
+		);
 	});
 });

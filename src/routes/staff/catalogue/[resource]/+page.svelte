@@ -10,6 +10,7 @@
 	export let form = null;
 
 	const resources = Object.freeze([
+		['entries', 'Entries'],
 		['teachers', 'Teachers'],
 		['courses', 'Courses'],
 		['bookstores', 'Bookstores'],
@@ -18,6 +19,7 @@
 	]);
 	const labels = /** @type {Readonly<Record<string, { singular: string, plural: string }>>} */ (
 		Object.freeze({
+			entries: { singular: 'catalogue entry', plural: 'Catalogue entries' },
 			teachers: { singular: 'teacher', plural: 'Teachers' },
 			courses: { singular: 'course', plural: 'Courses' },
 			bookstores: { singular: 'bookstore', plural: 'Bookstores' },
@@ -26,7 +28,32 @@
 		})
 	);
 	const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
-	const MUTATION_ACTIONS = new Set(['create', 'update', 'activate', 'deactivate']);
+	const MUTATION_ACTIONS = new Set(['create', 'update', 'activate', 'deactivate', 'importSource']);
+	const ENTRY_FIELDS = Object.freeze([
+		Object.freeze({ name: 'courseCode', label: 'Course code', required: true, maxlength: 64 }),
+		Object.freeze({ name: 'section', label: 'Section', required: false, maxlength: 80 }),
+		Object.freeze({ name: 'title', label: 'Course title', required: true, maxlength: 200 }),
+		Object.freeze({ name: 'instructor', label: 'Instructor', required: true, maxlength: 160 }),
+		Object.freeze({ name: 'author', label: 'Author', required: false, maxlength: 200 }),
+		Object.freeze({ name: 'bookTitle', label: 'Book title', required: true, maxlength: 240 }),
+		Object.freeze({ name: 'edition', label: 'Edition', required: false, maxlength: 240 }),
+		Object.freeze({ name: 'isbn', label: 'ISBN', required: false, maxlength: 32 }),
+		Object.freeze({ name: 'bookstore', label: 'Bookstore', required: false, maxlength: 160 }),
+		Object.freeze({
+			name: 'notes',
+			label: 'Notes',
+			required: false,
+			maxlength: 500,
+			textarea: true
+		}),
+		Object.freeze({
+			name: 'sourceDate',
+			label: 'Source date',
+			required: false,
+			maxlength: 10,
+			type: 'date'
+		})
+	]);
 
 	/** @type {HTMLDivElement | undefined} */
 	let errorSummaryElement;
@@ -41,6 +68,8 @@
 	$: editorValues = responseForm?.values ?? {};
 	$: editorAction = data.mode === 'add' ? 'create' : 'update';
 	$: failureContext = failureContextFor(responseForm?.action, responseForm?.selectedId);
+	$: snapshotPreview = data.resource === 'entries' && data.records.length === 0;
+	$: displayedRecords = snapshotPreview ? (data.sourceEntries ?? []) : data.records;
 
 	afterUpdate(() => {
 		if (responseForm?.errorSummary && responseForm !== focusedForm) {
@@ -68,6 +97,9 @@
 		if (data.resource === 'courses') return `${record.code} ${record.title}`;
 		if (data.resource === 'bookstores') return record.name;
 		if (data.resource === 'books') return record.title;
+		if (data.resource === 'entries') {
+			return `${record.courseCode} ${record.section}: ${record.bookTitle}`;
+		}
 		return `${record.courseCode}: ${record.bookTitle}`;
 	}
 
@@ -82,6 +114,7 @@
 		if (action === 'update') return `Could not save ${target}.`;
 		if (action === 'activate') return `Could not activate ${target}.`;
 		if (action === 'deactivate') return `Could not deactivate ${target}.`;
+		if (action === 'importSource') return 'Could not load the teacher list.';
 		return 'Changes were not saved.';
 	}
 
@@ -96,7 +129,7 @@
 		const selected = data.selected;
 		if (!selected) return fallback;
 		if (field === 'serviceFee') return money(selected.serviceFeeCents);
-		if (field === 'price') return money(selected.priceCents);
+		if (field === 'price') return selected.priceCents == null ? '' : money(selected.priceCents);
 		return selected[field] ?? fallback;
 	}
 
@@ -249,6 +282,36 @@
 		{/each}
 	</nav>
 
+	{#if data.resource === 'entries' && !data.unavailable}
+		<section class="source-panel" aria-label="Mios teacher list">
+			<p>
+				Source of truth: teacher {data.source?.teacher ?? 'Mios'}, {data.source?.date ??
+					'2026-08-20'}, last updated {data.source?.updatedAtLabel ?? '19:09 America/Toronto'}.
+				Contact
+				<a href="mailto:team@marihacks.com">{data.contact?.email ?? 'team@marihacks.com'}</a>
+				· {data.contact?.instagram ?? '@marihacks'}.
+			</p>
+			{#if data.notices?.length}
+				<ul class="notice-list">
+					{#each data.notices as notice (notice)}
+						<li>{notice}</li>
+					{/each}
+				</ul>
+			{/if}
+			{#if snapshotPreview}
+				<form method="post" data-action="importSource" use:enhance={enhanceMutation}>
+					<input type="hidden" name="intent" value="mios-2026-08-20" />
+					<button
+						class="primary-action"
+						type="submit"
+						formaction="?/importSource"
+						disabled={submitting}>Load Mios teacher list</button
+					>
+				</form>
+			{/if}
+		</section>
+	{/if}
+
 	<div class:with-editor={data.mode && !data.unavailable} class="catalogue-grid">
 		<section class="catalogue-list" aria-labelledby="resource-title">
 			<header class="list-heading">
@@ -293,9 +356,15 @@
 				<p class="notice error-notice" role="alert">
 					Catalogue data is unavailable. Try again later.
 				</p>
-			{:else if data.records.length === 0}
+			{:else if displayedRecords.length === 0}
 				<p class="notice">No {data.resource} found.</p>
 			{:else}
+				{#if snapshotPreview}
+					<p class="notice">
+						Showing the Mios teacher list before it is saved. Load it to edit rows, or add a new
+						entry.
+					</p>
+				{/if}
 				<div class="table-wrap">
 					<table aria-label={`${resourceLabel.plural} catalogue`}>
 						<thead>
@@ -307,7 +376,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each data.records as record (record.id)}
+							{#each displayedRecords as record, index (record.id ?? `${record.courseCode}-${record.section}-${record.bookTitle}-${index}`)}
 								<tr>
 									<td data-label="Entry">
 										<strong>
@@ -319,6 +388,9 @@
 												{record.name}
 											{:else if data.resource === 'books'}
 												{record.title}
+											{:else if data.resource === 'entries'}
+												{record.courseCode}
+												{record.section ? ` ${record.section}` : ''}: {record.bookTitle}
 											{:else}
 												{record.courseCode}: {record.bookTitle}
 											{/if}
@@ -331,6 +403,10 @@
 											<span class="secondary">{record.author}</span>
 										{:else if data.resource === 'assignments'}
 											<span class="secondary">{record.courseTitle}</span>
+										{:else if data.resource === 'entries'}
+											<span class="secondary"
+												>{record.author ? `${record.author}, ` : ''}{record.title}</span
+											>
 										{/if}
 									</td>
 									<td data-label="Details">
@@ -339,51 +415,71 @@
 										{:else if data.resource === 'bookstores'}
 											${money(record.serviceFeeCents)} service fee
 										{:else if data.resource === 'books'}
-											{record.bookstoreName}, ${money(record.priceCents)}
+											{record.bookstoreName ?? 'No bookstore'}{record.priceCents == null
+												? ''
+												: `, $${money(record.priceCents)}`}
 										{:else if data.resource === 'assignments'}
 											{record.teacherName}, position {record.position}
+										{:else if data.resource === 'entries'}
+											{record.instructor}{record.bookstore
+												? ` · ${record.bookstore}`
+												: ''}{record.isbn ? ` · ${record.isbn}` : ''}{record.notes
+												? ` · ${record.notes}`
+												: ''}{record.sourceDate ? ` · ${record.sourceDate}` : ''}
 										{:else}
 											Version {record.version}
 										{/if}
 									</td>
 									<td data-label="Visibility">
-										<span class:inactive={!record.active} class="state">
-											Direct: {record.active ? 'Active' : 'Inactive'}
-										</span>
-										<span class:inactive={!record.effectiveActive} class="state">
-											Public: {record.effectiveActive ? 'Visible' : 'Hidden'}
-										</span>
-										{#if blockedText(record)}
-											<span class="blocked">{blockedText(record)}</span>
+										{#if snapshotPreview}
+											<span class="state">Out of saved catalogue until loaded</span>
+										{:else}
+											<span class:inactive={!record.active} class="state">
+												Direct: {record.active ? 'Active' : 'Inactive'}
+											</span>
+											<span class:inactive={!record.effectiveActive} class="state">
+												Public: {record.effectiveActive ? 'Visible' : 'Hidden'}
+											</span>
+											{#if blockedText(record)}
+												<span class="blocked">{blockedText(record)}</span>
+											{/if}
 										{/if}
 									</td>
 									<td data-label="Actions" class="row-actions">
-										<!-- Query state is appended to a route already resolved with SvelteKit. -->
-										<!-- eslint-disable svelte/no-navigation-without-resolve -->
-										<a
-											href={`${resolve('/staff/catalogue/[resource]', { resource: data.resource })}${querySuffix({ edit: record.id })}`}
-											>Edit {recordName(record)}</a
-										>
-										<!-- eslint-enable svelte/no-navigation-without-resolve -->
-										{#if record.active}
-											<details>
-												<summary>Deactivate?</summary>
-												<form method="post" data-action="deactivate" use:enhance={enhanceMutation}>
+										{#if snapshotPreview}
+											<span class="secondary">Load the teacher list to edit.</span>
+										{:else}
+											<!-- Query state is appended to a route already resolved with SvelteKit. -->
+											<!-- eslint-disable svelte/no-navigation-without-resolve -->
+											<a
+												href={`${resolve('/staff/catalogue/[resource]', { resource: data.resource })}${querySuffix({ edit: record.id })}`}
+												>Edit {recordName(record)}</a
+											>
+											<!-- eslint-enable svelte/no-navigation-without-resolve -->
+											{#if record.active}
+												<details>
+													<summary>Deactivate?</summary>
+													<form
+														method="post"
+														data-action="deactivate"
+														use:enhance={enhanceMutation}
+													>
+														<input type="hidden" name="id" value={record.id} />
+														<input type="hidden" name="version" value={record.version} />
+														<button type="submit" formaction="?/deactivate" disabled={submitting}
+															>Deactivate {recordName(record)}</button
+														>
+													</form>
+												</details>
+											{:else}
+												<form method="post" data-action="activate" use:enhance={enhanceMutation}>
 													<input type="hidden" name="id" value={record.id} />
 													<input type="hidden" name="version" value={record.version} />
-													<button type="submit" formaction="?/deactivate" disabled={submitting}
-														>Deactivate {recordName(record)}</button
+													<button type="submit" formaction="?/activate" disabled={submitting}
+														>Activate {recordName(record)}</button
 													>
 												</form>
-											</details>
-										{:else}
-											<form method="post" data-action="activate" use:enhance={enhanceMutation}>
-												<input type="hidden" name="id" value={record.id} />
-												<input type="hidden" name="version" value={record.version} />
-												<button type="submit" formaction="?/activate" disabled={submitting}
-													>Activate {recordName(record)}</button
-												>
-											</form>
+											{/if}
 										{/if}
 									</td>
 								</tr>
@@ -391,6 +487,32 @@
 						</tbody>
 					</table>
 				</div>
+			{/if}
+
+			{#if data.resource === 'entries' && data.skippedPacks?.length}
+				<section class="skipped-packs" aria-labelledby="skipped-title">
+					<h3 id="skipped-title">Out of catalog</h3>
+					<p>Course packs are out of the service.</p>
+					<ul>
+						{#each data.skippedPacks as pack (`${pack.instructor}-${pack.courseCode}-${pack.section}`)}
+							<li>{`${pack.instructor} ${pack.courseCode} ${pack.section}: ${pack.reason}`}</li>
+						{/each}
+					</ul>
+				</section>
+			{/if}
+			{#if data.resource === 'entries' && data.bookstores?.length}
+				<section class="bookstore-directory" aria-labelledby="bookstore-title">
+					<h3 id="bookstore-title">Bookstores</h3>
+					<ul>
+						{#each data.bookstores as store (store.name)}
+							<li>
+								<strong>{store.name}</strong>
+								<span class="secondary">{store.address}</span>
+								<span class="secondary">{store.notes}</span>
+							</li>
+						{/each}
+					</ul>
+				</section>
 			{/if}
 		</section>
 
@@ -627,6 +749,36 @@
 						{#if fieldError('price')}<p id="price-error" class="field-error">
 								{fieldError('price')}
 							</p>{/if}
+					{:else if data.resource === 'entries'}
+						{#each ENTRY_FIELDS as field (field.name)}
+							<label for={field.name}>{field.label}{field.required ? '' : ', optional'}</label>
+							{#if field.textarea}
+								<textarea
+									id={field.name}
+									name={field.name}
+									maxlength={field.maxlength}
+									required={field.required ? true : undefined}
+									value={selectedValue(field.name)}
+									aria-invalid={fieldError(field.name) ? 'true' : undefined}
+									aria-describedby={fieldError(field.name) ? `${field.name}-error` : undefined}
+								></textarea>
+							{:else}
+								<input
+									id={field.name}
+									name={field.name}
+									type={field.type ?? 'text'}
+									maxlength={field.maxlength}
+									required={field.required ? true : undefined}
+									autocomplete="off"
+									value={selectedValue(field.name)}
+									aria-invalid={fieldError(field.name) ? 'true' : undefined}
+									aria-describedby={fieldError(field.name) ? `${field.name}-error` : undefined}
+								/>
+							{/if}
+							{#if fieldError(field.name)}<p id={`${field.name}-error`} class="field-error">
+									{fieldError(field.name)}
+								</p>{/if}
+						{/each}
 					{:else}
 						{#if data.mode === 'add'}
 							<label for="courseId">Course</label>
@@ -830,6 +982,7 @@
 
 	input,
 	select,
+	textarea,
 	.search-form button,
 	.primary-action,
 	.row-actions button {
@@ -841,9 +994,15 @@
 	}
 
 	input,
-	select {
+	select,
+	textarea {
 		width: 100%;
 		padding: 0.6rem 0.7rem;
+	}
+
+	textarea {
+		min-height: 6rem;
+		resize: vertical;
 	}
 
 	.search-form button,
@@ -1036,6 +1195,36 @@
 		margin: 0.2rem 0 0;
 	}
 
+	.source-panel,
+	.skipped-packs,
+	.bookstore-directory {
+		padding: 1rem 0 0;
+		font-size: var(--text-sm);
+	}
+
+	.source-panel,
+	.skipped-packs {
+		border-bottom: var(--rule);
+	}
+
+	.notice-list,
+	.skipped-packs ul,
+	.bookstore-directory ul {
+		margin: 0.6rem 0 0;
+		padding-left: 1.2rem;
+	}
+
+	.skipped-packs h3,
+	.bookstore-directory h3 {
+		font-size: var(--text-sm);
+		font-weight: 650;
+	}
+
+	.source-panel .primary-action {
+		width: auto;
+		margin-top: 0.85rem;
+	}
+
 	button:disabled {
 		cursor: wait;
 		opacity: 0.55;
@@ -1044,6 +1233,7 @@
 	:global(.staff-shell a:focus-visible),
 	input:focus-visible,
 	select:focus-visible,
+	textarea:focus-visible,
 	button:focus-visible,
 	summary:focus-visible {
 		outline: var(--focus-ring-width) solid var(--color-focus);

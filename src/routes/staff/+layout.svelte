@@ -54,7 +54,7 @@
 				<a
 					class:active={catalogueActive}
 					aria-current={catalogueActive ? 'page' : undefined}
-					href={resolve('/staff/catalogue/teachers', {})}>Catalogue</a
+					href={resolve('/staff/catalogue/entries', {})}>Catalogue</a
 				>
 			</nav>
 
