@@ -213,7 +213,7 @@
 				<span>English</span>
 				<span>Books</span>
 			</div>
-			<p class="delivery-status">Coming Soon</p>
+			<p class="delivery-status">coming next semester</p>
 		</section>
 	</div>
 </section>

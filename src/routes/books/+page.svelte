@@ -48,8 +48,8 @@
 	{:else}
 		<section class="launch-notice" aria-labelledby="book-delivery-status">
 			<div class="page-container launch-notice__inner">
-				<p class="launch-status">Coming Soon</p>
-				<h1 id="book-delivery-status">Book Delivery is coming soon</h1>
+				<p class="launch-status">coming next semester</p>
+				<h1 id="book-delivery-status">Book Delivery is coming next semester</h1>
 				<p>We are preparing course book lists and campus pickup.</p>
 			</div>
 		</section>

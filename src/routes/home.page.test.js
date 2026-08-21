@@ -61,7 +61,7 @@ describe('home route', () => {
 			'href',
 			'https://www.marihacks.com/'
 		);
-		expect(screen.getAllByText('Coming Soon')).toHaveLength(2);
+		expect(screen.getAllByText('Coming Soon')).toHaveLength(1);
 		expect(screen.queryByRole('link', { name: /current challenge/i })).not.toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Mini-Competitions status' })).toHaveAttribute(
 			'href',
@@ -86,14 +86,14 @@ describe('home route', () => {
 		expect(screen.getByRole('heading', { level: 2, name: 'Workshop archive' })).toBeVisible();
 	});
 
-	it('keeps Book Delivery on the homepage as a closed coming-soon preview', () => {
+	it('keeps Book Delivery on the homepage as a closed next-semester preview', () => {
 		const { container } = render(HomePage);
 		const delivery = screen.getByRole('region', { name: 'Book Delivery' });
 
 		expect(
 			within(delivery).getByRole('heading', { level: 2, name: 'Book Delivery' })
 		).toBeVisible();
-		expect(within(delivery).getByText('Coming Soon')).toBeVisible();
+		expect(within(delivery).getByText('coming next semester')).toBeVisible();
 		expect(delivery).toHaveTextContent('required French and English course books');
 		expect(within(delivery).queryByRole('link')).not.toBeInTheDocument();
 		expect(container.querySelectorAll('a[href^="/books"]')).toHaveLength(0);

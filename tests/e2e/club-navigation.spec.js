@@ -118,7 +118,9 @@ for (const width of [320, 768, 1024]) {
 		await expect(page.locator('a[href^="/books"]')).toHaveCount(0);
 		await expect(page.getByRole('heading', { name: 'Book Delivery', exact: true })).toBeVisible();
 		await expect(
-			page.getByRole('region', { name: 'Book Delivery' }).getByText('Coming Soon', { exact: true })
+			page
+				.getByRole('region', { name: 'Book Delivery' })
+				.getByText('coming next semester', { exact: true })
 		).toBeVisible();
 		await expectNoHorizontalOverflow(page);
 

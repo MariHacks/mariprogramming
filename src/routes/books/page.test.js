@@ -31,8 +31,9 @@ describe('book delivery catalogue route', () => {
 		});
 
 		expect(
-			screen.getByRole('heading', { level: 1, name: 'Book Delivery is coming soon' })
+			screen.getByRole('heading', { level: 1, name: 'Book Delivery is coming next semester' })
 		).toBeVisible();
+		expect(screen.getByText('coming next semester', { exact: true })).toBeVisible();
 		expect(screen.getByText('We are preparing course book lists and campus pickup.')).toBeVisible();
 		expect(screen.queryByRole('article')).not.toBeInTheDocument();
 		expect(screen.queryByRole('button')).not.toBeInTheDocument();

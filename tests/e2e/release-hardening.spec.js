@@ -25,7 +25,9 @@ for (const viewport of [
 		await expect(page).toHaveURL('/');
 		await expect(page.getByRole('heading', { name: 'Book Delivery', exact: true })).toBeVisible();
 		await expect(
-			page.getByRole('region', { name: 'Book Delivery' }).getByText('Coming Soon', { exact: true })
+			page
+				.getByRole('region', { name: 'Book Delivery' })
+				.getByText('coming next semester', { exact: true })
 		).toBeVisible();
 
 		await page.goto('/staff/sign-in?state=reauthenticate');
