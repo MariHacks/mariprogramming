@@ -36,6 +36,10 @@ describe('SiteHeader', () => {
 			'href',
 			'/mini-competitions'
 		);
+		expect(within(navigation).getByRole('link', { name: 'MariTools' })).toHaveAttribute(
+			'href',
+			'/tools'
+		);
 	});
 
 	it('renders the verified Sign up action once', () => {

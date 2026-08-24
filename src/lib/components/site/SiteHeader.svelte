@@ -12,7 +12,8 @@
 		{ label: 'Events', href: '/events', external: false },
 		{ label: 'Workshops', href: '/our-workshops', external: false },
 		{ label: 'Resources', href: '/resources', external: false },
-		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false }
+		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false },
+		{ label: 'MariTools', href: '/tools', external: false }
 	];
 	const compactLinks = primaryLinks.slice(0, 3);
 	const moreLinks = [
