@@ -94,7 +94,7 @@ Back to club home →                ← quiet link to / (not Book Delivery)
 |-----------|--------|
 | Google Calendar **week** view | Column alignment, time rail, block positioning |
 | Fantastical / Cron | Clean week density without decoration |
-| Printed **registrar timetable** | Ink rules, mono times, overlap visible as conflict |
+| Printed **registrar timetable** | Ink rules, tabular times (Inter), overlap visible as conflict |
 | Linear **calendar** (density) | No floating cards; blocks sit on grid |
 
 **Steal:** Paste-then-preview sequence (like import preview in spreadsheet tools). Overlap = danger border + label, not color alone. Tutorial in `<details>`, not modal.
@@ -144,7 +144,7 @@ Back to club home →                ← quiet link to / (not Book Delivery)
 |-----------|--------|
 | University **course catalog** (e.g. McGill, UBC public catalog) | Code + title + section + instructor row |
 | WorldCat / library OPAC | Facet row (term + query), dense results |
-| Stripe **Docs** list pages | Filter bar + ruled index, mono for codes |
+| Stripe **Docs** list pages | Filter bar + ruled index, tabular-nums for codes |
 
 **MariTools translation:** Term filter **on page only** (browse facet). Books subsection labeled **reference only** — link to title/ISBN text, never “Buy”.
 

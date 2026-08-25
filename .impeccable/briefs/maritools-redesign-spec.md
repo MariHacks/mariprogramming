@@ -35,7 +35,7 @@ MariTools belongs to these familiar student artifacts:
 - Lab manuals with a persistent contents index and clearly separated procedures.
 - Library finding aids with terse metadata, ruled lists, and reliable filters.
 
-It does not borrow from developer terminals, neon dashboards, arcade interfaces, social-media feeds, or school-spirit posters. Roboto Mono marks literal identifiers and time data only. It never becomes a decorative voice.
+It does not borrow from developer terminals, neon dashboards, arcade interfaces, social-media feeds, or school-spirit posters. Literal identifiers and time data use Inter with `font-variant-numeric: tabular-nums` and slightly tighter tracking — never a monospace stack.
 
 ### Story
 
@@ -67,8 +67,7 @@ The visual form is a flat worksheet:
 - Paper main pane, mist index pane, ink text, blue only for current state, primary action, links, and focus.
 - Horizontal rules group records and steps. Background panels are reserved for notices, selected items, and loading placeholders.
 - Controls share one height, radius, border weight, label treatment, focus ring, and disabled treatment.
-- Page headings use Inter Tight because they connect MariTools to the parent publication. All labels, navigation, controls, records, and body text use Inter.
-- Roboto Mono is limited to course codes, section numbers, ISBNs, dates in machine format, time ranges, room identifiers, and pasted Omnivox source text.
+- Page headings use Inter Tight because they connect MariTools to the parent publication. All labels, navigation, controls, records, body text, codes, times, and pasted source use Inter. Course codes, section numbers, ISBNs, dates, time ranges, and room identifiers add `tabular-nums` and optional semibold weight — no monospace font anywhere in MariTools.
 - Static content never casts a shadow. Only the mobile navigation popover may use a shadow because it sits above the page.
 
 ## Shared custom properties
@@ -95,7 +94,7 @@ Define MariTools properties on `.mt-shell` so they can refine the parent system 
 | `--mt-rule-strong` | `rgb(6 20 49 / 42%)` | Inputs, table headers, major boundaries |
 | `--mt-font-ui` | `Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` | All operational UI |
 | `--mt-font-heading` | `"Inter Tight", Inter, sans-serif` | Page h1 and shell brand only |
-| `--mt-font-mono` | `"Roboto Mono", "SFMono-Regular", Consolas, monospace` | Literal identifiers and time data only |
+| `--mt-font-data` | Same as `--mt-font-ui` with `font-variant-numeric: tabular-nums` | Course codes, times, ISBNs, machine dates |
 | `--mt-text-xs` | `0.75rem` | Supporting metadata, table annotations |
 | `--mt-text-sm` | `0.875rem` | Labels, navigation, buttons, table cells |
 | `--mt-text-base` | `1rem` | Body and input text |
@@ -201,7 +200,7 @@ Every route uses these vertical regions in order:
 
 `MtPageHeader` has a 2rem h1, then a single paragraph at 1rem with a 52ch maximum. Gap between h1 and copy is 0.5rem. The header ends 1.5rem before the first task control. Do not add eyebrows, route numbers, decorative rules, or action buttons unless the page has one unambiguous global action.
 
-Major sections start with a 1px rule and 1.5rem top padding. Section headings use 1.125rem/1.3 at weight 680. A workflow step heading may use `01`, `02`, or `03` in mono at 0.75rem only when the page has multiple sequential steps. Browse pages do not use step numbers.
+Major sections start with a 1px rule and 1.5rem top padding. Section headings use 1.125rem/1.3 at weight 680. A workflow step heading may use `01`, `02`, or `03` in tabular-nums at 0.75rem only when the page has multiple sequential steps. Browse pages do not use step numbers.
 
 ## Shared component inventory
 
@@ -215,8 +214,8 @@ All components use the `Mt` prefix. They should own their complete state vocabul
 | `MtPageHeader` | Required title and optional one-paragraph description. No free-form decorative slot. |
 | `MtSection` | Optional heading, description, top rule, and content. Supports `density="standard|compact"`. |
 | `MtField` | Label, optional hint, control slot, error, required marker expressed in text, and `aria-describedby` wiring. States: default, hover, focus, filled, invalid, disabled, read-only. |
-| `MtTextInput` | 2.75rem control using shared borders and focus. Supports mono mode for identifiers only. |
-| `MtTextarea` | Vertical resize, 8rem minimum, source mode in mono, compose mode in Inter. |
+| `MtTextInput` | 2.75rem control using shared borders and focus. Supports tabular-nums mode for identifiers only. |
+| `MtTextarea` | Vertical resize, 8rem minimum, source mode in tabular-nums, compose mode in Inter. |
 | `MtSelect` | Native select affordance with the same height and focus treatment as inputs. |
 | `MtChoiceGroup` | Fieldset and legend for radio or checkbox groups. Full label row is clickable; each target is at least 2.75rem. |
 | `MtFileInput` | Native file input within a ruled upload row. Shows accepted type and selected filename as text. No fake drag-and-drop requirement. |
@@ -269,10 +268,10 @@ Each route row is at least 4rem high and uses a three-column desktop grid: route
 
 1. `MtPageHeader` uses `My schedule` and the current privacy sentence.
 2. A closed `MtDisclosure` titled `How to copy your Omnivox list` contains the numbered instructions. It has a top and bottom rule, not a panel.
-3. The source form uses a `MtTextarea` in mono, 15rem minimum height, with `Read schedule` below it. At 70rem and above, the source field occupies 65% of the available width and a 35% adjacent note rail explains accepted input in no more than three short points. Below 70rem, the note follows the field.
+3. The source form uses a `MtTextarea` in tabular-nums, 15rem minimum height, with `Read schedule` below it. At 70rem and above, the source field occupies 65% of the available width and a 35% adjacent note rail explains accepted input in no more than three short points. Below 70rem, the note follows the field.
 4. A successful parse reveals `Review courses`, then `Week`, then `Export` as three ruled sections. Do not animate the page as a sequence. Only the newly inserted section may fade in over 160ms.
 
-**Review courses:** Each course is one `MtRecordEditor`. The header line shows course code in mono, section with a visible `Section` label, and teacher. The editable title follows. Meeting rows use columns `Day`, `Time`, and editable `Room`. On mobile they wrap to two lines without dropping labels. Warnings attach to the relevant course when possible; unassigned parser warnings appear as one warning notice above the list.
+**Review courses:** Each course is one `MtRecordEditor`. The header line shows course code in tabular-nums, section with a visible `Section` label, and teacher. The editable title follows. Meeting rows use columns `Day`, `Time`, and editable `Room`. On mobile they wrap to two lines without dropping labels. Warnings attach to the relevant course when possible; unassigned parser warnings appear as one warning notice above the list.
 
 **Week grid:** At 64rem and above, render a registrar timetable with a 4.5rem time rail and five equal weekday columns. The visible day runs from the earliest meeting rounded down to the hour to the latest meeting rounded up, clamped to 08:00 through 19:00. One hour equals 4rem. Major hour rules are strong enough to track across columns; half-hour rules are 8% ink. Meeting blocks sit on the time grid with 0.25rem inset, white background, 1px blue border, and a 3px blue leading rule. They show time, course code, title truncated to two lines, and room. Overlapping meetings use a danger leading rule and an `Overlap` text label. Color alone never carries overlap state. Empty weekdays show `No classes` in the day header region, not a full-height message.
 
@@ -301,13 +300,13 @@ If the five columns would fall below 10.5rem, keep the desktop grid at its minim
 
 The settings row contains `Minimum gap` as an `MtChoiceGroup` and `Optional date` as an `MtField`. At 64rem and above, they sit in a `minmax(24rem, 2fr) minmax(14rem, 1fr)` grid. Gap options are segmented radio rows, not pills. The custom-minute input appears directly after `Custom`, is 8rem wide, and keeps the 15 to 240 range hint visible.
 
-Schedule paste fields use a two-column grid at 64rem and above. Added people fill additional rows. Each field heading reads `Person 1 schedule`, `Person 2 schedule`, and so on. `Remove` is a quiet action in that field's heading and appears only when more than two fields exist. Do not call people `Schedule 1` because the comparison is person-based. Source fields use mono and have a 10rem minimum height.
+Schedule paste fields use a two-column grid at 64rem and above. Added people fill additional rows. Each field heading reads `Person 1 schedule`, `Person 2 schedule`, and so on. `Remove` is a quiet action in that field's heading and appears only when more than two fields exist. Do not call people `Schedule 1` because the comparison is person-based. Source fields use tabular-nums and have a 10rem minimum height.
 
 The action row places `Find shared free time` first visually and as the only primary button. `Add another person` and `Download busy times (.json)` are secondary. On mobile, the primary action spans the width and comes before secondary actions in reading order.
 
-**Results:** If an optional date exists, show its result before the recurring week because it is more specific. The date heading uses the formatted local date; the effective weekday appears in a labeled metadata line such as `Schedule followed: Monday`. Do not concatenate the values with punctuation. Slots render as mono ruled rows.
+**Results:** If an optional date exists, show its result before the recurring week because it is more specific. The date heading uses the formatted local date; the effective weekday appears in a labeled metadata line such as `Schedule followed: Monday`. Do not concatenate the values with punctuation. Slots render as tabular-nums ruled rows.
 
-The recurring week uses `MtWeekGrid` in free-time variant. At 48rem and above, use five columns with weekday headers. Each available block is a white row with a blue 3px leading rule and mono time range. There is no vertical hour scaling because the output is a list of candidate gaps, not a calendar. A day with no qualifying gap says `No gap of [n] minutes or longer`. Below 48rem, weekday sections stack.
+The recurring week uses `MtWeekGrid` in free-time variant. At 48rem and above, use five columns with weekday headers. Each available block is a white row with a blue 3px leading rule and tabular-nums time range. There is no vertical hour scaling because the output is a list of candidate gaps, not a calendar. A day with no qualifying gap says `No gap of [n] minutes or longer`. Below 48rem, weekday sections stack.
 
 **States:**
 
@@ -365,7 +364,7 @@ Each action links to `/tools/account`. Do not use a modal or duplicate Google si
 
 **Purpose:** Browse student-contributed course facts by term and course code. Textbooks are reference data, never products.
 
-**Layout:** The page header is followed by a single `MtFilterBar`. Term is a native select up to 16rem. Course code is a mono text field up to 16rem. `Show courses` is the primary button. This page is the only tools page with a user-facing term filter. The shell gains no term control.
+**Layout:** The page header is followed by a single `MtFilterBar`. Term is a native select up to 16rem. Course code is a tabular-nums text field up to 16rem. `Show courses` is the primary button. This page is the only tools page with a user-facing term filter. The shell gains no term control.
 
 Results use `MtRuledList`. Each course row uses a two-part desktop grid: a 15rem identity rail and a flexible facts column. The rail shows course code, title, term, section, and teacher with visible metadata labels. The facts column has Assessments followed by Textbooks. Assessments use aligned columns Name, Weight, Date. Textbooks use Title, Author, ISBN, Status. Rows with missing fields retain their column and show an em dash only as missing-data content; do not collapse the alignment.
 
@@ -415,9 +414,9 @@ Rooms remain absent until the product exposes staff-verified room data. The rede
 
 **Layout:** Category and Course filters use native selects in `MtFilterBar`. The course control stays enabled for all categories so the current backend behavior is preserved; if product logic later makes it irrelevant, disable it only after the category change is explicit and announce the change.
 
-Thread results are a ruled index. Each row is a full-width link with title in the flexible first column, category in a 7rem column, course code in a 7rem mono column, and a right arrow. Missing course tags show `No course` as muted text. On mobile, title sits first and a labeled metadata line follows. Do not use middle-dot separators.
+Thread results are a ruled index. Each row is a full-width link with title in the flexible first column, category in a 7rem column, course code in a 7rem tabular-nums column, and a right arrow. Missing course tags show `No course` as muted text. On mobile, title sits first and a labeled metadata line follows. Do not use middle-dot separators.
 
-The signed-in composer begins after a strong rule under `Start a thread`, max width 44rem. Category, Course tag, Title, and Body use shared fields. Body uses Inter, not mono. The primary action is `Post thread`. Signed-out users see `Sign in to start a thread` and a link to Account. Course tags remain sourced from the catalog.
+The signed-in composer begins after a strong rule under `Start a thread`, max width 44rem. Category, Course tag, Title, and Body use shared fields. Body uses Inter, not tabular-nums. The primary action is `Post thread`. Signed-out users see `Sign in to start a thread` and a link to Account. Course tags remain sourced from the catalog.
 
 **States:**
 
@@ -579,7 +578,7 @@ There is no page-load choreography, staggered list entrance, animated timetable 
 
 These refinements were grafted from Codex (GPT) and Grok CLI candidates after cross-judge scoring. Base: candidate 1.
 
-**From candidate 3 — `MtWeekGrid` geometry.** Window 08:00–18:00, five weekday columns. Grid: `grid-template-columns: var(--mt-grid-time-col) repeat(5, minmax(0, 1fr))` on a raised paper frame with strong outer rule, no shadow. Time rail labels each hour in mono; half-hour rules between. Meeting blocks use absolute positioning with `top`/`height` derived from minutes since 08:00 and `--mt-grid-row-h` per 30-minute slot. Schedule uses occupied meeting fills; free-time uses gap rows (no vertical hour scaling).
+**From candidate 3 — `MtWeekGrid` geometry.** Window 08:00–18:00, five weekday columns. Grid: `grid-template-columns: var(--mt-grid-time-col) repeat(5, minmax(0, 1fr))` on a raised paper frame with strong outer rule, no shadow. Time rail labels each hour in tabular-nums; half-hour rules between. Meeting blocks use absolute positioning with `top`/`height` derived from minutes since 08:00 and `--mt-grid-row-h` per 30-minute slot. Schedule uses occupied meeting fills; free-time uses gap rows (no vertical hour scaling).
 
 **From candidate 2 — Semester form grid.** Course identity fields use a 12-column row: code 3, title 5, section 2, teacher 4; wrap to two rows below 54rem.
 
