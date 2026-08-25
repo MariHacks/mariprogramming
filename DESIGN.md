@@ -13,7 +13,7 @@ description: A contemporary student technical journal for learning, community, a
 
 The website should feel like a current university publication made by technically serious students: direct, useful, confident, and alive without becoming theatrical. Editorial hierarchy and precise information design create interest. The interface uses the user's independent-bookstore and high-contrast checkout references as its craft bar, while translating them into one coherent club identity.
 
-Content sits in open compositions, ruled rows, and deliberate columns rather than a collection of floating cards. The programming club leads the public experience; Book Delivery adopts the same typography and grid while becoming denser and more transactional. Imagery is evidence: book covers, workshop material, and real club assets. Decorative illustration is not required to make an empty section feel complete.
+Content sits in open compositions, ruled rows, and deliberate columns rather than a collection of floating cards. The programming club leads the public experience. MariTools (`/tools`) and Book Delivery (`/books`) are independent operate surfaces on this domain: they may share typography and grid discipline but each owns its own chrome, task flow, and navigation. Book Delivery becomes denser and more transactional; MariTools becomes denser and more instrument-like. Imagery is evidence: book covers, workshop material, and real club assets. Decorative illustration is not required to make an empty section feel complete.
 
 Motion communicates state and continuity. Pointer-down feedback is immediate, route and cart changes settle quickly, and payment progress is calm and explicit. No animation exists only to decorate the page.
 

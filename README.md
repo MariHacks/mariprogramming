@@ -1,7 +1,8 @@
 # Marianopolis Programming Club
 
 The Marianopolis Programming Club website is a SvelteKit project for club workshops, events,
-learning resources, and the Book Delivery student service.
+learning resources, MariTools student tools (`/tools`), and the independent Book Delivery
+service (`/books`).
 
 ## Requirements and setup
 

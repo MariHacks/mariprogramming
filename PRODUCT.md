@@ -2,7 +2,17 @@
 
 ## Product purpose
 
-This website is the public home of the Marianopolis Programming Club. Its primary job is to help Marianopolis students understand the club and sign up. Its secondary job is to provide useful club services and learning material, including the Book Delivery service.
+This website is the public home of the Marianopolis Programming Club. Its primary job is to help Marianopolis students understand the club and sign up. Its secondary job is to provide useful club learning material and to host separate student services that share this domain.
+
+## Independent services on this domain
+
+Three products live here and must stay independent:
+
+1. **Programming Club** — recruitment, workshops, resources, events, and community links on public routes outside `/tools` and `/books`.
+2. **MariTools** (`/tools`) — student campus tools: schedule, free time, semester outlines, shared course catalog, clubs, and forum. MariTools is not Book Delivery and does not sell books.
+3. **Book Delivery** (`/books`) — a standalone transactional service for required French and English course books. Book Delivery is not MariTools. It has its own cart, checkout, and navigation chrome when live.
+
+MariTools and Book Delivery do not share accounts, carts, navigation, or fulfillment flows. MariTools catalog entries may list required textbooks as course facts; that is reference data, not commerce. Book purchases happen only in Book Delivery.
 
 ## Primary users
 
@@ -30,7 +40,8 @@ The club is a peer learning community where students can get motivated to code, 
 - Events: confirmed dates only, with the workshop archive available when no current event is published
 - Workshops: original club learning material organized for browsing
 - Resources: curated programming references
-- Book Delivery: a distinct transactional flow for course books
+- MariTools: campus tools under `/tools` with its own sidebar chrome
+- Book Delivery: a distinct transactional flow under `/books`, separate from MariTools
 - Staff: a private order and catalogue workspace available only to the verified team account
 
 ## Current launch state
@@ -83,6 +94,7 @@ Moving Book Delivery to `live` requires the legal, tax, refund, Stripe, database
 - The top-right primary action is `Sign up` and opens the verified member registration form.
 - Instagram and Discord are icon links with accessible names.
 - Book Delivery remains clearly connected to the club but should not displace recruitment on the homepage.
+- MariTools and Book Delivery stay independent: no cross-links in nav chrome, no shared cart, no Book Delivery routes inside MariTools, no MariTools tools inside Book Delivery chrome.
 - Existing workshop and resource destinations should remain functional during the redesign.
 - The service must remain usable on mobile and with keyboard navigation, visible focus, reduced motion, and screen-reader labels.
 
