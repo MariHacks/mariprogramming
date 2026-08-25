@@ -47,14 +47,11 @@
 		align-content: start;
 		min-width: 0;
 		height: 100%;
-		padding: clamp(1.25rem, 2.5vw, 1.75rem);
-		border: 1px solid var(--card-border);
-		border-block-start: 0.375rem solid var(--card-accent);
-		border-radius: var(--radius-sm);
+		padding: clamp(1.1rem, 2.5vw, 1.5rem) var(--space-2xs);
+		border-block-end: var(--rule);
 		background: var(--card-background);
-		box-shadow: var(--shadow-sm);
 		color: var(--card-foreground);
-		gap: var(--space-sm);
+		gap: var(--space-xs);
 	}
 
 	.content-card--paper {
@@ -62,8 +59,6 @@
 		--card-foreground: var(--graphite);
 		--card-heading: var(--midnight);
 		--card-meta: var(--club-blue);
-		--card-border: rgb(var(--midnight-rgb) / 18%);
-		--card-accent: var(--club-blue);
 	}
 
 	.content-card--navy {
@@ -71,29 +66,33 @@
 		--card-foreground: var(--paper);
 		--card-heading: var(--paper);
 		--card-meta: var(--sky);
-		--card-border: rgb(var(--sky-rgb) / 36%);
-		--card-accent: var(--sky);
 	}
 
 	.content-card-link {
 		text-decoration: none;
 		transition:
-			border-color var(--motion-fast) var(--ease-out),
-			box-shadow var(--motion-base) var(--ease-out),
-			transform var(--motion-fast) var(--ease-out);
+			background-color var(--motion-fast) var(--ease-out),
+			color var(--motion-fast) var(--ease-out),
+			transform var(--motion-press) var(--ease-out);
 	}
 
 	.content-card-link:hover {
-		border-color: var(--card-accent);
-		box-shadow: var(--shadow-md);
-		transform: translateY(-0.1875rem);
+		background: var(--mist);
+		color: var(--club-blue);
 	}
 
 	.content-card-link:focus-visible {
-		outline: 3px solid var(--color-focus);
-		outline-offset: 4px;
-		border-color: var(--card-accent);
-		box-shadow: var(--shadow-md);
+		outline: var(--focus-ring-width) solid var(--color-focus);
+		outline-offset: var(--focus-ring-offset);
+	}
+
+	.content-card-link:active {
+		transform: translateY(var(--press-distance));
+	}
+
+	.content-card--navy.content-card-link:hover {
+		background: rgb(var(--sky-rgb) / 10%);
+		color: var(--sky);
 	}
 
 	.card-meta {

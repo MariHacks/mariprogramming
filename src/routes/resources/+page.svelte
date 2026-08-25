@@ -10,8 +10,8 @@
 	<meta name="description" content={metaDescription} />
 </svelte:head>
 
-<section class="resources-page surface-paper">
-	<div class="page-container resources-frame">
+<section class="resources-page surface-paper editorial-page">
+	<div class="page-container resources-frame editorial-frame">
 		<SectionIntro title="Resources" />
 
 		<ul class="path-list" aria-label="Programming learning paths">
@@ -47,16 +47,6 @@
 </section>
 
 <style>
-	.resources-page {
-		border-block-end: var(--rule);
-	}
-
-	.resources-frame {
-		display: grid;
-		padding-block: clamp(3.5rem, 7vw, 6rem);
-		gap: clamp(2.75rem, 7vw, 5.5rem);
-	}
-
 	.resources-frame :global(.section-intro) {
 		max-width: 40rem;
 	}

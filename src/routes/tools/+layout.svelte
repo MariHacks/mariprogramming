@@ -62,21 +62,30 @@
 		display: flex;
 		align-items: center;
 		min-height: 2.75rem;
-		padding-block: 0.35rem;
+		padding: 0.35rem var(--space-2xs);
 		border-block-start: var(--rule);
 		color: inherit;
 		font-size: var(--text-sm);
 		font-weight: 600;
 		text-decoration: none;
+		transition:
+			color var(--motion-fast) var(--ease-out),
+			background-color var(--motion-fast) var(--ease-out);
 	}
 
 	.tools-nav a:first-child {
 		border-block-start: 0;
 	}
 
-	.tools-nav a:hover,
-	.tools-nav a.current {
+	.tools-nav a:hover {
+		background: var(--mist);
 		color: var(--club-blue);
+	}
+
+	.tools-nav a.current {
+		background: rgb(var(--sky-rgb) / 18%);
+		color: var(--club-blue);
+		box-shadow: inset 0.2rem 0 0 var(--club-blue);
 	}
 
 	.tools-main {

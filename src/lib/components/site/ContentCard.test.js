@@ -21,6 +21,8 @@ describe('ContentCard', () => {
 		expect(link).toHaveAttribute('href', '/our-workshops/python-foundations');
 		expect(container.querySelectorAll('a')).toHaveLength(1);
 		expect(screen.getByText('Beginner workshop')).toHaveClass('card-meta');
+		expect(link).toHaveClass('content-card-link');
+		expect(container.querySelector('.content-card-link')).not.toHaveClass('content-card--shadow');
 	});
 
 	it('renders an unlinked article without empty optional elements', () => {

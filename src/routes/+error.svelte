@@ -24,7 +24,7 @@
 </svelte:head>
 
 <section class="error-page surface-paper">
-	<div class="page-container recovery-layout">
+	<div class="page-container recovery-layout editorial-frame">
 		<div class="recovery-copy">
 			<SectionIntro title={heading} {summary} />
 
@@ -38,16 +38,16 @@
 			<a class="button-primary home-action" href={resolve('/', {})}>Return to club home</a>
 		</div>
 
-		<aside class="recovery-index" aria-labelledby="recovery-index-title">
+		<aside class="recovery-index surface-ink-panel" aria-labelledby="recovery-index-title">
 			<div class="index-heading">
 				<h2 id="recovery-index-title">Try another path</h2>
 			</div>
 
 			<nav aria-label="Recovery routes">
-				<ul class="route-list">
+				<ul class="route-list ruled-index">
 					{#each recoveryRoutes as route (route.href)}
 						<li>
-							<a aria-label={route.label} href={resolve(route.href, {})}>
+							<a class="ruled-link" aria-label={route.label} href={resolve(route.href, {})}>
 								<span>{route.label}</span>
 								<code aria-hidden="true">{route.href}</code>
 							</a>
@@ -79,9 +79,7 @@
 	}
 
 	.recovery-layout {
-		display: grid;
 		align-items: start;
-		gap: clamp(3rem, 8vw, 8rem);
 	}
 
 	.recovery-copy {
@@ -133,10 +131,7 @@
 		display: grid;
 		min-width: 0;
 		padding: clamp(1.5rem, 4vw, 2.5rem);
-		border-radius: var(--radius-md);
-		background: var(--midnight);
-		color: var(--paper);
-		box-shadow: var(--shadow-md);
+		border-block: var(--rule);
 		gap: var(--space-lg);
 	}
 
@@ -150,27 +145,18 @@
 		font-size: var(--text-2xl);
 	}
 
-	.route-list {
-		padding: 0;
-		border-block-start: 1px solid rgb(var(--paper-rgb) / 24%);
-		list-style: none;
-	}
-
-	.route-list li {
-		border-block-end: 1px solid rgb(var(--paper-rgb) / 24%);
-	}
-
-	.route-list a {
-		display: grid;
-		min-width: 0;
+	.route-list .ruled-link {
+		grid-template-columns: minmax(0, 1fr);
+		min-height: auto;
 		padding-block: var(--space-sm);
+		border-block-end: 0;
 		color: var(--paper);
 		font-weight: 600;
 		gap: var(--space-3xs);
-		text-decoration: none;
 	}
 
-	.route-list a:hover > span {
+	.route-list .ruled-link:hover {
+		background: rgb(var(--paper-rgb) / 8%);
 		color: var(--sky);
 	}
 

@@ -78,7 +78,7 @@
 <style>
 	.staff-shell {
 		min-height: 100vh;
-		background: #f7f9fc;
+		background: var(--paper);
 		color: var(--midnight);
 	}
 
@@ -89,7 +89,7 @@
 		min-height: 4.5rem;
 		padding: 0 var(--page-gutter);
 		border-bottom: var(--rule-strong);
-		background: var(--surface-raised);
+		background: #fff;
 	}
 
 	.staff-brand,

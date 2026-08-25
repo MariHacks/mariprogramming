@@ -13,7 +13,7 @@
 	/>
 </svelte:head>
 
-<section class="competition-page" aria-labelledby="competition-title">
+<section class="competition-page editorial-page" aria-labelledby="competition-title">
 	<div class="competition-frame">
 		<header class="competition-heading">
 			<h1 id="competition-title">
@@ -27,12 +27,12 @@
 			<p>New challenges will appear here when they are ready.</p>
 		</div>
 
-		<nav class="competition-links" aria-label="Programming links">
-			<a href={resolve('/our-workshops', {})}>
+		<nav class="competition-links ruled-index" aria-label="Programming links">
+			<a class="ruled-link" href={resolve('/our-workshops', {})}>
 				<span>Browse workshop archive</span>
 				<span aria-hidden="true">→</span>
 			</a>
-			<a href={discordUrl} target="_blank" rel="external noopener noreferrer">
+			<a class="ruled-link" href={discordUrl} target="_blank" rel="external noopener noreferrer">
 				<span>Join Discord</span>
 				<span aria-hidden="true">↗</span>
 			</a>
@@ -42,7 +42,6 @@
 
 <style>
 	.competition-page {
-		border-block-end: var(--rule);
 		background: #fff;
 	}
 
@@ -50,7 +49,6 @@
 		display: grid;
 		width: 100%;
 		max-width: 90rem;
-		min-height: calc(100vh - 4.5rem - 4.9375rem);
 		margin-inline: auto;
 		padding: clamp(3.5rem, 8vw, 7rem) clamp(1rem, 4.6vw, 3rem);
 		gap: clamp(2rem, 5vw, 4rem);
@@ -98,28 +96,7 @@
 	}
 
 	.competition-links {
-		border-block: var(--rule);
-	}
-
-	.competition-links a {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
-		align-items: center;
-		min-height: 3.5rem;
-		padding-inline: 0.5rem;
-		color: var(--midnight);
-		font-size: 0.875rem;
-		font-weight: 600;
-		text-decoration: none;
-	}
-
-	.competition-links a + a {
-		border-block-start: var(--rule);
-	}
-
-	.competition-links a:hover {
-		background: var(--mist);
-		color: var(--club-blue);
+		align-self: end;
 	}
 
 	@media (min-width: 52rem) {
@@ -138,12 +115,6 @@
 	}
 
 	@media (max-width: 43.749rem) {
-		.competition-frame {
-			min-height: calc(100vh - 4.25rem - 6.5rem);
-		}
-	}
-
-	@media (max-width: 23rem) {
 		h1 {
 			font-size: 2.75rem;
 		}

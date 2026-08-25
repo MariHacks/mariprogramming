@@ -78,7 +78,7 @@
 	<meta name="description" content={clubContent.mission} />
 </svelte:head>
 
-<section class="hero" data-home-section="hero" aria-labelledby="home-title">
+<section class="hero editorial-enter" data-home-section="hero" aria-labelledby="home-title">
 	<div class="hero-copy">
 		<h1 id="home-title">
 			<span>Come build</span>
@@ -330,23 +330,6 @@
 		justify-content: space-between;
 		border-radius: 0;
 		padding-inline: 0.95rem;
-	}
-
-	.quiet-link {
-		display: inline-flex;
-		align-items: center;
-		width: fit-content;
-		min-height: 2.75rem;
-		gap: 0.65rem;
-		color: var(--midnight);
-		font-size: 0.75rem;
-		font-weight: 600;
-		line-height: 1.25;
-		text-decoration: none;
-	}
-
-	.quiet-link:hover {
-		color: var(--club-blue);
 	}
 
 	.eligibility {
