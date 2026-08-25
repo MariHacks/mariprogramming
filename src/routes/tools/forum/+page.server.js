@@ -19,8 +19,8 @@ export function _createHandlers(dependencies = {}) {
 		const courseIdRaw = event.url.searchParams.get('course') ?? '';
 		const courseId = UUID.test(courseIdRaw) ? courseIdRaw : '';
 		const session = event.locals.maritools ?? null;
-		const store = createStore();
 		try {
+			const store = createStore();
 			const filter = {
 				...(category === 'courses' || category === 'student-life' ? { category } : {}),
 				...(courseId ? { courseId } : {})

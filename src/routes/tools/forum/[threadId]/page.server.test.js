@@ -92,6 +92,28 @@ describe('forum thread page server', () => {
 			}
 		});
 		await expect(down.load(event())).resolves.toMatchObject({ unavailable: true });
+		const closed = handlers({
+			createStore: vi.fn(() => {
+				throw new MaritoolsUnavailableError();
+			})
+		});
+		await expect(closed.load(event({ locals: { maritools: SESSION } }))).resolves.toMatchObject({
+			unavailable: true,
+			signedIn: true
+		});
+		const staffDown = handlers({
+			store: {
+				getProfile: vi.fn(async () => ({ role: 'staff' })),
+				getThread: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		await expect(staffDown.load(event({ locals: { maritools: SESSION } }))).resolves.toMatchObject({
+			unavailable: true,
+			staff: true,
+			signedIn: true
+		});
 		const boom = handlers({
 			store: {
 				getThread: vi.fn(async () => {
@@ -288,6 +310,15 @@ describe('forum thread page server', () => {
 		await expect(
 			boom.actions.moderate(event({ locals: { maritools: STAFF }, form: { moderation: 'lock' } }))
 		).rejects.toThrow('boom');
+		const closed = handlers({
+			createStore: vi.fn(() => {
+				throw new MaritoolsUnavailableError();
+			})
+		});
+		expect(
+			(await closed.actions.moderate(event({ locals: { maritools: STAFF }, form: { moderation: 'lock' } })))
+				.status
+		).toBe(503);
 	});
 
 	it('keeps a locked thread read-only and still staff-checks if the profile store is down', async () => {

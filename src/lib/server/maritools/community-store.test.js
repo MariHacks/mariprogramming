@@ -294,4 +294,15 @@ describe('openCommunityStore', () => {
 		const store = openCommunityStore();
 		expect(typeof store.listClubs).toBe('function');
 	});
+
+	it('treats missing runtime config as unavailable', () => {
+		vi.spyOn(environment, 'readRuntimeEnvironment').mockImplementation(() => {
+			throw new Error('Server configuration is unavailable');
+		});
+		expect(() => openCommunityStore()).toThrow(MaritoolsUnavailableError);
+		vi.mocked(environment.readRuntimeEnvironment).mockImplementation(() => {
+			throw new MaritoolsUnavailableError();
+		});
+		expect(() => openCommunityStore()).toThrow(MaritoolsUnavailableError);
+	});
 });

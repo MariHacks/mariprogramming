@@ -41,9 +41,12 @@ export function _createHandlers(dependencies = {}) {
 	async function load(event) {
 		const query = event.url.searchParams.get('q') ?? '';
 		const category = event.url.searchParams.get('category') ?? '';
-		const store = createStore();
-		const identity = await staffContext(event, store);
+		const session = event.locals.maritools ?? null;
+		let staff = false;
 		try {
+			const store = createStore();
+			const identity = await staffContext(event, store);
+			staff = identity.staff;
 			const clubs = filterClubs(await store.listClubs(), query, category);
 			const pending = identity.staff ? await store.listPendingClubSubmissions() : [];
 			return {
@@ -61,8 +64,8 @@ export function _createHandlers(dependencies = {}) {
 					pending: [],
 					query,
 					category,
-					signedIn: Boolean(identity.session),
-					staff: identity.staff,
+					signedIn: Boolean(session),
+					staff,
 					unavailable: true
 				};
 			}
@@ -108,13 +111,13 @@ export function _createHandlers(dependencies = {}) {
 
 	/** @param {any} event */
 	async function publish(event) {
-		const store = createStore();
-		const identity = await staffContext(event, store);
-		if (!identity.staff) return fail(403, { error: 'Publishing is limited to staff.' });
-		const data = await event.request.formData();
-		const submissionId = String(data.get('submissionId') ?? '').trim();
-		if (!submissionId) return fail(400, { error: 'Pick a submission to publish.' });
 		try {
+			const store = createStore();
+			const identity = await staffContext(event, store);
+			if (!identity.staff) return fail(403, { error: 'Publishing is limited to staff.' });
+			const data = await event.request.formData();
+			const submissionId = String(data.get('submissionId') ?? '').trim();
+			if (!submissionId) return fail(400, { error: 'Pick a submission to publish.' });
 			await store.publishPendingClub(submissionId);
 			return { published: true };
 		} catch (error) {

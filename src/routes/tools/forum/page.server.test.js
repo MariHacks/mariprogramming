@@ -101,6 +101,16 @@ describe('forum page server', () => {
 			threads: [],
 			unavailable: true
 		});
+		const closed = handlers({
+			createStore: vi.fn(() => {
+				throw new MaritoolsUnavailableError();
+			})
+		});
+		await expect(closed.load(event({ locals: { maritools: SESSION } }))).resolves.toMatchObject({
+			threads: [],
+			signedIn: true,
+			unavailable: true
+		});
 	});
 
 	it('rethrows unexpected load failures', async () => {

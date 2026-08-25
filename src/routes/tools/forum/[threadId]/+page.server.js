@@ -26,10 +26,13 @@ export function _createHandlers(dependencies = {}) {
 
 	/** @param {any} event */
 	async function load(event) {
-		const store = createStore();
 		const threadId = event.params.threadId;
-		const identity = await staffContext(event, store);
+		const session = event.locals.maritools ?? null;
+		let staff = false;
 		try {
+			const store = createStore();
+			const identity = await staffContext(event, store);
+			staff = identity.staff;
 			const thread = await store.getThread(threadId);
 			if (!thread || thread.removedAt) {
 				return {
@@ -53,8 +56,8 @@ export function _createHandlers(dependencies = {}) {
 				return {
 					thread: null,
 					replies: [],
-					staff: identity.staff,
-					signedIn: Boolean(identity.session),
+					staff,
+					signedIn: Boolean(session),
 					unavailable: true
 				};
 			}
@@ -119,13 +122,13 @@ export function _createHandlers(dependencies = {}) {
 
 	/** @param {any} event */
 	async function moderate(event) {
-		const store = createStore();
-		const identity = await staffContext(event, store);
-		if (!identity.staff) return fail(403, { error: 'Staff only.' });
-		const data = await event.request.formData();
-		const action = String(data.get('moderation') ?? '').trim();
-		const threadId = event.params.threadId;
 		try {
+			const store = createStore();
+			const identity = await staffContext(event, store);
+			if (!identity.staff) return fail(403, { error: 'Staff only.' });
+			const data = await event.request.formData();
+			const action = String(data.get('moderation') ?? '').trim();
+			const threadId = event.params.threadId;
 			if (action === 'lock') await store.lockThread(threadId);
 			else if (action === 'remove-thread') await store.removeThread(threadId);
 			else if (action === 'remove-reply') {

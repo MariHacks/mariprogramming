@@ -129,6 +129,30 @@ describe('clubs page server', () => {
 			clubs: [],
 			unavailable: true
 		});
+		const closed = handlers({
+			createStore: vi.fn(() => {
+				throw new MaritoolsUnavailableError();
+			})
+		});
+		await expect(closed.load(event({ locals: { maritools: SESSION } }))).resolves.toMatchObject({
+			clubs: [],
+			signedIn: true,
+			staff: false,
+			unavailable: true
+		});
+		const staffDown = handlers({
+			store: {
+				getProfile: vi.fn(async () => ({ role: 'staff' })),
+				listClubs: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		await expect(staffDown.load(event({ locals: { maritools: SESSION } }))).resolves.toMatchObject({
+			unavailable: true,
+			staff: true,
+			signedIn: true
+		});
 	});
 
 	it('rethrows unexpected load failures', async () => {
@@ -289,5 +313,17 @@ describe('clubs page server', () => {
 		await expect(
 			boom.actions.publish(event({ locals: { maritools: SESSION }, form: { submissionId: PENDING.id } }))
 		).rejects.toThrow('boom');
+		const closed = handlers({
+			createStore: vi.fn(() => {
+				throw new MaritoolsUnavailableError();
+			})
+		});
+		expect(
+			(
+				await closed.actions.publish(
+					event({ locals: { maritools: STAFF }, form: { submissionId: PENDING.id } })
+				)
+			).status
+		).toBe(503);
 	});
 });

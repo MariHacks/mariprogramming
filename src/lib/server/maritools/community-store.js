@@ -229,7 +229,12 @@ export function createCommunityStore(inner) {
 }
 
 export function openCommunityStore() {
-	return createCommunityStore(
-		createMariToolsRepository({ databaseUrl: readRuntimeEnvironment().databaseUrl })
-	);
+	try {
+		return createCommunityStore(
+			createMariToolsRepository({ databaseUrl: readRuntimeEnvironment().databaseUrl })
+		);
+	} catch (error) {
+		if (error instanceof MaritoolsUnavailableError) throw error;
+		throw new MaritoolsUnavailableError();
+	}
 }
