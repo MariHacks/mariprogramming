@@ -57,6 +57,13 @@
 			"when": 1787275800000,
 			"tag": "0007_mios_catalogue_entries",
 			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1787634000000,
+			"tag": "0008_maritools_persistence",
+			"breakpoints": true
 		}
 	]
 }

@@ -591,3 +591,5 @@ export const eventDeliveries = pgTable(
 		check('event_deliveries_version_positive', sql`${table.version} > 0`)
 	]
 );
+
+export * from './maritools-schema';
