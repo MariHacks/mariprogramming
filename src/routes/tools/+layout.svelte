@@ -21,13 +21,13 @@
 				value={$explicitTermId ?? ''}
 				on:change={onTermChange}
 			>
-				<option value="">Use current dates</option>
+				<option value="">Use today's dates</option>
 				{#each ACADEMIC_TERMS as term (term.id)}
 					<option value={term.id}>{term.name}</option>
 				{/each}
 			</select>
 			{#if $termResolution.reason === 'none'}
-				<p class="term-status" role="status">Current-term data is unavailable.</p>
+				<p class="term-status" role="status">We do not have current-term data yet.</p>
 			{:else if $termResolution.selected}
 				<p class="term-status" role="status">
 					Showing {$termResolution.selected.name}.

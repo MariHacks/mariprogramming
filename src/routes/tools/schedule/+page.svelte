@@ -34,12 +34,12 @@
 	function downloadIcs() {
 		const resolution = get(termResolution);
 		if (!resolution.selected) {
-			exportError = 'Pick a term before downloading a calendar.';
+			exportError = 'Choose a term before downloading a calendar.';
 			return;
 		}
 		const rules = rulesForTerm(resolution.selected.id);
 		if (!rules) {
-			exportError = 'That term has no calendar rules yet.';
+			exportError = 'This term does not have calendar rules yet.';
 			return;
 		}
 		const ics = occurrencesToIcs(
@@ -66,8 +66,11 @@
 
 <section class="schedule-page page-container">
 	<header class="intro">
-		<h1>My Schedule</h1>
-		<p>Paste the numbered course list from Omnivox. No login. Nothing is sent to the college.</p>
+		<h1>My schedule</h1>
+		<p>
+			Paste the numbered course list from Omnivox. You do not need to log in, and nothing is sent to
+			the college.
+		</p>
 	</header>
 
 	<details class="tutorial">
@@ -105,7 +108,7 @@
 	{/if}
 
 	{#if parsed && !result.ok}
-		<p class="error" role="alert">{result.warnings[0] ?? 'Could not read that paste.'}</p>
+		<p class="error" role="alert">{result.warnings[0] ?? 'We could not read that paste.'}</p>
 	{/if}
 
 	{#if result.ok}

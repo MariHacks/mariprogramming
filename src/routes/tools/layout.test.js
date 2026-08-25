@@ -11,7 +11,7 @@ afterEach(() => {
 describe('tools layout', () => {
 	it('names the Programming Club initiative', () => {
 		render(ToolsLayout);
-		expect(screen.getByText('A Programming Club initiative.')).toBeInTheDocument();
+		expect(screen.getByText('Made by the Programming Club.')).toBeInTheDocument();
 	});
 
 	it('lets the visitor pin a historical term', () => {

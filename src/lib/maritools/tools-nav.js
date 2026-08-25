@@ -5,12 +5,12 @@ export const TOOL_SECTIONS = [
 		items: [
 			{
 				href: '/tools/schedule',
-				label: 'My Schedule',
+				label: 'My schedule',
 				summary: 'Paste your Omnivox list and download a calendar.'
 			},
 			{
 				href: '/tools/free-time',
-				label: 'Common Free Time',
+				label: 'Common free time',
 				summary: 'Compare a few schedules and see when everyone is free.'
 			}
 		]
@@ -26,14 +26,14 @@ export const TOOL_SECTIONS = [
 			},
 			{
 				href: '/tools/catalog',
-				label: 'Course Catalog',
-				summary: 'Browse structured course information students have shared.'
+				label: 'Course catalog',
+				summary: 'Browse course information students have shared.'
 			}
 		]
 	},
 	{
 		id: 'student-life',
-		title: 'Student Life',
+		title: 'Student life',
 		items: [
 			{
 				href: '/tools/clubs',

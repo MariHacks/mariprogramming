@@ -6,14 +6,14 @@ describe('TOOL_SECTIONS', () => {
 		expect(TOOL_SECTIONS.map((section) => section.title)).toEqual([
 			'Schedule',
 			'Courses',
-			'Student Life'
+			'Student life'
 		]);
 		const labels = TOOL_SECTIONS.flatMap((section) => section.items.map((item) => item.label));
 		expect(labels).toEqual([
-			'My Schedule',
-			'Common Free Time',
+			'My schedule',
+			'Common free time',
 			'Semester',
-			'Course Catalog',
+			'Course catalog',
 			'Clubs',
 			'Forum'
 		]);

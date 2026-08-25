@@ -55,7 +55,7 @@ export function parseOmnivox(raw) {
 
 		if (STUDENT_NUMBER_LINE.test(trimmed) || BARE_STUDENT_NUMBER.test(trimmed)) {
 			warnings.push(
-				'That paste looks like it includes a student number. Copy only the numbered course list on the right.'
+				'That paste looks like it includes a student number. Copy only the numbered course list on the right, and leave the student number out.'
 			);
 			continue;
 		}
@@ -107,7 +107,7 @@ export function parseOmnivox(raw) {
 			courses: [],
 			warnings: warnings.length
 				? warnings
-				: ['Could not read a compact course list from that paste.']
+				: ['We could not read a compact course list from that paste.']
 		};
 	}
 

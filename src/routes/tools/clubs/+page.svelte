@@ -4,5 +4,5 @@
 
 <ToolStub
 	title="Clubs"
-	summary="Club pages appear here after someone submits them and staff publish them. Rooms are only shown when verified."
+	summary="Clubs show up after someone submits them and staff publish the page. Rooms appear only when staff verify them."
 />

@@ -4,5 +4,5 @@
 
 <ToolStub
 	title="Forum"
-	summary="Read threads without an account. Posting uses Google sign-in. Course tags come from the catalog."
+	summary="Anyone can read threads. Posting needs Google sign-in, and course tags come from the catalog."
 />

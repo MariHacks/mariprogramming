@@ -42,6 +42,6 @@ export const OMNIVOX_TUTORIAL_STEPS = [
 	{
 		n: 9,
 		title: 'Copy the list',
-		body: 'Copy the numbered course list on the right. Skip the grid. Skip the name and student number at the top.'
+		body: 'Copy the numbered course list on the right. Skip the grid, and skip the name and student number at the top.'
 	}
 ];

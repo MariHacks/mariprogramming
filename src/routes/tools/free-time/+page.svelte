@@ -23,14 +23,14 @@
 </script>
 
 <svelte:head>
-	<title>Common Free Time | {MARITOOLS_NAME}</title>
+	<title>Common free time | {MARITOOLS_NAME}</title>
 	<meta name="description" content="Compare two Omnivox lists and see shared free blocks." />
 </svelte:head>
 
 <section class="page page-container">
 	<header>
-		<h1>Common Free Time</h1>
-		<p>Paste two compact Omnivox lists. We only compare busy times, not course names.</p>
+		<h1>Common free time</h1>
+		<p>Paste two compact Omnivox lists. We compare busy times only, not course names.</p>
 	</header>
 	<div class="pastes">
 		<label>

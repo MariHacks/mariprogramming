@@ -3,6 +3,6 @@
 </script>
 
 <ToolStub
-	title="Course Catalog"
-	summary="Shared course facts, including books listed for a section. Browse without an account."
+	title="Course catalog"
+	summary="Browse course facts students have shared, including books for a section. No account needed."
 />

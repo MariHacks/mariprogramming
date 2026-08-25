@@ -5,7 +5,7 @@ import FreeTimePage from './+page.svelte';
 
 afterEach(cleanup);
 
-describe('Common Free Time', () => {
+describe('Common free time', () => {
 	it('compares two lists', () => {
 		render(FreeTimePage);
 		const areas = screen.getAllByRole('textbox');

@@ -9,7 +9,7 @@ afterEach(() => {
 	explicitTermId.set(null);
 });
 
-describe('My Schedule', () => {
+describe('My schedule', () => {
 	it('shows the native Omnivox steps', () => {
 		render(SchedulePage);
 		expect(screen.getByText('How do I get my schedule?')).toBeInTheDocument();
@@ -37,7 +37,9 @@ describe('My Schedule', () => {
 		});
 		fireEvent.click(screen.getByRole('button', { name: 'Read schedule' }));
 		expect(
-			screen.getByText('That paste looks like it includes a student number. Copy only the numbered course list on the right.')
+			screen.getByText(
+				'That paste looks like it includes a student number. Copy only the numbered course list on the right, and leave the student number out.'
+			)
 		).toBeInTheDocument();
 	});
 });

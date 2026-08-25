@@ -3,7 +3,7 @@ import { CANONICAL_OMNIVOX_SCHEDULE } from '../../src/lib/maritools/schedule/fix
 
 test('My Schedule reads the compact Omnivox list', async ({ page }) => {
 	await page.goto('/tools/schedule', { waitUntil: 'networkidle' });
-	await expect(page.getByRole('heading', { name: 'My Schedule' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'My schedule' })).toBeVisible();
 	await page.getByLabel('Omnivox course list').fill(CANONICAL_OMNIVOX_SCHEDULE);
 	await page.getByRole('button', { name: 'Read schedule' }).click();
 	await expect(page.getByRole('heading', { name: 'Courses' })).toBeVisible();

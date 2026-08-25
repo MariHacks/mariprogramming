@@ -11,12 +11,12 @@ describe('tools home', () => {
 		expect(screen.getByRole('heading', { level: 1, name: MARITOOLS_NAME })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Schedule' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Courses' })).toBeInTheDocument();
-		expect(screen.getByRole('heading', { name: 'Student Life' })).toBeInTheDocument();
-		expect(screen.getByRole('link', { name: /My Schedule/ })).toHaveAttribute(
+		expect(screen.getByRole('heading', { name: 'Student life' })).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: /My schedule/ })).toHaveAttribute(
 			'href',
 			'/tools/schedule'
 		);
-		expect(screen.getByRole('link', { name: /Course Catalog/ })).toHaveAttribute(
+		expect(screen.getByRole('link', { name: /Course catalog/ })).toHaveAttribute(
 			'href',
 			'/tools/catalog'
 		);
