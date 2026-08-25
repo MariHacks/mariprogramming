@@ -6,42 +6,34 @@ describe('ensureMariToolsSchema', () => {
 	afterEach(() => {
 		vi.resetModules();
 		vi.restoreAllMocks();
-		vi.doUnmock('$app/environment');
-		vi.doUnmock('../config/environment.js');
-		vi.doUnmock('../db/transaction.js');
-		vi.doUnmock('./repository.js');
 	});
 
 	it('applies the persistence migration when mt tables are missing', async () => {
-		const execute = vi
+		const query = vi
 			.fn()
-			.mockResolvedValueOnce([{ table_name: null }])
-			.mockResolvedValue([]);
-		const runTransaction = vi.fn(async (operation) => operation({ execute }));
-		vi.doMock('$app/environment', () => ({ building: false }));
-		vi.doMock('../config/environment.js', () => ({
-			readRuntimeEnvironment: () => ({ databaseUrl: 'postgresql://x' })
-		}));
-		vi.doMock('../db/transaction.js', () => ({ withDatabaseTransaction: runTransaction }));
-		vi.doMock('./repository.js', () => ({
-			createMariToolsRepository: () => ({ seedFall2026: vi.fn(async () => ({})) })
-		}));
+			.mockResolvedValueOnce({ rows: [{ table_name: null }] })
+			.mockResolvedValue({ rows: [] });
+		const client = { query, release: vi.fn() };
+		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
 		vi.doMock('../../../../drizzle/0008_maritools_persistence.sql?raw', () => ({
-			default: 'CREATE TABLE "mt_academic_terms" ();\n--> statement-breakpoint\nCREATE TABLE "mt_courses" ();'
+			default:
+				'CREATE TABLE "mt_academic_terms" ();\n--> statement-breakpoint\nCREATE TABLE "mt_courses" ();'
 		}));
 
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
-		await ensureMariToolsSchema('postgresql://x', { runTransaction });
-		expect(execute).toHaveBeenCalled();
-		expect(execute.mock.calls.length).toBeGreaterThan(1);
+		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
+		expect(query.mock.calls.length).toBe(3);
+		expect(client.release).toHaveBeenCalled();
+		expect(pool.end).toHaveBeenCalled();
 	});
 
 	it('skips migration when mt_academic_terms already exists', async () => {
-		const execute = vi.fn(async () => [{ table_name: 'mt_academic_terms' }]);
-		const runTransaction = vi.fn(async (operation) => operation({ execute }));
+		const query = vi.fn(async () => ({ rows: [{ table_name: 'mt_academic_terms' }] }));
+		const client = { query, release: vi.fn() };
+		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
-		await ensureMariToolsSchema('postgresql://x', { runTransaction });
-		expect(execute).toHaveBeenCalledTimes(1);
+		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
+		expect(query).toHaveBeenCalledTimes(1);
 	});
 });
 
@@ -57,7 +49,9 @@ describe('ensureMariToolsBootstrap', () => {
 
 	it('seeds Fall 2026 once when a database url exists', async () => {
 		const seedFall2026 = vi.fn(async () => ({ term: { id: 'fall-2026' } }));
-		const execute = vi.fn(async () => [{ table_name: 'mt_academic_terms' }]);
+		const query = vi.fn(async () => ({ rows: [{ table_name: 'mt_academic_terms' }] }));
+		const client = { query, release: vi.fn() };
+		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
 		vi.doMock('$app/environment', () => ({ building: false }));
 		vi.doMock('../config/environment.js', () => ({
 			readRuntimeEnvironment: () => ({
@@ -65,7 +59,7 @@ describe('ensureMariToolsBootstrap', () => {
 			})
 		}));
 		vi.doMock('../db/transaction.js', () => ({
-			withDatabaseTransaction: async (operation) => operation({ execute })
+			createRequestPool: () => pool
 		}));
 		vi.doMock('./repository.js', () => ({
 			createMariToolsRepository: () => ({ seedFall2026 })
@@ -83,7 +77,7 @@ describe('ensureMariToolsBootstrap', () => {
 		vi.doMock('../config/environment.js', () => ({
 			readRuntimeEnvironment: () => ({ databaseUrl: 'postgresql://bootstrap:test@localhost/club' })
 		}));
-		vi.doMock('../db/transaction.js', () => ({ withDatabaseTransaction: vi.fn() }));
+		vi.doMock('../db/transaction.js', () => ({ createRequestPool: vi.fn() }));
 		vi.doMock('./repository.js', () => ({
 			createMariToolsRepository: () => ({ seedFall2026 })
 		}));
@@ -100,7 +94,7 @@ describe('ensureMariToolsBootstrap', () => {
 				throw new Error('unavailable');
 			}
 		}));
-		vi.doMock('../db/transaction.js', () => ({ withDatabaseTransaction: vi.fn() }));
+		vi.doMock('../db/transaction.js', () => ({ createRequestPool: vi.fn() }));
 		vi.doMock('./repository.js', () => ({
 			createMariToolsRepository: () => ({ seedFall2026: vi.fn() })
 		}));
