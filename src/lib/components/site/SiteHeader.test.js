@@ -20,17 +20,9 @@ describe('SiteHeader', () => {
 			'href',
 			'/about-us'
 		);
-		expect(within(navigation).getByRole('link', { name: 'Workshops' })).toHaveAttribute(
-			'href',
-			'/our-workshops'
-		);
 		expect(within(navigation).getByRole('link', { name: 'Events' })).toHaveAttribute(
 			'href',
 			'/events'
-		);
-		expect(within(navigation).getByRole('link', { name: 'Resources' })).toHaveAttribute(
-			'href',
-			'/resources'
 		);
 		expect(within(navigation).getByRole('link', { name: 'Mini-Competitions' })).toHaveAttribute(
 			'href',
@@ -40,6 +32,8 @@ describe('SiteHeader', () => {
 			'href',
 			'/tools'
 		);
+		expect(within(navigation).queryByRole('link', { name: 'Workshops' })).not.toBeInTheDocument();
+		expect(within(navigation).queryByRole('link', { name: 'Resources' })).not.toBeInTheDocument();
 	});
 
 	it('renders the verified Sign up action once', () => {
@@ -50,6 +44,19 @@ describe('SiteHeader', () => {
 		expect(signUpLinks).toHaveLength(1);
 		expect(signUpLinks[0]).toHaveAttribute('href', clubContent.signupUrl);
 		expect(signUpLinks[0]).not.toHaveAttribute('target');
+	});
+
+	it('places Account in the top-right actions next to Sign up', () => {
+		const { container } = render(SiteHeader, { props: { pathname: '/tools/account' } });
+		const actions = container.querySelector('.header-actions');
+		if (!(actions instanceof HTMLElement)) throw new Error('Header actions are required');
+		const account = within(actions).getByRole('link', { name: 'Account' });
+		const signUp = within(actions).getByRole('link', { name: 'Sign up' });
+
+		expect(account).toHaveAttribute('href', '/tools/account');
+		expect(account).toHaveAttribute('aria-current', 'page');
+		expect(account.compareDocumentPosition(signUp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(screen.getAllByRole('link', { name: 'Account' })).toHaveLength(1);
 	});
 
 	it('keeps the utility cluster on one header row so Sign up cannot wrap under the bar', () => {
@@ -77,7 +84,7 @@ describe('SiteHeader', () => {
 	});
 
 	it('provides full, compact, and mobile navigation structures for the three responsive modes', () => {
-		const { container } = render(SiteHeader, { props: { pathname: '/resources' } });
+		const { container } = render(SiteHeader, { props: { pathname: '/tools' } });
 
 		const wide = screen.getByRole('navigation', { name: 'Primary navigation' });
 		const compact = screen.getByRole('navigation', { name: 'Compact navigation' });
@@ -90,7 +97,7 @@ describe('SiteHeader', () => {
 			'aria-controls',
 			'compact-more-menu'
 		);
-		expect(container.querySelector('#compact-more-menu a[href="/resources"]')).toHaveAttribute(
+		expect(container.querySelector('#compact-more-menu a[href="/tools"]')).toHaveAttribute(
 			'aria-current',
 			'page'
 		);
@@ -106,7 +113,7 @@ describe('SiteHeader', () => {
 		const moreMenu = container.querySelector('#compact-more-menu');
 		const mobileNavigation = container.querySelector('#mobile-navigation');
 
-		expect(within(compact).queryByRole('link', { name: 'Resources' })).not.toBeInTheDocument();
+		expect(within(compact).queryByRole('link', { name: 'MariTools' })).not.toBeInTheDocument();
 		expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).not.toBeInTheDocument();
 		expect(moreMenu).toHaveAttribute('aria-hidden', 'true');
 		expect(mobileNavigation).toHaveAttribute('aria-hidden', 'true');
@@ -184,7 +191,7 @@ describe('SiteHeader', () => {
 		expect(within(navigation).getByRole('link', { name: 'About' })).not.toHaveAttribute(
 			'aria-current'
 		);
-		expect(within(navigation).getByRole('link', { name: 'Workshops' })).not.toHaveAttribute(
+		expect(within(navigation).getByRole('link', { name: 'Events' })).not.toHaveAttribute(
 			'aria-current'
 		);
 	});

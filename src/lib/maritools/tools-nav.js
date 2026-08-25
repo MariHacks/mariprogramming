@@ -48,3 +48,20 @@ export const TOOL_SECTIONS = [
 		]
 	}
 ];
+
+export const TOOL_NAV_ITEMS = [
+	{ href: '/tools/schedule', label: 'Schedule' },
+	{ href: '/tools/free-time', label: 'Free Time' },
+	{ href: '/tools/semester', label: 'Semester' },
+	{ href: '/tools/catalog', label: 'Catalog' },
+	{ href: '/tools/clubs', label: 'Clubs' },
+	{ href: '/tools/forum', label: 'Forum' }
+];
+
+/**
+ * @param {string} pathname
+ * @param {string} href
+ */
+export function isToolNavCurrent(pathname, href) {
+	return pathname === href || pathname.startsWith(`${href}/`);
+}

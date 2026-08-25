@@ -34,6 +34,10 @@
 				<span>Browse workshop archive</span>
 				<span aria-hidden="true">→</span>
 			</a>
+			<a class="archive-link" href={resolve('/resources', {})}>
+				<span>Browse resources</span>
+				<span aria-hidden="true">→</span>
+			</a>
 			<a class="archive-link" href={discordUrl} target="_blank" rel="external noopener noreferrer">
 				<span>Join Discord</span>
 				<span aria-hidden="true">↗</span>

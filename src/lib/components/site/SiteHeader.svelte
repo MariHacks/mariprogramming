@@ -10,8 +10,6 @@
 	const primaryLinks = [
 		{ label: 'About', href: '/about-us', external: false },
 		{ label: 'Events', href: '/events', external: false },
-		{ label: 'Workshops', href: '/our-workshops', external: false },
-		{ label: 'Resources', href: '/resources', external: false },
 		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false },
 		{ label: 'MariTools', href: '/tools', external: false }
 	];
@@ -271,13 +269,25 @@
 			</div>
 
 			<a
-				class="signup-link"
-				href={clubContent.signupUrl}
-				{...(isExternalSignupUrl()
-					? { target: '_blank', rel: 'external noopener noreferrer' }
-					: {})}
-				on:click={closeDisclosures}>Sign up</a
+				class:current={isCurrent('/tools/account')}
+				class="account-link"
+				href={resolve('/tools/account', {})}
+				aria-current={isCurrent('/tools/account') ? 'page' : undefined}
+				on:click={closeDisclosures}>Account</a
 			>
+			{#if isExternalSignupUrl()}
+				<a
+					class="signup-link"
+					href={clubContent.signupUrl}
+					target="_blank"
+					rel="external noopener noreferrer"
+					on:click={closeDisclosures}>Sign up</a
+				>
+			{:else}
+				<a class="signup-link" href={resolve(clubContent.signupUrl, {})} on:click={closeDisclosures}
+					>Sign up</a
+				>
+			{/if}
 		</div>
 	</div>
 </header>
@@ -506,6 +516,24 @@
 		color: var(--club-blue);
 	}
 
+	.account-link {
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.75rem;
+		padding: 0.65rem 0.7rem;
+		color: inherit;
+		font-size: 0.8125rem;
+		font-weight: 650;
+		line-height: 1;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.account-link:hover,
+	.account-link.current {
+		color: var(--club-blue);
+	}
+
 	.signup-link {
 		display: inline-flex;
 		align-items: center;
@@ -608,6 +636,10 @@
 			padding-inline: 0.8rem;
 		}
 
+		.account-link {
+			padding-inline: 0.55rem;
+		}
+
 		.mobile-navigation {
 			top: calc(100% + 0.7rem);
 			right: -4.9rem;
@@ -653,6 +685,11 @@
 
 		.signup-link {
 			padding-inline: 0.65rem;
+		}
+
+		.account-link {
+			padding-inline: 0.4rem;
+			font-size: 0.75rem;
 		}
 	}
 

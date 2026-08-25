@@ -72,6 +72,10 @@ describe('events route', () => {
 			'href',
 			'/our-workshops'
 		);
+		expect(screen.getByRole('link', { name: 'Browse resources' })).toHaveAttribute(
+			'href',
+			'/resources'
+		);
 		expect(screen.getByRole('link', { name: 'Join Discord' })).toHaveAttribute(
 			'href',
 			'https://discord.gg/c6JJw9d'

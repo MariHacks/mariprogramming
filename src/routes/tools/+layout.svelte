@@ -1,94 +1,103 @@
 <script>
-	import { ACADEMIC_TERMS } from '$lib/maritools/term/calendar.js';
-	import { explicitTermId, termResolution } from '$lib/maritools/term/session.js';
-	import { MARITOOLS_INITIATIVE } from '$lib/maritools/brand.js';
+	import { page } from '$app/stores';
+	import { resolve } from '$app/paths';
+	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
+	import { isToolNavCurrent, TOOL_NAV_ITEMS } from '$lib/maritools/tools-nav.js';
 
-	/** @param {Event} event */
-	function onTermChange(event) {
-		if (!(event.currentTarget instanceof HTMLSelectElement)) return;
-		const value = event.currentTarget.value;
-		explicitTermId.set(value === '' ? null : value);
-	}
+	$: pathname = $page.url.pathname;
 </script>
 
 <div class="tools-shell">
-	<header class="tools-banner">
-		<p class="initiative">{MARITOOLS_INITIATIVE}</p>
-		<div class="term-control">
-			<label for="tools-term">Term</label>
-			<select
-				id="tools-term"
-				value={$explicitTermId ?? ''}
-				on:change={onTermChange}
-			>
-				<option value="">Use today's dates</option>
-				{#each ACADEMIC_TERMS as term (term.id)}
-					<option value={term.id}>{term.name}</option>
-				{/each}
-			</select>
-			{#if $termResolution.reason === 'none'}
-				<p class="term-status" role="status">We do not have current-term data yet.</p>
-			{:else if $termResolution.selected}
-				<p class="term-status" role="status">
-					Showing {$termResolution.selected.name}.
-				</p>
-			{/if}
-		</div>
-	</header>
-	<slot />
+	<aside class="tools-sidebar">
+		<a class="tools-brand" href={resolve('/tools', {})}>{MARITOOLS_NAME}</a>
+		<nav class="tools-nav" aria-label="MariTools">
+			{#each TOOL_NAV_ITEMS as item (item.href)}
+				<a
+					class:current={isToolNavCurrent(pathname, item.href)}
+					href={resolve(item.href, {})}
+					aria-current={isToolNavCurrent(pathname, item.href) ? 'page' : undefined}
+				>
+					{item.label}
+				</a>
+			{/each}
+		</nav>
+	</aside>
+	<div class="tools-main">
+		<slot />
+	</div>
 </div>
 
 <style>
 	.tools-shell {
+		display: grid;
 		min-height: calc(100vh - 4.5rem - 4.9375rem);
 		border-block-end: var(--rule);
 		background: var(--paper);
 	}
 
-	.tools-banner {
+	.tools-sidebar {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(12rem, 18rem);
-		gap: var(--space-md);
-		align-items: end;
-		max-width: var(--layout-width);
-		margin-inline: auto;
-		padding: var(--space-lg) var(--page-gutter) var(--space-sm);
+		align-content: start;
+		padding: var(--space-lg) var(--page-gutter);
 		border-block-end: var(--rule);
+		gap: var(--space-sm);
 	}
 
-	.initiative {
-		font-size: var(--text-sm);
-		color: var(--quiet-steel);
+	.tools-brand {
+		color: inherit;
+		font-family: var(--font-display);
+		font-size: var(--text-lg);
+		font-weight: 650;
+		letter-spacing: -0.03em;
+		line-height: 1.1;
+		text-decoration: none;
 	}
 
-	.term-control {
+	.tools-nav {
 		display: grid;
-		gap: var(--space-3xs);
+		border-block: var(--rule);
 	}
 
-	.term-control label {
-		font-size: var(--text-xs);
-		font-weight: 600;
-	}
-
-	select {
-		height: var(--control-height);
-		padding-inline: var(--space-xs);
-		border: var(--rule-strong);
-		border-radius: var(--radius-sm);
-		background: var(--surface-raised);
-		color: var(--graphite);
-		font: inherit;
-	}
-
-	.term-status {
+	.tools-nav a {
+		display: flex;
+		align-items: center;
+		min-height: 2.75rem;
+		padding-block: 0.35rem;
+		border-block-start: var(--rule);
+		color: inherit;
 		font-size: var(--text-sm);
-		color: var(--quiet-steel);
+		font-weight: 600;
+		text-decoration: none;
 	}
 
-	@media (max-width: 40rem) {
-		.tools-banner {
-			grid-template-columns: minmax(0, 1fr);
+	.tools-nav a:first-child {
+		border-block-start: 0;
+	}
+
+	.tools-nav a:hover,
+	.tools-nav a.current {
+		color: var(--club-blue);
+	}
+
+	.tools-main {
+		min-width: 0;
+	}
+
+	@media (min-width: 52rem) {
+		.tools-shell {
+			grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+			align-items: stretch;
+		}
+
+		.tools-sidebar {
+			border-block-end: 0;
+			border-inline-end: var(--rule);
+		}
+	}
+
+	@media (max-width: 43.749rem) {
+		.tools-shell {
+			min-height: calc(100vh - 4.25rem - 6.5rem);
 		}
 	}
 </style>
