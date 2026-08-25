@@ -322,6 +322,38 @@ describe.sequential('MariTools repository against disposable PostgreSQL', () => 
 		expect(Array.isArray(catalog)).toBe(true);
 	});
 
+	it('serializes concurrent catalog publications for one offering', async () => {
+		const repo = repository();
+		const offering = await repo.findOrCreateOffering({
+			termId: 'fall-2026',
+			code: '201-NYC-05',
+			section: '00007',
+			teacherName: 'Concurrent Teacher',
+			canonicalTitle: 'Linear Algebra'
+		});
+		const [left, right] = await Promise.all([
+			repo.publishCatalogContribution({
+				offeringId: offering.offering.id,
+				contributorUserId: USER_A,
+				documentSha256: SHA_A,
+				structured: { title: 'Left' }
+			}),
+			repo.publishCatalogContribution({
+				offeringId: offering.offering.id,
+				contributorUserId: USER_B,
+				documentSha256: SHA_B,
+				structured: { title: 'Right' }
+			})
+		]);
+		expect([left.conflict, right.conflict].filter(Boolean)).toHaveLength(1);
+		const rows = await repo.listCatalogContributions({
+			offeringId: offering.offering.id
+		});
+		expect(rows).toHaveLength(2);
+		const published = rows.filter((row) => row.status === 'published');
+		expect(published.length).toBeLessThanOrEqual(1);
+	});
+
 	it('stores club submissions and forum threads without leaking student IDs', async () => {
 		const repo = repository();
 		const unpublished = await repo.createClub({

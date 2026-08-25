@@ -54,11 +54,17 @@ const provider = createOutlineExtractionProvider({
 const cold = await provider.extract({
 	text: extracted.text,
 	sha256: extracted.sha256,
-	byteLength: extracted.byteLength
+	byteLength: extracted.byteLength,
+	offeringKey: 'fall-2026:proof:00001'
 });
 const warm = await provider.extract({
 	text: extracted.text,
 	sha256: extracted.sha256,
+	byteLength: extracted.byteLength
+});
+const offeringReuse = await provider.extract({
+	text: extracted.text + '\n',
+	offeringKey: 'fall-2026:proof:00001',
 	byteLength: extracted.byteLength
 });
 
@@ -70,6 +76,9 @@ const report = {
 	warmOk: warm.ok,
 	warmInferenceCount: warm.inferenceCount,
 	warmCacheHit: Boolean(warm.cacheHit),
+	offeringReuseOk: offeringReuse.ok,
+	offeringReuseInferenceCount: offeringReuse.inferenceCount,
+	offeringReuseCacheHit: Boolean(offeringReuse.cacheHit),
 	sha256Prefix: extracted.sha256.slice(0, 12),
 	textLength: extracted.text.length
 };
@@ -88,5 +97,9 @@ if (!warm.ok || !warm.cacheHit || warm.inferenceCount !== 1) {
 	console.error('NIM warm call should be a cache hit with unchanged inference count');
 	process.exit(1);
 }
+if (!offeringReuse.ok || !offeringReuse.cacheHit || offeringReuse.inferenceCount !== 1) {
+	console.error('NIM offering-key reuse should be a cache hit with unchanged inference count');
+	process.exit(1);
+}
 
-console.log('NIM cold/warm cache proof passed');
+console.log('NIM cold/warm/offering-reuse cache proof passed');

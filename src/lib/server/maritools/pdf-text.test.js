@@ -94,6 +94,11 @@ describe('extractPdfText', () => {
 		expect(extractPdfText(pdf).text).toContain('Hello');
 	});
 
+	it('skips odd-length hexadecimal Tj strings', () => {
+		const pdf = buildPdf('BT <48656C6C6> Tj ET');
+		expect(extractPdfText(pdf).text).toBe('');
+	});
+
 	it('rejects oversized FlateDecode output', () => {
 		const huge = deflateSync(Buffer.alloc(2_000_001, 65));
 		const pdf = Buffer.from(
@@ -101,5 +106,13 @@ describe('extractPdfText', () => {
 			'latin1'
 		);
 		expect(extractPdfText(pdf).text).toBe('');
+	});
+
+	it('accepts a lone CR after the stream marker', () => {
+		const pdf = Buffer.from(
+			'%PDF-1.4\n4 0 obj << /Length 11 >> stream\r(Hello) Tj\nendstream endobj\n',
+			'latin1'
+		);
+		expect(extractPdfText(pdf).text).toContain('Hello');
 	});
 });

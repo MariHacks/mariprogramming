@@ -52,6 +52,7 @@ function queuedRepo(queue) {
 			returning: () => chain,
 			update: () => chain,
 			set: () => chain,
+			execute: async () => [],
 			then(resolve, reject) {
 				return Promise.resolve().then(take).then(resolve, reject);
 			}
@@ -148,6 +149,7 @@ describe('createMariToolsRepository', () => {
 	it('defaults to withDatabaseTransaction and validates before transacting', async () => {
 		const source = await readFile(resolve('src/lib/server/maritools/repository.js'), 'utf8');
 		expect(source).toMatch(/withDatabaseTransaction/u);
+		expect(source).toMatch(/pg_advisory_xact_lock/u);
 		const runTransaction = vi.fn();
 		const repository = createMariToolsRepository({
 			databaseUrl: 'postgresql://x',
@@ -642,7 +644,14 @@ describe('createMariToolsRepository', () => {
 			})
 		).resolves.toMatchObject({ conflict: true });
 		await expect(
-			queuedRepo([[{ id: OFFERING }], [], [], uniqueError()]).publishCatalogContribution({
+			queuedRepo([[{ id: OFFERING }], [], [], uniqueError(), [published]]).publishCatalogContribution({
+				offeringId: OFFERING,
+				documentSha256: SHA,
+				structured: { title: 'A' }
+			})
+		).resolves.toEqual({ contribution: published, conflict: false });
+		await expect(
+			queuedRepo([[{ id: OFFERING }], [], [], uniqueError(), []]).publishCatalogContribution({
 				offeringId: OFFERING,
 				documentSha256: SHA,
 				structured: { title: 'A' }

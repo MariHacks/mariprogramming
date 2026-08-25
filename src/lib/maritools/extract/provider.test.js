@@ -6,7 +6,9 @@ const SAMPLE = 'Assessment: Midterm 30% on 2026-10-20. Required book: Title, Aut
 describe('needsTextPdf', () => {
 	it('rejects empty or scan-like text', () => {
 		expect(needsTextPdf('')).toBe(true);
+		expect(needsTextPdf(/** @type {any} */ (undefined))).toBe(true);
 		expect(needsTextPdf('hi', 90_000)).toBe(true);
+		expect(needsTextPdf('x'.repeat(50), 90_000)).toBe(true);
 		expect(needsTextPdf(SAMPLE)).toBe(false);
 	});
 });
@@ -129,5 +131,76 @@ describe('createOutlineExtractionProvider', () => {
 		expect((await provider.extract({ text: SAMPLE, sha256: 'nullish' })).reason).toBe(
 			'invalid-json'
 		);
+	});
+
+	it('accepts object content, offering-only cache keys, and default model', async () => {
+		let model = '';
+		const provider = createOutlineExtractionProvider({
+			getKey: () => 'k',
+			fetchImpl: async (_url, init) => {
+				model = JSON.parse(String(init?.body)).model;
+				return {
+					ok: true,
+					json: async () => ({
+						choices: [{ message: { content: { assessments: [] } } }]
+					})
+				};
+			}
+		});
+		const first = await provider.extract({
+			text: SAMPLE,
+			offeringKey: 'offering-only'
+		});
+		expect(first.ok).toBe(true);
+		expect(model).toBe('nvidia/nemotron-3.5-lightning-30b-a3b');
+		const second = await provider.extract({ text: SAMPLE, offeringKey: 'offering-only' });
+		expect(second.cacheHit).toBe(true);
+	});
+
+	it('does not cache when no identity key is provided', async () => {
+		let called = 0;
+		const provider = createOutlineExtractionProvider({
+			getKey: () => 'k',
+			fetchImpl: async () => {
+				called += 1;
+				return {
+					ok: true,
+					json: async () => ({
+						choices: [{ message: { content: '{"ok":true}' } }]
+					})
+				};
+			}
+		});
+		await provider.extract({ text: SAMPLE });
+		await provider.extract({ text: SAMPLE });
+		expect(called).toBe(2);
+	});
+
+	it('rejects non-object JSON payloads', async () => {
+		const provider = createOutlineExtractionProvider({
+			getKey: () => 'k',
+			fetchImpl: async () => ({
+				ok: true,
+				json: async () => ({ choices: [{ message: { content: '12' } }] })
+			})
+		});
+		expect((await provider.extract({ text: SAMPLE, sha256: 'num' })).reason).toBe('invalid-json');
+	});
+
+	it('uses global fetch when no fetchImpl is provided', async () => {
+		const original = globalThis.fetch;
+		globalThis.fetch = async () => ({
+			ok: true,
+			json: async () => ({
+				choices: [{ message: { content: '{"assessments":[]}' } }]
+			})
+		});
+		try {
+			const provider = createOutlineExtractionProvider({ getKey: () => 'k' });
+			const result = await provider.extract({ text: SAMPLE, sha256: 'global-fetch' });
+			expect(result.ok).toBe(true);
+		} finally {
+			globalThis.fetch = original;
+		}
 	});
 });

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, asc, desc, eq, isNull, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, ne, sql } from 'drizzle-orm';
 import { ACADEMIC_CALENDAR_RULES, ACADEMIC_TERMS } from '../../maritools/term/calendar.js';
 import {
 	mtAcademicCalendarRules,
@@ -891,6 +891,9 @@ export function createMariToolsRepository({
 			const structured = requiredJsonObject(input.structured);
 			return redactUnexpected(() =>
 				transact(async (transaction) => {
+					await transaction.execute(
+						sql`SELECT pg_advisory_xact_lock(hashtextextended(${`mt-catalog-offering:v1:${offeringId}`}, 0))`
+					);
 					const offering = oneRow(
 						await transaction
 							.select()
@@ -959,9 +962,20 @@ export function createMariToolsRepository({
 							structured,
 							status: decision
 						},
-						async () => null
+						async () =>
+							oneRow(
+								await transaction
+									.select()
+									.from(mtCatalogContributions)
+									.where(
+										and(
+											eq(mtCatalogContributions.offeringId, offeringId),
+											eq(mtCatalogContributions.documentSha256, documentSha256)
+										)
+									)
+							)
 					);
-					return { contribution: created, conflict: decision === 'conflict' };
+					return { contribution: created, conflict: created.status === 'conflict' };
 				})
 			);
 		},
