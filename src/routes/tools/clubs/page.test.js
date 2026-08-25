@@ -1,0 +1,107 @@
+import { cleanup, render, screen } from '@testing-library/svelte';
+import { afterEach, describe, expect, it } from 'vitest';
+import ClubsPage from './+page.svelte';
+
+afterEach(cleanup);
+
+const CLUB = {
+	id: 'club-1',
+	name: 'Robotics',
+	slug: 'robotics',
+	category: 'stem',
+	description: 'Builds robots',
+	links: [{ label: 'Discord', url: 'https://example.com' }]
+};
+
+describe('clubs page', () => {
+	it('explains browsing without an account', () => {
+		render(ClubsPage, {
+			props: {
+				data: {
+					clubs: [],
+					pending: [],
+					query: '',
+					category: '',
+					signedIn: false,
+					staff: false
+				}
+			}
+		});
+		expect(screen.getByRole('heading', { name: 'Clubs' })).toBeInTheDocument();
+		expect(screen.getByText(/Rooms stay off this page/)).toBeInTheDocument();
+		expect(screen.getByText('No published clubs yet.')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Sign in with Google' })).toHaveAttribute(
+			'href',
+			'/tools/account'
+		);
+	});
+
+	it('lists published clubs and the submit form when signed in', () => {
+		render(ClubsPage, {
+			props: {
+				data: {
+					clubs: [CLUB],
+					pending: [],
+					query: '',
+					category: '',
+					signedIn: true,
+					staff: false
+				}
+			}
+		});
+		expect(screen.getByText('Robotics')).toBeInTheDocument();
+		expect(screen.getByText('Builds robots')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Discord' })).toHaveAttribute(
+			'href',
+			'https://example.com'
+		);
+		expect(screen.getByRole('button', { name: 'Send for review' })).toBeInTheDocument();
+		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
+	});
+
+	it('lets staff publish pending listings', () => {
+		render(ClubsPage, {
+			props: {
+				data: {
+					clubs: [CLUB],
+					pending: [
+						{
+							id: 'sub-1',
+							name: 'Chess',
+							category: 'games',
+							description: 'Play weekly'
+						}
+					],
+					query: 'robot',
+					category: 'stem',
+					signedIn: true,
+					staff: true
+				},
+				form: { published: true }
+			}
+		});
+		expect(screen.getByText('Chess')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Publish' })).toBeInTheDocument();
+		expect(screen.getByText('Published.')).toBeInTheDocument();
+	});
+
+	it('shows unavailable and empty pending states', () => {
+		render(ClubsPage, {
+			props: {
+				data: {
+					clubs: [],
+					pending: [],
+					query: '',
+					category: '',
+					signedIn: true,
+					staff: true,
+					unavailable: true
+				},
+				form: { submitted: true, error: 'Check the club details and try again.' }
+			}
+		});
+		expect(screen.getByRole('alert')).toHaveTextContent('unavailable');
+		expect(screen.getByText('No pending submissions.')).toBeInTheDocument();
+		expect(screen.getByText('Sent for review.')).toBeInTheDocument();
+	});
+});

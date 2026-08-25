@@ -1,0 +1,294 @@
+// @vitest-environment node
+
+import { describe, expect, it, vi } from 'vitest';
+import { MaritoolsInputError, MaritoolsUnavailableError } from '$lib/server/maritools/student-store.js';
+import { prerender, _createHandlers } from './+page.server.js';
+
+const SESSION = {
+	userId: 'user-1',
+	sessionId: 'session-1',
+	email: 'ada@gmail.com',
+	googleSubject: 'sub-1',
+	expiresAt: new Date('2030-01-01T00:00:00.000Z')
+};
+const STAFF = { ...SESSION, email: 'team@marihacks.com' };
+const THREAD = '20000000-0000-4000-8000-000000000001';
+const REPLY = '30000000-0000-4000-8000-000000000001';
+const THREAD_ROW = {
+	id: THREAD,
+	title: 'Midterm tips',
+	body: 'Bring a calculator.',
+	category: 'courses',
+	lockedAt: null,
+	removedAt: null
+};
+
+function handlers(overrides = {}) {
+	const store = {
+		getThread: vi.fn(async () => THREAD_ROW),
+		listReplies: vi.fn(async () => [{ id: REPLY, threadId: THREAD, body: 'Thanks' }]),
+		getProfile: vi.fn(async () => null),
+		isStaff: vi.fn((email, role) => email === 'team@marihacks.com' || role === 'staff'),
+		createReply: vi.fn(async () => ({ id: REPLY })),
+		createReport: vi.fn(async () => ({ id: 'rep-1' })),
+		lockThread: vi.fn(async () => THREAD_ROW),
+		removeThread: vi.fn(async () => THREAD_ROW),
+		removeReply: vi.fn(async () => ({ id: REPLY })),
+		...overrides.store
+	};
+	return {
+		..._createHandlers({
+			createStore: vi.fn(() => store),
+			...overrides
+		}),
+		store
+	};
+}
+
+function event({ locals = {}, form = {}, params = { threadId: THREAD } } = {}) {
+	const data = new FormData();
+	for (const [key, value] of Object.entries(form)) data.set(key, String(value));
+	return {
+		locals,
+		params,
+		request: { formData: async () => data }
+	};
+}
+
+describe('forum thread page server', () => {
+	it('is not prerendered', () => {
+		expect(prerender).toBe(false);
+	});
+
+	it('loads a thread for anonymous readers', async () => {
+		const data = await handlers().load(event());
+		expect(data.thread.title).toBe('Midterm tips');
+		expect(data.replies).toHaveLength(1);
+		expect(data.canReply).toBe(false);
+		expect(JSON.stringify(data)).not.toMatch(/2530622/);
+	});
+
+	it('lets a signed-in student reply when the thread is open', async () => {
+		const data = await handlers().load(event({ locals: { maritools: SESSION } }));
+		expect(data.signedIn).toBe(true);
+		expect(data.canReply).toBe(true);
+	});
+
+	it('returns not found for missing or removed threads', async () => {
+		const missing = handlers({ store: { getThread: vi.fn(async () => null) } });
+		await expect(missing.load(event())).resolves.toMatchObject({ notFound: true, thread: null });
+		const removed = handlers({
+			store: { getThread: vi.fn(async () => ({ ...THREAD_ROW, removedAt: new Date() })) }
+		});
+		await expect(removed.load(event())).resolves.toMatchObject({ notFound: true });
+	});
+
+	it('returns unavailable and rethrows unexpected errors', async () => {
+		const down = handlers({
+			store: {
+				getThread: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		await expect(down.load(event())).resolves.toMatchObject({ unavailable: true });
+		const boom = handlers({
+			store: {
+				getThread: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			}
+		});
+		await expect(boom.load(event())).rejects.toThrow('boom');
+		const profileBoom = handlers({
+			store: {
+				getProfile: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			}
+		});
+		await expect(profileBoom.load(event({ locals: { maritools: SESSION } }))).rejects.toThrow('boom');
+	});
+
+	it('posts a reply', async () => {
+		const current = handlers();
+		await expect(
+			current.actions.reply(event({ locals: { maritools: SESSION }, form: { body: 'Thanks' } }))
+		).resolves.toEqual({ replied: true });
+		expect((await current.actions.reply(event({ form: { body: 'Thanks' } }))).status).toBe(401);
+		expect(
+			(await current.actions.reply(event({ locals: { maritools: SESSION }, form: { body: '' } }))).status
+		).toBe(400);
+	});
+
+	it('returns bounded reply errors', async () => {
+		const invalid = handlers({
+			store: {
+				createReply: vi.fn(async () => {
+					throw new MaritoolsInputError('invalid');
+				})
+			}
+		});
+		expect(
+			(await invalid.actions.reply(event({ locals: { maritools: SESSION }, form: { body: 'Hi' } }))).status
+		).toBe(400);
+		const down = handlers({
+			store: {
+				createReply: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		expect(
+			(await down.actions.reply(event({ locals: { maritools: SESSION }, form: { body: 'Hi' } }))).status
+		).toBe(503);
+		const boom = handlers({
+			store: {
+				createReply: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			}
+		});
+		await expect(
+			boom.actions.reply(event({ locals: { maritools: SESSION }, form: { body: 'Hi' } }))
+		).rejects.toThrow('boom');
+	});
+
+	it('files a report', async () => {
+		const current = handlers();
+		await expect(
+			current.actions.report(
+				event({
+					locals: { maritools: SESSION },
+					form: { targetKind: 'thread', targetId: THREAD, reason: 'spam' }
+				})
+			)
+		).resolves.toEqual({ reported: true });
+		expect((await current.actions.report(event({ form: { reason: 'spam' } }))).status).toBe(401);
+		expect(
+			(await current.actions.report(event({ locals: { maritools: SESSION }, form: { reason: '' } })))
+				.status
+		).toBe(400);
+	});
+
+	it('returns bounded report errors', async () => {
+		const invalid = handlers({
+			store: {
+				createReport: vi.fn(async () => {
+					throw new MaritoolsInputError('invalid');
+				})
+			}
+		});
+		expect(
+			(
+				await invalid.actions.report(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'thread', targetId: THREAD, reason: 'spam' }
+					})
+				)
+			).status
+		).toBe(400);
+		const down = handlers({
+			store: {
+				createReport: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		expect(
+			(
+				await down.actions.report(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'thread', targetId: THREAD, reason: 'spam' }
+					})
+				)
+			).status
+		).toBe(503);
+		const boom = handlers({
+			store: {
+				createReport: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			}
+		});
+		await expect(
+			boom.actions.report(
+				event({
+					locals: { maritools: SESSION },
+					form: { targetKind: 'thread', targetId: THREAD, reason: 'spam' }
+				})
+			)
+		).rejects.toThrow('boom');
+	});
+
+	it('moderates as staff', async () => {
+		const current = handlers();
+		await expect(
+			current.actions.moderate(event({ locals: { maritools: STAFF }, form: { moderation: 'lock' } }))
+		).resolves.toEqual({ moderated: true });
+		await current.actions.moderate(
+			event({ locals: { maritools: STAFF }, form: { moderation: 'remove-thread' } })
+		);
+		await current.actions.moderate(
+			event({
+				locals: { maritools: STAFF },
+				form: { moderation: 'remove-reply', replyId: REPLY }
+			})
+		);
+		expect(
+			(await current.actions.moderate(event({ locals: { maritools: STAFF }, form: { moderation: 'nope' } })))
+				.status
+		).toBe(400);
+		expect(
+			(
+				await current.actions.moderate(
+					event({ locals: { maritools: STAFF }, form: { moderation: 'remove-reply' } })
+				)
+			).status
+		).toBe(400);
+		expect((await current.actions.moderate(event())).status).toBe(403);
+	});
+
+	it('returns bounded moderation errors', async () => {
+		const down = handlers({
+			store: {
+				lockThread: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		expect(
+			(await down.actions.moderate(event({ locals: { maritools: STAFF }, form: { moderation: 'lock' } })))
+				.status
+		).toBe(503);
+		const boom = handlers({
+			store: {
+				lockThread: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			}
+		});
+		await expect(
+			boom.actions.moderate(event({ locals: { maritools: STAFF }, form: { moderation: 'lock' } }))
+		).rejects.toThrow('boom');
+	});
+
+	it('keeps a locked thread read-only and still staff-checks if the profile store is down', async () => {
+		const locked = handlers({
+			store: { getThread: vi.fn(async () => ({ ...THREAD_ROW, lockedAt: new Date() })) }
+		});
+		const lockedData = await locked.load(event({ locals: { maritools: SESSION } }));
+		expect(lockedData.canReply).toBe(false);
+		const staffDown = handlers({
+			store: {
+				getProfile: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		const data = await staffDown.load(event({ locals: { maritools: STAFF } }));
+		expect(data.staff).toBe(true);
+	});
+});
