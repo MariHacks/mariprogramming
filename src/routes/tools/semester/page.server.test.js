@@ -328,6 +328,8 @@ describe('semester page server', () => {
 			})
 		);
 	});
+
+	it('rejects contribute without a session and with null JSON', async () => {
 		const unsigned = await handlers().actions.contribute(event({ locals: {}, form: { structured: 'null' } }));
 		expect(unsigned.status).toBe(401);
 		const nullish = await handlers().actions.contribute(
