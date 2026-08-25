@@ -210,7 +210,7 @@ describe('Better Auth configuration', () => {
 		);
 	});
 
-	it('normalizes and admits only the verified exact staff identity', async () => {
+	it('normalizes a verified Google identity, including the staff mailbox', async () => {
 		const getUserInfo = getGoogleUserInfo(
 			createOptions({
 				fetchGoogleProfile: async () => ({
@@ -254,17 +254,10 @@ describe('Better Auth configuration', () => {
 			{ sub: 'google-subject-123', email: ALLOWED_EMAIL, email_verified: 'true' }
 		],
 		['missing email', { sub: 'google-subject-123', email_verified: true }],
+		['malformed email', { sub: 'google-subject-123', email: 'not-an-email', email_verified: true }],
 		[
-			'other account',
-			{ sub: 'google-subject-123', email: 'other@marihacks.com', email_verified: true }
-		],
-		[
-			'alias address',
-			{ sub: 'google-subject-123', email: 'team+admin@marihacks.com', email_verified: true }
-		],
-		[
-			'lookalike domain',
-			{ sub: 'google-subject-123', email: 'team@marihacks.co', email_verified: true }
+			'oversized email',
+			{ sub: 'google-subject-123', email: `${'a'.repeat(250)}@x.com`, email_verified: true }
 		]
 	])('returns null before issuance for %s', async (_case, profile) => {
 		const getUserInfo = getGoogleUserInfo(
@@ -274,6 +267,28 @@ describe('Better Auth configuration', () => {
 		);
 
 		await expect(getUserInfo({ accessToken: 'provider-access-token' })).resolves.toBeNull();
+	});
+
+	it('admits a verified student Google mailbox', async () => {
+		const getUserInfo = getGoogleUserInfo(
+			createOptions({
+				fetchGoogleProfile: async () => ({
+					sub: 'google-subject-456',
+					email: '  Ada@Gmail.Com  ',
+					email_verified: true,
+					name: 'Ada'
+				})
+			})
+		);
+
+		await expect(getUserInfo({ accessToken: 'provider-access-token' })).resolves.toMatchObject({
+			user: {
+				id: 'google-subject-456',
+				email: 'ada@gmail.com',
+				emailVerified: true,
+				name: 'Ada'
+			}
+		});
 	});
 
 	it('returns null without contacting Google when the authorization-code token is absent', async () => {
@@ -634,6 +649,20 @@ describe('Better Auth runtime contract', () => {
 		expect(response.status).toBe(403);
 		expect(response.headers.has('location')).toBe(false);
 		expect(response.headers.has('set-cookie')).toBe(false);
+	});
+
+	it('allows the MariTools account callback pair', async () => {
+		const auth = betterAuth(createOptions());
+		const response = await auth.handler(
+			signInRequest({
+				provider: 'google',
+				callbackURL: `${productionEnvironment.appOrigin}/tools/account`,
+				errorCallbackURL: `${productionEnvironment.appOrigin}/tools/account?state=unavailable`,
+				disableRedirect: true
+			})
+		);
+		expect(response.status).toBeLessThan(400);
+		expect((await response.json()).url).toContain('accounts.google.com');
 	});
 
 	it.each([

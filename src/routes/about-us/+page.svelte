@@ -1,7 +1,7 @@
 <script>
 	import { resolve } from '$app/paths';
 	import SectionIntro from '$lib/components/site/SectionIntro.svelte';
-	import { clubContent } from '$lib/content/club';
+	import { clubContent, isExternalSignupUrl } from '$lib/content/club';
 
 	const discordUrl = clubContent.socialLinks.find(({ label }) => label === 'Discord')?.url;
 </script>
@@ -31,11 +31,12 @@
 						<a
 							class="destination-link destination-link-primary"
 							href={clubContent.signupUrl}
-							target="_blank"
-							rel="external noopener noreferrer"
+							{...(isExternalSignupUrl()
+								? { target: '_blank', rel: 'external noopener noreferrer' }
+								: {})}
 						>
 							<span>Join the club</span>
-							<span aria-hidden="true">↗</span>
+							<span aria-hidden="true">{isExternalSignupUrl() ? '↗' : '→'}</span>
 						</a>
 					</li>
 					<li>

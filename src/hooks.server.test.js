@@ -49,7 +49,9 @@ describe('server authentication hook', () => {
 		'/api/cron/book-delivery',
 		'/books/cart',
 		'/books/checkout',
-		'/books/order-confirmation/MPC-ABCDEFGH2345'
+		'/books/order-confirmation/MPC-ABCDEFGH2345',
+		'/tools/account',
+		'/tools/semester'
 	])('marks the sensitive route %s private even when its handler succeeds', async (path) => {
 		const setup = harness();
 		const response = await setup.handle({ event: event(path), resolve: setup.resolve });
@@ -83,7 +85,7 @@ describe('server authentication hook', () => {
 		const current = event('/events');
 		const response = await setup.handle({ event: current, resolve: setup.resolve });
 		expect(await response.text()).toBe('public response');
-		expect(current.locals).toEqual({ staff: null });
+		expect(current.locals).toEqual({ staff: null, maritools: null });
 		expect(setup.withAuth).not.toHaveBeenCalled();
 		expect(setup.resolve).toHaveBeenCalledWith(current);
 	});
@@ -126,8 +128,33 @@ describe('server authentication hook', () => {
 			googleSubject: 'google-subject-123',
 			expiresAt: new Date('2030-01-01T00:00:00.000Z')
 		});
+		expect(current.locals.maritools?.email).toBe('team@marihacks.com');
 		expect(current.locals).not.toHaveProperty('user');
 		expect(current.locals).not.toHaveProperty('session');
+	});
+
+	it('stores a student Google session without granting staff locals', async () => {
+		const setup = harness({
+			session: {
+				user: { id: 'user-123', email: 'ada@gmail.com', emailVerified: true },
+				session: {
+					id: 'session-123',
+					userId: 'user-123',
+					expiresAt: new Date('2030-01-01T00:00:00.000Z')
+				}
+			},
+			account: { providerId: 'google', accountId: 'google-subject-123', userId: 'user-123' }
+		});
+		const current = event('/tools/account', { cookie: 'mari-staff.session_token=signed-token' });
+		await setup.handle({ event: current, resolve: setup.resolve });
+		expect(current.locals.staff).toBeNull();
+		expect(current.locals.maritools).toEqual({
+			userId: 'user-123',
+			sessionId: 'session-123',
+			email: 'ada@gmail.com',
+			googleSubject: 'google-subject-123',
+			expiresAt: new Date('2030-01-01T00:00:00.000Z')
+		});
 	});
 
 	it.each([

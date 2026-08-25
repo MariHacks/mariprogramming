@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clubContent, getUpcomingEvents, getWorkshopTracks } from './club';
+import { clubContent, getUpcomingEvents, getWorkshopTracks, isExternalSignupUrl } from './club';
 
 describe('club destinations', () => {
 	it('publishes the team mailbox for public contact', () => {
@@ -12,10 +12,10 @@ describe('club destinations', () => {
 		);
 	});
 
-	it('keeps the verified member registration form as the sign-up destination', () => {
-		expect(clubContent.signupUrl).toBe(
-			'https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header'
-		);
+	it('routes sign up to MariTools account creation', () => {
+		expect(clubContent.signupUrl).toBe('/tools/account');
+		expect(isExternalSignupUrl()).toBe(false);
+		expect(isExternalSignupUrl('https://example.com')).toBe(true);
 	});
 
 	it('includes the verified Instagram and Discord metadata', () => {

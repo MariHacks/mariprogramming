@@ -1,6 +1,6 @@
 <script>
 	import { resolve } from '$app/paths';
-	import { clubContent } from '$lib/content/club';
+	import { clubContent, isExternalSignupUrl } from '$lib/content/club';
 	import { createClubContactLinks } from '$lib/club-contact.js';
 	import SocialIcon from './SocialIcon.svelte';
 
@@ -12,7 +12,8 @@
 		{ label: 'Events', href: '/events', external: false },
 		{ label: 'Workshops', href: '/our-workshops', external: false },
 		{ label: 'Resources', href: '/resources', external: false },
-		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false }
+		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false },
+		{ label: 'MariTools', href: '/tools', external: false }
 	];
 	const compactLinks = primaryLinks.slice(0, 3);
 	const moreLinks = [
@@ -272,8 +273,9 @@
 			<a
 				class="signup-link"
 				href={clubContent.signupUrl}
-				target="_blank"
-				rel="external noopener noreferrer"
+				{...(isExternalSignupUrl()
+					? { target: '_blank', rel: 'external noopener noreferrer' }
+					: {})}
 				on:click={closeDisclosures}>Sign up</a
 			>
 		</div>

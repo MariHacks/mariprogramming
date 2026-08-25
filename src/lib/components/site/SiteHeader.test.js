@@ -36,6 +36,10 @@ describe('SiteHeader', () => {
 			'href',
 			'/mini-competitions'
 		);
+		expect(within(navigation).getByRole('link', { name: 'MariTools' })).toHaveAttribute(
+			'href',
+			'/tools'
+		);
 	});
 
 	it('renders the verified Sign up action once', () => {
@@ -45,8 +49,7 @@ describe('SiteHeader', () => {
 
 		expect(signUpLinks).toHaveLength(1);
 		expect(signUpLinks[0]).toHaveAttribute('href', clubContent.signupUrl);
-		expect(signUpLinks[0]).toHaveAttribute('target', '_blank');
-		expect(signUpLinks[0]).toHaveAttribute('rel', 'external noopener noreferrer');
+		expect(signUpLinks[0]).not.toHaveAttribute('target');
 	});
 
 	it('keeps the utility cluster on one header row so Sign up cannot wrap under the bar', () => {

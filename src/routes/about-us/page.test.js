@@ -44,8 +44,7 @@ describe('about route', () => {
 		expect(links[1]).toBe(workshopLink);
 		expect(links[2]).toBe(resourceLink);
 		expect(signupLink).toHaveAttribute('href', clubContent.signupUrl);
-		expect(signupLink).toHaveAttribute('target', '_blank');
-		expect(signupLink).toHaveAttribute('rel', 'external noopener noreferrer');
+		expect(signupLink).not.toHaveAttribute('target');
 		expect(workshopLink).toHaveAttribute('href', '/our-workshops');
 		expect(resourceLink).toHaveAttribute('href', '/resources');
 		expect(discordLink).toHaveAttribute('href', 'https://discord.gg/c6JJw9d');

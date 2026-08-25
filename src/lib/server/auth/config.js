@@ -1,6 +1,5 @@
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 
-const ALLOWED_GOOGLE_EMAIL = 'team@marihacks.com';
 const AUTH_CONFIGURATION_ERROR = 'Authentication configuration is invalid';
 const BASIC_GOOGLE_SCOPES = Object.freeze(['email', 'openid', 'profile']);
 const GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo';
@@ -87,6 +86,19 @@ function sanitizeDatabaseAdapter(database) {
 /**
  * @param {string} canonicalOrigin
  */
+function allowedSignInDestinations(canonicalOrigin) {
+	return [
+		{
+			callbackURL: `${canonicalOrigin}/staff`,
+			errorCallbackURL: `${canonicalOrigin}/staff/sign-in?state=unavailable`
+		},
+		{
+			callbackURL: `${canonicalOrigin}/tools/account`,
+			errorCallbackURL: `${canonicalOrigin}/tools/account?state=unavailable`
+		}
+	];
+}
+
 function createAuthBoundaryHook(canonicalOrigin) {
 	return createAuthMiddleware(async (context) => {
 		if (DENIED_AUTH_ENDPOINTS.has(context.path)) {
@@ -98,11 +110,14 @@ function createAuthBoundaryHook(canonicalOrigin) {
 		}
 
 		const body = context.body;
+		const allowed = allowedSignInDestinations(canonicalOrigin).some(
+			(pair) =>
+				body?.callbackURL === pair.callbackURL && body?.errorCallbackURL === pair.errorCallbackURL
+		);
 		if (
 			context.headers?.get('origin') !== canonicalOrigin ||
 			body?.provider !== 'google' ||
-			body?.callbackURL !== `${canonicalOrigin}/staff` ||
-			body?.errorCallbackURL !== `${canonicalOrigin}/staff/sign-in?state=unavailable` ||
+			!allowed ||
 			body?.disableRedirect !== true ||
 			body?.scopes !== undefined ||
 			body?.idToken !== undefined ||
@@ -159,12 +174,29 @@ function isRecord(value) {
 /**
  * @param {unknown} value
  */
-function boundedName(value) {
+function boundedName(value, fallback) {
 	if (typeof value !== 'string') {
-		return ALLOWED_GOOGLE_EMAIL;
+		return fallback;
 	}
 
-	return value.trim().slice(0, MAX_PROFILE_FIELD_LENGTH) || ALLOWED_GOOGLE_EMAIL;
+	return value.trim().slice(0, MAX_PROFILE_FIELD_LENGTH) || fallback;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+function boundedEmail(value) {
+	if (typeof value !== 'string') return null;
+	const email = value.trim().toLowerCase();
+	if (
+		email.length === 0 ||
+		email.length > MAX_PROFILE_FIELD_LENGTH ||
+		!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+	) {
+		return null;
+	}
+	return email;
 }
 
 /**
@@ -196,15 +228,15 @@ function admitGoogleProfile(profile) {
 		return null;
 	}
 
-	const { sub, email, email_verified: emailVerified } = profile;
+	const { sub, email_verified: emailVerified } = profile;
+	const email = boundedEmail(profile.email);
 	if (
 		typeof sub !== 'string' ||
 		sub.length === 0 ||
 		sub.length > MAX_PROFILE_FIELD_LENGTH ||
 		sub !== sub.trim() ||
-		typeof email !== 'string' ||
 		emailVerified !== true ||
-		email.trim().toLowerCase() !== ALLOWED_GOOGLE_EMAIL
+		!email
 	) {
 		return null;
 	}
@@ -213,14 +245,14 @@ function admitGoogleProfile(profile) {
 	return {
 		user: {
 			id: sub,
-			name: boundedName(profile.name),
-			email: ALLOWED_GOOGLE_EMAIL,
+			name: boundedName(profile.name, email),
+			email,
 			emailVerified: true,
 			...(image ? { image } : {})
 		},
 		data: {
 			sub,
-			email: ALLOWED_GOOGLE_EMAIL,
+			email,
 			email_verified: true
 		}
 	};
