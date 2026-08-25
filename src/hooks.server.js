@@ -1,6 +1,6 @@
 import { building } from '$app/environment';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
-import { isStaffSession } from '$lib/server/auth/authorization.js';
+import { isMaritoolsSession, isStaffSession } from '$lib/server/auth/authorization.js';
 import { withRequestAuth } from '$lib/server/auth/runtime.js';
 
 const AUTH_UNAVAILABLE = 'Authentication service is unavailable';
@@ -8,7 +8,13 @@ const AUTH_PATH = '/api/auth';
 const STAFF_PATH = '/staff';
 const PUBLIC_STAFF_SIGN_IN_PATH = '/staff/sign-in';
 const SESSION_COOKIE_NAMES = ['__Secure-mari-staff.session_token', 'mari-staff.session_token'];
-const PRIVATE_PAGE_PATHS = ['/books/cart', '/books/checkout', '/books/order-confirmation'];
+const PRIVATE_PAGE_PATHS = [
+	'/books/cart',
+	'/books/checkout',
+	'/books/order-confirmation',
+	'/tools/account',
+	'/tools/semester'
+];
 const PRIVATE_HEADERS = Object.freeze({
 	'cache-control': 'private, no-store',
 	'pragma': 'no-cache',
@@ -72,6 +78,7 @@ export function createHandle({
 	/** @type {import('@sveltejs/kit').Handle} */
 	return async function handle({ event, resolve }) {
 		event.locals.staff = null;
+		event.locals.maritools = null;
 		/** @param {Response} response */
 		const finalize = (response) => applyRoutePolicy(response, event.url.pathname);
 		const authPath = isPath(event.url.pathname, AUTH_PATH);
@@ -89,7 +96,9 @@ export function createHandle({
 				const current = await auth.api.getSession({ headers: event.request.headers });
 				if (current?.user?.id) {
 					const account = await findGoogleAccount(current.user.id);
-					event.locals.staff = isStaffSession({ ...current, account });
+					const identity = { ...current, account };
+					event.locals.maritools = isMaritoolsSession(identity);
+					event.locals.staff = isStaffSession(identity);
 				}
 
 				if (authPath) {

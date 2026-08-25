@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isCompleteStudentId, isStaffAccount, publicCommunityView } from './community.js';
+import {
+	NIM_DISCLOSURE,
+	accountPageView,
+	isCompleteStudentId,
+	isStaffAccount,
+	publicCommunityView,
+	semesterPageView
+} from './community.js';
 
 describe('community identity', () => {
 	it('treats the MariHacks team mailbox as staff', () => {
@@ -24,5 +31,33 @@ describe('community identity', () => {
 	it('accepts a 5 to 8 digit student id', () => {
 		expect(isCompleteStudentId('2530622')).toBe(true);
 		expect(isCompleteStudentId('abc')).toBe(false);
+		expect(isCompleteStudentId(undefined)).toBe(false);
+	});
+
+	it('builds account and semester views without a student number', () => {
+		expect(accountPageView(null, null)).toEqual({ kind: 'guest' });
+		expect(accountPageView({ email: 'a@gmail.com' }, null)).toEqual({
+			kind: 'incomplete',
+			email: 'a@gmail.com'
+		});
+		const complete = accountPageView(
+			{ email: 'a@gmail.com' },
+			{ displayName: 'Ada', nimDisclosureAcceptedAt: new Date() }
+		);
+		expect(complete.kind).toBe('complete');
+		expect(complete.nimAccepted).toBe(true);
+		const unnamed = accountPageView({ email: 'a@gmail.com' }, { nimDisclosureAcceptedAt: null });
+		expect(unnamed.kind).toBe('complete');
+		expect(unnamed.displayName).toBe(null);
+		expect(unnamed.nimAccepted).toBe(false);
+		expect(semesterPageView(null, null).kind).toBe('need-sign-in');
+		expect(semesterPageView({ email: 'a@gmail.com' }, null).kind).toBe('need-profile');
+		expect(
+			semesterPageView({ email: 'a@gmail.com' }, { nimDisclosureAcceptedAt: null }).kind
+		).toBe('need-disclosure');
+		expect(
+			semesterPageView({ email: 'a@gmail.com' }, { nimDisclosureAcceptedAt: new Date() }).kind
+		).toBe('ready');
+		expect(NIM_DISCLOSURE).toMatch(/NVIDIA/);
 	});
 });

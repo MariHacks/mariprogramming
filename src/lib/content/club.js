@@ -10,8 +10,7 @@ const communityAction = {
 export const clubContent = {
 	name: 'Marianopolis Programming Club',
 	contactEmail: CLUB_TEAM_EMAIL,
-	signupUrl:
-		'https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header',
+	signupUrl: '/tools/account',
 	communityAction,
 	mission:
 		'Learn programming with other Marianopolis students. You do not need programming experience to join.',
@@ -228,6 +227,11 @@ export const clubContent = {
 		}
 	]
 };
+
+/** @param {string} [url] */
+export function isExternalSignupUrl(url = clubContent.signupUrl) {
+	return /^https?:\/\//i.test(String(url));
+}
 
 /**
  * @typedef {{ id: string, startsAt: string }} ClubEvent

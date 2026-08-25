@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { ACADEMIC_CALENDAR_RULES } from '../term/calendar.js';
 import { CANONICAL_OMNIVOX_SCHEDULE } from './fixture.js';
-import { commonFreeOnWeekday, commonFreeWeek } from './freeTime.js';
+import {
+	commonFreeOnDate,
+	commonFreeOnWeekday,
+	commonFreeWeek,
+	effectiveWeekdayForDate
+} from './freeTime.js';
 import { parseOmnivox } from './parseOmnivox.js';
+
+const FALL_RULES = ACADEMIC_CALENDAR_RULES['fall-2026'];
 
 describe('commonFreeOnWeekday', () => {
 	it('finds a late-morning gap on Tuesday for the fixture plus an empty schedule', () => {
@@ -33,5 +41,20 @@ describe('commonFreeWeek', () => {
 			'Thu',
 			'Fri'
 		]);
+	});
+});
+
+describe('effectiveWeekdayForDate', () => {
+	it('follows Monday schedule overrides on 2026-09-08', () => {
+		expect(effectiveWeekdayForDate('2026-09-08', FALL_RULES)).toBe('Mon');
+		expect(effectiveWeekdayForDate('2026-09-07', FALL_RULES)).toBeNull();
+	});
+});
+
+describe('commonFreeOnDate', () => {
+	it('uses calendar rules for a specific date', () => {
+		const me = parseOmnivox(CANONICAL_OMNIVOX_SCHEDULE).courses;
+		const slots = commonFreeOnDate([me, []], '2026-09-08', FALL_RULES, 45);
+		expect(slots.length).toBeGreaterThan(0);
 	});
 });

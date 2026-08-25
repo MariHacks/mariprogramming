@@ -1,6 +1,6 @@
 <script>
 	import { resolve } from '$app/paths';
-	import { clubContent } from '$lib/content/club';
+	import { clubContent, isExternalSignupUrl } from '$lib/content/club';
 	import { createClubContactLinks } from '$lib/club-contact.js';
 	import SocialIcon from './SocialIcon.svelte';
 
@@ -273,8 +273,9 @@
 			<a
 				class="signup-link"
 				href={clubContent.signupUrl}
-				target="_blank"
-				rel="external noopener noreferrer"
+				{...(isExternalSignupUrl()
+					? { target: '_blank', rel: 'external noopener noreferrer' }
+					: {})}
 				on:click={closeDisclosures}>Sign up</a
 			>
 		</div>

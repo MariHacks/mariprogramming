@@ -977,6 +977,7 @@ export function createMariToolsRepository({
 						transaction
 							.select({
 								id: mtCatalogContributions.id,
+								courseId: mtCourses.id,
 								termId: mtCourseOfferings.termId,
 								courseCode: mtCourses.code,
 								title: mtCourses.canonicalTitle,

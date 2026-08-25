@@ -8,6 +8,13 @@ declare global {
 				googleSubject: string;
 				expiresAt: Date;
 			}> | null;
+			maritools: Readonly<{
+				userId: string;
+				sessionId: string;
+				email: string;
+				googleSubject: string;
+				expiresAt: Date;
+			}> | null;
 		}
 	}
 }

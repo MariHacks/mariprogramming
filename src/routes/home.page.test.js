@@ -18,8 +18,7 @@ describe('home route', () => {
 
 		expect(signupLinks).toHaveLength(1);
 		expect(signupLinks[0]).toHaveAttribute('href', clubContent.signupUrl);
-		expect(signupLinks[0]).toHaveAttribute('target', '_blank');
-		expect(signupLinks[0]).toHaveAttribute('rel', 'external noopener noreferrer');
+		expect(signupLinks[0]).not.toHaveAttribute('target');
 		expect(heroSignup).toHaveAttribute('href', clubContent.signupUrl);
 	});
 

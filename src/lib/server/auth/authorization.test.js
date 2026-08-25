@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isStaffSession, requireStaff } from './authorization.js';
+import { isMaritoolsSession, isStaffSession, requireStaff } from './authorization.js';
 
 const approved = Object.freeze({
 	user: {
@@ -92,6 +92,18 @@ describe('staff authorization', () => {
 		]
 	])('rejects %s', (_case, candidate) => {
 		expect(isStaffSession(candidate, new Date('2029-12-31T23:59:59.000Z'))).toBeNull();
+	});
+
+	it('accepts any verified Google mailbox for MariTools without promoting staff', () => {
+		const student = {
+			...approved,
+			user: { ...approved.user, email: 'ada@gmail.com' }
+		};
+		expect(isMaritoolsSession(student, new Date('2029-12-31T23:59:59.000Z'))).toMatchObject({
+			email: 'ada@gmail.com',
+			userId: 'better-auth-user-123'
+		});
+		expect(isStaffSession(student, new Date('2029-12-31T23:59:59.000Z'))).toBeNull();
 	});
 
 	it('redirects missing or forged locals to the one sign-in route', () => {

@@ -8,13 +8,13 @@ function isRecord(value) {
 }
 
 /**
- * Converts a Better Auth session plus its persisted provider account into the only privileged
- * local shape accepted by staff routes.
+ * Converts a Better Auth session plus its persisted Google account into the student session
+ * shape used by MariTools routes. Staff routes still go through isStaffSession.
  *
  * @param {unknown} candidate
  * @param {Date} [now]
  */
-export function isStaffSession(candidate, now = new Date()) {
+export function isMaritoolsSession(candidate, now = new Date()) {
 	if (!isRecord(candidate)) return null;
 	const { user, session, account } = candidate;
 	if (!isRecord(user) || !isRecord(session) || !isRecord(account)) return null;
@@ -27,7 +27,9 @@ export function isStaffSession(candidate, now = new Date()) {
 		typeof user.id !== 'string' ||
 		user.id.length === 0 ||
 		user.emailVerified !== true ||
-		email !== STAFF_EMAIL ||
+		!email ||
+		email.length > 255 ||
+		!email.includes('@') ||
 		typeof session.id !== 'string' ||
 		session.id.length === 0 ||
 		session.userId !== user.id ||
@@ -46,10 +48,23 @@ export function isStaffSession(candidate, now = new Date()) {
 	return Object.freeze({
 		userId: user.id,
 		sessionId: session.id,
-		email: STAFF_EMAIL,
+		email,
 		googleSubject: account.accountId,
 		expiresAt
 	});
+}
+
+/**
+ * Converts a Better Auth session plus its persisted provider account into the only privileged
+ * local shape accepted by staff routes.
+ *
+ * @param {unknown} candidate
+ * @param {Date} [now]
+ */
+export function isStaffSession(candidate, now = new Date()) {
+	const session = isMaritoolsSession(candidate, now);
+	if (!session || session.email !== STAFF_EMAIL) return null;
+	return Object.freeze({ ...session, email: STAFF_EMAIL });
 }
 
 /** @param {{ staff?: ReturnType<typeof isStaffSession> }} locals */

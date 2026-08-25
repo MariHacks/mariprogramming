@@ -1,6 +1,6 @@
 <script>
 	import { resolve } from '$app/paths';
-	import { clubContent } from '$lib/content/club';
+	import { clubContent, isExternalSignupUrl } from '$lib/content/club';
 
 	const workshops = clubContent.workshops.slice(0, 3);
 	const discordUrl = clubContent.socialLinks.find(({ label }) => label === 'Discord')?.url;
@@ -96,10 +96,11 @@
 			<a
 				class="button-primary hero-primary"
 				href={clubContent.signupUrl}
-				target="_blank"
-				rel="external noopener noreferrer"
+				{...(isExternalSignupUrl()
+					? { target: '_blank', rel: 'external noopener noreferrer' }
+					: {})}
 			>
-				Join the club <span aria-hidden="true">→</span>
+				Join the club <span aria-hidden="true">{isExternalSignupUrl() ? '↗' : '→'}</span>
 			</a>
 			<a class="quiet-link" href={resolve('/events', {})}
 				>Explore upcoming events <span aria-hidden="true">→</span></a

@@ -37,3 +37,32 @@ export function publicCommunityView(profile) {
 export function isCompleteStudentId(studentId) {
 	return /^\d{5,8}$/.test(String(studentId ?? '').trim());
 }
+
+export const NIM_DISCLOSURE =
+	'When you upload a course outline, we send the extracted text to NVIDIA for analysis. NVIDIA trial terms may use that text to improve models. We do not publish the PDF. Sharing structured fields with the catalog is a separate step.';
+
+/**
+ * @param {{ email: string } | null | undefined} session
+ * @param {{ displayName?: string | null, nimDisclosureAcceptedAt?: Date | string | null } | null | undefined} profile
+ */
+export function accountPageView(session, profile) {
+	if (!session) return { kind: 'guest' };
+	if (!profile) return { kind: 'incomplete', email: session.email };
+	return {
+		kind: 'complete',
+		email: session.email,
+		displayName: profile.displayName ?? null,
+		nimAccepted: Boolean(profile.nimDisclosureAcceptedAt)
+	};
+}
+
+/**
+ * @param {{ email: string } | null | undefined} session
+ * @param {{ nimDisclosureAcceptedAt?: Date | string | null } | null | undefined} profile
+ */
+export function semesterPageView(session, profile) {
+	if (!session) return { kind: 'need-sign-in' };
+	if (!profile) return { kind: 'need-profile' };
+	if (!profile.nimDisclosureAcceptedAt) return { kind: 'need-disclosure' };
+	return { kind: 'ready' };
+}
