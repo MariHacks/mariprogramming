@@ -55,7 +55,7 @@ export function _createMariToolsMigrateEndpoint(dependencies = {}) {
 			await applySchema(migration.databaseUrl);
 			const seeded = await createRepository({
 				databaseUrl: runtime.databaseUrl
-			}).seedFall2026();
+			}).seedCommittedTerms();
 			const listed = await createRepository({
 				databaseUrl: runtime.databaseUrl
 			}).listTerms();
@@ -63,7 +63,7 @@ export function _createMariToolsMigrateEndpoint(dependencies = {}) {
 				{
 					ok: true,
 					termCount: listed.length,
-					seededTermId: seeded?.term?.id ?? null
+					seededTermId: seeded?.[0]?.term?.id ?? null
 				},
 				{ headers: PRIVATE_HEADERS }
 			);

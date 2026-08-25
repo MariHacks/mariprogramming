@@ -170,6 +170,18 @@ export function fall2026TermSeed(terms = ACADEMIC_TERMS, rulesByTerm = ACADEMIC_
 	return { term, rules };
 }
 
+/**
+ * @param {typeof ACADEMIC_TERMS} [terms]
+ * @param {typeof ACADEMIC_CALENDAR_RULES} [rulesByTerm]
+ */
+export function committedTermSeeds(terms = ACADEMIC_TERMS, rulesByTerm = ACADEMIC_CALENDAR_RULES) {
+	return terms.map((term) => {
+		const rules = rulesByTerm[term.id];
+		if (!rules) return unavailable();
+		return { term, rules };
+	});
+}
+
 /** @param {unknown} value @param {number} maximum */
 function requiredText(value, maximum) {
 	if (
@@ -342,6 +354,72 @@ async function insertOrRecover(transaction, table, values, recover) {
 }
 
 /**
+ * @param {any} transaction
+ * @param {{ term: any, rules: any }} seed
+ */
+async function upsertTermSeed(transaction, seed) {
+	const existingTerm = oneRow(
+		await transaction.select().from(mtAcademicTerms).where(eq(mtAcademicTerms.id, seed.term.id))
+	);
+	if (existingTerm) {
+		if (!termMatchesSeed(seed.term, termDto(existingTerm))) return conflict();
+	} else {
+		await insertOrRecover(
+			transaction,
+			mtAcademicTerms,
+			{
+				id: seed.term.id,
+				name: seed.term.name,
+				startDate: seed.term.startDate,
+				endDate: seed.term.endDate,
+				classStartDate: seed.term.classStartDate,
+				classEndDate: seed.term.classEndDate,
+				status: seed.term.status
+			},
+			async () => {
+				const raced = oneRow(
+					await transaction.select().from(mtAcademicTerms).where(eq(mtAcademicTerms.id, seed.term.id))
+				);
+				if (!raced || !termMatchesSeed(seed.term, termDto(raced))) return null;
+				return raced;
+			}
+		);
+	}
+
+	const existingRules = oneRow(
+		await transaction
+			.select()
+			.from(mtAcademicCalendarRules)
+			.where(eq(mtAcademicCalendarRules.termId, seed.rules.termId))
+	);
+	if (existingRules) {
+		if (!rulesMatchSeed(seed.rules, rulesDto(existingRules))) return conflict();
+	} else {
+		await insertOrRecover(
+			transaction,
+			mtAcademicCalendarRules,
+			{
+				termId: seed.rules.termId,
+				noClassDates: seed.rules.noClassDates,
+				scheduleOverrides: seed.rules.scheduleOverrides
+			},
+			async () => {
+				const raced = oneRow(
+					await transaction
+						.select()
+						.from(mtAcademicCalendarRules)
+						.where(eq(mtAcademicCalendarRules.termId, seed.rules.termId))
+				);
+				if (!raced || !rulesMatchSeed(seed.rules, rulesDto(raced))) return null;
+				return raced;
+			}
+		);
+	}
+
+	return { term: seed.term, rules: seed.rules };
+}
+
+/**
  * @param {unknown} links
  */
 function normalizeClubLinks(links) {
@@ -431,72 +509,21 @@ export function createMariToolsRepository({
 		async seedFall2026() {
 			const seed = fall2026TermSeed();
 			return redactUnexpected(() =>
+				transact(async (transaction) => upsertTermSeed(transaction, seed))
+			);
+		},
+
+		/** Seeds every committed AcademicTerm + calendar rules once. */
+		async seedCommittedTerms() {
+			const seeds = committedTermSeeds();
+			return redactUnexpected(() =>
 				transact(async (transaction) => {
-					const existingTerm = oneRow(
-						await transaction
-							.select()
-							.from(mtAcademicTerms)
-							.where(eq(mtAcademicTerms.id, seed.term.id))
-					);
-					if (existingTerm) {
-						if (!termMatchesSeed(seed.term, termDto(existingTerm))) return conflict();
-					} else {
-						await insertOrRecover(
-							transaction,
-							mtAcademicTerms,
-							{
-								id: seed.term.id,
-								name: seed.term.name,
-								startDate: seed.term.startDate,
-								endDate: seed.term.endDate,
-								classStartDate: seed.term.classStartDate,
-								classEndDate: seed.term.classEndDate,
-								status: seed.term.status
-							},
-							async () => {
-								const raced = oneRow(
-									await transaction
-										.select()
-										.from(mtAcademicTerms)
-										.where(eq(mtAcademicTerms.id, seed.term.id))
-								);
-								if (!raced || !termMatchesSeed(seed.term, termDto(raced))) return null;
-								return raced;
-							}
-						);
+					/** @type {{ term: ReturnType<typeof termDto>, rules: ReturnType<typeof rulesDto> }[]} */
+					const results = [];
+					for (const seed of seeds) {
+						results.push(await upsertTermSeed(transaction, seed));
 					}
-
-					const existingRules = oneRow(
-						await transaction
-							.select()
-							.from(mtAcademicCalendarRules)
-							.where(eq(mtAcademicCalendarRules.termId, seed.rules.termId))
-					);
-					if (existingRules) {
-						if (!rulesMatchSeed(seed.rules, rulesDto(existingRules))) return conflict();
-					} else {
-						await insertOrRecover(
-							transaction,
-							mtAcademicCalendarRules,
-							{
-								termId: seed.rules.termId,
-								noClassDates: seed.rules.noClassDates,
-								scheduleOverrides: seed.rules.scheduleOverrides
-							},
-							async () => {
-								const raced = oneRow(
-									await transaction
-										.select()
-										.from(mtAcademicCalendarRules)
-										.where(eq(mtAcademicCalendarRules.termId, seed.rules.termId))
-								);
-								if (!raced || !rulesMatchSeed(seed.rules, rulesDto(raced))) return null;
-								return raced;
-							}
-						);
-					}
-
-					return { term: seed.term, rules: seed.rules };
+					return results;
 				})
 			);
 		},

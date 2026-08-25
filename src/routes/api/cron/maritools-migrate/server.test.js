@@ -62,13 +62,13 @@ describe('MariTools migrate cron', () => {
 
 	it('applies schema with the migrator URL and seeds via runtime', async () => {
 		const ensureSchema = vi.fn(async () => undefined);
-		const seedFall2026 = vi.fn(async () => ({ term: { id: 'fall-2026' } }));
-		const listTerms = vi.fn(async () => [{ id: 'fall-2026' }]);
+		const seedCommittedTerms = vi.fn(async () => [{ term: { id: 'fall-2026' } }]);
+		const listTerms = vi.fn(async () => [{ id: 'fall-2026' }, { id: 'winter-2027' }]);
 		const endpoint = _createMariToolsMigrateEndpoint({
 			readCronEnvironment: () => RUNTIME,
 			readMigrationEnvironment: () => MIGRATION,
 			ensureMariToolsSchema: ensureSchema,
-			createMariToolsRepository: () => ({ seedFall2026, listTerms })
+			createMariToolsRepository: () => ({ seedCommittedTerms, listTerms })
 		});
 
 		const response = await endpoint({
@@ -79,11 +79,11 @@ describe('MariTools migrate cron', () => {
 		expect(response.status).toBe(200);
 		expect(body).toEqual({
 			ok: true,
-			termCount: 1,
+			termCount: 2,
 			seededTermId: 'fall-2026'
 		});
 		expect(ensureSchema).toHaveBeenCalledWith(MIGRATION.databaseUrl);
-		expect(seedFall2026).toHaveBeenCalledTimes(1);
+		expect(seedCommittedTerms).toHaveBeenCalledTimes(1);
 		expect(listTerms).toHaveBeenCalledTimes(1);
 	});
 });

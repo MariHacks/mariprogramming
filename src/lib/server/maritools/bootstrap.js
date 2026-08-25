@@ -92,7 +92,7 @@ export async function ensureMariToolsBootstrap() {
 			if (!databaseUrl) return;
 			// DDL is operator-only (MIGRATION_DATABASE_URL). Runtime only seeds.
 			const repository = createMariToolsRepository({ databaseUrl });
-			await repository.seedFall2026();
+			await repository.seedCommittedTerms();
 		} catch (error) {
 			bootstrapPromise = null;
 			console.error(

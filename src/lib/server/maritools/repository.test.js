@@ -9,6 +9,7 @@ import {
 	MariToolsUnavailableError,
 	MariToolsValidationError,
 	createMariToolsRepository,
+	committedTermSeeds,
 	fall2026TermSeed,
 	isUniqueViolation,
 	publicOutlineView,
@@ -132,6 +133,9 @@ describe('maritools repository helpers', () => {
 		expect(seed.rules.termId).toBe('fall-2026');
 		expect(() => fall2026TermSeed([], {})).toThrow(MariToolsUnavailableError);
 		expect(() => fall2026TermSeed([{ id: 'fall-2026' }], {})).toThrow(MariToolsUnavailableError);
+		const all = committedTermSeeds();
+		expect(all.map((entry) => entry.term.id)).toEqual(['fall-2026', 'winter-2027']);
+		expect(() => committedTermSeeds([{ id: 'fall-2026' }], {})).toThrow(MariToolsUnavailableError);
 	});
 
 	it('rejects invalid repository configuration', () => {

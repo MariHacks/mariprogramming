@@ -143,15 +143,17 @@ describe.sequential('MariTools repository against disposable PostgreSQL', () => 
 
 	it('seeds fall 2026 once and finds or creates offerings', async () => {
 		const repo = repository();
-		const first = await repo.seedFall2026();
-		const second = await repo.seedFall2026();
-		expect(first.term.id).toBe('fall-2026');
-		expect(second.rules.noClassDates).toContain('2026-09-07');
-		expect(await repo.listTerms()).toHaveLength(1);
+		const first = await repo.seedCommittedTerms();
+		const second = await repo.seedCommittedTerms();
+		expect(first.map((row) => row.term.id).sort()).toEqual(['fall-2026', 'winter-2027']);
+		expect(second.find((row) => row.term.id === 'fall-2026')?.rules.noClassDates).toContain(
+			'2026-09-07'
+		);
+		expect(await repo.listTerms()).toHaveLength(2);
 		expect(await repo.getTerm('fall-2026')).toMatchObject({ name: 'Fall 2026' });
-		expect(await repo.getTerm('winter-2027')).toBeNull();
+		expect(await repo.getTerm('winter-2027')).toMatchObject({ name: 'Winter 2027' });
 		expect(await repo.getCalendarRules('fall-2026')).toMatchObject({ termId: 'fall-2026' });
-		expect(await repo.getCalendarRules('winter-2027')).toBeNull();
+		expect(await repo.getCalendarRules('winter-2027')).toMatchObject({ termId: 'winter-2027' });
 
 		const created = await repo.findOrCreateOffering({
 			termId: 'fall-2026',
@@ -169,15 +171,14 @@ describe.sequential('MariTools repository against disposable PostgreSQL', () => 
 		});
 		expect(reused.offering.id).toBe(created.offering.id);
 		expect(reused.course.canonicalTitle).toBe('Calculus I');
-		await expect(
-			repo.findOrCreateOffering({
-				termId: 'winter-2027',
-				code: '201-NYA-05',
-				section: '00001',
-				teacherName: 'Ada Lovelace',
-				canonicalTitle: 'Calculus I'
-			})
-		).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		const winter = await repo.findOrCreateOffering({
+			termId: 'winter-2027',
+			code: '201-NYA-05',
+			section: '00001',
+			teacherName: 'Ada Lovelace',
+			canonicalTitle: 'Calculus I'
+		});
+		expect(winter.offering.termId).toBe('winter-2027');
 	});
 
 	it('upserts student profiles without exposing student IDs on the public view', async () => {
