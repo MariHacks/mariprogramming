@@ -38,7 +38,8 @@ describe('production security configuration', () => {
 			);
 		expect(vercel.crons).toEqual([
 			{ path: '/api/cron/book-delivery', schedule: '17 3 * * *' },
-			{ path: '/api/cron/notify-relay', schedule: '32 3 * * *' }
+			{ path: '/api/cron/notify-relay', schedule: '32 3 * * *' },
+			{ path: '/api/cron/maritools-migrate', schedule: '45 3 * * *' }
 		]);
 		const headers = Object.fromEntries(
 			vercel.headers[0].headers.map(({ key, value }) => [key.toLowerCase(), value])

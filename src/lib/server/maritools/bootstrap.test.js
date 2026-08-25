@@ -52,14 +52,20 @@ describe('ensureMariToolsBootstrap', () => {
 		const query = vi.fn(async () => ({ rows: [{ table_name: 'mt_academic_terms' }] }));
 		const client = { query, release: vi.fn() };
 		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
+		vi.doMock('pg', () => ({
+			default: {
+				Pool: class {
+					constructor() {
+						return pool;
+					}
+				}
+			}
+		}));
 		vi.doMock('$app/environment', () => ({ building: false }));
 		vi.doMock('../config/environment.js', () => ({
 			readRuntimeEnvironment: () => ({
 				databaseUrl: 'postgresql://bootstrap:test@localhost/club'
 			})
-		}));
-		vi.doMock('../db/transaction.js', () => ({
-			createRequestPool: () => pool
 		}));
 		vi.doMock('./repository.js', () => ({
 			createMariToolsRepository: () => ({ seedFall2026 })
@@ -77,7 +83,6 @@ describe('ensureMariToolsBootstrap', () => {
 		vi.doMock('../config/environment.js', () => ({
 			readRuntimeEnvironment: () => ({ databaseUrl: 'postgresql://bootstrap:test@localhost/club' })
 		}));
-		vi.doMock('../db/transaction.js', () => ({ createRequestPool: vi.fn() }));
 		vi.doMock('./repository.js', () => ({
 			createMariToolsRepository: () => ({ seedFall2026 })
 		}));
@@ -94,7 +99,6 @@ describe('ensureMariToolsBootstrap', () => {
 				throw new Error('unavailable');
 			}
 		}));
-		vi.doMock('../db/transaction.js', () => ({ createRequestPool: vi.fn() }));
 		vi.doMock('./repository.js', () => ({
 			createMariToolsRepository: () => ({ seedFall2026: vi.fn() })
 		}));
