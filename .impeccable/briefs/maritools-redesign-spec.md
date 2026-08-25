@@ -158,13 +158,17 @@ The sidebar is `position: sticky; top: 0` only if the site header is not sticky.
 
 The brand link reads `MariTools`, uses Inter Tight at 1.125rem/1.15 and weight 680, and occupies 2.75rem minimum height. It returns to `/tools`.
 
-Navigation is grouped visually without adding routes:
+Navigation is grouped to match `TOOL_SECTIONS` in `tools-nav.js`:
 
-- `Plan`: Schedule, Free Time
+- `Schedule`: Schedule, Free Time
 - `Courses`: Semester, Catalog
-- `Community`: Clubs, Forum
+- `Student life`: Clubs, Forum
 
-Group labels use Inter at 0.75rem, weight 650, sentence case, muted color, and 1rem top margin after the first group. Do not use all caps or letter spacing. Each link is a 2.75rem row with 0.75rem inline padding. The current route uses ink text, a white background, and a 3px blue inset rule on its leading edge. Hover uses white at 65% opacity. Focus uses the global blue outline. The Forum link remains current on a thread route.
+Group labels use Inter at 0.75rem, weight 650, sentence case, muted color, and 1rem top margin after the first group. Each group’s links sit in a **raised paper mini-panel** (white fill, 1px rule, 0.25rem radius) — lab-manual TOC, not a floating card stack. Each link is a 2.5rem row with 0.75rem inline padding. The current route uses ink text, white background, and a 3px blue inset rule on its leading edge. Hover uses white at 65% opacity on mist sidebar. Focus uses the global blue outline. The Forum link remains current on a thread route.
+
+Optional footer (ruled, not a card): quiet link **Back to club home** → `/`. No Account, term, or Book Delivery entries.
+
+Optional collapse (≥80rem, phase 2): 64px icon rail with tooltips; preference in `localStorage`. See `maritools-inspiration.md`.
 
 The sidebar contains no Account link, term selector, auto-term badge, Programming Club credit, initiative strip, cart, Book Delivery link, or promotional callout.
 

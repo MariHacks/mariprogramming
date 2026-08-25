@@ -10,3 +10,4 @@
 - **Memorable moment:** Schedule week grid reads like a printed registrar timetable; sidebar feels like a lab manual table of contents.
 - **Motion:** 120–220ms state feedback; no decorative page-load choreography.
 - **Full spec:** `.impeccable/briefs/maritools-redesign-spec.md` (Arena-synthesized Campus Lab Manual).
+- **Category inspiration:** `.impeccable/briefs/maritools-inspiration.md` (per-tool craft bars + grouped sidebar redesign).
