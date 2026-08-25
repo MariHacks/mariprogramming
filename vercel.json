@@ -34,10 +34,6 @@
 		{
 			"path": "/api/cron/notify-relay",
 			"schedule": "32 3 * * *"
-		},
-		{
-			"path": "/api/cron/maritools-migrate",
-			"schedule": "45 3 * * *"
 		}
 	]
 }

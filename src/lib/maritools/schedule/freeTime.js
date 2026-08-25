@@ -46,7 +46,15 @@ export function commonFreeOnDate(people, isoDate, rules, minimumMinutes = 30) {
  * @returns {Interval[]}
  */
 export function commonFreeFromBusy(busy, minimumMinutes = 30) {
-	const sorted = [...busy].sort((left, right) => left.startTime.localeCompare(right.startTime));
+	const dayStart = '08:00';
+	const dayEnd = '18:00';
+	const sorted = [...busy]
+		.map((slot) => ({
+			startTime: slot.startTime < dayStart ? dayStart : slot.startTime,
+			endTime: slot.endTime > dayEnd ? dayEnd : slot.endTime
+		}))
+		.filter((slot) => slot.startTime < slot.endTime)
+		.sort((left, right) => left.startTime.localeCompare(right.startTime));
 	/** @type {Interval[]} */
 	const merged = [];
 	for (const slot of sorted) {
@@ -58,8 +66,6 @@ export function commonFreeFromBusy(busy, minimumMinutes = 30) {
 		}
 	}
 
-	const dayStart = '08:00';
-	const dayEnd = '18:00';
 	/** @type {Interval[]} */
 	const free = [];
 	let cursor = dayStart;

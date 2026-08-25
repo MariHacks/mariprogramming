@@ -74,4 +74,13 @@ describe('commonFreeFromBusy', () => {
 			)
 		).toEqual([{ startTime: '08:00', endTime: '18:00' }]);
 	});
+
+	it('clips busy intervals to the 08:00–18:00 window', () => {
+		expect(
+			commonFreeFromBusy([{ startTime: '17:30', endTime: '19:00' }], 30)
+		).toEqual([{ startTime: '08:00', endTime: '17:30' }]);
+		expect(
+			commonFreeFromBusy([{ startTime: '18:30', endTime: '19:30' }], 30)
+		).toEqual([{ startTime: '08:00', endTime: '18:00' }]);
+	});
 });

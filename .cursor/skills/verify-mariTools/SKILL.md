@@ -17,7 +17,7 @@ npm run build && npm run preview -- --host 127.0.0.1 --port 4173 --strictPort
 
 Ready when `http://127.0.0.1:4173/tools` returns 200.
 
-For DB-backed tools (account, semester, catalog, clubs, forum), set `DATABASE_URL` to a disposable Postgres URL before preview. Migrations apply on first request via the app bootstrap.
+For DB-backed tools (account, semester, catalog, clubs, forum), set `DATABASE_URL` to a disposable Postgres URL before preview. Apply `drizzle/0008_maritools_persistence.sql` (and runtime grants) with the migrator role first — `scripts/apply-maritools-migration.mjs` or `GET /api/cron/maritools-migrate` when `MIGRATION_DATABASE_URL` is set. Runtime bootstrap only seeds terms.
 
 Teardown: stop the preview process you started (Ctrl+C or kill the PID from `lsof -i :4173`). Do not `pkill node`.
 

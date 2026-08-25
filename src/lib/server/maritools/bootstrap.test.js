@@ -22,9 +22,11 @@ describe('ensureMariToolsSchema', () => {
 
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
-		// existence check + 2 DDL statements + runtime grants
-		expect(query.mock.calls.length).toBe(4);
-		expect(String(query.mock.calls[3][0])).toContain('mariprogramming_runtime');
+		// existence check + BEGIN + 2 DDL + grants + COMMIT
+		expect(query.mock.calls.length).toBe(6);
+		expect(query.mock.calls[1][0]).toBe('BEGIN');
+		expect(String(query.mock.calls[4][0])).toContain('mariprogramming_runtime');
+		expect(query.mock.calls[5][0]).toBe('COMMIT');
 		expect(client.release).toHaveBeenCalled();
 		expect(pool.end).toHaveBeenCalled();
 	});

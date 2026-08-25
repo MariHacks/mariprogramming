@@ -37,27 +37,37 @@ export async function ensureMariToolsSchema(databaseUrl, dependencies = {}) {
 		if (statements.length === 0) {
 			throw new Error('MariTools persistence SQL is empty');
 		}
-		for (const statement of statements) {
-			await client.query(statement);
+		await client.query('BEGIN');
+		try {
+			for (const statement of statements) {
+				await client.query(statement);
+			}
+			await client.query(`
+				GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+				  mt_academic_terms,
+				  mt_academic_calendar_rules,
+				  mt_courses,
+				  mt_course_offerings,
+				  mt_student_profiles,
+				  mt_outline_documents,
+				  mt_outline_extractions,
+				  mt_catalog_contributions,
+				  mt_clubs,
+				  mt_club_submissions,
+				  mt_forum_threads,
+				  mt_forum_replies,
+				  mt_forum_reports
+				TO mariprogramming_runtime
+			`);
+			await client.query('COMMIT');
+		} catch (error) {
+			try {
+				await client.query('ROLLBACK');
+			} catch {
+				/* ignore */
+			}
+			throw error;
 		}
-
-		await client.query(`
-			GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
-			  mt_academic_terms,
-			  mt_academic_calendar_rules,
-			  mt_courses,
-			  mt_course_offerings,
-			  mt_student_profiles,
-			  mt_outline_documents,
-			  mt_outline_extractions,
-			  mt_catalog_contributions,
-			  mt_clubs,
-			  mt_club_submissions,
-			  mt_forum_threads,
-			  mt_forum_replies,
-			  mt_forum_reports
-			TO mariprogramming_runtime
-		`);
 	} finally {
 		try {
 			client?.release();

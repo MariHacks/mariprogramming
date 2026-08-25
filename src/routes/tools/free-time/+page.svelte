@@ -80,6 +80,14 @@
 			return;
 		}
 		followedWeekday = effectiveWeekdayForDate(focusDate, rules) ?? '';
+		if (
+			focusDate < resolution.selected.classStartDate ||
+			focusDate > resolution.selected.classEndDate
+		) {
+			error = 'That date is outside class dates for the selected term.';
+			dateSlots = [];
+			return;
+		}
 		const occurrences = parsed.people.flatMap((courses) =>
 			generateOccurrences(resolution.selected, rules, courses)
 		);
