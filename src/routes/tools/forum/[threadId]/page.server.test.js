@@ -117,7 +117,7 @@ describe('forum thread page server', () => {
 		).resolves.toEqual({ replied: true });
 		expect((await current.actions.reply(event({ form: { body: 'Thanks' } }))).status).toBe(401);
 		expect(
-			(await current.actions.reply(event({ locals: { maritools: SESSION }, form: { body: '' } }))).status
+			(await current.actions.reply(event({ locals: { maritools: SESSION } }))).status
 		).toBe(400);
 	});
 
@@ -166,8 +166,7 @@ describe('forum thread page server', () => {
 		).resolves.toEqual({ reported: true });
 		expect((await current.actions.report(event({ form: { reason: 'spam' } }))).status).toBe(401);
 		expect(
-			(await current.actions.report(event({ locals: { maritools: SESSION }, form: { reason: '' } })))
-				.status
+			(await current.actions.report(event({ locals: { maritools: SESSION } }))).status
 		).toBe(400);
 	});
 
@@ -249,6 +248,22 @@ describe('forum thread page server', () => {
 			).status
 		).toBe(400);
 		expect((await current.actions.moderate(event())).status).toBe(403);
+		expect(
+			(await current.actions.moderate(event({ locals: { maritools: STAFF } }))).status
+		).toBe(400);
+		const viaRole = handlers({
+			store: { getProfile: vi.fn(async () => ({ role: 'staff' })) }
+		});
+		await expect(
+			viaRole.actions.moderate(event({ locals: { maritools: SESSION }, form: { moderation: 'lock' } }))
+		).resolves.toEqual({ moderated: true });
+		const noRole = handlers({
+			store: { getProfile: vi.fn(async () => ({})) }
+		});
+		expect(
+			(await noRole.actions.moderate(event({ locals: { maritools: SESSION }, form: { moderation: 'lock' } })))
+				.status
+		).toBe(403);
 	});
 
 	it('returns bounded moderation errors', async () => {

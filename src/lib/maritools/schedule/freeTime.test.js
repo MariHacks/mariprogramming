@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { ACADEMIC_CALENDAR_RULES } from '../term/calendar.js';
 import { CANONICAL_OMNIVOX_SCHEDULE } from './fixture.js';
 import {
+	commonFreeFromBusy,
+	commonFreeFromOccurrences,
 	commonFreeOnDate,
 	commonFreeOnWeekday,
 	commonFreeWeek,
@@ -48,6 +50,7 @@ describe('effectiveWeekdayForDate', () => {
 	it('follows Monday schedule overrides on 2026-09-08', () => {
 		expect(effectiveWeekdayForDate('2026-09-08', FALL_RULES)).toBe('Mon');
 		expect(effectiveWeekdayForDate('2026-09-07', FALL_RULES)).toBeNull();
+		expect(effectiveWeekdayForDate('2026-09-05', FALL_RULES)).toBeNull();
 	});
 });
 
@@ -56,5 +59,19 @@ describe('commonFreeOnDate', () => {
 		const me = parseOmnivox(CANONICAL_OMNIVOX_SCHEDULE).courses;
 		const slots = commonFreeOnDate([me, []], '2026-09-08', FALL_RULES, 45);
 		expect(slots.length).toBeGreaterThan(0);
+		expect(commonFreeOnDate([me, []], '2026-09-07', FALL_RULES, 45)).toEqual([]);
+	});
+});
+
+describe('commonFreeFromBusy', () => {
+	it('returns the whole day when nobody is busy', () => {
+		expect(commonFreeFromBusy([], 45)).toEqual([{ startTime: '08:00', endTime: '18:00' }]);
+		expect(
+			commonFreeFromOccurrences(
+				[{ date: '2026-09-08', startTime: '08:15', endTime: '10:05' }],
+				'2026-09-07',
+				30
+			)
+		).toEqual([{ startTime: '08:00', endTime: '18:00' }]);
 	});
 });

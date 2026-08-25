@@ -190,6 +190,39 @@ describe('createMariToolsRepository', () => {
 		await expect(
 			repository.createClub({ name: 'Chess', slug: 'chess', links: {} })
 		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.createClub({
+				name: 'Chess',
+				slug: 'chess',
+				links: [{ url: 'javascript:alert(1)' }]
+			})
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.createClub({ name: 'Chess', slug: 'chess', links: [{ url: 'not a url' }] })
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.createClub({ name: 'Chess', slug: 'chess', links: [null] })
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.createClub({ name: 'Chess', slug: 'chess', links: [{ url: '' }] })
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.createClub({
+				name: 'Chess',
+				slug: 'chess',
+				links: [{ url: `https://example.com/${'a'.repeat(500)}` }]
+			})
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.createClub({ name: 'Chess', slug: 'chess', links: ['https://example.com'] })
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.createClub({
+				name: 'Chess',
+				slug: 'chess',
+				links: [{ url: 'ftp://files.example.com/club' }]
+			})
+		).rejects.toBeInstanceOf(MariToolsValidationError);
 		await expect(repository.submitClub({ payload: [] })).rejects.toBeInstanceOf(
 			MariToolsValidationError
 		);

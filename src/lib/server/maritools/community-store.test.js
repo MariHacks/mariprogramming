@@ -130,6 +130,29 @@ describe('createCommunityStore', () => {
 		});
 		await createCommunityStore(repo).publishPendingClub(SUBMISSION);
 		expect(repo.createClub).toHaveBeenCalledWith(expect.objectContaining({ slug: 'chess-club' }));
+		const emptyPayload = inner({
+			listClubSubmissions: vi.fn(async () => [{ id: SUBMISSION }])
+		});
+		await expect(
+			createCommunityStore(emptyPayload).publishPendingClub(SUBMISSION)
+		).rejects.toMatchObject({ code: 'invalid-club' });
+		const existing = inner({
+			createClub: vi.fn(async () => {
+				throw new MariToolsConflictError();
+			}),
+			listPublishedClubs: vi.fn(async () => [{ id: 'c1', name: 'Chess', slug: 'chess' }])
+		});
+		await expect(createCommunityStore(existing).publishPendingClub(SUBMISSION)).resolves.toMatchObject({
+			slug: 'chess'
+		});
+		const failedCreate = inner({
+			createClub: vi.fn(async () => {
+				throw new Error('insert failed');
+			})
+		});
+		await expect(createCommunityStore(failedCreate).publishPendingClub(SUBMISSION)).rejects.toBeInstanceOf(
+			MaritoolsUnavailableError
+		);
 	});
 
 	it('submits clubs and lists public threads', async () => {

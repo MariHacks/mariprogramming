@@ -100,7 +100,7 @@ describe('clubs page', () => {
 				form: { submitted: true, error: 'Check the club details and try again.' }
 			}
 		});
-		expect(screen.getByRole('alert')).toHaveTextContent('unavailable');
+		expect(screen.getByText('Clubs are unavailable right now. Try again.')).toBeInTheDocument();
 		expect(screen.getByText('No pending submissions.')).toBeInTheDocument();
 		expect(screen.getByText('Sent for review.')).toBeInTheDocument();
 	});

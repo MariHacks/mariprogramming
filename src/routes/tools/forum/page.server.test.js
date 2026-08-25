@@ -57,6 +57,23 @@ describe('forum page server', () => {
 		expect(JSON.stringify(data)).not.toMatch(/2530622|authorUserId/);
 		const signed = await current.load(event({ locals: { maritools: SESSION } }));
 		expect(signed.signedIn).toBe(true);
+		const untagged = handlers({
+			store: {
+				listThreads: vi.fn(async () => [
+					{ id: THREAD, title: 'Club fair', category: 'student-life', courseId: null }
+				])
+			}
+		});
+		expect((await untagged.load(event())).threads[0].courseCode).toBeNull();
+		const unknownCourse = handlers({
+			store: {
+				listThreads: vi.fn(async () => [
+					{ id: THREAD, title: 'Orphan', category: 'courses', courseId: COURSE }
+				]),
+				listCatalogCourses: vi.fn(async () => [])
+			}
+		});
+		expect((await unknownCourse.load(event())).threads[0].courseCode).toBeNull();
 	});
 
 	it('forwards category and valid course filters', async () => {
@@ -151,7 +168,7 @@ describe('forum page server', () => {
 		expect(
 			(
 				await handlers().actions.create(
-					event({ locals: { maritools: SESSION }, form: { title: '', body: '' } })
+					event({ locals: { maritools: SESSION }, form: { category: 'student-life' } })
 				)
 			).status
 		).toBe(400);
@@ -162,6 +179,13 @@ describe('forum page server', () => {
 						locals: { maritools: SESSION },
 						form: { title: 'Hi', body: 'Hello', category: 'memes' }
 					})
+				)
+			).status
+		).toBe(400);
+		expect(
+			(
+				await handlers().actions.create(
+					event({ locals: { maritools: SESSION }, form: { title: 'Hi', body: 'Hello' } })
 				)
 			).status
 		).toBe(400);

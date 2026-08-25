@@ -56,6 +56,15 @@ describe('Common free time', () => {
 		expect(screen.getByText(/2026-09-08 follows Mon/)).toBeInTheDocument();
 	});
 
+	it('treats a no-class date as fully free', () => {
+		explicitTermId.set('fall-2026');
+		render(FreeTimePage);
+		pasteTwo();
+		fireEvent.input(screen.getByLabelText('Optional date'), { target: { value: '2026-09-07' } });
+		fireEvent.click(screen.getByRole('button', { name: 'Find shared free time' }));
+		expect(screen.getByText('08:00–18:00')).toBeInTheDocument();
+	});
+
 	it('rejects an out-of-range custom duration', () => {
 		render(FreeTimePage);
 		pasteTwo();
@@ -66,6 +75,7 @@ describe('Common free time', () => {
 	});
 
 	it('asks for a term before filtering by date', () => {
+		explicitTermId.set('not-a-term');
 		render(FreeTimePage);
 		pasteTwo();
 		fireEvent.input(screen.getByLabelText('Optional date'), { target: { value: '2026-09-08' } });

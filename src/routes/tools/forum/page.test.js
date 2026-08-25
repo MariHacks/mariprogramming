@@ -56,7 +56,7 @@ describe('forum page', () => {
 			'href',
 			'/tools/forum/t1'
 		);
-		expect(screen.getByText(/203-SN3-RE/)).toBeInTheDocument();
+		expect(screen.getByText(/courses · 203-SN3-RE/)).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Post thread' })).toBeInTheDocument();
 		expect(screen.getByRole('alert')).toHaveTextContent('Check the thread');
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();

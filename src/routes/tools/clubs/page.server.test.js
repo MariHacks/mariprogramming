@@ -31,7 +31,7 @@ const PENDING = {
 
 function handlers(overrides = {}) {
 	const store = {
-		listClubs: vi.fn(async () => [CLUB]),
+		listClubs: vi.fn(async () => [CLUB, { id: 'club-2', name: 'Robotics extra' }]),
 		getProfile: vi.fn(async () => null),
 		isStaff: vi.fn((email, role) => email === 'team@marihacks.com' || role === 'staff'),
 		listPendingClubSubmissions: vi.fn(async () => [PENDING]),
@@ -66,7 +66,8 @@ describe('clubs page server', () => {
 	it('lists published clubs for anonymous visitors', async () => {
 		const current = handlers();
 		const data = await current.load(event());
-		expect(data.clubs).toEqual([CLUB]);
+		expect(data.clubs[0]).toEqual(CLUB);
+		expect(data.clubs).toHaveLength(2);
 		expect(data.staff).toBe(false);
 		expect(data.pending).toEqual([]);
 		expect(JSON.stringify(data)).not.toMatch(/2530622/);
@@ -74,10 +75,13 @@ describe('clubs page server', () => {
 
 	it('filters clubs by search and category', async () => {
 		const current = handlers();
-		const data = await current.load(event({ search: '?q=robot&category=stem' }));
-		expect(data.clubs).toEqual([CLUB]);
-		const empty = await current.load(event({ search: '?q=chess&category=arts' }));
-		expect(empty.clubs).toEqual([]);
+		expect((await current.load(event({ search: '?q=robot&category=stem' }))).clubs).toEqual([CLUB]);
+		expect((await current.load(event({ search: '?q=robot' }))).clubs.map((club) => club.id)).toEqual([
+			'club-1',
+			'club-2'
+		]);
+		expect((await current.load(event({ search: '?category=stem' }))).clubs).toEqual([CLUB]);
+		expect((await current.load(event({ search: '?q=chess&category=arts' }))).clubs).toEqual([]);
 	});
 
 	it('treats the team mailbox as staff even when the profile cannot be read', async () => {
@@ -162,13 +166,21 @@ describe('clubs page server', () => {
 				links: [{ label: 'Discord', url: 'https://example.com' }]
 			})
 		});
+		await current.actions.submit(
+			event({ locals: { maritools: SESSION }, form: { name: 'Chess Club', linkUrl: 'https://example.com' } })
+		);
+		expect(current.store.submitClub).toHaveBeenLastCalledWith({
+			submitterUserId: SESSION.userId,
+			payload: expect.objectContaining({
+				links: [{ label: 'Website', url: 'https://example.com' }]
+			})
+		});
 	});
 
 	it('rejects submit without a session, name, or usable slug', async () => {
 		expect((await handlers().actions.submit(event({ form: { name: 'Chess' } }))).status).toBe(401);
 		expect(
-			(await handlers().actions.submit(event({ locals: { maritools: SESSION }, form: { name: '' } })))
-				.status
+			(await handlers().actions.submit(event({ locals: { maritools: SESSION } }))).status
 		).toBe(400);
 		expect(
 			(await handlers().actions.submit(event({ locals: { maritools: SESSION }, form: { name: '!!!' } })))
@@ -231,8 +243,7 @@ describe('clubs page server', () => {
 			store: { getProfile: vi.fn(async () => ({ role: 'staff' })) }
 		});
 		expect(
-			(await staff.actions.publish(event({ locals: { maritools: SESSION }, form: { submissionId: '' } })))
-				.status
+			(await staff.actions.publish(event({ locals: { maritools: SESSION } }))).status
 		).toBe(400);
 	});
 
