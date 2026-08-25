@@ -76,7 +76,7 @@ export function createCommunityStore(inner) {
 				throw error;
 			}
 			if (error instanceof MariToolsValidationError || error instanceof MariToolsConflictError) {
-				throw new MaritoolsInputError(error.code ?? 'invalid');
+				throw new MaritoolsInputError(error.code);
 			}
 			if (error instanceof MariToolsNotFoundError || error instanceof RepoUnavailableError) {
 				throw new MaritoolsUnavailableError();
@@ -128,16 +128,24 @@ export function createCommunityStore(inner) {
 				const name = String(payload.name ?? '').trim();
 				const slug = String(payload.slug ?? '').trim() || slugFromName(name);
 				if (!name || !slug) throw new MaritoolsInputError('invalid-club');
-				const club = await inner.createClub({
-					name,
-					slug,
-					category: payload.category ?? null,
-					description: payload.description ?? null,
-					links: payload.links ?? [],
-					published: true
-				});
-				await inner.setClubSubmissionStatus(submissionId, 'published');
-				return publicClubView(club);
+				try {
+					const club = await inner.createClub({
+						name,
+						slug,
+						category: payload.category ?? null,
+						description: payload.description ?? null,
+						links: payload.links ?? [],
+						published: true
+					});
+					await inner.setClubSubmissionStatus(submissionId, 'published');
+					return publicClubView(club);
+				} catch (error) {
+					if (!(error instanceof MariToolsConflictError)) throw error;
+					await inner.setClubSubmissionStatus(submissionId, 'published');
+					const clubs = await inner.listPublishedClubs();
+					const club = clubs.find((row) => row.slug === slug);
+					return publicClubView(club);
+				}
 			});
 		},
 

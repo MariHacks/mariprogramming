@@ -2,6 +2,7 @@ import { building } from '$app/environment';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { isMaritoolsSession, isStaffSession } from '$lib/server/auth/authorization.js';
 import { withRequestAuth } from '$lib/server/auth/runtime.js';
+import { ensureMariToolsBootstrap } from '$lib/server/maritools/bootstrap.js';
 
 const AUTH_UNAVAILABLE = 'Authentication service is unavailable';
 const AUTH_PATH = '/api/auth';
@@ -79,6 +80,9 @@ export function createHandle({
 	return async function handle({ event, resolve }) {
 		event.locals.staff = null;
 		event.locals.maritools = null;
+		if (!isBuilding && isPath(event.url.pathname, '/tools')) {
+			await ensureMariToolsBootstrap();
+		}
 		/** @param {Response} response */
 		const finalize = (response) => applyRoutePolicy(response, event.url.pathname);
 		const authPath = isPath(event.url.pathname, AUTH_PATH);

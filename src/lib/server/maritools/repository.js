@@ -342,6 +342,31 @@ async function insertOrRecover(transaction, table, values, recover) {
 }
 
 /**
+ * @param {unknown} links
+ */
+function normalizeClubLinks(links) {
+	if (links === undefined) return [];
+	if (!Array.isArray(links)) return invalid();
+	/** @type {{ label: string, url: string }[]} */
+	const normalized = [];
+	for (const entry of links) {
+		if (!entry || typeof entry !== 'object') return invalid();
+		const label = optionalText(/** @type {Record<string, unknown>} */ (entry).label, 80) ?? 'Link';
+		const rawUrl = /** @type {Record<string, unknown>} */ (entry).url;
+		if (typeof rawUrl !== 'string' || rawUrl.length === 0 || rawUrl.length > 500) return invalid();
+		let parsed;
+		try {
+			parsed = new URL(rawUrl.trim());
+		} catch {
+			return invalid();
+		}
+		if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return invalid();
+		normalized.push({ label, url: parsed.href });
+	}
+	return normalized;
+}
+
+/**
  * @param {{
  *   databaseUrl: string,
  *   runTransaction?: typeof withDatabaseTransaction
@@ -1016,8 +1041,7 @@ export function createMariToolsRepository({
 			if (!SLUG_PATTERN.test(slug)) return invalid();
 			const category = optionalText(input.category, 80);
 			const description = optionalText(input.description, 4000);
-			const links = input.links === undefined ? [] : input.links;
-			if (!Array.isArray(links)) return invalid();
+			const links = normalizeClubLinks(input.links);
 			const published = input.published === true;
 			return redactUnexpected(() =>
 				transact((transaction) =>

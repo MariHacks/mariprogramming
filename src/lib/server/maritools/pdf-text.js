@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { inflateSync } from 'node:zlib';
 
+const MAX_DECOMPRESSED_BYTES = 2_000_000;
+
 /**
  * @param {ArrayBuffer | Uint8Array | Buffer} bytes
  */
@@ -39,7 +41,7 @@ export function extractPdfText(bytes) {
 		let data = buffer.subarray(dataStart, end);
 		if (/\/FlateDecode/.test(dict)) {
 			try {
-				data = inflateSync(data);
+				data = inflateSync(data, { maxOutputLength: MAX_DECOMPRESSED_BYTES });
 			} catch {
 				continue;
 			}
@@ -58,6 +60,13 @@ function textFromContent(content) {
 	while ((match = show.exec(content))) {
 		const literal = match[0].replace(/\s*Tj$/u, '');
 		chunks.push(unescapePdfString(literal.slice(1, -1)));
+	}
+	const hexShow = /<([0-9A-Fa-f\s]+)>\s*Tj/g;
+	while ((match = hexShow.exec(content))) {
+		const hex = match[1].replace(/\s+/gu, '');
+		if (hex.length % 2 === 0) {
+			chunks.push(Buffer.from(hex, 'hex').toString('latin1'));
+		}
 	}
 	const arrayShow = /\[(?:[^\]]*)\]\s*TJ/g;
 	while ((match = arrayShow.exec(content))) {

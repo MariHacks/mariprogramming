@@ -89,11 +89,17 @@ describe('extractPdfText', () => {
 		expect(extractPdfText(pdf).text).toBe('');
 	});
 
-	it('skips a broken FlateDecode stream and accepts CR LF after stream', () => {
-		const broken = Buffer.from(
-			'%PDF-1.4\n4 0 obj << /Filter /FlateDecode /Length 3 >> stream\r\nNOT\nendstream endobj\n',
+	it('reads hexadecimal Tj strings', () => {
+		const pdf = buildPdf('BT <48656C6C6F> Tj ET');
+		expect(extractPdfText(pdf).text).toContain('Hello');
+	});
+
+	it('rejects oversized FlateDecode output', () => {
+		const huge = deflateSync(Buffer.alloc(2_000_001, 65));
+		const pdf = Buffer.from(
+			`%PDF-1.4\n4 0 obj << /Filter /FlateDecode /Length ${huge.length} >> stream\n${huge.toString('latin1')}\nendstream endobj\n`,
 			'latin1'
 		);
-		expect(extractPdfText(broken).text).toBe('');
+		expect(extractPdfText(pdf).text).toBe('');
 	});
 });
