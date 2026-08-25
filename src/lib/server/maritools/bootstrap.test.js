@@ -22,7 +22,9 @@ describe('ensureMariToolsSchema', () => {
 
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
-		expect(query.mock.calls.length).toBe(3);
+		// existence check + 2 DDL statements + runtime grants
+		expect(query.mock.calls.length).toBe(4);
+		expect(String(query.mock.calls[3][0])).toContain('mariprogramming_runtime');
 		expect(client.release).toHaveBeenCalled();
 		expect(pool.end).toHaveBeenCalled();
 	});
@@ -49,18 +51,6 @@ describe('ensureMariToolsBootstrap', () => {
 
 	it('seeds Fall 2026 once when a database url exists', async () => {
 		const seedFall2026 = vi.fn(async () => ({ term: { id: 'fall-2026' } }));
-		const query = vi.fn(async () => ({ rows: [{ table_name: 'mt_academic_terms' }] }));
-		const client = { query, release: vi.fn() };
-		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
-		vi.doMock('pg', () => ({
-			default: {
-				Pool: class {
-					constructor() {
-						return pool;
-					}
-				}
-			}
-		}));
 		vi.doMock('$app/environment', () => ({ building: false }));
 		vi.doMock('../config/environment.js', () => ({
 			readRuntimeEnvironment: () => ({

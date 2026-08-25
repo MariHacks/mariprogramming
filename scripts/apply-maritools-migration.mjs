@@ -57,8 +57,27 @@ try {
 		process.exit(1);
 	}
 	console.log(`ok: applied ${statements.length} statements`);
+
+	await client.query(`
+		GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+		  mt_academic_terms,
+		  mt_academic_calendar_rules,
+		  mt_courses,
+		  mt_course_offerings,
+		  mt_student_profiles,
+		  mt_outline_documents,
+		  mt_outline_extractions,
+		  mt_catalog_contributions,
+		  mt_clubs,
+		  mt_club_submissions,
+		  mt_forum_threads,
+		  mt_forum_replies,
+		  mt_forum_reports
+		TO mariprogramming_runtime
+	`);
+	console.log('ok: granted runtime privileges on mt_* tables');
 } catch (error) {
-	console.error('migration failed:', error instanceof Error ? error.name : 'unknown');
+	console.error('migration failed:', error instanceof Error ? error.message : 'unknown');
 	process.exit(1);
 } finally {
 	client.release();

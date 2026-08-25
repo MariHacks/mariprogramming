@@ -8,6 +8,10 @@ import { createMariToolsRepository } from './repository.js';
 let bootstrapPromise = null;
 
 /**
+ * Apply drizzle/0008 when `mt_academic_terms` is missing.
+ * Must use a migrator/owner connection (`MIGRATION_DATABASE_URL`), not the
+ * least-privilege runtime role.
+ *
  * @param {string} databaseUrl
  * @param {{
  *   createPool?: (databaseUrl: string) => InstanceType<typeof pg.Pool>
@@ -36,6 +40,24 @@ export async function ensureMariToolsSchema(databaseUrl, dependencies = {}) {
 		for (const statement of statements) {
 			await client.query(statement);
 		}
+
+		await client.query(`
+			GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+			  mt_academic_terms,
+			  mt_academic_calendar_rules,
+			  mt_courses,
+			  mt_course_offerings,
+			  mt_student_profiles,
+			  mt_outline_documents,
+			  mt_outline_extractions,
+			  mt_catalog_contributions,
+			  mt_clubs,
+			  mt_club_submissions,
+			  mt_forum_threads,
+			  mt_forum_replies,
+			  mt_forum_reports
+			TO mariprogramming_runtime
+		`);
 	} finally {
 		try {
 			client?.release();
@@ -58,7 +80,7 @@ export async function ensureMariToolsBootstrap() {
 		try {
 			const { databaseUrl } = readRuntimeEnvironment();
 			if (!databaseUrl) return;
-			await ensureMariToolsSchema(databaseUrl);
+			// DDL is operator-only (MIGRATION_DATABASE_URL). Runtime only seeds.
 			const repository = createMariToolsRepository({ databaseUrl });
 			await repository.seedFall2026();
 		} catch (error) {
