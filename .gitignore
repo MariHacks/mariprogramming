@@ -11,6 +11,7 @@ vite.config.ts.timestamp-*
 .worktrees/
 .vercel/
 coverage/
+.artifacts/
 .vercel
 .env*
 !.env.example
