@@ -10,7 +10,12 @@ describe('ScheduleCalendar', () => {
 			props: {
 				grid: [
 					{
+						date: '2026-09-07',
 						weekday: 'Mon',
+						dayNumber: 7,
+						isToday: false,
+						isNoClass: false,
+						outOfTerm: false,
 						overlap: false,
 						meetings: [
 							{
@@ -25,10 +30,46 @@ describe('ScheduleCalendar', () => {
 							}
 						]
 					},
-					{ weekday: 'Tue', overlap: false, meetings: [] },
-					{ weekday: 'Wed', overlap: false, meetings: [] },
-					{ weekday: 'Thu', overlap: false, meetings: [] },
-					{ weekday: 'Fri', overlap: false, meetings: [] }
+					{
+						date: '2026-09-08',
+						weekday: 'Tue',
+						dayNumber: 8,
+						isToday: true,
+						isNoClass: false,
+						outOfTerm: false,
+						overlap: false,
+						meetings: []
+					},
+					{
+						date: '2026-09-09',
+						weekday: 'Wed',
+						dayNumber: 9,
+						isToday: false,
+						isNoClass: false,
+						outOfTerm: false,
+						overlap: false,
+						meetings: []
+					},
+					{
+						date: '2026-09-10',
+						weekday: 'Thu',
+						dayNumber: 10,
+						isToday: false,
+						isNoClass: false,
+						outOfTerm: false,
+						overlap: false,
+						meetings: []
+					},
+					{
+						date: '2026-09-11',
+						weekday: 'Fri',
+						dayNumber: 11,
+						isToday: false,
+						isNoClass: false,
+						outOfTerm: false,
+						overlap: false,
+						meetings: []
+					}
 				]
 			}
 		});
@@ -36,5 +77,6 @@ describe('ScheduleCalendar', () => {
 		expect(screen.getByLabelText('Weekly course schedule')).toBeInTheDocument();
 		expect(screen.getByText('Calculus II')).toBeInTheDocument();
 		expect(screen.getByText('201-NYB-05')).toBeInTheDocument();
+		expect(screen.getByText('Today')).toBeInTheDocument();
 	});
 });

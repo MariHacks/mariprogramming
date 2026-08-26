@@ -6,6 +6,12 @@ import SchedulePage from './+page.svelte';
 
 vi.mock('$app/environment', () => ({ browser: false }));
 
+const defaultData = {
+	signedIn: false,
+	googleCalendarConnected: false,
+	gcalStatus: null
+};
+
 afterEach(() => {
 	cleanup();
 	explicitTermId.set(null);
@@ -21,7 +27,7 @@ describe('My schedule', () => {
 	});
 
 	it('opens the Omnivox tutorial from the import drawer helper', () => {
-		render(SchedulePage);
+		render(SchedulePage, { props: { data: defaultData } });
 		fireEvent.click(screen.getAllByRole('button', { name: 'Import Omnivox' })[0]);
 		fireEvent.click(screen.getByRole('button', { name: 'Show tutorial again' }));
 		expect(screen.getByRole('heading', { name: 'Open Omnivox' })).toBeInTheDocument();
@@ -30,7 +36,7 @@ describe('My schedule', () => {
 	});
 
 	it('reads the canonical paste into a positioned calendar', () => {
-		render(SchedulePage);
+		render(SchedulePage, { props: { data: defaultData } });
 		fireEvent.click(screen.getAllByRole('button', { name: 'Import Omnivox' })[0]);
 		fireEvent.input(screen.getByLabelText('Omnivox course list'), {
 			target: { value: CANONICAL_OMNIVOX_SCHEDULE }
@@ -39,10 +45,11 @@ describe('My schedule', () => {
 		expect(screen.getByLabelText('Weekly course schedule')).toBeInTheDocument();
 		expect(screen.getByText('Badminton and Conditioning')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Add to Google Calendar' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { level: 1 })).not.toHaveTextContent('Week of January 20');
 	});
 
 	it('warns when a student number is in the paste', () => {
-		render(SchedulePage);
+		render(SchedulePage, { props: { data: defaultData } });
 		fireEvent.click(screen.getAllByRole('button', { name: 'Import Omnivox' })[0]);
 		fireEvent.input(screen.getByLabelText('Omnivox course list'), {
 			target: { value: `Zhi Cheng Ma - 2530622\n${CANONICAL_OMNIVOX_SCHEDULE}` }

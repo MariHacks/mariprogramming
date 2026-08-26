@@ -1,21 +1,30 @@
 <script>
 	import { get } from 'svelte/store';
 	import { browser } from '$app/environment';
+	import { enhance } from '$app/forms';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import CalendarExportModal from '$lib/maritools/components/CalendarExportModal.svelte';
 	import OmnivoxTutorialOverlay from '$lib/maritools/components/OmnivoxTutorialOverlay.svelte';
 	import ScheduleCalendar from '$lib/maritools/components/ScheduleCalendar.svelte';
+	import {
+		addDays,
+		mondayOfWeek,
+		weekGridForTermWeek,
+		weekTitle
+	} from '$lib/maritools/schedule/academicWeekView.js';
 	import { occurrencesToIcs } from '$lib/maritools/schedule/ics.js';
 	import { generateOccurrences } from '$lib/maritools/schedule/occurrences.js';
 	import { parseOmnivox } from '$lib/maritools/schedule/parseOmnivox.js';
-	import { weekGrid } from '$lib/maritools/schedule/timetable.js';
-	import { rulesForTerm } from '$lib/maritools/term/calendar.js';
+	import { calendarDate, rulesForTerm } from '$lib/maritools/term/calendar.js';
 	import { termResolution } from '$lib/maritools/term/session.js';
 
 	const TUTORIAL_STORAGE_KEY = 'maritools.omnivox-tutorial.dismissed';
 
-	/** @type {{ result?: import('$lib/maritools/schedule/parseOmnivox.js').ParseResult } | null} */
+	/** @type {{ result?: import('$lib/maritools/schedule/parseOmnivox.js').ParseResult, pushError?: string, pushSuccess?: string } | null} */
 	export let form = null;
+
+	/** @type {{ signedIn?: boolean, googleCalendarConnected?: boolean, gcalStatus?: string | null }} */
+	export let data;
 
 	let paste = '';
 	/** @type {import('$lib/maritools/schedule/parseOmnivox.js').ParseResult} */
@@ -25,6 +34,8 @@
 	let drawerOpen = false;
 	let exportOpen = false;
 	let tutorialOpen = false;
+	let weekStartIso = mondayOfWeek(calendarDate());
+	let pushing = false;
 
 	$: if (form?.result) {
 		result = form.result;
@@ -32,13 +43,41 @@
 		drawerOpen = false;
 	}
 
-	$: grid = result.ok ? weekGrid(result.courses) : [];
+	$: if (form?.pushError) {
+		exportError = form.pushError;
+		exportOpen = true;
+	}
+
+	$: if (form?.pushSuccess) {
+		exportError = '';
+		exportOpen = false;
+	}
+
+	$: resolution = get(termResolution);
+	$: rules = resolution.selected ? rulesForTerm(resolution.selected.id) : null;
+	$: grid =
+		result.ok && resolution.selected && rules
+			? weekGridForTermWeek(weekStartIso, resolution.selected, rules, result.courses)
+			: [];
+	$: heading = weekTitle(weekStartIso);
 
 	function runParse() {
 		result = parseOmnivox(paste);
 		parsed = true;
 		exportError = '';
 		drawerOpen = false;
+	}
+
+	function goToToday() {
+		weekStartIso = mondayOfWeek(calendarDate());
+	}
+
+	function goToPreviousWeek() {
+		weekStartIso = addDays(weekStartIso, -7);
+	}
+
+	function goToNextWeek() {
+		weekStartIso = addDays(weekStartIso, 7);
 	}
 
 	function openImport() {
@@ -114,13 +153,13 @@
 <section class="schedule-page">
 	<div class="utility-bar">
 		<div>
-			<h1>Week of January 20</h1>
+			<h1>{heading}</h1>
 		</div>
 		<div class="utility-actions">
-			<button class="quiet-button" type="button">Today</button>
+			<button class="quiet-button" type="button" on:click={goToToday}>Today</button>
 			<div class="arrow-pair" aria-hidden="true">
-				<button type="button" aria-label="Previous week">←</button>
-				<button type="button" aria-label="Next week">→</button>
+				<button type="button" aria-label="Previous week" on:click={goToPreviousWeek}>←</button>
+				<button type="button" aria-label="Next week" on:click={goToNextWeek}>→</button>
 			</div>
 			{#if result.ok}
 				<button class="primary-button" type="button" on:click={openExport}>Add to Google Calendar</button>
@@ -205,10 +244,40 @@
 <CalendarExportModal
 	open={exportOpen}
 	{exportError}
+	signedIn={data?.signedIn ?? false}
+	googleCalendarConnected={data?.googleCalendarConnected ?? false}
+	connectHref="/tools/schedule/google-calendar/connect"
+	pushTermId={resolution.selected?.id ?? ''}
 	onClose={() => (exportOpen = false)}
 	onDownloadGoogle={downloadForGoogle}
 	onDownloadApple={downloadForApple}
-/>
+>
+	<form
+		slot="push-form"
+		method="POST"
+		action="?/pushGoogleCalendar"
+		use:enhance={() => {
+			pushing = true;
+			return async ({ result: actionResult }) => {
+				pushing = false;
+				if (actionResult.type === 'failure') {
+					exportError = String(actionResult.data?.pushError ?? 'Could not push to Google Calendar.');
+					exportOpen = true;
+				}
+				if (actionResult.type === 'success') {
+					exportError = '';
+					exportOpen = false;
+				}
+			};
+		}}
+	>
+		<input type="hidden" name="paste" value={paste} />
+		<input type="hidden" name="termId" value={resolution.selected?.id ?? ''} />
+		<button type="submit" class="primary" disabled={pushing || !resolution.selected}>
+			{pushing ? 'Pushing…' : 'Push to Google Calendar'}
+		</button>
+	</form>
+</CalendarExportModal>
 
 <style>
 	.schedule-page {

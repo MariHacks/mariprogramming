@@ -1,7 +1,7 @@
 <script>
 	import { layoutTimedMeetings, gridHourLabels } from '$lib/maritools/schedule/calendarLayout.js';
 
-	/** @type {{ weekday: string, meetings: import('$lib/maritools/schedule/timetable.js').PlacedMeeting[], overlap: boolean }[]} */
+	/** @type {{ date: string, weekday: string, dayNumber: number, isToday: boolean, isNoClass: boolean, outOfTerm: boolean, meetings: import('$lib/maritools/schedule/timetable.js').PlacedMeeting[], overlap: boolean }[]} */
 	export let grid = [];
 
 	/** @type {string[]} */
@@ -15,10 +15,11 @@
 
 <div class="calendar-frame" aria-label="Weekly course schedule">
 	<div class="calendar-corner"><span>EST</span></div>
-	{#each grid as column, columnIndex (column.weekday)}
-		<div class="day-head" class:is-today={columnIndex === 0}>
-			<span>{column.weekday}</span><strong>{20 + columnIndex}</strong>
-			{#if columnIndex === 0}<i>Today</i>{/if}
+	{#each grid as column (column.date)}
+		<div class="day-head" class:is-today={column.isToday} class:is-no-class={column.isNoClass}>
+			<span>{column.weekday}</span><strong>{column.dayNumber}</strong>
+			{#if column.isToday}<i>Today</i>{/if}
+			{#if column.isNoClass && !column.outOfTerm}<i class="muted">No class</i>{/if}
 		</div>
 	{/each}
 	<div class="time-rail">
@@ -26,8 +27,12 @@
 			<span style={`--row:${index}`}>{label}</span>
 		{/each}
 	</div>
-	{#each grid as column, columnIndex (column.weekday)}
-		<div class="day-column" class:today-column={columnIndex === 0}>
+	{#each grid as column (column.date)}
+		<div
+			class="day-column"
+			class:today-column={column.isToday}
+			class:no-class-column={column.isNoClass}
+		>
 			{#each layoutTimedMeetings(column.meetings) as meeting, meetingIndex (meeting.courseCode + meeting.startTime)}
 				<article
 					class="event {eventTone(meetingIndex)}"
@@ -89,12 +94,20 @@
 		box-shadow: inset 0 -2px 0 var(--club-blue);
 	}
 
+	.day-head.is-no-class {
+		background: #f1f3f6;
+	}
+
 	.day-head i {
 		color: var(--club-blue);
 		font-size: 0.5625rem;
 		font-style: normal;
 		font-weight: 700;
 		text-transform: uppercase;
+	}
+
+	.day-head i.muted {
+		color: var(--quiet-steel);
 	}
 
 	.time-rail {
@@ -121,6 +134,17 @@
 			transparent calc(var(--hour-h) - 1px),
 			rgb(var(--midnight-rgb) / 8%) calc(var(--hour-h) - 1px),
 			rgb(var(--midnight-rgb) / 8%) var(--hour-h)
+		);
+	}
+
+	.no-class-column {
+		background-color: #f8f9fb;
+		background-image: repeating-linear-gradient(
+			to bottom,
+			transparent 0,
+			transparent calc(var(--hour-h) - 1px),
+			rgb(var(--midnight-rgb) / 5%) calc(var(--hour-h) - 1px),
+			rgb(var(--midnight-rgb) / 5%) var(--hour-h)
 		);
 	}
 

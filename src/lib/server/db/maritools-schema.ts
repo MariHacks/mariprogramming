@@ -303,6 +303,22 @@ export const mtForumReplies = pgTable(
 	]
 );
 
+export const mtGoogleCalendarGrants = pgTable(
+	'mt_google_calendar_grants',
+	{
+		userId: text('user_id')
+			.primaryKey()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		refreshToken: text('refresh_token').notNull(),
+		accessToken: text('access_token'),
+		accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+		version: version(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	(table) => [check('mt_google_calendar_grants_version_positive', sql`${table.version} > 0}`)]
+);
+
 export const mtFreeTimeBoards = pgTable(
 	'mt_free_time_boards',
 	{

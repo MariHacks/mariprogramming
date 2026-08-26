@@ -10,9 +10,11 @@ export function initialsFromDisplayName(name) {
 	if (parts.length >= 2) {
 		return `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase();
 	}
-	return String(name ?? 'AC')
+	const compact = String(name ?? '')
+		.trim()
 		.slice(0, 2)
 		.toUpperCase();
+	return compact || 'AC';
 }
 
 /**

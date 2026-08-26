@@ -56,7 +56,10 @@ export async function ensureMariToolsSchema(databaseUrl, dependencies = {}) {
 				  mt_club_submissions,
 				  mt_forum_threads,
 				  mt_forum_replies,
-				  mt_forum_reports
+				  mt_forum_reports,
+				  mt_google_calendar_grants,
+				  mt_free_time_boards,
+				  mt_free_time_members
 				TO mariprogramming_runtime
 			`);
 			await client.query('COMMIT');
