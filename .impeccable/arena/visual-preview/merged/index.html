@@ -1,124 +1,1638 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="MariTools merged visual preview">
-  <title>MariTools merged preview</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&family=Inter+Tight:wght@500;600;650;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <!--
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="description" content="MariTools merged visual preview" />
+		<title>MariTools merged preview</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&family=Inter+Tight:wght@500;600;650;700&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="styles.css" />
+	</head>
+	<body>
+		<!--
     THESIS: MariTools is a shared campus timetable, not a dashboard of floating cards.
     OWN-WORLD: cool white paper, ink navy, steel rules, square controls, and scarce signal blue.
     STORY: students read their week first, then import, compare, review, and share only what they choose.
     FIRST VIEWPORT: the production club header sits above a quiet tools index and a wide working calendar.
     FORM: calendar-first operational canvas using approved C1 geometry, C2 indexes, and C4 breathing room.
   -->
-  <a class="skip-link" href="#workspace">Skip to MariTools</a>
+		<a class="skip-link" href="#workspace">Skip to MariTools</a>
 
-  <header class="site-header">
-    <div class="header-frame">
-      <a class="club-brand" href="/" aria-label="Marianopolis Programming Club, home">
-        <img src="../../../../static/logo-icon.svg" alt="" width="173" height="182">
-        <span><b>Marianopolis</b><b>Programming Club</b></span>
-      </a>
-      <nav class="primary-nav" aria-label="Primary navigation">
-        <a href="/about-us">About</a><a href="/events">Events</a><a href="/mini-competitions">Mini-Competitions</a><a class="current" href="#home" data-page-link="home">MariTools</a>
-      </nav>
-      <div class="header-actions">
-        <nav class="header-contact" aria-label="Club contact"><a class="contact-link" href="mailto:team@marihacks.com?subject=Programming%20Club%20website%20issue">Report a bug</a></nav>
-        <div class="header-socials" aria-label="Club social links"><a class="social-link" href="mailto:team@marihacks.com" aria-label="Email the club"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4.5" width="15" height="11" rx="1"/><path d="m3.5 6 6.5 5 6.5-5"/></svg></a><a class="social-link" href="https://www.instagram.com/mari_programming_club/" aria-label="Instagram"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="4"/><circle cx="10" cy="10" r="3.5"/><circle cx="14.8" cy="5.3" r=".7" fill="currentColor" stroke="none"/></svg></a><a class="social-link" href="https://discord.gg/c6JJw9d" aria-label="Discord"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5.2 5.5A12 12 0 0 1 10 4.3a12 12 0 0 1 4.8 1.2c1.2 1.8 1.8 3.8 1.7 6-.9 1.1-2 1.9-3.2 2.4l-.8-1.1c.7-.3 1.2-.6 1.7-1-.1.1-1.8 1.3-4.2 1.3s-4.1-1.2-4.2-1.3c.5.4 1 .7 1.7 1l-.8 1.1a9.5 9.5 0 0 1-3.2-2.4c-.1-2.2.5-4.2 1.7-6Z"/><circle cx="7.5" cy="9.5" r="1" fill="currentColor" stroke="none"/><circle cx="12.5" cy="9.5" r="1" fill="currentColor" stroke="none"/></svg></a></div>
-        <div class="account-demo signed-out" id="account-demo">
-          <a class="account-link signed-out-only" href="#account" data-page-link="account">Account</a>
-          <button class="google-link signed-out-only" type="button" data-sign-in>Continue with Google</button>
-          <button class="identity-button signed-in-only" type="button" aria-expanded="false" aria-controls="account-menu"><span>MS</span><b>Maya</b><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m2.5 4.5 3.5 3 3.5-3"/></svg></button>
-          <div class="account-menu signed-in-only" id="account-menu" hidden><a href="#account" data-page-link="account">Your account</a><button type="button" data-sign-out>Sign out</button></div>
-        </div>
-        <a class="signup-link" href="https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header">Sign up</a>
-      </div>
-      <button class="header-menu" type="button" aria-expanded="false" aria-controls="mobile-site-nav">Menu</button>
-      <nav class="mobile-site-nav" id="mobile-site-nav" hidden aria-label="Mobile site navigation"><a href="/about-us">About</a><a href="/events">Events</a><a href="/mini-competitions">Mini-Competitions</a><a href="#home" data-page-link="home">MariTools</a><a href="https://www.marihacks.com/">MariHacks</a><a href="mailto:team@marihacks.com?subject=Programming%20Club%20website%20issue">Report a bug</a><a href="mailto:team@marihacks.com">Email the club</a><a href="https://www.instagram.com/mari_programming_club/">Instagram</a><a href="https://discord.gg/c6JJw9d">Discord</a><a href="#account" data-page-link="account">Account</a><a class="mobile-signup" href="https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header">Sign up</a></nav>
-    </div>
-  </header>
+		<header class="site-header">
+			<div class="header-frame">
+				<a class="club-brand" href="/" aria-label="Marianopolis Programming Club, home">
+					<img src="../../../../static/logo-icon.svg" alt="" width="173" height="182" />
+					<span><b>Marianopolis</b><b>Programming Club</b></span>
+				</a>
+				<nav class="primary-nav" aria-label="Primary navigation">
+					<a href="/about-us">About</a><a href="/events">Events</a
+					><a href="/mini-competitions">Mini-Competitions</a
+					><a class="current" href="#home" data-page-link="home">MariTools</a>
+				</nav>
+				<div class="header-actions">
+					<nav class="header-contact" aria-label="Club contact">
+						<a
+							class="contact-link"
+							href="mailto:team@marihacks.com?subject=Programming%20Club%20website%20issue"
+							>Report a bug</a
+						>
+					</nav>
+					<div class="header-socials" aria-label="Club social links">
+						<a class="social-link" href="mailto:team@marihacks.com" aria-label="Email the club"
+							><svg viewBox="0 0 20 20" aria-hidden="true">
+								<rect x="2.5" y="4.5" width="15" height="11" rx="1" />
+								<path d="m3.5 6 6.5 5 6.5-5" /></svg></a
+						><a
+							class="social-link"
+							href="https://www.instagram.com/mari_programming_club/"
+							aria-label="Instagram"
+							><svg viewBox="0 0 20 20" aria-hidden="true">
+								<rect x="2.5" y="2.5" width="15" height="15" rx="4" />
+								<circle cx="10" cy="10" r="3.5" />
+								<circle cx="14.8" cy="5.3" r=".7" fill="currentColor" stroke="none" /></svg></a
+						><a class="social-link" href="https://discord.gg/c6JJw9d" aria-label="Discord"
+							><svg viewBox="0 0 20 20" aria-hidden="true">
+								<path
+									d="M5.2 5.5A12 12 0 0 1 10 4.3a12 12 0 0 1 4.8 1.2c1.2 1.8 1.8 3.8 1.7 6-.9 1.1-2 1.9-3.2 2.4l-.8-1.1c.7-.3 1.2-.6 1.7-1-.1.1-1.8 1.3-4.2 1.3s-4.1-1.2-4.2-1.3c.5.4 1 .7 1.7 1l-.8 1.1a9.5 9.5 0 0 1-3.2-2.4c-.1-2.2.5-4.2 1.7-6Z"
+								/>
+								<circle cx="7.5" cy="9.5" r="1" fill="currentColor" stroke="none" />
+								<circle cx="12.5" cy="9.5" r="1" fill="currentColor" stroke="none" /></svg
+						></a>
+					</div>
+					<div class="account-demo signed-out" id="account-demo">
+						<a
+							class="signup-link signed-out-only"
+							href="https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header"
+							>Sign up</a
+						>
+						<button
+							class="identity-button signed-in-only"
+							type="button"
+							aria-expanded="false"
+							aria-controls="account-menu"
+						>
+							<span>MS</span><b>Maya</b
+							><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m2.5 4.5 3.5 3 3.5-3" /></svg>
+						</button>
+						<div class="account-menu signed-in-only" id="account-menu" hidden>
+							<a href="#account" data-page-link="account">Your account</a
+							><button type="button" data-sign-out>Sign out</button>
+						</div>
+					</div>
+				</div>
+				<button
+					class="header-menu"
+					type="button"
+					aria-expanded="false"
+					aria-controls="mobile-site-nav"
+				>
+					Menu
+				</button>
+				<nav
+					class="mobile-site-nav"
+					id="mobile-site-nav"
+					hidden
+					aria-label="Mobile site navigation"
+				>
+					<a href="/about-us">About</a><a href="/events">Events</a
+					><a href="/mini-competitions">Mini-Competitions</a
+					><a href="#home" data-page-link="home">MariTools</a
+					><a href="https://www.marihacks.com/">MariHacks</a
+					><a href="mailto:team@marihacks.com?subject=Programming%20Club%20website%20issue"
+						>Report a bug</a
+					><a href="mailto:team@marihacks.com">Email the club</a
+					><a href="https://www.instagram.com/mari_programming_club/">Instagram</a
+					><a href="https://discord.gg/c6JJw9d">Discord</a>
+					<span class="mobile-account-demo signed-out" id="mobile-account-demo"
+						><a class="signed-in-only" href="#account" data-page-link="account">Account</a
+						><a
+							class="mobile-signup signed-out-only"
+							href="https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header"
+							>Sign up</a
+						></span
+					>
+				</nav>
+			</div>
+		</header>
 
-  <div class="preview-bar"><label for="page-picker">Preview surface</label><select id="page-picker"><option value="home">Home</option><option value="schedule" selected>Schedule</option><option value="free-time">Free time board</option><option value="free-boards">Free time boards</option><option value="semester">Semester</option><option value="catalog">Catalog</option><option value="clubs">Clubs</option><option value="forum">Forum</option><option value="thread">Thread</option><option value="account">Account</option><option value="tutorial">Tutorial overlay</option></select><button class="account-state-toggle" type="button" data-sign-in>Show signed-in header</button><span>Static design review</span></div>
+		<div class="preview-bar">
+			<label for="page-picker">Preview surface</label
+			><select id="page-picker">
+				<option value="home">Home</option>
+				<option value="schedule" selected>Schedule</option>
+				<option value="free-time">Free time board</option>
+				<option value="free-boards">Free time boards</option>
+				<option value="semester">Semester</option>
+				<option value="catalog">Catalog</option>
+				<option value="clubs">Clubs</option>
+				<option value="club-detail">Club detail</option>
+				<option value="forum">Forum</option>
+				<option value="thread">Thread</option>
+				<option value="account">Account</option>
+				<option value="tutorial">Tutorial overlay</option></select
+			><button class="account-state-toggle" type="button" data-sign-in>Show signed-in header</button
+			><span>Static design review</span>
+		</div>
 
-  <div class="app-shell">
-    <div class="sidebar-scrim" hidden></div>
-    <aside class="tools-sidebar" id="tools-sidebar">
-      <div class="tools-brand-row"><a class="tools-wordmark" href="#home" data-page-link="home"><span class="tools-glyph" aria-hidden="true"><i></i><i></i><i></i></span><b>MariTools</b></a><button class="sidebar-close" type="button" aria-label="Close tools menu">Close</button></div>
-      <p class="tools-context">Student utilities</p>
-      <nav class="tools-nav" aria-label="MariTools sections">
-        <section><h2>Schedule</h2><a class="is-current" href="#schedule" data-page-link="schedule"><span>Schedule</span><i aria-hidden="true"></i></a><a href="#free-time" data-page-link="free-time"><span>Free time</span><i aria-hidden="true"></i></a></section>
-        <section><h2>Courses</h2><a href="#semester" data-page-link="semester"><span>Semester</span><i aria-hidden="true"></i></a><a href="#catalog" data-page-link="catalog"><span>Catalog</span><i aria-hidden="true"></i></a></section>
-        <section><h2>Student life</h2><a href="#clubs" data-page-link="clubs"><span>Clubs</span><i aria-hidden="true"></i></a><a href="#forum" data-page-link="forum"><span>Forum</span><i aria-hidden="true"></i></a></section>
-      </nav>
-      <div class="sidebar-note"><span>Winter 2026</span><b>Schedule saved</b></div><a class="back-club" href="/">Back to club home <span aria-hidden="true">↗</span></a>
-    </aside>
+		<div class="app-shell">
+			<div class="sidebar-scrim" hidden></div>
+			<aside class="tools-sidebar" id="tools-sidebar">
+				<div class="tools-brand-row">
+					<a class="tools-wordmark" href="#home" data-page-link="home"
+						><span class="tools-glyph" aria-hidden="true"><i></i><i></i><i></i></span
+						><b>MariTools</b></a
+					><button class="sidebar-close" type="button" aria-label="Close tools menu">Close</button>
+				</div>
+				<p class="tools-context">Student utilities</p>
+				<nav class="tools-nav" aria-label="MariTools sections">
+					<section>
+						<h2>Schedule</h2>
+						<a class="is-current" href="#schedule" data-page-link="schedule"
+							><span>Schedule</span><i aria-hidden="true"></i></a
+						><a href="#free-time" data-page-link="free-time"
+							><span>Free time</span><i aria-hidden="true"></i
+						></a>
+					</section>
+					<section>
+						<h2>Courses</h2>
+						<a href="#semester" data-page-link="semester"
+							><span>Semester</span><i aria-hidden="true"></i></a
+						><a href="#catalog" data-page-link="catalog"
+							><span>Catalog</span><i aria-hidden="true"></i
+						></a>
+					</section>
+					<section>
+						<h2>Student life</h2>
+						<a href="#clubs" data-page-link="clubs"><span>Clubs</span><i aria-hidden="true"></i></a
+						><a href="#forum" data-page-link="forum"
+							><span>Forum</span><i aria-hidden="true"></i
+						></a>
+					</section>
+				</nav>
+				<div class="sidebar-note"><span>Winter 2026</span><b>Schedule saved</b></div>
+				<a class="back-club" href="/">Back to club home <span aria-hidden="true">↗</span></a>
+			</aside>
 
-    <main class="workspace" id="workspace"><button class="tools-menu" id="tools-menu" type="button" aria-expanded="false" aria-controls="tools-sidebar"><span aria-hidden="true">☰</span> Tools</button>
-      <section class="page page-home" data-page="home" hidden>
-        <div class="home-intro"><div><span class="breadcrumb">MariTools / Home</span><h1>Six useful places.<br>One readable semester.</h1><p>Build a schedule, find a common break, check course facts, and stay connected to campus life.</p></div><div class="today-ticket"><span>Today</span><strong>20</strong><p>3 classes<br>Next at 11:15</p></div></div>
-        <div class="tool-index"><div class="tool-group"><h2>Schedule</h2><p>Plan and compare the week.</p></div><a href="#schedule" data-page-link="schedule"><b>Schedule</b><span>Import your Omnivox list into a weekly calendar.</span><i>Open →</i></a><a href="#free-boards" data-page-link="free-boards"><b>Free time</b><span>Create a board and find overlap without requiring an account.</span><i>Open →</i></a><div class="tool-group"><h2>Courses</h2><p>Keep the term legible.</p></div><a href="#semester" data-page-link="semester"><b>Semester</b><span>Review dates extracted from course outlines.</span><i>Open →</i></a><a href="#catalog" data-page-link="catalog"><b>Catalog</b><span>Browse assessments and book references shared by students.</span><i>Open →</i></a><div class="tool-group"><h2>Student life</h2><p>Find people and answers.</p></div><a href="#clubs" data-page-link="clubs"><b>Clubs</b><span>Read verified focus, meeting, and contact details.</span><i>Open →</i></a><a href="#forum" data-page-link="forum"><b>Forum</b><span>Ask useful questions and keep course context attached.</span><i>Open →</i></a></div>
-      </section>
+			<main class="workspace" id="workspace">
+				<button
+					class="tools-menu"
+					id="tools-menu"
+					type="button"
+					aria-expanded="false"
+					aria-controls="tools-sidebar"
+				>
+					<span aria-hidden="true">☰</span> Tools
+				</button>
+				<section class="page page-home" data-page="home" hidden>
+					<div class="home-intro">
+						<div>
+							<h1>Six useful places.<br />One readable semester.</h1>
+							<p>
+								Build a schedule, find a common break, check course facts, and stay connected to
+								campus life.
+							</p>
+						</div>
+						<div class="today-ticket">
+							<span>Today</span><strong>20</strong>
+							<p>3 classes<br />Next at 11:15</p>
+						</div>
+					</div>
+					<div class="tool-index">
+						<div class="tool-group">
+							<h2>Schedule</h2>
+							<p>Plan and compare the week.</p>
+						</div>
+						<a href="#schedule" data-page-link="schedule"
+							><b>Schedule</b><span>Import your Omnivox list into a weekly calendar.</span
+							><i>Open →</i></a
+						><a href="#free-boards" data-page-link="free-boards"
+							><b>Free time</b
+							><span>Create a board and find overlap without requiring an account.</span
+							><i>Open →</i></a
+						>
+						<div class="tool-group">
+							<h2>Courses</h2>
+							<p>Keep the term legible.</p>
+						</div>
+						<a href="#semester" data-page-link="semester"
+							><b>Semester</b><span>Review dates extracted from course outlines.</span
+							><i>Open →</i></a
+						><a href="#catalog" data-page-link="catalog"
+							><b>Catalog</b><span>Browse assessments and book references shared by students.</span
+							><i>Open →</i></a
+						>
+						<div class="tool-group">
+							<h2>Student life</h2>
+							<p>Find people and answers.</p>
+						</div>
+						<a href="#clubs" data-page-link="clubs"
+							><b>Clubs</b><span>Read verified focus, meeting, and contact details.</span
+							><i>Open →</i></a
+						><a href="#forum" data-page-link="forum"
+							><b>Forum</b><span>Ask useful questions and keep course context attached.</span
+							><i>Open →</i></a
+						>
+					</div>
+					<nav class="pagination">
+						<button disabled>← Previous</button><span>Page 1 of 7</span><button>Next →</button>
+					</nav>
+				</section>
 
-      <section class="page page-schedule is-active" data-page="schedule">
-        <div class="utility-bar"><div><span class="breadcrumb">Schedule / My week</span><h1>Week of January 20</h1></div><div class="utility-actions"><button class="quiet-button" type="button">Today</button><div class="arrow-pair"><button type="button" aria-label="Previous week">←</button><button type="button" aria-label="Next week">→</button></div><button class="text-button" type="button">Download .ics</button><button class="primary-button" type="button">Add to Google Calendar</button><button class="quiet-button import-toggle" type="button" aria-expanded="false">Import Omnivox</button></div></div>
-        <div class="schedule-stage drawer-hidden"><div class="calendar-frame schedule-calendar" aria-label="Illustrative weekly course schedule"><div class="calendar-corner"><span>EST</span></div><div class="day-head is-today"><span>Mon</span><strong>20</strong><i>Today</i></div><div class="day-head"><span>Tue</span><strong>21</strong></div><div class="day-head"><span>Wed</span><strong>22</strong></div><div class="day-head"><span>Thu</span><strong>23</strong></div><div class="day-head"><span>Fri</span><strong>24</strong></div><div class="time-rail"><span style="--row:0">8 AM</span><span style="--row:1">9 AM</span><span style="--row:2">10 AM</span><span style="--row:3">11 AM</span><span style="--row:4">12 PM</span><span style="--row:5">1 PM</span><span style="--row:6">2 PM</span><span style="--row:7">3 PM</span><span style="--row:8">4 PM</span><span style="--row:9">5 PM</span><span style="--row:10">6 PM</span></div>
-          <div class="day-column today-column"><article class="event event-blue" style="--start:1;--duration:1.5"><strong>Calculus II</strong><span>201-NYB-05</span><small>9:00–10:30<br>A-301</small></article><article class="event event-ink" style="--start:3.25;--duration:1.75"><strong>General Chemistry</strong><span>202-NYA-05</span><small>11:15–1:00<br>C-203</small></article><article class="event event-line" style="--start:7;--duration:1.5"><strong>English</strong><span>603-101-MQ</span><small>3:00–4:30<br>A-205</small></article></div>
-          <div class="day-column"><article class="event event-slate" style="--start:.5;--duration:1.5"><strong>Mechanics</strong><span>203-NYA-05</span><small>8:30–10:00<br>C-401</small></article><article class="event event-pale" style="--start:4;--duration:2"><strong>Philosophy</strong><span>340-101-MQ</span><small>12:00–2:00<br>A-206</small></article><article class="event event-blue" style="--start:8;--duration:1.5"><strong>Calculus II</strong><span>201-NYB-05</span><small>4:00–5:30<br>A-301</small></article></div>
-          <div class="day-column"><article class="event event-ink" style="--start:1;--duration:2"><strong>Chemistry lab</strong><span>202-NYA-05</span><small>9:00–11:00<br>C-115</small></article><article class="event event-line conflict" style="--start:5;--duration:2;--lane:0"><strong>English</strong><span>603-101-MQ</span><small>1:00–3:00<br>A-205</small></article><article class="event event-danger conflict" style="--start:5.5;--duration:1.5;--lane:1"><b>Conflict</b><strong>Peer tutoring</strong><small>1:30–3:00<br>Library</small></article></div>
-          <div class="day-column"><article class="event event-slate" style="--start:.5;--duration:1.5"><strong>Mechanics</strong><span>203-NYA-05</span><small>8:30–10:00<br>C-401</small></article><article class="event event-pale" style="--start:3;--duration:2"><strong>Humanities</strong><span>345-102-MQ</span><small>11:00–1:00<br>A-310</small></article><article class="event event-ink" style="--start:7.5;--duration:2"><strong>Mechanics lab</strong><span>203-NYA-05</span><small>3:30–5:30<br>C-012</small></article></div>
-          <div class="day-column"><article class="event event-blue" style="--start:1;--duration:1.5"><strong>Calculus II</strong><span>201-NYB-05</span><small>9:00–10:30<br>A-301</small></article><article class="event event-line" style="--start:4.5;--duration:1.5"><strong>English</strong><span>603-101-MQ</span><small>12:30–2:00<br>A-205</small></article></div><div class="now-line"><span>10:18</span><i></i></div></div>
-          <aside class="import-drawer" aria-label="Import schedule"><div class="drawer-head"><div><span>Omnivox import</span><strong>Paste course list</strong></div><button class="drawer-close" type="button" aria-label="Close import drawer">×</button></div><p>Copy the compact numbered course list. Skip the schedule grid and personal details.</p><textarea aria-label="Omnivox course list" placeholder="Paste your copied schedule here…"></textarea><div class="parse-status"><span>8 classes detected</span><span>1 conflict</span></div><button class="primary-button wide" type="button">Review import</button><button class="text-button tutorial-again" type="button">Show tutorial again</button></aside></div>
-      </section>
+				<section class="page page-schedule is-active" data-page="schedule">
+					<div class="utility-bar">
+						<div>
+							<h1>Week of January 20</h1>
+						</div>
+						<div class="utility-actions">
+							<button class="quiet-button" type="button">Today</button>
+							<div class="arrow-pair">
+								<button type="button" aria-label="Previous week">←</button
+								><button type="button" aria-label="Next week">→</button>
+							</div>
+							<button class="primary-button calendar-export-open" type="button">
+								Add to Google Calendar</button
+							><button class="quiet-button import-toggle" type="button" aria-expanded="false">
+								Import Omnivox
+							</button>
+						</div>
+					</div>
+					<div class="schedule-stage drawer-hidden">
+						<div
+							class="calendar-frame schedule-calendar"
+							aria-label="Illustrative weekly course schedule"
+						>
+							<div class="calendar-corner"><span>EST</span></div>
+							<div class="day-head is-today"><span>Mon</span><strong>20</strong><i>Today</i></div>
+							<div class="day-head"><span>Tue</span><strong>21</strong></div>
+							<div class="day-head"><span>Wed</span><strong>22</strong></div>
+							<div class="day-head"><span>Thu</span><strong>23</strong></div>
+							<div class="day-head"><span>Fri</span><strong>24</strong></div>
+							<div class="time-rail">
+								<span style="--row: 0">8 AM</span><span style="--row: 1">9 AM</span
+								><span style="--row: 2">10 AM</span><span style="--row: 3">11 AM</span
+								><span style="--row: 4">12 PM</span><span style="--row: 5">1 PM</span
+								><span style="--row: 6">2 PM</span><span style="--row: 7">3 PM</span
+								><span style="--row: 8">4 PM</span><span style="--row: 9">5 PM</span
+								><span style="--row: 10">6 PM</span>
+							</div>
+							<div class="day-column today-column">
+								<article
+									class="event event-blue"
+									style="--start: 1; --duration: 1.5; --lane: 0; --lanes: 1"
+								>
+									<strong>Calculus II</strong><span>201-NYB-05</span
+									><small>9:00–10:30<br />A-301</small>
+								</article>
+								<article
+									class="event event-ink"
+									style="--start: 3.25; --duration: 1.75; --lane: 0; --lanes: 1"
+								>
+									<strong>General Chemistry</strong><span>202-NYA-05</span
+									><small>11:15–1:00<br />C-203</small>
+								</article>
+								<article
+									class="event event-line"
+									style="--start: 7; --duration: 1.5; --lane: 0; --lanes: 1"
+								>
+									<strong>English</strong><span>603-101-MQ</span><small>3:00–4:30<br />A-205</small>
+								</article>
+							</div>
+							<div class="day-column">
+								<article
+									class="event event-slate"
+									style="--start: 0.5; --duration: 1.5; --lane: 0; --lanes: 1"
+								>
+									<strong>Mechanics</strong><span>203-NYA-05</span
+									><small>8:30–10:00<br />C-401</small>
+								</article>
+								<article
+									class="event event-pale"
+									style="--start: 4; --duration: 2; --lane: 0; --lanes: 1"
+								>
+									<strong>Philosophy</strong><span>340-101-MQ</span
+									><small>12:00–2:00<br />A-206</small>
+								</article>
+								<article
+									class="event event-blue"
+									style="--start: 8; --duration: 1.5; --lane: 0; --lanes: 1"
+								>
+									<strong>Calculus II</strong><span>201-NYB-05</span
+									><small>4:00–5:30<br />A-301</small>
+								</article>
+							</div>
+							<div class="day-column">
+								<article
+									class="event event-ink"
+									style="--start: 1; --duration: 2; --lane: 0; --lanes: 1"
+								>
+									<strong>Chemistry lab</strong><span>202-NYA-05</span
+									><small>9:00–11:00<br />C-115</small>
+								</article>
+								<article
+									class="event event-line conflict"
+									style="--start: 5; --duration: 2; --lane: 0; --lanes: 2"
+								>
+									<strong>English</strong><span>603-101-MQ</span><small>1:00–3:00<br />A-205</small>
+								</article>
+								<article
+									class="event event-danger conflict"
+									style="--start: 5.5; --duration: 1.5; --lane: 1; --lanes: 2"
+								>
+									<b>Conflict</b><strong>Peer tutoring</strong><small>1:30–3:00<br />Library</small>
+								</article>
+							</div>
+							<div class="day-column">
+								<article
+									class="event event-slate"
+									style="--start: 0.5; --duration: 1.5; --lane: 0; --lanes: 1"
+								>
+									<strong>Mechanics</strong><span>203-NYA-05</span
+									><small>8:30–10:00<br />C-401</small>
+								</article>
+								<article
+									class="event event-pale"
+									style="--start: 3; --duration: 2; --lane: 0; --lanes: 1"
+								>
+									<strong>Humanities</strong><span>345-102-MQ</span
+									><small>11:00–1:00<br />A-310</small>
+								</article>
+								<article
+									class="event event-ink"
+									style="--start: 7.5; --duration: 2; --lane: 0; --lanes: 1"
+								>
+									<strong>Mechanics lab</strong><span>203-NYA-05</span
+									><small>3:30–5:30<br />C-012</small>
+								</article>
+							</div>
+							<div class="day-column">
+								<article
+									class="event event-blue"
+									style="--start: 1; --duration: 1.5; --lane: 0; --lanes: 1"
+								>
+									<strong>Calculus II</strong><span>201-NYB-05</span
+									><small>9:00–10:30<br />A-301</small>
+								</article>
+								<article
+									class="event event-line"
+									style="--start: 4.5; --duration: 1.5; --lane: 0; --lanes: 1"
+								>
+									<strong>English</strong><span>603-101-MQ</span
+									><small>12:30–2:00<br />A-205</small>
+								</article>
+							</div>
+							<div class="now-line"><span>10:18</span><i></i></div>
+						</div>
+						<aside class="import-drawer" aria-label="Import schedule">
+							<div class="drawer-head">
+								<div><span>Omnivox import</span><strong>Paste course list</strong></div>
+								<button class="drawer-close" type="button" aria-label="Close import drawer">
+									×
+								</button>
+							</div>
+							<p>
+								Copy the compact numbered course list. Skip the schedule grid and personal details.
+							</p>
+							<textarea
+								aria-label="Omnivox course list"
+								placeholder="Paste your copied schedule here…"
+							></textarea>
+							<div class="parse-status"><span>8 classes detected</span><span>1 conflict</span></div>
+							<button class="primary-button wide" type="button">Review import</button
+							><button class="text-button tutorial-again" type="button">Show tutorial again</button>
+						</aside>
+					</div>
+				</section>
 
-      <section class="page page-free" data-page="free-time" hidden>
-        <div class="utility-bar"><div><span class="breadcrumb">Free time / Study group</span><h1>Week of January 20</h1></div><div class="utility-actions"><button class="quiet-button">Today</button><div class="arrow-pair"><button>←</button><button>→</button></div><button class="quiet-button" data-page-link="free-boards">All boards</button><button class="primary-button">Save availability</button></div></div>
-        <div class="free-stage"><div class="paint-wrap"><div class="paint-toolbar"><div><strong>Drag to paint your free time</strong><span>Click or drag cells. Green bands show where everyone overlaps.</span></div><div class="paint-legend"><span><i class="legend-you"></i>Your free time</span><span><i class="legend-common"></i>Common free</span><button class="text-button clear-paint">Clear</button></div></div><div class="paint-grid" id="paint-grid" aria-label="Interactive free-time grid"></div><p class="no-login-caption">No login required. Anyone with the link can add availability using a display name.</p></div>
-          <aside class="board-panel"><div class="board-heading"><span>Free-time board</span><h2>Data Structures study group</h2></div><label class="share-field"><span>Share link</span><span><input value="maritools.ca/t/free/ds-lab" readonly><button class="copy-link">Copy</button></span></label><div class="members"><div><strong>Members</strong><span>3 added</span></div><ul><li><i class="member-dot maya"></i><span>Maya <small>You, editing</small></span></li><li><i class="member-dot alex"></i><span>Alex <small>Saved 8 min ago</small></span></li><li><i class="member-dot samira"></i><span>Samira <small>Saved yesterday</small></span></li></ul></div><label class="guest-field"><span>Display name</span><input value="Maya" placeholder="How others will see you"><small>Shown when you are not signed in.</small></label><button class="panel-button signed-board-action" hidden>Use my schedule</button><button class="panel-button">Import Omnivox</button><button class="primary-button wide">Save availability</button><p class="editing-as">You’re editing as Guest, Maya.</p></aside></div>
-      </section>
+				<section class="page page-free" data-page="free-time" hidden>
+					<div class="utility-bar">
+						<div>
+							<h1>Week of January 20</h1>
+						</div>
+						<div class="utility-actions">
+							<button class="quiet-button">Today</button>
+							<div class="arrow-pair"><button>←</button><button>→</button></div>
+							<button class="quiet-button" data-page-link="free-boards">All boards</button
+							><button class="primary-button">Save availability</button>
+						</div>
+					</div>
+					<div class="free-stage">
+						<div class="paint-wrap">
+							<div class="paint-toolbar">
+								<div>
+									<strong>Drag to paint your free time</strong
+									><span>Click or drag cells. Green bands show where everyone overlaps.</span>
+								</div>
+								<div class="paint-legend">
+									<span><i class="legend-you"></i>Your free time</span
+									><span><i class="legend-common"></i>Common free</span
+									><button class="text-button clear-paint">Clear</button>
+								</div>
+							</div>
+							<div class="paint-grid" id="paint-grid" aria-label="Interactive free-time grid"></div>
+							<p class="no-login-caption">
+								No login required. Anyone with the link can add availability using a display name.
+							</p>
+						</div>
+						<aside class="board-panel">
+							<div class="board-heading">
+								<span>Free-time board</span>
+								<h2>Data Structures study group</h2>
+							</div>
+							<label class="share-field"
+								><span>Share link</span
+								><span
+									><input value="maritools.ca/t/free/ds-lab" readonly /><button class="copy-link">
+										Copy
+									</button></span
+								></label
+							>
+							<div class="members">
+								<div><strong>Members</strong><span>3 added</span></div>
+								<ul>
+									<li>
+										<i class="member-dot maya"></i><span>Maya <small>You, editing</small></span>
+									</li>
+									<li>
+										<i class="member-dot alex"></i><span>Alex <small>Saved 8 min ago</small></span>
+									</li>
+									<li>
+										<i class="member-dot samira"></i
+										><span>Samira <small>Saved yesterday</small></span>
+									</li>
+								</ul>
+							</div>
+							<label class="guest-field"
+								><span>Display name</span
+								><input value="Maya" placeholder="How others will see you" /><small
+									>Shown when you are not signed in.</small
+								></label
+							><button class="panel-button signed-board-action" hidden>Use my schedule</button
+							><button class="panel-button">Import Omnivox</button
+							><button class="primary-button wide">Save availability</button>
+							<p class="editing-as">You’re editing as Guest, Maya.</p>
+						</aside>
+					</div>
+				</section>
 
-      <section class="page page-free-boards" data-page="free-boards" hidden><header class="index-title"><div><span class="breadcrumb">Schedule / Free time</span><h1>Your boards</h1><p>Create a board, share its link, and find a time that works.</p></div><button class="primary-button">Create board</button></header><div class="boards-index"><div class="boards-head"><span>Board</span><span>Members</span><span>Your response</span><span>Updated</span><span></span></div><a href="#free-time" data-page-link="free-time"><span><strong>Data Structures study group</strong><small>Created by you</small></span><b>3</b><span class="status-ready">Saved</span><time>8 min ago</time><i>Open →</i></a><a href="#free-time" data-page-link="free-time"><span><strong>Club executives meeting</strong><small>Joined by link</small></span><b>7</b><span class="status-needed">Add availability</span><time>Yesterday</time><i>Open →</i></a><a href="#free-time" data-page-link="free-time"><span><strong>Mechanics lab partners</strong><small>Created by Jordan</small></span><b>4</b><span class="status-ready">Saved</span><time>Aug 22</time><i>Open →</i></a></div><div class="boards-help"><strong>No account needed</strong><p>Guest boards stay accessible through their private link. Sign in only if you want them listed here across devices.</p></div></section>
+				<section class="page page-free-boards" data-page="free-boards" hidden>
+					<header class="index-title">
+						<div>
+							<h1>Your boards</h1>
+							<p>Create a board, share its link, and find a time that works.</p>
+						</div>
+						<button class="primary-button">Create board</button>
+					</header>
+					<div class="boards-index">
+						<div class="boards-head">
+							<span>Board</span><span>Members</span><span>Your response</span><span>Updated</span
+							><span></span>
+						</div>
+						<a href="#free-time" data-page-link="free-time"
+							><span><strong>Data Structures study group</strong><small>Created by you</small></span
+							><b>3</b><span class="status-ready">Saved</span><time>8 min ago</time><i>Open →</i></a
+						><a href="#free-time" data-page-link="free-time"
+							><span><strong>Club executives meeting</strong><small>Joined by link</small></span
+							><b>7</b><span class="status-needed">Add availability</span><time>Yesterday</time
+							><i>Open →</i></a
+						><a href="#free-time" data-page-link="free-time"
+							><span><strong>Mechanics lab partners</strong><small>Created by Jordan</small></span
+							><b>4</b><span class="status-ready">Saved</span><time>Aug 22</time><i>Open →</i></a
+						>
+					</div>
+					<div class="boards-help">
+						<strong>No account needed</strong>
+						<p>
+							Guest boards stay accessible through their private link. Sign in only if you want them
+							listed here across devices.
+						</p>
+					</div>
+				</section>
 
-      <section class="page page-semester" data-page="semester" hidden><header class="index-title"><div><span class="breadcrumb">Courses / Semester</span><h1>Build your semester</h1><p>Open a course, check every extracted fact, then save it to your plan.</p></div><button class="primary-button">Add course outline</button></header><div class="semester-layout"><aside class="course-stack"><div class="stack-head"><strong>Winter 2026</strong><span>4 courses</span></div><button class="is-selected"><span>201-NYB-05</span><strong>Calculus II</strong><small>1 date missing</small></button><button><span>202-NYA-05</span><strong>General Chemistry</strong><small>Ready to save</small></button><button><span>203-NYA-05</span><strong>Mechanics</strong><small>Outline needed</small></button><button><span>603-101-MQ</span><strong>College English</strong><small>Saved</small></button></aside><div class="review-sheet"><div class="sheet-head"><div><span>Extraction review</span><h2>Calculus II</h2><p>Calculus-II-outline.pdf, 12 pages</p></div><span class="course-ref">201-NYB-05, Sec. 02</span></div><div class="review-row header"><span>Assessment</span><span>Date</span><span>Weight</span><span></span></div><div class="review-row"><input value="Quiz 1" aria-label="Assessment"><input value="Feb 03" aria-label="Date"><input value="10%" aria-label="Weight"><button>×</button></div><div class="review-row"><input value="Midterm exam" aria-label="Assessment"><input value="Mar 06" aria-label="Date"><input value="25%" aria-label="Weight"><button>×</button></div><div class="review-row warned"><input value="Final project" aria-label="Assessment"><input value="Date missing" aria-label="Date"><input value="20%" aria-label="Weight"><button>×</button></div><p class="field-error">Add a date for Final project before saving.</p><button class="add-row">+ Add assessment</button><label class="share-band"><input type="checkbox" checked><span><strong>Share course facts with the catalog</strong><small>Only the course code, instructor, assessments, and book references are shared.</small></span></label><div class="sheet-actions"><span>1 field needs attention</span><button class="primary-button">Save semester</button></div></div></div></section>
+				<section class="page page-semester" data-page="semester" hidden>
+					<div class="semester-layout">
+						<aside class="course-stack">
+							<div class="stack-head">
+								<div><strong>Winter 2026</strong><span>4 courses</span></div>
+								<button class="primary-button add-outline">Add course outline</button>
+							</div>
+							<button class="is-selected">
+								<span>201-NYB-05</span><strong>Calculus II</strong
+								><small>1 date missing</small></button
+							><button>
+								<span>202-NYA-05</span><strong>General Chemistry</strong
+								><small>Ready to save</small></button
+							><button>
+								<span>203-NYA-05</span><strong>Mechanics</strong
+								><small>Outline needed</small></button
+							><button>
+								<span>603-101-MQ</span><strong>College English</strong><small>Saved</small>
+							</button>
+						</aside>
+						<div class="review-sheet">
+							<div class="sheet-head">
+								<div>
+									<span>Extraction review</span>
+									<h2>Calculus II</h2>
+									<p>Calculus-II-outline.pdf, 12 pages</p>
+								</div>
+								<span class="course-ref">201-NYB-05, Sec. 02</span>
+							</div>
+							<div class="review-row header">
+								<span>Assessment</span><span>Date</span><span>Weight</span><span></span>
+							</div>
+							<div class="review-row">
+								<input value="Quiz 1" aria-label="Assessment" /><input
+									value="Feb 03"
+									aria-label="Date"
+								/><input value="10%" aria-label="Weight" /><button>×</button>
+							</div>
+							<div class="review-row">
+								<input value="Midterm exam" aria-label="Assessment" /><input
+									value="Mar 06"
+									aria-label="Date"
+								/><input value="25%" aria-label="Weight" /><button>×</button>
+							</div>
+							<div class="review-row warned">
+								<input value="Final project" aria-label="Assessment" /><input
+									value="Date missing"
+									aria-label="Date"
+								/><input value="20%" aria-label="Weight" /><button>×</button>
+							</div>
+							<p class="field-error">Add a date for Final project before saving.</p>
+							<button class="add-row">+ Add assessment</button
+							><label class="share-band"
+								><input type="checkbox" checked /><span
+									><strong>Share course facts with the catalog</strong
+									><small
+										>Only the course code, instructor, assessments, and book references are
+										shared.</small
+									></span
+								></label
+							>
+							<div class="sheet-actions">
+								<span>1 field needs attention</span
+								><button class="primary-button">Save semester</button>
+							</div>
+						</div>
+					</div>
+				</section>
 
-      <section class="page page-catalog" data-page="catalog" hidden><header class="catalog-titlebar"><div><span class="breadcrumb">Courses / Shared index</span><h1>Course catalog</h1></div><p>Student-contributed facts for planning a semester. Books are reference only.</p></header><form class="index-filters"><label class="search-field"><span>⌕</span><input aria-label="Search courses" placeholder="Course code, title, or teacher"></label><label><span>Term</span><select><option>Winter 2026</option><option>All terms</option></select></label><label><span>Discipline</span><select><option>All disciplines</option><option>Computer Science</option><option>Mathematics</option></select></label><button class="dark-button">Search</button></form><div class="catalog-count"><strong>148 courses</strong><span>Updated from reviewed student outlines</span><button>Sort by course code ↓</button></div><div class="catalog-index"><div class="catalog-head"><span>Code</span><span>Course</span><span>Category</span><span>Section / teacher</span><span>Term</span><span></span></div>
-        <article class="catalog-row catalog-row--open"><strong class="course-code">420-202-MA</strong><div><h2>Data Structures</h2><p>7 assessments, 1 reference book</p></div><span>Computer Science</span><span>00001<br><small>Nadia Tremblay</small></span><span>Winter 2026</span><button class="catalog-toggle" aria-expanded="true">−</button><div class="catalog-detail"><div><h3>Assessment outline</h3><dl><div><dt>Assignments</dt><dd>25%</dd></div><div><dt>Midterm</dt><dd>25%</dd></div><div><dt>Final project</dt><dd>35%</dd></div><div><dt>Participation</dt><dd>15%</dd></div></dl></div><div><h3>Book reference</h3><p><strong>Algorithms, 4th edition</strong><br>Robert Sedgewick and Kevin Wayne<br><span>ISBN 978-0321573513</span></p><a href="#">View publisher details ↗</a></div></div></article>
-        <article class="catalog-row"><strong class="course-code">201-NYA-05</strong><div><h2>Linear Algebra</h2><p>6 assessments, no book listed</p></div><span>Mathematics</span><span>00003<br><small>Marc Deslauriers</small></span><span>Winter 2026</span><button class="catalog-toggle" aria-expanded="false">+</button><div class="catalog-detail"><div><h3>Assessment outline</h3><dl><div><dt>Assignments</dt><dd>20%</dd></div><div><dt>Midterms</dt><dd>40%</dd></div><div><dt>Final</dt><dd>40%</dd></div></dl></div><div><h3>Book reference</h3><p>No book reference was shared for this section.</p></div></div></article>
-        <article class="catalog-row"><strong class="course-code">203-NYA-05</strong><div><h2>Mechanics</h2><p>8 assessments, 1 reference book</p></div><span>Physics</span><span>00004<br><small>Elena Rossi</small></span><span>Winter 2026</span><button class="catalog-toggle" aria-expanded="false">+</button><div class="catalog-detail"><div><h3>Assessment outline</h3><dl><div><dt>Labs</dt><dd>30%</dd></div><div><dt>Midterm</dt><dd>25%</dd></div><div><dt>Final</dt><dd>45%</dd></div></dl></div><div><h3>Book reference</h3><p><strong>University Physics</strong><br>Young and Freedman</p></div></div></article>
-        <article class="catalog-row"><strong class="course-code">603-101-MQ</strong><div><h2>Introduction to College English</h2><p>5 assessments, 3 readings</p></div><span>English</span><span>00007<br><small>Sarah Ahmed</small></span><span>Winter 2026</span><button class="catalog-toggle" aria-expanded="false">+</button><div class="catalog-detail"><div><h3>Assessment outline</h3><dl><div><dt>Essays</dt><dd>60%</dd></div><div><dt>Participation</dt><dd>15%</dd></div><div><dt>Final</dt><dd>25%</dd></div></dl></div><div><h3>Book reference</h3><p>Three readings listed in the course outline.</p></div></div></article></div></section>
+				<section class="page page-catalog" data-page="catalog" hidden>
+					<header class="catalog-titlebar">
+						<div>
+							<h1>Course catalog</h1>
+						</div>
+						<p>Student-contributed facts for planning a semester. Books are reference only.</p>
+					</header>
+					<form class="index-filters">
+						<label class="search-field"
+							><span>⌕</span
+							><input
+								aria-label="Search courses"
+								placeholder="Course code, title, or teacher" /></label
+						><label
+							><span>Term</span
+							><select>
+								<option>Winter 2026</option>
+								<option>All terms</option>
+							</select></label
+						><label
+							><span>Discipline</span
+							><select>
+								<option>All disciplines</option>
+								<option>Computer Science</option>
+								<option>Mathematics</option>
+							</select></label
+						><button class="dark-button">Search</button>
+					</form>
+					<div class="catalog-count">
+						<strong>148 courses</strong><span>Updated from reviewed student outlines</span
+						><button>Sort by course code ↓</button>
+					</div>
+					<div class="catalog-index">
+						<div class="catalog-head">
+							<span>Code</span><span>Course</span><span>Category</span><span>Section / teacher</span
+							><span>Term</span><span></span>
+						</div>
+						<article class="catalog-row catalog-row--open">
+							<strong class="course-code">420-202-MA</strong>
+							<div>
+								<h2>Data Structures</h2>
+								<p>7 assessments, 1 reference book</p>
+							</div>
+							<span>Computer Science</span><span>00001<br /><small>Nadia Tremblay</small></span
+							><span>Winter 2026</span
+							><button class="catalog-toggle" aria-expanded="true">−</button>
+							<div class="catalog-detail">
+								<div>
+									<h3>Assessment outline</h3>
+									<dl>
+										<div>
+											<dt>Assignments</dt>
+											<dd>25%</dd>
+										</div>
+										<div>
+											<dt>Midterm</dt>
+											<dd>25%</dd>
+										</div>
+										<div>
+											<dt>Final project</dt>
+											<dd>35%</dd>
+										</div>
+										<div>
+											<dt>Participation</dt>
+											<dd>15%</dd>
+										</div>
+									</dl>
+								</div>
+								<div>
+									<h3>Book reference</h3>
+									<p>
+										<strong>Algorithms, 4th edition</strong><br />Robert Sedgewick and Kevin
+										Wayne<br /><span>ISBN 978-0321573513</span>
+									</p>
+									<a href="#">View publisher details ↗</a>
+								</div>
+							</div>
+						</article>
+						<article class="catalog-row">
+							<strong class="course-code">201-NYA-05</strong>
+							<div>
+								<h2>Linear Algebra</h2>
+								<p>6 assessments, no book listed</p>
+							</div>
+							<span>Mathematics</span><span>00003<br /><small>Marc Deslauriers</small></span
+							><span>Winter 2026</span
+							><button class="catalog-toggle" aria-expanded="false">+</button>
+							<div class="catalog-detail">
+								<div>
+									<h3>Assessment outline</h3>
+									<dl>
+										<div>
+											<dt>Assignments</dt>
+											<dd>20%</dd>
+										</div>
+										<div>
+											<dt>Midterms</dt>
+											<dd>40%</dd>
+										</div>
+										<div>
+											<dt>Final</dt>
+											<dd>40%</dd>
+										</div>
+									</dl>
+								</div>
+								<div>
+									<h3>Book reference</h3>
+									<p>No book reference was shared for this section.</p>
+								</div>
+							</div>
+						</article>
+						<article class="catalog-row">
+							<strong class="course-code">203-NYA-05</strong>
+							<div>
+								<h2>Mechanics</h2>
+								<p>8 assessments, 1 reference book</p>
+							</div>
+							<span>Physics</span><span>00004<br /><small>Elena Rossi</small></span
+							><span>Winter 2026</span
+							><button class="catalog-toggle" aria-expanded="false">+</button>
+							<div class="catalog-detail">
+								<div>
+									<h3>Assessment outline</h3>
+									<dl>
+										<div>
+											<dt>Labs</dt>
+											<dd>30%</dd>
+										</div>
+										<div>
+											<dt>Midterm</dt>
+											<dd>25%</dd>
+										</div>
+										<div>
+											<dt>Final</dt>
+											<dd>45%</dd>
+										</div>
+									</dl>
+								</div>
+								<div>
+									<h3>Book reference</h3>
+									<p><strong>University Physics</strong><br />Young and Freedman</p>
+								</div>
+							</div>
+						</article>
+						<article class="catalog-row">
+							<strong class="course-code">603-101-MQ</strong>
+							<div>
+								<h2>Introduction to College English</h2>
+								<p>5 assessments, 3 readings</p>
+							</div>
+							<span>English</span><span>00007<br /><small>Sarah Ahmed</small></span
+							><span>Winter 2026</span
+							><button class="catalog-toggle" aria-expanded="false">+</button>
+							<div class="catalog-detail">
+								<div>
+									<h3>Assessment outline</h3>
+									<dl>
+										<div>
+											<dt>Essays</dt>
+											<dd>60%</dd>
+										</div>
+										<div>
+											<dt>Participation</dt>
+											<dd>15%</dd>
+										</div>
+										<div>
+											<dt>Final</dt>
+											<dd>25%</dd>
+										</div>
+									</dl>
+								</div>
+								<div>
+									<h3>Book reference</h3>
+									<p>Three readings listed in the course outline.</p>
+								</div>
+							</div>
+						</article>
+					</div>
+				</section>
 
-      <section class="page page-clubs" data-page="clubs" hidden><header class="catalog-titlebar"><div><span class="breadcrumb">Student life / Directory</span><h1>Clubs at Marianopolis</h1></div><p>Verified student groups, what they do, and where to find them.</p></header><form class="index-filters clubs-filters"><label class="search-field"><span>⌕</span><input placeholder="Search clubs and interests"></label><label><span>Category</span><select><option>All categories</option><option>Academic</option><option>Creative</option></select></label><button class="dark-button">Filter</button></form><div class="club-index"><div class="club-head"><span>Organization</span><span>Focus</span><span>Meeting rhythm</span><span>Contact</span></div><article class="club-row"><div><span class="club-initials">PC</span><div><h2>Programming Club</h2><p>Workshops, peer help, and small builds for any experience level.</p></div></div><span>Technology</span><span>Weekly workshops</span><a href="#">Open listing ↗</a></article><article class="club-row"><div><span class="club-initials">DS</span><div><h2>Debate Society</h2><p>Practice rounds, public speaking, and intercollegiate events.</p></div></div><span>Academic</span><span>Wednesday lunch</span><a href="#">Open listing ↗</a></article><article class="club-row"><div><span class="club-initials">EC</span><div><h2>Environmental Committee</h2><p>Campus sustainability projects and community volunteering.</p></div></div><span>Community</span><span>Twice monthly</span><a href="#">Open listing ↗</a></article><article class="club-row"><div><span class="club-initials">FM</span><div><h2>Film Makers</h2><p>Short films, editing sessions, screenings, and production crews.</p></div></div><span>Creative</span><span>Friday afternoon</span><a href="#">Open listing ↗</a></article><article class="club-row"><div><span class="club-initials">BM</span><div><h2>Black Students' Association</h2><p>Community, cultural programming, advocacy, and shared events.</p></div></div><span>Community</span><span>Biweekly</span><a href="#">Open listing ↗</a></article></div><aside class="submit-club"><div><strong>Missing a group?</strong><h2>Add or correct a club listing</h2></div><p>Sign in to submit official links or updated meeting information. Staff review submissions before they appear.</p><button class="primary-button">Submit a listing</button></aside></section>
+				<section class="page page-clubs" data-page="clubs" hidden>
+					<header class="catalog-titlebar">
+						<div>
+							<h1>Clubs at Marianopolis</h1>
+						</div>
+						<p>Verified student groups, what they do, and where to find them.</p>
+					</header>
+					<form class="index-filters clubs-filters">
+						<label class="search-field"
+							><span>⌕</span><input placeholder="Search clubs and interests" /></label
+						><label
+							><span>Category</span
+							><select>
+								<option>All categories</option>
+								<option>Academic</option>
+								<option>Creative</option>
+							</select></label
+						><button class="dark-button">Filter</button>
+					</form>
+					<div class="club-index">
+						<div class="club-head">
+							<span>Organization</span><span>Focus</span><span>Meeting rhythm</span
+							><span>Contact</span>
+						</div>
+						<article class="club-row">
+							<div>
+								<span class="club-initials">PC</span>
+								<div>
+									<h2>Programming Club</h2>
+									<p>Workshops, peer help, and small builds for any experience level.</p>
+								</div>
+							</div>
+							<span>Technology</span><span>Weekly workshops</span
+							><a href="#club-detail" data-page-link="club-detail">Open listing ↗</a>
+						</article>
+						<article class="club-row">
+							<div>
+								<span class="club-initials">DS</span>
+								<div>
+									<h2>Debate Society</h2>
+									<p>Practice rounds, public speaking, and intercollegiate events.</p>
+								</div>
+							</div>
+							<span>Academic</span><span>Wednesday lunch</span
+							><a href="#club-detail" data-page-link="club-detail">Open listing ↗</a>
+						</article>
+						<article class="club-row">
+							<div>
+								<span class="club-initials">EC</span>
+								<div>
+									<h2>Environmental Committee</h2>
+									<p>Campus sustainability projects and community volunteering.</p>
+								</div>
+							</div>
+							<span>Community</span><span>Twice monthly</span
+							><a href="#club-detail" data-page-link="club-detail">Open listing ↗</a>
+						</article>
+						<article class="club-row">
+							<div>
+								<span class="club-initials">FM</span>
+								<div>
+									<h2>Film Makers</h2>
+									<p>Short films, editing sessions, screenings, and production crews.</p>
+								</div>
+							</div>
+							<span>Creative</span><span>Friday afternoon</span
+							><a href="#club-detail" data-page-link="club-detail">Open listing ↗</a>
+						</article>
+						<article class="club-row">
+							<div>
+								<span class="club-initials">BM</span>
+								<div>
+									<h2>Black Students' Association</h2>
+									<p>Community, cultural programming, advocacy, and shared events.</p>
+								</div>
+							</div>
+							<span>Community</span><span>Biweekly</span
+							><a href="#club-detail" data-page-link="club-detail">Open listing ↗</a>
+						</article>
+					</div>
+					<aside class="submit-club">
+						<div>
+							<strong>Missing a group?</strong>
+							<h2>Add or correct a club listing</h2>
+						</div>
+						<p>
+							Sign in to submit official links or updated meeting information. Staff review
+							submissions before they appear.
+						</p>
+						<button class="primary-button">Submit a listing</button>
+					</aside>
+				</section>
 
-      <section class="page page-forum" data-page="forum" hidden><header class="forum-titlebar"><div><span class="breadcrumb">Student life / Forum</span><h1>Campus discussions</h1></div><div class="forum-tabs"><button class="is-active">Latest</button><button>Courses</button><button>Student life</button><button>Unanswered <span>8</span></button></div></header><div class="forum-toolbar"><label class="search-field"><span>⌕</span><input placeholder="Search discussions"></label><label><span>Course</span><select><option>Every course</option><option>420-202-MA</option></select></label><button class="primary-button">Start a thread</button></div><div class="topic-list"><div class="topic-head"><span>Topic</span><span>Category</span><span>Course</span><span>Replies</span><span>Latest</span></div><a class="topic-row pinned" href="#thread" data-page-link="thread"><div><h2>How to ask for course help here</h2><p>Start with what you tried and remove personal information.</p></div><span>Forum guide</span><span>General</span><strong>3</strong><time>Sep 15<br><small>Staff</small></time></a><a class="topic-row" href="#thread" data-page-link="thread"><div><h2>What should I review before the first Data Structures lab?</h2><p>Coming from 420-101 and trying to get ahead this weekend.</p></div><span>Course help</span><span class="course-chip">420-202-MA</span><strong>12</strong><time>8 min<br><small>Maya L.</small></time></a><a class="topic-row" href="#thread" data-page-link="thread"><div><h2>Quiet places for a group call between classes</h2><p>Looking for somewhere that will not disturb people studying.</p></div><span>Campus</span><span>General</span><strong>7</strong><time>24 min<br><small>Jon P.</small></time></a><a class="topic-row unread" href="#thread" data-page-link="thread"><div><h2>Linear Algebra midterm practice set</h2><p>Does question 4 use the same row-reduction method from class?</p></div><span>Course help</span><span class="course-chip">201-NYA-05</span><strong>18</strong><time>41 min<br><small>Alex C.</small></time></a><a class="topic-row" href="#thread" data-page-link="thread"><div><h2>Clubs accepting new members after activities day</h2><p>A running list from club executives.</p></div><span>Student life</span><span>General</span><strong>23</strong><time>1 hr<br><small>Rina K.</small></time></a></div><section class="inline-composer"><div><span class="post-avatar">MS</span><div><span>New discussion</span><h2>Start a thread</h2></div><button class="quiet-button">Save draft</button></div><label><span>Title</span><input placeholder="What do you want to ask or share?"></label><div><label><span>Category</span><select><option>Course help</option><option>Student life</option></select></label><label><span>Course tag</span><select><option>No course tag</option><option>420-202-MA</option></select></label></div><label><span>Body</span><textarea placeholder="Include enough context for another student to help."></textarea></label><footer><p>Be kind. Do not post student numbers or private course files.</p><button class="primary-button">Post thread</button></footer></section></section>
+				<section class="page page-club-detail" data-page="club-detail" hidden>
+					<header class="club-detail-header">
+						<a href="#clubs" data-page-link="clubs">← All clubs</a>
+						<div>
+							<span class="club-initials">PC</span>
+							<div>
+								<h1>Programming Club</h1>
+								<p>Technology</p>
+							</div>
+						</div>
+					</header>
+					<div class="club-detail-index">
+						<section>
+							<h2>About</h2>
+							<p>
+								Peer coding help, workshops, mini-competitions, and small builds for students at any
+								experience level.
+							</p>
+						</section>
+						<section>
+							<h2>Meeting rhythm</h2>
+							<p>
+								Weekly workshops during the semester. Confirm the next session through the club's
+								official channels.
+							</p>
+						</section>
+						<section>
+							<h2>Contact and links</h2>
+							<div class="club-link-row">
+								<span>Instagram</span
+								><a href="https://www.instagram.com/mari_programming_club/"
+									>@mari_programming_club ↗</a
+								>
+							</div>
+							<div class="club-link-row">
+								<span>Discord</span><a href="https://discord.gg/c6JJw9d">Join the server ↗</a>
+							</div>
+							<div class="club-link-row">
+								<span>Email</span><a href="mailto:team@marihacks.com">team@marihacks.com</a>
+							</div>
+						</section>
+						<section>
+							<h2>How to join</h2>
+							<p>
+								Open the member registration form, then follow Instagram or Discord for confirmed
+								workshop details.
+							</p>
+							<a
+								class="primary-button"
+								href="https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header"
+								>Sign up for the club</a
+							>
+						</section>
+					</div>
+				</section>
 
-      <section class="page page-thread" data-page="thread" hidden><header class="thread-header"><nav><a href="#forum" data-page-link="forum">← All discussions</a><span>Course help</span><span>420-202-MA</span></nav><h1>What should I review before the first Data Structures lab?</h1><p>Started by Maya L. on September 15</p></header><div class="thread-layout"><article class="post origin"><aside><span class="post-avatar">ML</span><strong>Maya L.</strong><small>Original poster</small></aside><div class="post-body"><p>I took the introductory programming course last term, but I have not used linked lists yet. The outline mentions them in the first lab.</p><p>Should I review pointers first, or is the lab meant to introduce both ideas together? I am mainly trying to avoid getting stuck on setup.</p><footer><time>Yesterday at 19:42</time><div><button>Report</button><button>Reply</button></div></footer></div></article><article class="post"><aside><span class="post-avatar blue">JR</span><strong>Jon R.</strong><small>420-202 student</small></aside><div class="post-body"><p>Review arrays and object references first. We did not need manual pointers. The starter exercise explains the node structure before the graded part.</p><blockquote>The setup check took about ten minutes once Java was on the right version.</blockquote><footer><time>Yesterday at 20:10</time><div><button>Report</button><button>Reply</button></div></footer></div></article><article class="post helpful"><aside><span class="post-avatar ink">NK</span><strong>Nora K.</strong><small>Course mentor</small></aside><div class="post-body"><span class="answer-label">Helpful answer</span><p>The most useful review is tracing an array operation by hand, then doing the same with two objects that refer to each other. The lab instructions introduce the linked-list vocabulary.</p><p>Also confirm that the course repository builds before the lab. If that step fails, post the error text without your student number.</p><footer><time>Today at 08:16</time><div><button>Report</button><button>Reply</button></div></footer></div></article><section class="reply-editor"><div><span class="post-avatar">MS</span><strong>Reply to this discussion</strong></div><textarea placeholder="Write a clear, useful reply…"></textarea><footer><span>Write enough context to be useful.</span><button class="primary-button">Post reply</button></footer></section></div></section>
+				<section class="page page-forum" data-page="forum" hidden>
+					<header class="forum-titlebar">
+						<div>
+							<h1>Campus discussions</h1>
+						</div>
+						<div class="forum-tabs">
+							<button class="is-active">Latest</button><button>Courses</button
+							><button>Student life</button><button>Unanswered <span>8</span></button>
+						</div>
+					</header>
+					<div class="forum-toolbar">
+						<label class="search-field"
+							><span>⌕</span><input placeholder="Search discussions" /></label
+						><label
+							><span>Course</span
+							><select>
+								<option>Every course</option>
+								<option>420-202-MA</option>
+							</select></label
+						><button class="primary-button">Start a thread</button>
+					</div>
+					<div class="topic-list">
+						<div class="topic-head">
+							<span>Topic</span><span>Category</span><span>Course</span><span>Replies</span
+							><span>Latest</span>
+						</div>
+						<a class="topic-row topic-row--pinned" href="#thread" data-page-link="thread"
+							><div>
+								<span class="pin-mark">↑</span>
+								<h2>How to ask for course help here</h2>
+								<p>Start with what you tried and remove personal information.</p>
+							</div>
+							<span>Forum guide</span><span>General</span><strong>3</strong
+							><time>Sep 15<br /><small>Staff</small></time></a
+						><a class="topic-row" href="#thread" data-page-link="thread"
+							><div>
+								<h2>What should I review before the first Data Structures lab?</h2>
+								<p>Coming from 420-101 and trying to get ahead this weekend.</p>
+							</div>
+							<span>Course help</span><span class="course-chip">420-202-MA</span><strong>12</strong
+							><time>8 min<br /><small>Maya L.</small></time></a
+						><a class="topic-row" href="#thread" data-page-link="thread"
+							><div>
+								<h2>Quiet places for a group call between classes</h2>
+								<p>Looking for somewhere that will not disturb people studying.</p>
+							</div>
+							<span>Campus</span><span>General</span><strong>7</strong
+							><time>24 min<br /><small>Jon P.</small></time></a
+						><a class="topic-row topic-row--unread" href="#thread" data-page-link="thread"
+							><div>
+								<span class="unread-mark"></span>
+								<h2>Linear Algebra midterm practice set</h2>
+								<p>Does question 4 use the same row-reduction method from class?</p>
+							</div>
+							<span>Course help</span><span class="course-chip">201-NYA-05</span><strong>18</strong
+							><time>41 min<br /><small>Alex C.</small></time></a
+						><a class="topic-row" href="#thread" data-page-link="thread"
+							><div>
+								<h2>Clubs accepting new members after activities day</h2>
+								<p>A running list from club executives.</p>
+							</div>
+							<span>Student life</span><span>General</span><strong>23</strong
+							><time>1 hr<br /><small>Rina K.</small></time></a
+						>
+					</div>
+					<section class="inline-composer">
+						<div class="composer-heading">
+							<div>
+								<span class="composer-avatar">MS</span>
+								<div>
+									<span>New discussion</span>
+									<h2>Start a thread</h2>
+								</div>
+							</div>
+							<button class="quiet-button">Save draft</button>
+						</div>
+						<div class="composer-fields">
+							<label
+								><span>Title</span><input placeholder="What do you want to ask or share?"
+							/></label>
+							<div class="composer-meta">
+								<label
+									><span>Category</span
+									><select>
+										<option>Course help</option>
+										<option>Student life</option>
+									</select></label
+								><label
+									><span>Course tag</span
+									><select>
+										<option>No course tag</option>
+										<option>420-202-MA</option>
+									</select></label
+								>
+							</div>
+							<label
+								><span>Body</span
+								><textarea
+									placeholder="Include enough context for another student to help."
+								></textarea>
+							</label>
+						</div>
+						<div class="composer-actions">
+							<p>Be kind. Do not post student numbers or private course files.</p>
+							<button class="primary-button">Post thread</button>
+						</div>
+					</section>
+				</section>
 
-      <section class="page page-account" data-page="account" hidden><header class="index-title"><div><span class="breadcrumb">Account</span><h1>Your MariTools account</h1><p>Save personal tools and control what MariTools keeps.</p></div></header><div class="account-layout"><nav><a class="is-current" href="#profile">Profile</a><a href="#student">Student details</a><a href="#privacy">Privacy</a></nav><div class="settings-sheet"><section><header><div><h2>Profile</h2><p>Shown next to discussions and contributions.</p></div><span class="signed-status"><i></i> Signed in</span></header><div class="identity-row"><span class="identity-avatar">MS</span><div><strong>Maya Singh</strong><p>maya.singh@example.com</p></div><button class="quiet-button" data-sign-out>Sign out</button></div></section><section><header><div><h2>Student details</h2><p>Used only to connect your schedule and semester.</p></div></header><div class="setting-row"><label><span>Student number</span><input value="246 801 357"></label><div><span>Storage</span><strong>Encrypted</strong><small>Never displayed publicly</small></div></div><button class="dark-button">Save changes</button></section><section><header><div><h2>Privacy and data</h2><p>Control what MariTools keeps.</p></div></header><details><summary>How your student number is protected</summary><p>Your student number is encrypted before storage and is never used as a public identifier.</p></details><div class="danger-row"><div><strong>Delete MariTools account</strong><p>Removes saved schedules and personal semester facts. Public forum posts become anonymous.</p></div><button>Delete account</button></div></section></div></div></section>
-    </main>
-  </div>
+				<section class="page page-thread" data-page="thread" hidden>
+					<header class="thread-header">
+						<nav>
+							<a href="#forum" data-page-link="forum">← All discussions</a><span>Course help</span
+							><span>420-202-MA</span>
+						</nav>
+						<h1>What should I review before the first Data Structures lab?</h1>
+						<p>Started by Maya L. on September 15</p>
+					</header>
+					<div class="thread-layout">
+						<article class="post origin">
+							<aside>
+								<span class="post-avatar">ML</span><strong>Maya L.</strong
+								><small>Original poster</small>
+							</aside>
+							<div class="post-body">
+								<p>
+									I took the introductory programming course last term, but I have not used linked
+									lists yet. The outline mentions them in the first lab.
+								</p>
+								<p>
+									Should I review pointers first, or is the lab meant to introduce both ideas
+									together? I am mainly trying to avoid getting stuck on setup.
+								</p>
+								<footer>
+									<time>Yesterday at 19:42</time>
+									<div><button>Report</button><button>Reply</button></div>
+								</footer>
+							</div>
+						</article>
+						<article class="post">
+							<aside>
+								<span class="post-avatar post-avatar--blue">JR</span><strong>Jon R.</strong
+								><small>420-202 student</small>
+							</aside>
+							<div class="post-body">
+								<p>
+									Review arrays and object references first. We did not need manual pointers. The
+									starter exercise explains the node structure before the graded part.
+								</p>
+								<blockquote>
+									The setup check took about ten minutes once Java was on the right version.
+								</blockquote>
+								<footer>
+									<time>Yesterday at 20:10</time>
+									<div><button>Report</button><button>Reply</button></div>
+								</footer>
+							</div>
+						</article>
+						<article class="post post--answer">
+							<aside>
+								<span class="post-avatar post-avatar--ink">NK</span><strong>Nora K.</strong
+								><small>Course mentor</small>
+							</aside>
+							<div class="post-body">
+								<span class="answer-label">Helpful answer</span>
+								<p>
+									The most useful review is tracing an array operation by hand, then doing the same
+									with two objects that refer to each other. The lab instructions introduce the
+									linked-list vocabulary.
+								</p>
+								<p>
+									Also confirm that the course repository builds before the lab. If that step fails,
+									post the error text without your student number.
+								</p>
+								<footer>
+									<time>Today at 08:16</time>
+									<div><button>Report</button><button>Reply</button></div>
+								</footer>
+							</div>
+						</article>
+						<section class="reply-editor">
+							<div>
+								<span class="post-avatar">MS</span><strong>Reply to this discussion</strong>
+							</div>
+							<textarea placeholder="Write a clear, useful reply…"></textarea>
+							<footer>
+								<span>Write enough context to be useful.</span
+								><button class="primary-button">Post reply</button>
+							</footer>
+						</section>
+					</div>
+				</section>
 
-  <div class="tutorial-overlay" id="tutorial-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="tutorial-title"><div class="tutorial-shell"><aside class="tutorial-rail"><div><span>MariTools guide</span><h2>Import from Omnivox</h2><p>Nine short steps. Your student number and legal name stay out of MariTools.</p></div><ol id="tutorial-list"></ol><label><input type="checkbox" id="tutorial-optout"> Don’t show this again</label></aside><section class="tutorial-stage"><button class="tutorial-close" type="button" aria-label="Close tutorial">×</button><div class="tutorial-copy"><span id="tutorial-count">Step 1 of 9</span><h1 id="tutorial-title">Open Omnivox</h1><p id="tutorial-body">Go to the Marianopolis Omnivox login page.</p></div><div class="tutorial-frame"><span id="tutorial-frame-label">step 1</span><strong id="tutorial-frame-title">Open Omnivox</strong><small>Image placeholder</small></div><footer><button class="quiet-button tutorial-back">Back</button><button class="text-button tutorial-skip">Skip tutorial</button><button class="primary-button tutorial-next">Next</button></footer></section></div></div><div class="toast" role="status" aria-live="polite" hidden></div>
+				<section class="page page-account" data-page="account" hidden>
+					<header class="index-title">
+						<div>
+							<h1>Your MariTools account</h1>
+							<p>Save personal tools and control what MariTools keeps.</p>
+						</div>
+					</header>
+					<div class="account-layout">
+						<div class="settings-sheet">
+							<section>
+								<header>
+									<div>
+										<h2>Profile</h2>
+										<p>Shown next to discussions and contributions.</p>
+									</div>
+									<span class="signed-status"><i></i> Signed in</span>
+								</header>
+								<div class="identity-row">
+									<span class="identity-avatar">MS</span>
+									<div>
+										<strong>Maya Singh</strong>
+										<p>maya.singh@example.com</p>
+									</div>
+									<button class="quiet-button" data-sign-out>Sign out</button>
+								</div>
+							</section>
+							<section>
+								<header>
+									<div>
+										<h2>Student details</h2>
+										<p>Used only to connect your schedule and semester.</p>
+									</div>
+								</header>
+								<div class="setting-row">
+									<label><span>Student number</span><input value="246 801 357" /></label>
+									<div>
+										<span>Storage</span><strong>Encrypted</strong
+										><small>Never displayed publicly</small>
+									</div>
+								</div>
+								<button class="dark-button">Save changes</button>
+							</section>
+							<section>
+								<header>
+									<div>
+										<h2>Privacy and data</h2>
+										<p>Control what MariTools keeps.</p>
+									</div>
+								</header>
+								<details>
+									<summary>How your student number is protected</summary>
+									<p>
+										Your student number is encrypted before storage and is never used as a public
+										identifier.
+									</p>
+								</details>
+								<div class="danger-row">
+									<div>
+										<strong>Delete MariTools account</strong>
+										<p>
+											Removes saved schedules and personal semester facts. Public forum posts become
+											anonymous.
+										</p>
+									</div>
+									<button>Delete account</button>
+								</div>
+							</section>
+						</div>
+					</div>
+				</section>
+			</main>
+		</div>
 
-  <script>
-    const tutorialSteps = [['Open Omnivox','Go to https://marianopolis.omnivox.ca/Login/Account/Login'],['Student number','Click the Student number field and sign in there. MariTools never asks for that number.'],['Log in','Click Log In.'],['Course Schedule','In the left sidebar, click Course Schedule.'],['Obtain my schedule','Pick the semester, then click Obtain my schedule.'],['Printer-friendly version','Click the yellow banner that says Click here for a printer-friendly version.'],['Compact list','Choose Compact printable semester schedule, not the full format.'],['View','Click View.'],['Copy the list','Copy the numbered course list on the right. Skip the grid, name, and student number.']];
-    const pages=[...document.querySelectorAll('[data-page]')],picker=document.querySelector('#page-picker'),stage=document.querySelector('.schedule-stage'),overlay=document.querySelector('#tutorial-overlay'),sidebar=document.querySelector('#tools-sidebar'),sidebarScrim=document.querySelector('.sidebar-scrim');let tutorialIndex=0,tutorialReturnTarget=null;
-    function showPage(name){if(name==='tutorial'){showPage('schedule');openTutorial();picker.value='tutorial';return}const target=pages.some(page=>page.dataset.page===name)?name:'schedule';pages.forEach(page=>{page.hidden=page.dataset.page!==target;page.classList.toggle('is-active',page.dataset.page===target)});picker.value=target;document.querySelectorAll('.tools-nav a').forEach(link=>{const active=link.dataset.pageLink===target||(target==='thread'&&link.dataset.pageLink==='forum')||(target==='free-boards'&&link.dataset.pageLink==='free-time');link.classList.toggle('is-current',active);active?link.setAttribute('aria-current','page'):link.removeAttribute('aria-current')});closeTools();window.scrollTo({top:0,behavior:'instant'})}
-    document.querySelectorAll('[data-page-link]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();const target=link.dataset.pageLink;showPage(target);history.replaceState(null,'','#'+target)}));picker.addEventListener('change',()=>showPage(picker.value));
-    function openTools(){sidebar.classList.add('is-open');sidebarScrim.hidden=false;document.querySelector('#tools-menu').setAttribute('aria-expanded','true')}function closeTools(){sidebar.classList.remove('is-open');sidebarScrim.hidden=true;document.querySelector('#tools-menu').setAttribute('aria-expanded','false')}document.querySelector('#tools-menu').addEventListener('click',openTools);document.querySelector('.sidebar-close').addEventListener('click',closeTools);sidebarScrim.addEventListener('click',closeTools);
-    function openDrawer(){stage.classList.remove('drawer-hidden');document.querySelector('.import-toggle').setAttribute('aria-expanded','true')}function closeDrawer(){stage.classList.add('drawer-hidden');document.querySelector('.import-toggle').setAttribute('aria-expanded','false')}document.querySelector('.import-toggle').addEventListener('click',event=>{if(localStorage.getItem('maritoolsTutorialSeen')==='true')openDrawer();else{tutorialReturnTarget=event.currentTarget;openTutorial()}});document.querySelector('.drawer-close').addEventListener('click',closeDrawer);document.querySelector('.tutorial-again').addEventListener('click',openTutorial);
-    function renderTutorial(){const step=tutorialSteps[tutorialIndex];document.querySelector('#tutorial-count').textContent=`Step ${tutorialIndex+1} of 9`;document.querySelector('#tutorial-title').textContent=step[0];document.querySelector('#tutorial-body').textContent=step[1];document.querySelector('#tutorial-frame-label').textContent=`step ${tutorialIndex+1}`;document.querySelector('#tutorial-frame-title').textContent=step[0];document.querySelector('.tutorial-back').disabled=tutorialIndex===0;document.querySelector('.tutorial-next').textContent=tutorialIndex===8?'Done':'Next';[...document.querySelectorAll('#tutorial-list button')].forEach((button,index)=>button.classList.toggle('is-current',index===tutorialIndex))}
-    function openTutorial(){tutorialReturnTarget=tutorialReturnTarget||document.activeElement;tutorialIndex=0;overlay.hidden=false;document.body.classList.add('modal-open');renderTutorial();document.querySelector('.tutorial-next').focus()}function finishTutorial(openImport=true){if(document.querySelector('#tutorial-optout').checked||tutorialIndex===8)localStorage.setItem('maritoolsTutorialSeen','true');overlay.hidden=true;document.body.classList.remove('modal-open');if(openImport)openDrawer();tutorialReturnTarget?.focus();tutorialReturnTarget=null}
-    const list=document.querySelector('#tutorial-list');tutorialSteps.forEach((step,index)=>{const li=document.createElement('li'),button=document.createElement('button');button.type='button';button.innerHTML=`<span>${index+1}</span><b>${step[0]}</b>`;button.addEventListener('click',()=>{tutorialIndex=index;renderTutorial()});li.append(button);list.append(li)});document.querySelector('.tutorial-next').addEventListener('click',()=>{if(tutorialIndex===8)finishTutorial(true);else{tutorialIndex++;renderTutorial()}});document.querySelector('.tutorial-back').addEventListener('click',()=>{if(tutorialIndex>0){tutorialIndex--;renderTutorial()}});document.querySelector('.tutorial-skip').addEventListener('click',()=>finishTutorial(true));document.querySelector('.tutorial-close').addEventListener('click',()=>finishTutorial(false));
-    document.querySelectorAll('.catalog-toggle').forEach(button=>button.addEventListener('click',()=>{const row=button.closest('.catalog-row'),open=row.classList.toggle('catalog-row--open');button.textContent=open?'−':'+';button.setAttribute('aria-expanded',String(open))}));
-    const paintGrid=document.querySelector('#paint-grid');let painting=false,paintValue=true;['Time','Mon 20','Tue 21','Wed 22','Thu 23','Fri 24'].forEach(label=>{const head=document.createElement('b');head.textContent=label;paintGrid.append(head)});for(let row=0;row<20;row++){const time=document.createElement('span');time.className='paint-time';const hour=8+Math.floor(row/2);time.textContent=row%2?':30':(hour>12?hour-12:hour)+(hour<12?' AM':' PM');paintGrid.append(time);for(let day=0;day<5;day++){const cell=document.createElement('button');cell.type='button';cell.className='paint-cell';cell.setAttribute('aria-label',`${['Monday','Tuesday','Wednesday','Thursday','Friday'][day]} ${time.textContent}`);if((day===2&&row>=9&&row<=12)||(day===4&&row>=6&&row<=8))cell.classList.add('common');cell.addEventListener('pointerdown',event=>{event.preventDefault();painting=true;paintValue=!cell.classList.contains('selected');cell.classList.toggle('selected',paintValue);cell.setPointerCapture(event.pointerId)});cell.addEventListener('pointerenter',()=>{if(painting)cell.classList.toggle('selected',paintValue)});paintGrid.append(cell)}}document.addEventListener('pointerup',()=>{painting=false});document.querySelector('.clear-paint').addEventListener('click',()=>document.querySelectorAll('.paint-cell.selected').forEach(cell=>cell.classList.remove('selected')));
-    const toast=document.querySelector('.toast');function showToast(text){toast.textContent=text;toast.hidden=false;clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>{toast.hidden=true},1800)}document.querySelector('.copy-link').addEventListener('click',event=>{navigator.clipboard?.writeText('https://maritools.ca/t/free/ds-lab');event.currentTarget.textContent='Copied';showToast('Board link copied')});
-    const accountDemo=document.querySelector('#account-demo');function setSignedIn(signedIn){accountDemo.classList.toggle('signed-in',signedIn);accountDemo.classList.toggle('signed-out',!signedIn);document.querySelectorAll('.account-state-toggle').forEach(button=>button.textContent=signedIn?'Show signed-out header':'Show signed-in header');document.querySelector('.guest-field').hidden=signedIn;document.querySelector('.signed-board-action').hidden=!signedIn;document.querySelector('.editing-as').textContent=signedIn?'You’re editing as Maya.':'You’re editing as Guest, Maya.'}document.querySelectorAll('[data-sign-in]').forEach(button=>button.addEventListener('click',()=>setSignedIn(!accountDemo.classList.contains('signed-in'))));document.querySelectorAll('[data-sign-out]').forEach(button=>button.addEventListener('click',()=>setSignedIn(false)));document.querySelector('.identity-button').addEventListener('click',event=>{const menu=document.querySelector('#account-menu'),open=menu.hidden;menu.hidden=!open;event.currentTarget.setAttribute('aria-expanded',String(open))});const headerMenu=document.querySelector('.header-menu');headerMenu.addEventListener('click',()=>{const nav=document.querySelector('#mobile-site-nav');nav.hidden=!nav.hidden;headerMenu.setAttribute('aria-expanded',String(!nav.hidden))});document.addEventListener('keydown',event=>{if(event.key==='Escape'){if(!overlay.hidden)finishTutorial(false);closeTools();document.querySelector('#account-menu').hidden=true}});showPage(location.hash.slice(1)||'schedule');
-  </script>
-</body>
+		<div
+			class="tutorial-overlay"
+			id="tutorial-overlay"
+			hidden
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="tutorial-title"
+		>
+			<div class="tutorial-shell">
+				<aside class="tutorial-rail">
+					<div>
+						<span>MariTools guide</span>
+						<h2>Import from Omnivox</h2>
+						<p>Nine short steps. Your student number and legal name stay out of MariTools.</p>
+					</div>
+					<ol id="tutorial-list"></ol>
+					<label><input type="checkbox" id="tutorial-optout" /> Don’t show this again</label>
+				</aside>
+				<section class="tutorial-stage">
+					<button class="tutorial-close" type="button" aria-label="Close tutorial">×</button>
+					<div class="tutorial-copy">
+						<span id="tutorial-count">Step 1 of 9</span>
+						<h1 id="tutorial-title">Open Omnivox</h1>
+						<p id="tutorial-body">Go to the Marianopolis Omnivox login page.</p>
+					</div>
+					<div class="tutorial-frame" id="tutorial-frame" data-step="1">
+						<div class="mock-browser-bar">
+							<i></i><i></i><i></i><span>marianopolis.omnivox.ca</span>
+						</div>
+						<div class="mock-omnivox">
+							<aside>
+								<b>Omnivox</b><span>Services</span><span>Course Schedule</span
+								><span>Documents</span>
+							</aside>
+							<div>
+								<span id="tutorial-frame-label">Step 1</span
+								><strong id="tutorial-frame-title">Open Omnivox</strong
+								><small>Illustrative guide frame</small><i class="mock-focus"></i>
+							</div>
+						</div>
+						<div class="tutorial-screenshots" aria-live="off">
+							<img
+								data-tutorial-step="1"
+								src="../../../../static/maritools/omnivox/step-01.webp"
+								alt="Open the Marianopolis Omnivox login page"
+								onerror="this.hidden = true"
+							/>
+							<img
+								data-tutorial-step="2"
+								src="../../../../static/maritools/omnivox/step-02.webp"
+								alt="Select the Student number field to sign in"
+								onerror="this.hidden = true"
+							/>
+							<img
+								data-tutorial-step="3"
+								src="../../../../static/maritools/omnivox/step-03.webp"
+								alt="Click Log In on Omnivox"
+								onerror="this.hidden = true"
+							/>
+							<img
+								data-tutorial-step="4"
+								src="../../../../static/maritools/omnivox/step-04.webp"
+								alt="Open Course Schedule from the Omnivox sidebar"
+								onerror="this.hidden = true"
+							/>
+							<img
+								data-tutorial-step="5"
+								src="../../../../static/maritools/omnivox/step-05.webp"
+								alt="Pick the semester and obtain your schedule"
+								onerror="this.hidden = true"
+							/>
+							<img
+								data-tutorial-step="6"
+								src="../../../../static/maritools/omnivox/step-06.webp"
+								alt="Open the printer-friendly schedule from the yellow banner"
+								onerror="this.hidden = true"
+							/>
+							<img
+								data-tutorial-step="7"
+								src="../../../../static/maritools/omnivox/step-07.webp"
+								alt="Choose the compact printable semester schedule"
+								onerror="this.hidden = true"
+							/>
+							<img
+								data-tutorial-step="8"
+								src="../../../../static/maritools/omnivox/step-08.webp"
+								alt="Click View to open the compact schedule"
+								onerror="this.hidden = true"
+							/>
+							<img
+								data-tutorial-step="9"
+								src="../../../../static/maritools/omnivox/step-09.webp"
+								alt="Copy the numbered course list without personal information"
+								onerror="this.hidden = true"
+							/>
+						</div>
+					</div>
+					<footer>
+						<button class="quiet-button tutorial-back">Back</button
+						><button class="text-button tutorial-skip">Skip tutorial</button
+						><button class="primary-button tutorial-next">Next</button>
+					</footer>
+				</section>
+			</div>
+		</div>
+		<div
+			class="calendar-modal"
+			id="calendar-modal"
+			hidden
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="calendar-modal-title"
+		>
+			<div class="calendar-modal-panel">
+				<button class="calendar-modal-close" type="button" aria-label="Close calendar export">
+					×
+				</button>
+				<span>Calendar export</span>
+				<h2 id="calendar-modal-title">Add this week to Google Calendar</h2>
+				<p>
+					Google Calendar imports an <strong>.ics</strong> file. Download it here, then import the
+					file from Google Calendar settings.
+				</p>
+				<div class="calendar-modal-actions">
+					<a
+						class="primary-button"
+						download="maritools-schedule.ics"
+						href="data:text/calendar;charset=utf-8,BEGIN%3AVCALENDAR%0AVERSION%3A2.0%0APRODID%3A-%2F%2FMariTools%2F%2FEN%0AEND%3AVCALENDAR"
+						>Download for Google Calendar</a
+					>
+					<a
+						class="quiet-button"
+						download="maritools-schedule.ics"
+						href="data:text/calendar;charset=utf-8,BEGIN%3AVCALENDAR%0AVERSION%3A2.0%0APRODID%3A-%2F%2FMariTools%2F%2FEN%0AEND%3AVCALENDAR"
+						>Download .ics for Apple / Outlook</a
+					>
+				</div>
+				<small
+					>In Google Calendar, open Settings, Import & export, then choose the downloaded
+					file.</small
+				>
+			</div>
+		</div>
+		<div class="toast" role="status" aria-live="polite" hidden></div>
+
+		<script>
+			const tutorialSteps = [
+				['Open Omnivox', 'Go to https://marianopolis.omnivox.ca/Login/Account/Login'],
+				[
+					'Student number',
+					'Click the Student number field and sign in there. MariTools never asks for that number.'
+				],
+				['Log in', 'Click Log In.'],
+				['Course Schedule', 'In the left sidebar, click Course Schedule.'],
+				['Obtain my schedule', 'Pick the semester, then click Obtain my schedule.'],
+				[
+					'Printer-friendly version',
+					'Click the yellow banner that says Click here for a printer-friendly version.'
+				],
+				['Compact list', 'Choose Compact printable semester schedule, not the full format.'],
+				['View', 'Click View.'],
+				[
+					'Copy the list',
+					'Copy the numbered course list on the right. Skip the grid, and skip the name and student number at the top.'
+				]
+			];
+			const pages = [...document.querySelectorAll('[data-page]')],
+				picker = document.querySelector('#page-picker'),
+				stage = document.querySelector('.schedule-stage'),
+				overlay = document.querySelector('#tutorial-overlay'),
+				calendarModal = document.querySelector('#calendar-modal'),
+				sidebar = document.querySelector('#tools-sidebar'),
+				sidebarScrim = document.querySelector('.sidebar-scrim');
+			let tutorialIndex = 0,
+				tutorialReturnTarget = null,
+				calendarReturnTarget = null;
+			function showPage(name) {
+				if (name === 'tutorial') {
+					showPage('schedule');
+					openTutorial();
+					picker.value = 'tutorial';
+					return;
+				}
+				const target = pages.some((page) => page.dataset.page === name) ? name : 'schedule';
+				pages.forEach((page) => {
+					page.hidden = page.dataset.page !== target;
+					page.classList.toggle('is-active', page.dataset.page === target);
+				});
+				picker.value = target;
+				document.querySelectorAll('.tools-nav a').forEach((link) => {
+					const active =
+						link.dataset.pageLink === target ||
+						(target === 'thread' && link.dataset.pageLink === 'forum') ||
+						(target === 'club-detail' && link.dataset.pageLink === 'clubs') ||
+						(target === 'free-boards' && link.dataset.pageLink === 'free-time');
+					link.classList.toggle('is-current', active);
+					active ? link.setAttribute('aria-current', 'page') : link.removeAttribute('aria-current');
+				});
+				closeTools();
+				window.scrollTo({ top: 0, behavior: 'instant' });
+			}
+			document.querySelectorAll('[data-page-link]').forEach((link) =>
+				link.addEventListener('click', (event) => {
+					event.preventDefault();
+					const target = link.dataset.pageLink;
+					showPage(target);
+					history.replaceState(null, '', '#' + target);
+				})
+			);
+			picker.addEventListener('change', () => showPage(picker.value));
+			function openTools() {
+				sidebar.classList.add('is-open');
+				sidebarScrim.hidden = false;
+				document.querySelector('#tools-menu').setAttribute('aria-expanded', 'true');
+			}
+			function closeTools() {
+				sidebar.classList.remove('is-open');
+				sidebarScrim.hidden = true;
+				document.querySelector('#tools-menu').setAttribute('aria-expanded', 'false');
+			}
+			document.querySelector('#tools-menu').addEventListener('click', openTools);
+			document.querySelector('.sidebar-close').addEventListener('click', closeTools);
+			sidebarScrim.addEventListener('click', closeTools);
+			function openDrawer() {
+				stage.classList.remove('drawer-hidden');
+				document.querySelector('.import-toggle').setAttribute('aria-expanded', 'true');
+			}
+			function closeDrawer() {
+				stage.classList.add('drawer-hidden');
+				document.querySelector('.import-toggle').setAttribute('aria-expanded', 'false');
+			}
+			document.querySelector('.import-toggle').addEventListener('click', (event) => {
+				if (localStorage.getItem('maritoolsTutorialSeen') === 'true') openDrawer();
+				else {
+					tutorialReturnTarget = event.currentTarget;
+					openTutorial();
+				}
+			});
+			document.querySelector('.drawer-close').addEventListener('click', closeDrawer);
+			document.querySelector('.tutorial-again').addEventListener('click', openTutorial);
+			function renderTutorial() {
+				const step = tutorialSteps[tutorialIndex];
+				document.querySelector('#tutorial-count').textContent = `Step ${tutorialIndex + 1} of 9`;
+				document.querySelector('#tutorial-title').textContent = step[0];
+				document.querySelector('#tutorial-body').textContent = step[1];
+				document.querySelector('#tutorial-frame-label').textContent = `step ${tutorialIndex + 1}`;
+				document.querySelector('#tutorial-frame-title').textContent = step[0];
+				document.querySelector('#tutorial-frame').dataset.step = String(tutorialIndex + 1);
+				document.querySelector('.tutorial-back').disabled = tutorialIndex === 0;
+				document.querySelector('.tutorial-next').textContent =
+					tutorialIndex === 8 ? 'Done' : 'Next';
+				[...document.querySelectorAll('#tutorial-list button')].forEach((button, index) =>
+					button.classList.toggle('is-current', index === tutorialIndex)
+				);
+			}
+			function openTutorial() {
+				tutorialReturnTarget = tutorialReturnTarget || document.activeElement;
+				tutorialIndex = 0;
+				overlay.hidden = false;
+				document.body.classList.add('modal-open');
+				renderTutorial();
+				document.querySelector('.tutorial-next').focus();
+			}
+			function finishTutorial(openImport = true) {
+				if (document.querySelector('#tutorial-optout').checked || tutorialIndex === 8)
+					localStorage.setItem('maritoolsTutorialSeen', 'true');
+				overlay.hidden = true;
+				document.body.classList.remove('modal-open');
+				if (openImport) openDrawer();
+				tutorialReturnTarget?.focus();
+				tutorialReturnTarget = null;
+			}
+			const list = document.querySelector('#tutorial-list');
+			tutorialSteps.forEach((step, index) => {
+				const li = document.createElement('li'),
+					button = document.createElement('button');
+				button.type = 'button';
+				button.innerHTML = `<span>${index + 1}</span><b>${step[0]}</b>`;
+				button.addEventListener('click', () => {
+					tutorialIndex = index;
+					renderTutorial();
+				});
+				li.append(button);
+				list.append(li);
+			});
+			document.querySelector('.tutorial-next').addEventListener('click', () => {
+				if (tutorialIndex === 8) finishTutorial(true);
+				else {
+					tutorialIndex++;
+					renderTutorial();
+				}
+			});
+			document.querySelector('.tutorial-back').addEventListener('click', () => {
+				if (tutorialIndex > 0) {
+					tutorialIndex--;
+					renderTutorial();
+				}
+			});
+			document
+				.querySelector('.tutorial-skip')
+				.addEventListener('click', () => finishTutorial(true));
+			document
+				.querySelector('.tutorial-close')
+				.addEventListener('click', () => finishTutorial(false));
+			document.querySelectorAll('.catalog-toggle').forEach((button) =>
+				button.addEventListener('click', () => {
+					const row = button.closest('.catalog-row'),
+						open = row.classList.toggle('catalog-row--open');
+					button.textContent = open ? '−' : '+';
+					button.setAttribute('aria-expanded', String(open));
+				})
+			);
+			const paintGrid = document.querySelector('#paint-grid');
+			let painting = false,
+				paintValue = true,
+				paintedCells = new Set();
+			function paintCell(cell) {
+				if (!cell || paintedCells.has(cell)) return;
+				cell.classList.toggle('selected', paintValue);
+				cell.setAttribute('aria-pressed', String(paintValue));
+				paintedCells.add(cell);
+			}
+			['Time', 'Mon 20', 'Tue 21', 'Wed 22', 'Thu 23', 'Fri 24'].forEach((label) => {
+				const head = document.createElement('b');
+				head.textContent = label;
+				paintGrid.append(head);
+			});
+			for (let row = 0; row < 20; row++) {
+				const time = document.createElement('span');
+				time.className = 'paint-time';
+				const hour = 8 + Math.floor(row / 2);
+				time.textContent =
+					row % 2 ? ':30' : (hour > 12 ? hour - 12 : hour) + (hour < 12 ? ' AM' : ' PM');
+				paintGrid.append(time);
+				for (let day = 0; day < 5; day++) {
+					const cell = document.createElement('button');
+					cell.type = 'button';
+					cell.className = 'paint-cell';
+					cell.setAttribute('aria-pressed', 'false');
+					cell.setAttribute(
+						'aria-label',
+						`${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][day]} ${time.textContent}`
+					);
+					if ((day === 2 && row >= 9 && row <= 12) || (day === 4 && row >= 6 && row <= 8))
+						cell.classList.add('common');
+					cell.addEventListener('pointerdown', (event) => {
+						event.preventDefault();
+						painting = true;
+						paintValue = !cell.classList.contains('selected');
+						paintedCells = new Set();
+						paintCell(cell);
+					});
+					cell.addEventListener('keydown', (event) => {
+						if (event.key !== ' ' && event.key !== 'Enter') return;
+						event.preventDefault();
+						paintValue = !cell.classList.contains('selected');
+						paintedCells = new Set();
+						paintCell(cell);
+					});
+					paintGrid.append(cell);
+				}
+			}
+			document.addEventListener('pointermove', (event) => {
+				if (!painting) return;
+				paintCell(document.elementFromPoint(event.clientX, event.clientY)?.closest('.paint-cell'));
+			});
+			document.addEventListener('pointerup', () => {
+				painting = false;
+				paintedCells.clear();
+			});
+			document.querySelector('.clear-paint').addEventListener('click', () =>
+				document.querySelectorAll('.paint-cell.selected').forEach((cell) => {
+					cell.classList.remove('selected');
+					cell.setAttribute('aria-pressed', 'false');
+				})
+			);
+			const toast = document.querySelector('.toast');
+			function showToast(text) {
+				toast.textContent = text;
+				toast.hidden = false;
+				clearTimeout(showToast.timer);
+				showToast.timer = setTimeout(() => {
+					toast.hidden = true;
+				}, 1800);
+			}
+			document.querySelector('.copy-link').addEventListener('click', (event) => {
+				navigator.clipboard?.writeText('https://maritools.ca/t/free/ds-lab');
+				event.currentTarget.textContent = 'Copied';
+				showToast('Board link copied');
+			});
+			const accountDemo = document.querySelector('#account-demo');
+			const mobileAccountDemo = document.querySelector('#mobile-account-demo');
+			function setSignedIn(signedIn) {
+				[accountDemo, mobileAccountDemo].forEach((demo) => {
+					demo.classList.toggle('signed-in', signedIn);
+					demo.classList.toggle('signed-out', !signedIn);
+				});
+				document
+					.querySelectorAll('.account-state-toggle')
+					.forEach(
+						(button) =>
+							(button.textContent = signedIn ? 'Show signed-out header' : 'Show signed-in header')
+					);
+				document.querySelector('.guest-field').hidden = signedIn;
+				document.querySelector('.signed-board-action').hidden = !signedIn;
+				document.querySelector('.editing-as').textContent = signedIn
+					? 'You’re editing as Maya.'
+					: 'You’re editing as Guest, Maya.';
+			}
+			document
+				.querySelectorAll('[data-sign-in]')
+				.forEach((button) =>
+					button.addEventListener('click', () =>
+						setSignedIn(!accountDemo.classList.contains('signed-in'))
+					)
+				);
+			document
+				.querySelectorAll('[data-sign-out]')
+				.forEach((button) => button.addEventListener('click', () => setSignedIn(false)));
+			document.querySelector('.identity-button').addEventListener('click', (event) => {
+				const menu = document.querySelector('#account-menu'),
+					open = menu.hidden;
+				menu.hidden = !open;
+				event.currentTarget.setAttribute('aria-expanded', String(open));
+			});
+			const headerMenu = document.querySelector('.header-menu');
+			headerMenu.addEventListener('click', () => {
+				const nav = document.querySelector('#mobile-site-nav');
+				nav.hidden = !nav.hidden;
+				headerMenu.setAttribute('aria-expanded', String(!nav.hidden));
+			});
+			function closeCalendarModal() {
+				calendarModal.hidden = true;
+				document.body.classList.remove('modal-open');
+				calendarReturnTarget?.focus();
+				calendarReturnTarget = null;
+			}
+			document.querySelector('.calendar-export-open').addEventListener('click', (event) => {
+				calendarReturnTarget = event.currentTarget;
+				calendarModal.hidden = false;
+				document.body.classList.add('modal-open');
+				document.querySelector('.calendar-modal-close').focus();
+			});
+			document.querySelector('.calendar-modal-close').addEventListener('click', closeCalendarModal);
+			calendarModal.addEventListener('click', (event) => {
+				if (event.target === calendarModal) closeCalendarModal();
+			});
+			document.addEventListener('keydown', (event) => {
+				if (event.key === 'Escape') {
+					if (!overlay.hidden) finishTutorial(false);
+					if (!calendarModal.hidden) closeCalendarModal();
+					closeTools();
+					document.querySelector('#account-menu').hidden = true;
+				}
+			});
+			showPage(location.hash.slice(1) || 'schedule');
+		</script>
+	</body>
 </html>
