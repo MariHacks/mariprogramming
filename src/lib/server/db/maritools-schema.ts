@@ -303,6 +303,48 @@ export const mtForumReplies = pgTable(
 	]
 );
 
+export const mtFreeTimeBoards = pgTable(
+	'mt_free_time_boards',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		slug: varchar('slug', { length: 120 }).notNull(),
+		title: varchar('title', { length: 240 }).notNull(),
+		termId: varchar('term_id', { length: 64 })
+			.notNull()
+			.references(() => mtAcademicTerms.id, { onDelete: 'restrict' }),
+		ownerUserId: text('owner_user_id').references(() => user.id, { onDelete: 'set null' }),
+		version: version(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	(table) => [
+		uniqueIndex('mt_free_time_boards_slug_unique_idx').on(table.slug),
+		index('mt_free_time_boards_term_idx').on(table.termId),
+		check('mt_free_time_boards_version_positive', sql`${table.version} > 0`)
+	]
+);
+
+export const mtFreeTimeMembers = pgTable(
+	'mt_free_time_members',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		boardId: uuid('board_id')
+			.notNull()
+			.references(() => mtFreeTimeBoards.id, { onDelete: 'cascade' }),
+		displayName: varchar('display_name', { length: 120 }).notNull(),
+		availability: jsonb('availability').$type<Record<string, unknown>>().default({}).notNull(),
+		shareToken: varchar('share_token', { length: 64 }),
+		version: version(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	(table) => [
+		uniqueIndex('mt_free_time_members_share_token_unique_idx').on(table.shareToken),
+		index('mt_free_time_members_board_idx').on(table.boardId),
+		check('mt_free_time_members_version_positive', sql`${table.version} > 0`)
+	]
+);
+
 export const mtForumReports = pgTable(
 	'mt_forum_reports',
 	{
