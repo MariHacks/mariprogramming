@@ -3,6 +3,7 @@
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { ACADEMIC_TERMS } from '$lib/maritools/term/calendar.js';
 	import { explicitTermId } from '$lib/maritools/term/session.js';
+	import '$lib/maritools/styles/index-pages.css';
 
 	export let data;
 	export let form = null;
@@ -39,8 +40,8 @@
 	/>
 </svelte:head>
 
-<section class="semester-page page-container">
-	<header class="intro">
+<section class="mt-index-page semester-page page-container">
+	<header class="mt-titlebar intro">
 		<h1>Semester</h1>
 		<p>
 			Upload a text PDF of a course outline. Check the dates and weights before anything is shared.
@@ -63,22 +64,22 @@
 			before we send outline text for analysis.
 		</p>
 	{:else}
-		<form method="POST" action="?/extract" enctype="multipart/form-data" class="upload">
+		<form method="POST" action="?/extract" enctype="multipart/form-data" class="upload mt-stack">
 			<label>
 				Course outline PDF
 				<input type="file" name="outline" accept="application/pdf" required />
 			</label>
-			<button type="submit" class="primary">Read outline</button>
+			<button type="submit" class="mt-primary-button">Read outline</button>
 		</form>
 	{/if}
 
 	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
+		<p class="mt-error" role="alert">{form.error}</p>
 	{/if}
 
 	{#if form?.extraction}
 		{#if form.extraction.ok === false}
-			<p class="status" role="status">
+			<p class="mt-status" role="status">
 				{#if form.extraction.reason === 'missing-key'}
 					Automatic extraction is unavailable. Type the assessments and books below. Your upload is
 					saved privately.
@@ -89,10 +90,10 @@
 			</p>
 		{/if}
 		{#if form.extraction.cacheHit}
-			<p class="status" role="status">Reused a saved extraction for this file.</p>
+			<p class="mt-status" role="status">Reused a saved extraction for this file.</p>
 		{/if}
 
-		<form method="POST" action="?/contribute" class="review">
+		<form method="POST" action="?/contribute" class="review mt-panel mt-stack">
 			<input type="hidden" name="sha256" value={form.extraction.sha256 ?? ''} />
 			<input type="hidden" name="termId" value={selectedTerm} />
 			<input type="hidden" name="structured" value={structuredJson} />
@@ -163,13 +164,13 @@
 				Share these fields to the course catalog
 			</label>
 			{#if contributeCatalog}
-				<button type="submit" class="primary">Share to catalog</button>
+				<button type="submit" class="mt-primary-button">Share to catalog</button>
 			{/if}
 		</form>
 	{/if}
 
 	{#if form?.contributed}
-		<p class="status" role="status">Saved to the catalog.</p>
+		<p class="mt-status" role="status">Saved to the catalog.</p>
 	{/if}
 </section>
 
@@ -179,11 +180,13 @@
 		padding-block: var(--space-xl);
 		gap: var(--space-md);
 		max-width: 46rem;
+		background: var(--surface-raised);
 	}
 
 	.intro h1 {
+		margin: 0;
 		font-family: var(--font-display);
-		font-size: var(--text-3xl);
+		font-size: clamp(1.75rem, 3vw, 2.5rem);
 		line-height: 1.05;
 	}
 
@@ -200,7 +203,6 @@
 	}
 
 	.review {
-		border-block-start: var(--rule);
 		padding-block-start: var(--space-md);
 	}
 
@@ -232,31 +234,6 @@
 
 	.code {
 		font-family: var(--font-mono);
-	}
-
-	.primary {
-		justify-self: start;
-		height: var(--control-height);
-		padding-inline: var(--space-md);
-		border: 0;
-		border-radius: var(--radius-sm);
-		background: var(--club-blue);
-		color: #fff;
-		font-weight: 650;
-	}
-
-	.primary:focus-visible {
-		outline: var(--focus-ring-width) solid var(--club-blue);
-		outline-offset: var(--focus-ring-offset);
-	}
-
-	.error {
-		color: var(--danger);
-	}
-
-	.status {
-		color: var(--quiet-steel);
-		font-size: var(--text-sm);
 	}
 
 	h2 {

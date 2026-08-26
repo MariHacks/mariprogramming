@@ -652,6 +652,154 @@
 	color: var(--graphite);
 }
 
+.mt-account-page {
+	background: var(--surface-raised);
+}
+
+.mt-account-header {
+	padding: 2rem clamp(1.25rem, 3vw, 3rem) 1.25rem;
+}
+
+.mt-account-header h1 {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: clamp(1.75rem, 3vw, 2.5rem);
+}
+
+.mt-account-header p {
+	max-width: 42ch;
+	margin: 0.75rem 0 0;
+	color: var(--quiet-steel);
+	font-size: var(--text-sm);
+}
+
+.mt-account-sheet {
+	margin: 0 clamp(1.25rem, 3vw, 3rem) 3rem;
+	border-top: var(--rule-strong);
+	background: #fff;
+}
+
+.mt-account-section {
+	padding: 1.5rem clamp(1rem, 2vw, 1.75rem);
+	border-bottom: var(--rule);
+}
+
+.mt-account-section header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
+}
+
+.mt-account-section h2 {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: 1.15rem;
+}
+
+.mt-account-section header p {
+	margin: 0.35rem 0 0;
+	color: var(--quiet-steel);
+	font-size: var(--text-xs);
+}
+
+.mt-account-signed {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	color: #177b59;
+	font-size: var(--text-xs);
+	font-weight: 650;
+}
+
+.mt-account-signed i {
+	width: 0.4rem;
+	height: 0.4rem;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.mt-account-identity {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: 0.85rem;
+}
+
+.mt-account-avatar {
+	display: grid;
+	width: 2.75rem;
+	height: 2.75rem;
+	place-items: center;
+	background: var(--midnight);
+	color: #fff;
+	font-size: var(--text-xs);
+	font-weight: 700;
+}
+
+.mt-account-identity strong {
+	display: block;
+	font-size: var(--text-sm);
+}
+
+.mt-account-identity p {
+	margin: 0.15rem 0 0;
+	color: var(--quiet-steel);
+	font-size: var(--text-xs);
+}
+
+.mt-account-form {
+	display: grid;
+	gap: 0.75rem;
+	max-width: 36rem;
+}
+
+.mt-account-form label {
+	display: grid;
+	gap: 0.35rem;
+	font-size: var(--text-sm);
+	font-weight: 600;
+}
+
+.mt-account-form label.disclose {
+	grid-template-columns: auto 1fr;
+	align-items: start;
+	font-weight: 400;
+}
+
+.mt-account-form input:not([type='checkbox']) {
+	min-height: var(--control-height);
+	padding: 0 0.65rem;
+	border: var(--rule-strong);
+	border-radius: var(--radius-xs);
+	font: inherit;
+}
+
+.mt-account-profile {
+	display: grid;
+	gap: 0;
+}
+
+.mt-account-profile div {
+	display: grid;
+	gap: 0.2rem;
+	padding: 0.75rem 0;
+	border-top: var(--rule);
+}
+
+.mt-account-profile dt {
+	color: var(--quiet-steel);
+	font-size: var(--text-xs);
+	font-weight: 600;
+}
+
+.mt-account-profile dd {
+	margin: 0;
+	font-size: var(--text-sm);
+}
+
 @media (max-width: 56rem) {
 	.mt-index-filters,
 	.mt-forum-toolbar {

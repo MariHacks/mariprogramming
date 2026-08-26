@@ -1,5 +1,7 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
+	import { initialsFromDisplayName } from '$lib/maritools/header-account.js';
+	import '$lib/maritools/styles/index-pages.css';
 	import { requestStudentAuthorization } from '$lib/auth/student-sign-in.js';
 
 	export let data;
@@ -7,6 +9,11 @@
 
 	let pending = false;
 	let failed = false;
+
+	/** @param {string} email */
+	function labelFromEmail(email) {
+		return email.split('@')[0] || 'Account';
+	}
 
 	async function beginSignIn() {
 		if (pending) return;
@@ -30,189 +37,145 @@
 	/>
 </svelte:head>
 
-<section class="account-page page-container">
-	<header class="intro">
+<section class="mt-index-page mt-account-page">
+	<header class="mt-account-header">
 		<h1>Your account</h1>
 		{#if data.view.kind === 'guest'}
 			<p>Sign in with Google to save outlines and contribute to the catalog. Any Google account works.</p>
 		{:else if data.view.kind === 'incomplete'}
 			<p>
-				We keep your student number on the server. It does not show on the catalog, forum, or
-				schedule pages.
+				We keep your student number on the server. It does not show on the catalog, forum, or schedule
+				pages.
 			</p>
 		{:else}
-			<p>Signed in as {data.view.email}.</p>
+			<p>Save personal tools and control what MariTools keeps.</p>
 		{/if}
 	</header>
 
 	{#if data.recoveryMessage}
-		<p class="error" role="alert">{data.recoveryMessage}</p>
+		<p class="mt-error" role="alert">{data.recoveryMessage}</p>
 	{/if}
 	{#if data.unavailable}
-		<p class="error" role="alert">Account details are unavailable right now. Try again.</p>
+		<p class="mt-error" role="alert">Account details are unavailable right now. Try again.</p>
 	{/if}
 	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
+		<p class="mt-error" role="alert">{form.error}</p>
 	{/if}
 	{#if form?.success}
-		<p class="status" role="status">Account saved.</p>
+		<p class="mt-status" role="status">Account saved.</p>
 	{/if}
 
-	{#if data.view.kind === 'guest'}
-		<form on:submit|preventDefault={beginSignIn}>
-			<button type="submit" class="primary" disabled={pending}>Continue with Google</button>
-		</form>
-		{#if pending}<p class="status" role="status">Opening Google sign-in</p>{/if}
-		{#if failed}<p class="error" role="alert">Sign-in is unavailable. Try again.</p>{/if}
-	{:else if data.view.kind === 'incomplete'}
-		<p class="email">{data.view.email}</p>
-		<form method="POST" action="?/complete" class="account-form">
-			<label>
-				Student number
-				<input
-					name="studentId"
-					inputmode="numeric"
-					autocomplete="off"
-					required
-					minlength="5"
-					maxlength="8"
-				/>
-			</label>
-			<label>
-				Display name, optional
-				<input name="displayName" maxlength="120" />
-			</label>
-			<label class="disclose">
-				<input type="checkbox" name="nimAccepted" />
-				{data.nimDisclosure}
-			</label>
-			<button type="submit" class="primary">Save account</button>
-		</form>
-	{:else}
-		<dl class="profile">
-			<div>
-				<dt>Email</dt>
-				<dd>{data.view.email}</dd>
-			</div>
-			{#if data.view.displayName}
-				<div>
-					<dt>Display name</dt>
-					<dd>{data.view.displayName}</dd>
+	<div class="mt-account-sheet">
+		{#if data.view.kind === 'guest'}
+			<section class="mt-account-section">
+				<header>
+					<div>
+						<h2>Sign in</h2>
+						<p>Use Google to save schedules, outlines, and forum posts.</p>
+					</div>
+				</header>
+				<form on:submit|preventDefault={beginSignIn}>
+					<button type="submit" class="mt-primary-button" disabled={pending}>Continue with Google</button>
+				</form>
+				{#if pending}<p class="mt-status" role="status">Opening Google sign-in</p>{/if}
+				{#if failed}<p class="mt-error" role="alert">Sign-in is unavailable. Try again.</p>{/if}
+			</section>
+		{:else if data.view.kind === 'incomplete'}
+			<section class="mt-account-section">
+				<header>
+					<div>
+						<h2>Profile</h2>
+						<p>Shown next to discussions and contributions.</p>
+					</div>
+				</header>
+				<div class="mt-account-identity">
+					<span class="mt-account-avatar">{initialsFromDisplayName(labelFromEmail(data.view.email))}</span>
+					<div>
+						<strong>{labelFromEmail(data.view.email)}</strong>
+						<p>{data.view.email}</p>
+					</div>
 				</div>
-			{/if}
-			<div>
-				<dt>Student number</dt>
-				<dd>Saved, and kept off other pages.</dd>
-			</div>
-			<div>
-				<dt>NVIDIA outline analysis</dt>
-				<dd>{data.view.nimAccepted ? 'Accepted' : 'Not accepted yet'}</dd>
-			</div>
-		</dl>
-		{#if !data.view.nimAccepted}
-			<form method="POST" action="?/complete" class="account-form">
-				<label>
-					Student number
-					<input name="studentId" inputmode="numeric" required minlength="5" maxlength="8" />
-				</label>
-				<label class="disclose">
-					<input type="checkbox" name="nimAccepted" />
-					{data.nimDisclosure}
-				</label>
-				<button type="submit" class="primary">Save account</button>
-			</form>
+			</section>
+			<section class="mt-account-section">
+				<header>
+					<div>
+						<h2>Student details</h2>
+						<p>Used only to connect your schedule and semester.</p>
+					</div>
+				</header>
+				<form method="POST" action="?/complete" class="mt-account-form">
+					<label>
+						Student number
+						<input
+							name="studentId"
+							inputmode="numeric"
+							autocomplete="off"
+							required
+							minlength="5"
+							maxlength="8"
+						/>
+					</label>
+					<label>
+						Display name, optional
+						<input name="displayName" maxlength="120" />
+					</label>
+					<label class="disclose">
+						<input type="checkbox" name="nimAccepted" />
+						{data.nimDisclosure}
+					</label>
+					<button type="submit" class="mt-primary-button">Save account</button>
+				</form>
+			</section>
+		{:else}
+			<section class="mt-account-section">
+				<header>
+					<div>
+						<h2>Profile</h2>
+						<p>Shown next to discussions and contributions.</p>
+					</div>
+					<span class="mt-account-signed"><i></i> Signed in</span>
+				</header>
+				<div class="mt-account-identity">
+					<span class="mt-account-avatar">
+						{initialsFromDisplayName(data.view.displayName ?? labelFromEmail(data.view.email))}
+					</span>
+					<div>
+						<strong>{data.view.displayName ?? labelFromEmail(data.view.email)}</strong>
+						<p>{data.view.email}</p>
+					</div>
+				</div>
+			</section>
+			<section class="mt-account-section">
+				<header>
+					<div>
+						<h2>Student details</h2>
+						<p>Used only to connect your schedule and semester.</p>
+					</div>
+				</header>
+				<dl class="mt-account-profile">
+					<div>
+						<dt>Student number</dt>
+						<dd>Saved, and kept off other pages.</dd>
+					</div>
+					<div>
+						<dt>NVIDIA outline analysis</dt>
+						<dd>{data.view.nimAccepted ? 'Accepted' : 'Not accepted yet'}</dd>
+					</div>
+				</dl>
+				{#if !data.view.nimAccepted}
+					<form method="POST" action="?/complete" class="mt-account-form">
+						<label>
+							Student number
+							<input name="studentId" inputmode="numeric" required minlength="5" maxlength="8" />
+						</label>
+						<label class="disclose">
+							<input type="checkbox" name="nimAccepted" />
+							{data.nimDisclosure}
+						</label>
+						<button type="submit" class="mt-primary-button">Save account</button>
+					</form>
+				{/if}
+			</section>
 		{/if}
-	{/if}
+	</div>
 </section>
-
-<style>
-	.account-page {
-		display: grid;
-		padding-block: var(--space-xl);
-		gap: var(--space-md);
-		max-width: 42rem;
-	}
-
-	.intro h1 {
-		font-family: var(--font-display);
-		font-size: var(--text-3xl);
-		line-height: 1.05;
-	}
-
-	.intro p,
-	.disclose,
-	.email {
-		max-width: 52ch;
-	}
-
-	.email {
-		color: var(--quiet-steel);
-	}
-
-	.account-form,
-	.profile {
-		display: grid;
-		gap: var(--space-sm);
-	}
-
-	.account-form label,
-	.profile div {
-		display: grid;
-		gap: var(--space-3xs);
-		padding-block: var(--space-sm);
-		border-block-start: var(--rule);
-	}
-
-	.disclose {
-		grid-template-columns: auto 1fr;
-		align-items: start;
-		font-weight: 400;
-		font-size: var(--text-sm);
-	}
-
-	input:not([type='checkbox']) {
-		height: var(--control-height);
-		padding-inline: var(--space-xs);
-		border: var(--rule-strong);
-		border-radius: var(--radius-sm);
-		background: var(--surface-raised);
-		color: var(--graphite);
-		font: inherit;
-	}
-
-	.primary {
-		justify-self: start;
-		height: var(--control-height);
-		padding-inline: var(--space-md);
-		border: 0;
-		border-radius: var(--radius-sm);
-		background: var(--club-blue);
-		color: #fff;
-		font-weight: 650;
-	}
-
-	.primary:disabled {
-		cursor: wait;
-		opacity: 0.65;
-	}
-
-	.primary:focus-visible {
-		outline: var(--focus-ring-width) solid var(--club-blue);
-		outline-offset: var(--focus-ring-offset);
-	}
-
-	.error {
-		color: var(--danger);
-	}
-
-	.status {
-		font-size: var(--text-sm);
-		color: var(--quiet-steel);
-	}
-
-	dt {
-		font-size: var(--text-xs);
-		font-weight: 600;
-		color: var(--quiet-steel);
-	}
-</style>
