@@ -9,8 +9,20 @@
 	} from '$lib/maritools/schedule/freeTime.js';
 	import { generateOccurrences } from '$lib/maritools/schedule/occurrences.js';
 	import { parseOmnivox } from '$lib/maritools/schedule/parseOmnivox.js';
+	import { slugFromBoardTitle } from '$lib/maritools/schedule/freeTimeBoard.js';
+	import { ACADEMIC_TERMS } from '$lib/maritools/term/calendar.js';
 	import { rulesForTerm } from '$lib/maritools/term/calendar.js';
-	import { termResolution } from '$lib/maritools/term/session.js';
+	import { termResolution, explicitTermId } from '$lib/maritools/term/session.js';
+	import '$lib/maritools/styles/index-pages.css';
+
+	/** @type {{ boards?: Array<{ slug: string, title: string, members?: unknown[] }>, unavailable?: boolean }} */
+	export let data = { boards: [] };
+
+	/** @type {{ createError?: string } | null} */
+	export let form = null;
+
+	let boardTitle = '';
+	$: selectedTerm = get(explicitTermId) ?? get(termResolution).selected?.id ?? ACADEMIC_TERMS[0]?.id ?? '';
 
 	/** @type {string[]} */
 	let schedules = ['', ''];
@@ -131,6 +143,51 @@
 </svelte:head>
 
 <section class="page page-container">
+	<section class="boards-section">
+		<header class="mt-titlebar">
+			<div>
+				<h2 class="boards-title">Your boards</h2>
+			</div>
+			<p>Create a board, share its link, and find a time that works. No account required.</p>
+		</header>
+
+		<form method="POST" action="?/createBoard" class="mt-index-filters mt-index-filters--two">
+			<label>
+				<span>Board title</span>
+				<input name="title" bind:value={boardTitle} placeholder="Data Structures study group" required />
+			</label>
+			<label>
+				<span>Term</span>
+				<select name="termId" bind:value={selectedTerm} required>
+					{#each ACADEMIC_TERMS as term (term.id)}
+						<option value={term.id}>{term.name}</option>
+					{/each}
+				</select>
+			</label>
+			<input type="hidden" name="slug" value={slugFromBoardTitle(boardTitle)} />
+			<button type="submit" class="mt-primary-button">Create board</button>
+		</form>
+
+		{#if form?.createError}
+			<p class="error" role="alert">{form.createError}</p>
+		{/if}
+
+		{#if data.boards?.length}
+			<div class="boards-index mt-index-table">
+				<div class="boards-head mt-index-head">
+					<span>Board</span><span>Members</span><span></span>
+				</div>
+				{#each data.boards as board (board.slug)}
+					<a class="boards-row" href={`/tools/free-time/${board.slug}`}>
+						<span><strong>{board.title}</strong></span>
+						<span>{board.members?.length ?? 0}</span>
+						<span>Open →</span>
+					</a>
+				{/each}
+			</div>
+		{/if}
+	</section>
+
 	<header>
 		<h1>Common free time</h1>
 		<p>
@@ -163,7 +220,12 @@
 		{#each schedules as _, index (index)}
 			<label>
 				Schedule {index + 1}
-				<textarea bind:value={schedules[index]} rows="8" spellcheck="false"></textarea>
+				<textarea
+					bind:value={schedules[index]}
+					rows="8"
+					spellcheck="false"
+					aria-label="Schedule {index + 1}"
+				></textarea>
 				{#if schedules.length > 2}
 					<button type="button" class="ghost" on:click={() => removePerson(index)}>Remove</button>
 				{/if}
@@ -225,6 +287,40 @@
 		display: grid;
 		padding-block: var(--space-xl);
 		gap: var(--space-md);
+	}
+
+	.boards-section {
+		display: grid;
+		margin-inline: calc(-1 * clamp(1.25rem, 3vw, 3rem));
+		margin-bottom: var(--space-lg);
+		background: var(--surface-raised);
+	}
+
+	.boards-title {
+		margin: 0;
+		font-family: var(--font-display);
+		font-size: clamp(1.5rem, 2.5vw, 2rem);
+	}
+
+	.boards-head,
+	.boards-row {
+		display: grid;
+		grid-template-columns: minmax(12rem, 1fr) 5rem 5rem;
+		column-gap: 1rem;
+		align-items: center;
+	}
+
+	.boards-row {
+		min-height: 3rem;
+		padding: 0.35rem 0;
+		border-bottom: var(--rule);
+		color: inherit;
+		text-decoration: none;
+		font-size: var(--text-sm);
+	}
+
+	.boards-row:hover {
+		background: #f5f8fb;
 	}
 
 	h1 {

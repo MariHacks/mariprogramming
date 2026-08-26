@@ -166,6 +166,13 @@ describe('createFreeTimeStore', () => {
 		});
 	});
 
+	it('lists recent boards', async () => {
+		const store = queuedStore([[BOARD_ROW]]);
+		await expect(store.listBoards(5)).resolves.toEqual([
+			expect.objectContaining({ slug: 'study-group', members: [] })
+		]);
+	});
+
 	it('returns null for a missing slug', async () => {
 		const store = queuedStore([[]]);
 		await expect(store.getBoardBySlug('missing')).resolves.toBeNull();

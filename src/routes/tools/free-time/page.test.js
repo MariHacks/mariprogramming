@@ -11,9 +11,8 @@ afterEach(() => {
 });
 
 function pasteTwo() {
-	const areas = screen.getAllByRole('textbox');
-	fireEvent.input(areas[0], { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
-	fireEvent.input(areas[1], { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
+	fireEvent.input(screen.getByLabelText('Schedule 1'), { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
+	fireEvent.input(screen.getByLabelText('Schedule 2'), { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
 }
 
 describe('Common free time', () => {
@@ -34,15 +33,14 @@ describe('Common free time', () => {
 	it('adds a third person and compares a 90-minute gap', () => {
 		render(FreeTimePage);
 		fireEvent.click(screen.getByRole('button', { name: 'Add another person' }));
-		const areas = screen.getAllByRole('textbox');
-		expect(areas.length).toBeGreaterThanOrEqual(3);
-		fireEvent.input(areas[0], { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
-		fireEvent.input(areas[1], { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
+		expect(screen.getByLabelText('Schedule 3')).toBeInTheDocument();
+		fireEvent.input(screen.getByLabelText('Schedule 1'), { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
+		fireEvent.input(screen.getByLabelText('Schedule 2'), { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
 		fireEvent.click(screen.getByRole('radio', { name: '90 minutes' }));
 		fireEvent.click(screen.getByRole('button', { name: 'Find shared free time' }));
 		expect(screen.getByText('Tue')).toBeInTheDocument();
 		fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0]);
-		expect(screen.getAllByRole('textbox').length).toBe(2);
+		expect(screen.getAllByLabelText(/^Schedule \d+$/).length).toBe(2);
 	});
 
 	it('uses a custom duration and an optional calendar date', () => {

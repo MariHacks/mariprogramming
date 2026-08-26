@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { asc, eq } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 import { readRuntimeEnvironment } from '../config/environment.js';
 import { mtFreeTimeBoards, mtFreeTimeMembers } from '../db/schema';
 import { withDatabaseTransaction } from '../db/transaction.js';
@@ -139,6 +139,25 @@ export function createFreeTimeStore(databaseUrl, runTransaction = withDatabaseTr
 				return publicBoardView({ ...board, members: [] });
 			} catch (error) {
 				if (isUniqueViolation(error)) throw new MariToolsConflictError();
+				redactUnexpected(error);
+			}
+		},
+
+		/** @param {number} [limit] */
+		async listBoards(limit = 20) {
+			const capped = Number.isFinite(limit) ? Math.min(Math.max(Math.trunc(limit), 1), 100) : 20;
+			try {
+				const boards = asRows(
+					await transact((transaction) =>
+						transaction
+							.select()
+							.from(mtFreeTimeBoards)
+							.orderBy(desc(mtFreeTimeBoards.createdAt))
+							.limit(capped)
+					)
+				);
+				return boards.map((board) => publicBoardView({ ...board, members: [] }));
+			} catch (error) {
 				redactUnexpected(error);
 			}
 		},

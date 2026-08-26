@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
-import { MariToolsUnavailableError } from '$lib/server/maritools/repository.js';
+import { MariToolsUnavailableError, MariToolsValidationError } from '$lib/server/maritools/repository.js';
 import { prerender, _createHandlers } from './+page.server.js';
 
 const BOARD = {
@@ -15,10 +15,17 @@ const BOARD = {
 function handlers(overrides = {}) {
 	const store = {
 		getBoardBySlug: vi.fn(async () => BOARD),
+		upsertMemberAvailability: vi.fn(async () => ({
+			id: '80000000-0000-4000-8000-000000000001',
+			displayName: 'Ada',
+			availability: { version: 1, free: ['Mon-09:00'] },
+			shareToken: 'token-1'
+		})),
 		...overrides.store
 	};
 	return {
 		..._createHandlers({
+			readEnvironment: vi.fn(() => ({ appOrigin: 'https://example.com' })),
 			createStore: vi.fn(() => store),
 			...overrides
 		}),
@@ -30,6 +37,19 @@ function event({ params = { slug: 'study-group' } } = {}) {
 	return { params };
 }
 
+function saveEvent(fields, params = { slug: 'study-group' }) {
+	return {
+		params,
+		request: {
+			formData: async () => {
+				const data = new FormData();
+				for (const [key, value] of Object.entries(fields)) data.set(key, value);
+				return data;
+			}
+		}
+	};
+}
+
 describe('free-time board page server', () => {
 	it('is not prerendered', () => {
 		expect(prerender).toBe(false);
@@ -38,7 +58,8 @@ describe('free-time board page server', () => {
 	it('loads a board by slug', async () => {
 		const current = handlers();
 		await expect(current.load(event())).resolves.toMatchObject({
-			board: { slug: 'study-group', title: 'Study group' }
+			board: { slug: 'study-group', title: 'Study group' },
+			shareUrl: 'https://example.com/tools/free-time/study-group'
 		});
 		expect(current.store.getBoardBySlug).toHaveBeenCalledWith('study-group');
 	});
@@ -74,5 +95,52 @@ describe('free-time board page server', () => {
 			}
 		});
 		await expect(boom.load(event())).rejects.toThrow('boom');
+	});
+
+	it('saves member availability', async () => {
+		const current = handlers();
+		await expect(
+			current.actions.saveMember(
+				saveEvent({
+					displayName: 'Ada',
+					shareToken: '',
+					freeJson: JSON.stringify(['Mon-09:00'])
+				})
+			)
+		).resolves.toMatchObject({ saveSuccess: true, member: { displayName: 'Ada' } });
+	});
+
+	it('rejects invalid availability json', async () => {
+		const current = handlers();
+		await expect(
+			current.actions.saveMember(
+				saveEvent({ displayName: 'Ada', shareToken: '', freeJson: '{bad' })
+			)
+		).resolves.toMatchObject({ status: 400 });
+	});
+
+	it('returns not found when saving to a missing board', async () => {
+		const missing = handlers({ store: { getBoardBySlug: vi.fn(async () => null) } });
+		await expect(
+			missing.actions.saveMember(
+				saveEvent({ displayName: 'Ada', shareToken: '', freeJson: '[]' })
+			)
+		).resolves.toMatchObject({ status: 404 });
+	});
+
+	it('maps validation failures while saving', async () => {
+		const invalid = handlers({
+			store: {
+				getBoardBySlug: vi.fn(async () => BOARD),
+				upsertMemberAvailability: vi.fn(async () => {
+					throw new MariToolsValidationError();
+				})
+			}
+		});
+		await expect(
+			invalid.actions.saveMember(
+				saveEvent({ displayName: '   ', shareToken: '', freeJson: '[]' })
+			)
+		).resolves.toMatchObject({ status: 400 });
 	});
 });
