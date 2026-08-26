@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MariTools visual arena — 4 directions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Inter+Tight:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ink: #0f172a; --muted: #64748b; --rule: #e2e8f0; --signal: #2563eb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(--ink); background: #f1f5f9; line-height: 1.5; }
+    header { background: #0f172a; color: #f8fafc; padding: 20px 24px; border-bottom: 3px solid var(--signal); }
+    header h1 { font-family: "Inter Tight", Inter, sans-serif; font-size: 1.5rem; margin: 0 0 6px; }
+    header p { margin: 0; color: #94a3b8; font-size: 0.9rem; max-width: 60ch; }
+    main { max-width: 1200px; margin: 0 auto; padding: 24px 20px 48px; }
+    .grid { display: grid; gap: 20px; }
+    @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+    .card { background: #fff; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 16px rgb(15 23 42 / 6%); }
+    .card-head { padding: 16px 18px; border-bottom: 1px solid var(--rule); }
+    .card-head h2 { font-family: "Inter Tight", Inter, sans-serif; font-size: 1.125rem; margin: 0 0 4px; }
+    .card-head p { margin: 0; font-size: 0.875rem; color: var(--muted); }
+    .card-head .runner { font-size: 0.75rem; font-weight: 600; color: var(--signal); margin-bottom: 6px; }
+    .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; background: #f8fafc; }
+    .shots img { width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 4px; display: block; }
+    .shots span { font-size: 0.7rem; color: var(--muted); display: block; margin-top: 4px; }
+    .actions { padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .actions a { font-size: 0.875rem; font-weight: 600; color: var(--signal); text-decoration: none; }
+    .actions a:hover { text-decoration: underline; }
+    .btn { display: inline-block; padding: 8px 14px; background: var(--signal); color: #fff; border-radius: 6px; font-weight: 600; font-size: 0.875rem; text-decoration: none; }
+    .process { margin-top: 32px; padding: 20px; background: #fff; border: 1px solid var(--rule); border-radius: 10px; font-size: 0.9rem; }
+    .process h2 { font-size: 1rem; margin: 0 0 10px; }
+    .process ol { margin: 0; padding-left: 1.2rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MariTools visual arena</h1>
+    <p>Four high-effort static previews from 2 Codex + 2 Grok agents. Each direction is a full 9-surface shell with grouped sidebar. No monospace fonts. Pick a candidate, open the live preview, use the surface picker inside each preview to walk every page.</p>
+  </header>
+  <main>
+    <div class="grid">
+      <article class="card">
+        <div class="card-head">
+          <p class="runner">Candidate 1 · Codex gpt-5.6-sol · Round 2 polished</p>
+          <h2>Campus Lab Manual</h2>
+          <p>Grouped TOC mini-panels, mist sidebar, registrar week grid, electric blue signal.</p>
+        </div>
+        <div class="shots">
+          <div><img src="screenshots/round-1-post-build/candidate-1-schedule-desktop.png" alt="" /><span>Schedule desktop</span></div>
+          <div><img src="screenshots/round-1-post-build/candidate-1-schedule-mobile.png" alt="" /><span>Schedule mobile</span></div>
+        </div>
+        <div class="actions">
+          <a class="btn" href="candidate-1/index.html">Open live preview</a>
+          <a href="candidate-1/rationale.md">Rationale</a>
+          <a href="candidate-1/self-review.md">Self-review</a>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head">
+          <p class="runner">Candidate 2 · Codex gpt-5.6-sol</p>
+          <h2>Linear instrument</h2>
+          <p>Flat rail, hairline rules, inset active bar, Stripe-docs list density.</p>
+        </div>
+        <div class="shots">
+          <div><img src="screenshots/round-1-post-build/candidate-2-schedule-desktop.png" alt="" /><span>Schedule desktop</span></div>
+          <div><img src="screenshots/round-1-post-build/candidate-2-schedule-mobile.png" alt="" /><span>Schedule mobile</span></div>
+        </div>
+        <div class="actions">
+          <a class="btn" href="candidate-2/index.html">Open live preview</a>
+          <a href="candidate-2/rationale.md">Rationale</a>
+          <a href="candidate-2/self-review.md">Self-review</a>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head">
+          <p class="runner">Candidate 3 · Grok grok-4.6</p>
+          <h2>Comparison workshop</h2>
+          <p>When2meet-style multi-schedule paste, person labels, ruled gap rows.</p>
+        </div>
+        <div class="shots">
+          <div><img src="screenshots/round-1-post-build/candidate-3-schedule-desktop.png" alt="" /><span>Schedule desktop</span></div>
+          <div><img src="screenshots/round-1-post-build/candidate-3-schedule-mobile.png" alt="" /><span>Schedule mobile</span></div>
+        </div>
+        <div class="actions">
+          <a class="btn" href="candidate-3/index.html">Open live preview</a>
+          <a href="candidate-3/rationale.md">Rationale</a>
+          <a href="candidate-3/self-review.md">Self-review</a>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-head">
+          <p class="runner">Candidate 4 · Grok grok-4.6</p>
+          <h2>Quiet ledger</h2>
+          <p>Narrow dot-nav rail, wide main, cool paper editorial tables.</p>
+        </div>
+        <div class="shots">
+          <div><img src="screenshots/round-1-post-build/candidate-4-schedule-desktop.png" alt="" /><span>Schedule desktop</span></div>
+          <div><img src="screenshots/round-1-post-build/candidate-4-schedule-mobile.png" alt="" /><span>Schedule mobile</span></div>
+        </div>
+        <div class="actions">
+          <a class="btn" href="candidate-4/index.html">Open live preview</a>
+          <a href="candidate-4/rationale.md">Rationale</a>
+          <a href="candidate-4/self-review.md">Self-review</a>
+        </div>
+      </article>
+    </div>
+    <section class="process">
+      <h2>Arena process</h2>
+      <ol>
+        <li>Frame + rubric: <code>.impeccable/arena/maritools-visual-arena-frame.md</code></li>
+        <li>Round 1: 2 Codex + 2 Grok parallel HTML/CSS builds (400+ line CSS each)</li>
+        <li>Visual review: Playwright screenshots at 1440×900 and 390×844</li>
+        <li>Round 2: Candidate 1 polish iteration from self-review (Codex)</li>
+        <li>Cross-judge scores: <code>.impeccable/arena/maritools-visual-cross-judge.md</code></li>
+      </ol>
+    </section>
+  </main>
+</body>
+</html>
