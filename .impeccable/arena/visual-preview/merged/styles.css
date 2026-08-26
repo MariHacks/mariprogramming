@@ -624,6 +624,20 @@ h3 {
 	padding: 0;
 }
 
+.page-catalog,
+.page-clubs,
+.page-club-detail,
+.page-forum,
+.page-thread,
+.page-free-boards,
+.page-account {
+	padding: 0;
+}
+
+.page-semester {
+	padding: 28px clamp(24px, 3vw, 50px) 64px;
+}
+
 .primary-button,
 .quiet-button,
 .text-button,
@@ -875,8 +889,7 @@ h3 {
 	width: calc(100% / var(--lanes) - 5px);
 	height: calc(var(--duration) * var(--hour-h) - 4px);
 	min-height: 38px;
-	overflow: hidden;
-	padding: 7px 8px;
+	padding: 7px 8px 7px 6px;
 	border-radius: 2px;
 	box-shadow: 0 2px 4px rgba(16, 26, 45, 0.08);
 }
@@ -920,7 +933,7 @@ h3 {
 .event-blue {
 	color: #0e3a8a;
 	background: #dce8ff;
-	box-shadow: inset 2px 0 0 #1463ff;
+	border-left: 2px solid #1463ff;
 }
 
 .event-ink {
@@ -931,13 +944,13 @@ h3 {
 .event-slate {
 	color: #1d2b40;
 	background: #dce2eb;
-	box-shadow: inset 2px 0 0 #667890;
+	border-left: 2px solid #667890;
 }
 
 .event-pale {
 	color: #28384e;
 	background: #eef1f5;
-	box-shadow: inset 2px 0 0 #8593a6;
+	border-left: 2px solid #8593a6;
 }
 
 .event-line {
@@ -1456,11 +1469,11 @@ h3 {
 	display: flex;
 	align-items: flex-end;
 	justify-content: space-between;
-	max-width: 1180px;
-	margin: 0 auto 30px;
-	padding: 16px 0 27px;
-	border-bottom: 1px solid var(--line-dark);
-	gap: 34px;
+	margin: 0;
+	padding: 1.5rem clamp(1.25rem, 3vw, 3rem);
+	border-bottom: 1px solid var(--rule-dark);
+	background: white;
+	gap: 2rem;
 }
 
 .index-title h1 {
@@ -1498,8 +1511,7 @@ h3 {
 }
 
 .boards-index {
-	max-width: 1180px;
-	margin: 0 auto;
+	margin: 0 clamp(1.25rem, 3vw, 3rem);
 	border-top: 1px solid var(--line-dark);
 }
 
@@ -1574,8 +1586,7 @@ h3 {
 .boards-help {
 	display: grid;
 	grid-template-columns: 160px 1fr;
-	max-width: 1180px;
-	margin: 32px auto 0;
+	margin: 32px clamp(1.25rem, 3vw, 3rem) 3rem;
 	padding: 20px 0;
 	border-top: 1px solid var(--line-dark);
 	border-bottom: 1px solid var(--line-dark);
@@ -1592,10 +1603,9 @@ h3 {
 .semester-layout {
 	display: grid;
 	grid-template-columns: 245px minmax(0, 1fr);
-	max-width: 1180px;
-	margin: 0 auto;
-	border-top: 1px solid var(--line-dark);
-	border-bottom: 1px solid var(--line-dark);
+	margin: 0;
+	border-top: 0;
+	border-bottom: 0;
 }
 
 .course-stack {
@@ -1605,11 +1615,31 @@ h3 {
 
 .stack-head {
 	display: flex;
+	align-items: center;
 	justify-content: space-between;
-	min-height: 48px;
+	min-height: 68px;
 	padding: 16px;
 	border-bottom: 1px solid var(--line-dark);
 	font-size: 10px;
+	gap: 12px;
+}
+
+.stack-head > div {
+	display: grid;
+	gap: 2px;
+}
+
+.course-stack .stack-head .add-outline {
+	position: static;
+	display: inline-flex;
+	width: auto;
+	min-height: 32px;
+	padding: 0 9px;
+	border: 1px solid var(--blue);
+	background: var(--blue);
+	color: white;
+	font-size: 9px;
+	text-align: center;
 }
 
 .stack-head span {
@@ -2112,6 +2142,96 @@ h3 {
 	line-height: 1.55;
 }
 
+/* Club detail */
+
+.club-detail-header,
+.club-detail-index {
+	margin: 0 clamp(1.25rem, 3vw, 3rem);
+}
+
+.club-detail-header {
+	padding: 2rem 0 1.5rem;
+	border-bottom: 1px solid var(--ink);
+}
+
+.club-detail-header > a {
+	color: var(--blue);
+	font-size: 11px;
+	font-weight: 650;
+	text-decoration: none;
+}
+
+.club-detail-header > div {
+	display: flex;
+	align-items: center;
+	margin-top: 2rem;
+	gap: 14px;
+}
+
+.club-detail-header .club-initials {
+	width: 52px;
+	height: 52px;
+}
+
+.club-detail-header h1 {
+	margin: 0 0 4px;
+	font-size: clamp(32px, 4vw, 52px);
+}
+
+.club-detail-header p,
+.club-detail-index p {
+	margin: 0;
+	color: var(--steel);
+}
+
+.club-detail-index {
+	display: grid;
+	grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.75fr);
+}
+
+.club-detail-index section {
+	min-height: 150px;
+	padding: 24px 24px 28px 0;
+	border-bottom: 1px solid var(--line-dark);
+}
+
+.club-detail-index section:nth-child(even) {
+	padding-right: 0;
+	padding-left: 24px;
+	border-left: 1px solid var(--line-dark);
+}
+
+.club-detail-index h2 {
+	margin-bottom: 14px;
+	font-size: 16px;
+}
+
+.club-detail-index p {
+	max-width: 66ch;
+	font-size: 12px;
+	line-height: 1.65;
+}
+
+.club-link-row {
+	display: flex;
+	justify-content: space-between;
+	padding: 9px 0;
+	border-top: 1px solid var(--line);
+	color: var(--steel);
+	font-size: 10px;
+}
+
+.club-link-row a {
+	color: var(--blue);
+	font-weight: 650;
+	text-decoration: none;
+}
+
+.club-detail-index .primary-button {
+	margin-top: 18px;
+	text-decoration: none;
+}
+
 /* Forum index */
 
 .forum-titlebar {
@@ -2344,8 +2464,7 @@ h3 {
 }
 
 .composer-avatar,
-.post-avatar,
-.identity-avatar {
+.post-avatar {
 	display: grid;
 	width: 2.25rem;
 	height: 2.25rem;
@@ -2588,15 +2707,15 @@ h3 {
 /* Account */
 
 .account-layout {
-	display: grid;
-	grid-template-columns: 170px minmax(0, 1fr);
-	max-width: 1000px;
-	margin: 0 auto;
-	border-top: 1px solid var(--line-dark);
+	display: block;
+	max-width: 900px;
+	margin: 0 clamp(1.25rem, 3vw, 3rem) 3rem;
+	border-top: 0;
 }
 
 .settings-sheet {
-	border-left: 1px solid var(--line-dark);
+	border-top: 2px solid var(--ink);
+	border-left: 0;
 	background: white;
 }
 
@@ -2648,10 +2767,12 @@ h3 {
 	gap: 12px;
 }
 
-.identity-avatar {
+.account-layout .identity-avatar {
 	display: grid;
 	width: 45px;
 	height: 45px;
+	border: 0;
+	border-radius: 0;
 	background: var(--ink);
 	color: white;
 	font-size: 11px;
@@ -2864,58 +2985,17 @@ h3 {
 }
 
 .tutorial-frame {
-	position: relative;
-	display: grid;
+	display: block;
 	min-height: 370px;
-	overflow: hidden;
+	padding: 22px;
 	border: 1px solid #aebccc;
-	background: #f2f5f9;
-	place-content: center;
-	text-align: center;
-}
-
-.tutorial-frame::before,
-.tutorial-frame::after {
-	position: absolute;
-	content: '';
-}
-
-.tutorial-frame::before {
-	inset: 22px;
-	border: 1px solid #d4dde7;
-	background: white;
-}
-
-.tutorial-frame::after {
-	top: 22px;
-	right: 22px;
-	left: 22px;
-	height: 35px;
-	border-bottom: 1px solid #d4dde7;
-	background: #e7edf4;
+	background: #edf2f7;
+	text-align: left;
 }
 
 .tutorial-frame > * {
 	position: relative;
 	z-index: 1;
-}
-
-.tutorial-frame span {
-	color: var(--blue);
-	font-size: 10px;
-	font-weight: 700;
-	text-transform: uppercase;
-}
-
-.tutorial-frame strong {
-	margin: 6px 0 3px;
-	font-family: var(--font-display);
-	font-size: 20px;
-}
-
-.tutorial-frame small {
-	color: var(--steel);
-	font-size: 9px;
 }
 
 .tutorial-stage footer {
@@ -2948,164 +3028,7 @@ h3 {
 	box-shadow: 0 10px 24px rgb(var(--ink-rgb) / 20%);
 }
 
-/* Candidate 2 flat indexes and settings bands */
-
-.page-catalog,
-.page-clubs,
-.page-club-detail,
-.page-forum,
-.page-thread {
-	padding: 0;
-}
-
-.page-semester {
-	padding: 28px clamp(24px, 3vw, 50px) 64px;
-}
-
-.semester-layout {
-	max-width: none;
-	margin: 0;
-	border-top: 0;
-	border-bottom: 0;
-}
-
-.stack-head {
-	min-height: 68px;
-	align-items: center;
-	gap: 12px;
-}
-
-.stack-head > div {
-	display: grid;
-	gap: 2px;
-}
-
-.course-stack .stack-head .add-outline {
-	position: static;
-	display: inline-flex;
-	width: auto;
-	min-height: 32px;
-	padding: 0 9px;
-	border: 1px solid var(--blue);
-	background: var(--blue);
-	color: white;
-	font-size: 9px;
-	text-align: center;
-}
-
-.account-layout {
-	display: block;
-	max-width: 900px;
-	border-top: 0;
-}
-
-.settings-sheet {
-	border-top: 2px solid var(--ink);
-	border-left: 0;
-}
-
-.club-detail-header,
-.club-detail-index {
-	margin: 0 clamp(1.25rem, 3vw, 3rem);
-}
-
-.club-detail-header {
-	padding: 2rem 0 1.5rem;
-	border-bottom: 1px solid var(--ink);
-}
-
-.club-detail-header > a {
-	color: var(--blue);
-	font-size: 11px;
-	font-weight: 650;
-	text-decoration: none;
-}
-
-.club-detail-header > div {
-	display: flex;
-	align-items: center;
-	margin-top: 2rem;
-	gap: 14px;
-}
-
-.club-detail-header .club-initials {
-	width: 52px;
-	height: 52px;
-}
-
-.club-detail-header h1 {
-	margin: 0 0 4px;
-	font-size: clamp(32px, 4vw, 52px);
-}
-
-.club-detail-header p,
-.club-detail-index p {
-	margin: 0;
-	color: var(--steel);
-}
-
-.club-detail-index {
-	display: grid;
-	grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.75fr);
-}
-
-.club-detail-index section {
-	min-height: 150px;
-	padding: 24px 24px 28px 0;
-	border-bottom: 1px solid var(--line-dark);
-}
-
-.club-detail-index section:nth-child(even) {
-	padding-right: 0;
-	padding-left: 24px;
-	border-left: 1px solid var(--line-dark);
-}
-
-.club-detail-index h2 {
-	margin-bottom: 14px;
-	font-size: 16px;
-}
-
-.club-detail-index p {
-	max-width: 66ch;
-	font-size: 12px;
-	line-height: 1.65;
-}
-
-.club-link-row {
-	display: flex;
-	justify-content: space-between;
-	padding: 9px 0;
-	border-top: 1px solid var(--line);
-	color: var(--steel);
-	font-size: 10px;
-}
-
-.club-link-row a {
-	color: var(--blue);
-	font-weight: 650;
-	text-decoration: none;
-}
-
-.club-detail-index .primary-button {
-	margin-top: 18px;
-	text-decoration: none;
-}
-
 /* Intentional Omnivox mock frames */
-
-.tutorial-frame {
-	display: block;
-	min-height: 370px;
-	padding: 22px;
-	background: #edf2f7;
-	text-align: left;
-}
-
-.tutorial-frame::before,
-.tutorial-frame::after {
-	display: none;
-}
 
 .mock-browser-bar {
 	display: flex;
@@ -3467,7 +3390,7 @@ h3 {
 		min-height: calc(100vh - var(--header-h) - var(--preview-h));
 	}
 
-	.page:not(.page-schedule):not(.page-free) {
+	.page-home {
 		padding-top: 10px;
 	}
 
@@ -3567,7 +3490,8 @@ h3 {
 		flex: 1;
 	}
 
-	.page {
+	.page-home,
+	.page-semester {
 		padding-right: 17px;
 		padding-left: 17px;
 	}
@@ -3741,7 +3665,8 @@ h3 {
 	}
 
 	.forum-titlebar {
-		overflow: hidden;
+		align-items: flex-start;
+		flex-direction: column;
 	}
 
 	.forum-tabs {
