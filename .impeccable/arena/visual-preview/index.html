@@ -3,113 +3,35 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MariTools visual arena — Round 2 (from scratch)</title>
+  <title>MariTools visual arena — Merged direction</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Inter+Tight:wght@700&display=swap" rel="stylesheet" />
   <style>
-    :root { --ink: #0f172a; --muted: #64748b; --rule: #e2e8f0; --signal: #2563eb; }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(--ink); background: #e8edf3; line-height: 1.5; }
-    header { background: #0f172a; color: #f8fafc; padding: 22px 24px; border-bottom: 3px solid var(--signal); }
-    header h1 { font-family: "Inter Tight", Inter, sans-serif; font-size: 1.5rem; margin: 0 0 8px; }
-    header p { margin: 0; color: #94a3b8; font-size: 0.9rem; max-width: 72ch; }
-    main { max-width: 1280px; margin: 0 auto; padding: 24px 20px 56px; }
-    .note { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; padding: 12px 14px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; }
-    .grid { display: grid; gap: 20px; }
-    @media (min-width: 960px) { .grid { grid-template-columns: 1fr 1fr; } }
-    .card { background: #fff; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 16px rgb(15 23 42 / 6%); }
-    .card-head { padding: 16px 18px; border-bottom: 1px solid var(--rule); }
-    .card-head .runner { font-size: 0.75rem; font-weight: 600; color: var(--signal); margin: 0 0 6px; }
-    .card-head h2 { font-family: "Inter Tight", Inter, sans-serif; font-size: 1.125rem; margin: 0 0 4px; }
-    .card-head p { margin: 0; font-size: 0.875rem; color: var(--muted); }
-    .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; background: #f8fafc; }
-    .shots figure { margin: 0; }
-    .shots img { width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 4px; display: block; background: #fff; }
-    .shots figcaption { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
-    .actions { padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    .actions a { font-size: 0.875rem; font-weight: 600; color: var(--signal); text-decoration: none; }
-    .btn { display: inline-block; padding: 8px 14px; background: var(--signal); color: #fff !important; border-radius: 6px; font-weight: 600; font-size: 0.875rem; text-decoration: none; }
-    .process { margin-top: 28px; padding: 18px 20px; background: #fff; border: 1px solid var(--rule); border-radius: 10px; font-size: 0.9rem; color: var(--muted); }
-    .process h2 { font-size: 1rem; margin: 0 0 8px; color: var(--ink); }
-    code { font-size: 0.85em; }
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #0f172a; color: #f8fafc; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 24px; }
+    h1 { font-family: "Inter Tight", Inter, sans-serif; font-size: 1.75rem; margin: 0 0 12px; }
+    p, li { color: #94a3b8; line-height: 1.55; }
+    .btn { display: inline-block; margin-top: 20px; padding: 12px 18px; background: #2563eb; color: #fff; font-weight: 600; text-decoration: none; border-radius: 8px; }
+    .btn:hover { filter: brightness(1.05); }
+    .card { margin-top: 28px; padding: 18px 20px; background: #1e293b; border-radius: 10px; }
+    .card h2 { font-size: 1rem; margin: 0 0 10px; color: #fff; }
+    a.secondary { color: #60a5fa; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>MariTools visual arena — Round 2</h1>
-    <p>From-scratch rebuild. Round 1 lookalikes archived. Four agents stole craft from Google Calendar, Reddit/Discourse, When2meet, and Linear — not the same mist-sidebar form.</p>
-  </header>
   <main>
-    <p class="note">Open each <strong>live preview</strong> and use the surface picker. Compare Schedule / Forum / Free time — thumbnails should not look interchangeable.</p>
-    <div class="grid">
-      <article class="card">
-        <div class="card-head">
-          <p class="runner">Candidate 1 · Codex · Calendar-first</p>
-          <h2>The Registrar Desk</h2>
-          <p>Google Calendar week owns the first viewport. Omnivox paste is a side drawer, not a giant form above a tiny grid.</p>
-        </div>
-        <div class="shots">
-          <figure><img src="screenshots/round-2-from-scratch/candidate-1-schedule-desktop.png" alt="" /><figcaption>Schedule desktop</figcaption></figure>
-          <figure><img src="screenshots/round-2-from-scratch/candidate-1-forum-desktop.png" alt="" /><figcaption>Forum desktop</figcaption></figure>
-        </div>
-        <div class="actions">
-          <a class="btn" href="candidate-1/index.html">Open live preview</a>
-          <a href="candidate-1/rationale.md">Rationale</a>
-          <a href="candidate-1/self-review.md">Self-review</a>
-        </div>
-      </article>
-      <article class="card">
-        <div class="card-head">
-          <p class="runner">Candidate 2 · Codex · Discourse dens</p>
-          <h2>Registrar Commons</h2>
-          <p>Reddit/Discourse scan density: dark ink rail, ruled topic ledger, composer under the list.</p>
-        </div>
-        <div class="shots">
-          <figure><img src="screenshots/round-2-from-scratch/candidate-2-forum-desktop.png" alt="" /><figcaption>Forum desktop</figcaption></figure>
-          <figure><img src="screenshots/round-2-from-scratch/candidate-2-catalog-desktop.png" alt="" /><figcaption>Catalog desktop</figcaption></figure>
-        </div>
-        <div class="actions">
-          <a class="btn" href="candidate-2/index.html">Open live preview</a>
-          <a href="candidate-2/rationale.md">Rationale</a>
-          <a href="candidate-2/self-review.md">Self-review</a>
-        </div>
-      </article>
-      <article class="card">
-        <div class="card-head">
-          <p class="runner">Candidate 3 · Grok · Availability workshop</p>
-          <h2>When2meet comparison bench</h2>
-          <p>Free time is the flagship: person stations + shared-gap matrix. Schedule shares the calendar geometry.</p>
-        </div>
-        <div class="shots">
-          <figure><img src="screenshots/round-2-from-scratch/candidate-3-free-time-desktop.png" alt="" onerror="this.src='screenshots/round-2-from-scratch/candidate-3-schedule-desktop.png'" /><figcaption>Free time / Schedule</figcaption></figure>
-          <figure><img src="screenshots/round-2-from-scratch/candidate-3-forum-desktop.png" alt="" /><figcaption>Forum desktop</figcaption></figure>
-        </div>
-        <div class="actions">
-          <a class="btn" href="candidate-3/index.html">Open live preview</a>
-          <a href="candidate-3/rationale.md">Rationale</a>
-          <a href="candidate-3/self-review.md">Self-review</a>
-        </div>
-      </article>
-      <article class="card">
-        <div class="card-head">
-          <p class="runner">Candidate 4 · Grok · Linear workspace</p>
-          <h2>Linear canvas + inspector</h2>
-          <p>36px rail, week toolbar, Omnivox paste in a right inspector — not the main column.</p>
-        </div>
-        <div class="shots">
-          <figure><img src="screenshots/round-2-from-scratch/candidate-4-schedule-desktop.png" alt="" /><figcaption>Schedule desktop</figcaption></figure>
-          <figure><img src="screenshots/round-2-from-scratch/candidate-4-forum-desktop.png" alt="" /><figcaption>Forum desktop</figcaption></figure>
-        </div>
-        <div class="actions">
-          <a class="btn" href="candidate-4/index.html">Open live preview</a>
-          <a href="candidate-4/rationale.md">Rationale</a>
-          <a href="candidate-4/self-review.md">Self-review</a>
-        </div>
-      </article>
+    <h1>Merged direction</h1>
+    <p>Single preview synthesized from your Round 2 feedback. New sidebar (arena sidebars discarded). Production-shaped site header with a proper Account control. Schedule from Registrar Desk; catalog/forum from Commons; roomier calendar from Linear workspace.</p>
+    <a class="btn" href="merged/index.html">Open merged live preview</a>
+    <div class="card">
+      <h2>What to check first</h2>
+      <ul>
+        <li>Schedule → Import (tutorial overlay) → Add to Google Calendar</li>
+        <li>Free time → boards + drag paint + guest name panel</li>
+        <li>Semester extraction review · Catalog expand · Forum polish</li>
+        <li>Header Account signed-out / signed-in toggle</li>
+      </ul>
+      <p><a class="secondary" href="merged/MERGE.md">Merge pedigree</a> · <a class="secondary" href="candidate-1/index.html">Round 2 archives</a></p>
     </div>
-    <section class="process">
-      <h2>What changed vs Round 1</h2>
-      <p>Round 1 was archived under <code>archive-round1-lookalike/</code>. Round 2 banned “heading + lead + textarea + blue button” as the dominant Schedule composition and required a named signature layout inspired by real products. No monospace fonts.</p>
-    </section>
   </main>
 </body>
 </html>
