@@ -56,7 +56,7 @@
 					<div>
 						<span class="mt-club-initials">{initialsFromClubName(club.name)}</span>
 						<div>
-							<h2>{club.name}</h2>
+							<h2><a href="/tools/clubs/{club.slug}">{club.name}</a></h2>
 							{#if club.description}
 								<p>{club.description}</p>
 							{/if}
@@ -69,7 +69,7 @@
 							{primaryLink(club).label ?? 'Open listing'} ↗
 						</a>
 					{:else}
-						<span>—</span>
+						<a href="/tools/clubs/{club.slug}">Open listing</a>
 					{/if}
 				</article>
 			{/each}

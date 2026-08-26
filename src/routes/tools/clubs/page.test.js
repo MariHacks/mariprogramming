@@ -51,6 +51,10 @@ describe('clubs page', () => {
 		});
 		expect(screen.getByText('Robotics')).toBeInTheDocument();
 		expect(screen.getByText('Builds robots')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Robotics' })).toHaveAttribute(
+			'href',
+			'/tools/clubs/robotics'
+		);
 		expect(screen.getByRole('link', { name: /Discord/ })).toHaveAttribute(
 			'href',
 			'https://example.com'
@@ -85,7 +89,26 @@ describe('clubs page', () => {
 		expect(screen.getByText('Published.')).toBeInTheDocument();
 	});
 
-	it('shows unavailable and empty pending states', () => {
+	it('links clubs without external URLs to their detail page', () => {
+		render(ClubsPage, {
+			props: {
+				data: {
+					clubs: [{ ...CLUB, links: [] }],
+					pending: [],
+					query: '',
+					category: '',
+					signedIn: false,
+					staff: false
+				}
+			}
+		});
+		expect(screen.getByRole('link', { name: 'Open listing' })).toHaveAttribute(
+			'href',
+			'/tools/clubs/robotics'
+		);
+	});
+
+	it('shows empty pending states', () => {
 		render(ClubsPage, {
 			props: {
 				data: {

@@ -93,6 +93,11 @@ export function createCommunityStore(inner) {
 			});
 		},
 
+		/** @param {string} slug */
+		getPublishedClubBySlug(slug) {
+			return wrap(async () => publicClubView(await inner.getPublishedClubBySlug(slug)));
+		},
+
 		/** @param {{ submitterUserId?: string, payload: object, clubId?: string | null }} input */
 		submitClub(input) {
 			return wrap(() =>

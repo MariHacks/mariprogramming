@@ -29,6 +29,11 @@ function inner(overrides = {}) {
 		listPublishedClubs: vi.fn(async () => [
 			{ id: 'c1', name: 'Robotics', slug: 'robotics', category: 'stem', description: 'Bots', links: [] }
 		]),
+		getPublishedClubBySlug: vi.fn(async (slug) =>
+			slug === 'robotics'
+				? { id: 'c1', name: 'Robotics', slug: 'robotics', category: 'stem', description: 'Bots', links: [] }
+				: null
+		),
 		submitClub: vi.fn(async () => ({ id: SUBMISSION, status: 'pending' })),
 		listClubSubmissions: vi.fn(async () => [
 			{
@@ -94,6 +99,15 @@ describe('community views', () => {
 });
 
 describe('createCommunityStore', () => {
+	it('loads a published club by slug', async () => {
+		const store = createCommunityStore(inner());
+		await expect(store.getPublishedClubBySlug('robotics')).resolves.toMatchObject({
+			slug: 'robotics',
+			name: 'Robotics'
+		});
+		await expect(store.getPublishedClubBySlug('missing')).resolves.toBeNull();
+	});
+
 	it('lists clubs, pending submissions, and catalog courses without student numbers', async () => {
 		const repo = inner();
 		const store = createCommunityStore(repo);
@@ -270,6 +284,17 @@ describe('createCommunityStore', () => {
 			})
 		);
 		await expect(unavailable.listClubs()).rejects.toBeInstanceOf(MaritoolsUnavailableError);
+
+		const slugDown = createCommunityStore(
+			inner({
+				getPublishedClubBySlug: vi.fn(async () => {
+					throw new MariToolsNotFoundError();
+				})
+			})
+		);
+		await expect(slugDown.getPublishedClubBySlug('robotics')).rejects.toBeInstanceOf(
+			MaritoolsUnavailableError
+		);
 	});
 
 	it('defaults pending payload fields', async () => {

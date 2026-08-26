@@ -1110,6 +1110,23 @@ export function createMariToolsRepository({
 			);
 		},
 
+		/** @param {unknown} slug */
+		async getPublishedClubBySlug(slug) {
+			const normalized = typeof slug === 'string' ? slug.trim() : '';
+			if (!normalized || !SLUG_PATTERN.test(normalized)) return null;
+			return redactUnexpected(async () =>
+				oneRow(
+					await transact((transaction) =>
+						transaction
+							.select()
+							.from(mtClubs)
+							.where(and(eq(mtClubs.slug, normalized), eq(mtClubs.published, true)))
+							.limit(1)
+					)
+				)
+			);
+		},
+
 		/** @param {{ submitterUserId?: unknown, clubId?: unknown, payload: unknown }} input */
 		async submitClub(input) {
 			const submitterUserId = optionalUserId(input.submitterUserId);

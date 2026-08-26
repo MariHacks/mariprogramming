@@ -241,6 +241,8 @@ describe('createMariToolsRepository', () => {
 		await expect(repository.setClubSubmissionStatus(SUBMISSION, 'nope')).rejects.toBeInstanceOf(
 			MariToolsValidationError
 		);
+		expect(await repository.getPublishedClubBySlug(null)).toBeNull();
+		expect(await repository.getPublishedClubBySlug('Bad Slug')).toBeNull();
 		await expect(
 			repository.createThread({ authorUserId: USER, title: 'Hi', body: 'Hello', category: 'memes' })
 		).rejects.toBeInstanceOf(MariToolsValidationError);
@@ -283,6 +285,10 @@ describe('createMariToolsRepository', () => {
 			runTransaction: vi.fn().mockRejectedValue(new MariToolsValidationError())
 		});
 		await expect(validation.listPublishedClubs()).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(domain.getPublishedClubBySlug('robotics')).rejects.toBeInstanceOf(MariToolsConflictError);
+		await expect(validation.getPublishedClubBySlug('robotics')).rejects.toBeInstanceOf(
+			MariToolsValidationError
+		);
 	});
 
 	it('covers seed races, malformed rows, and offering recovery', async () => {

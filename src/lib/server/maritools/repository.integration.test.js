@@ -372,6 +372,11 @@ describe.sequential('MariTools repository against disposable PostgreSQL', () => 
 			published: true
 		});
 		expect(await repo.listPublishedClubs()).toMatchObject([{ id: published.id, slug: 'robotics' }]);
+		expect(await repo.getPublishedClubBySlug('robotics')).toMatchObject({ slug: 'robotics' });
+		expect(await repo.getPublishedClubBySlug('chess-club')).toBeNull();
+		expect(await repo.getPublishedClubBySlug('')).toBeNull();
+		expect(await repo.getPublishedClubBySlug('Bad Slug')).toBeNull();
+		expect(await repo.getPublishedClubBySlug(null)).toBeNull();
 		await expect(repo.createClub({ name: 'Robotics 2', slug: 'robotics' })).rejects.toBeInstanceOf(
 			MariToolsConflictError
 		);
