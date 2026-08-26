@@ -46,17 +46,43 @@ describe('SiteHeader', () => {
 		expect(signUpLinks[0]).not.toHaveAttribute('target');
 	});
 
-	it('places Account in the top-right actions next to Sign up', () => {
-		const { container } = render(SiteHeader, { props: { pathname: '/tools/account' } });
+	it('places Sign up in the top-right actions when signed out', () => {
+		const { container } = render(SiteHeader, {
+			props: { pathname: '/', headerAccount: { kind: 'signed-out' } }
+		});
 		const actions = container.querySelector('.header-actions');
 		if (!(actions instanceof HTMLElement)) throw new Error('Header actions are required');
-		const account = within(actions).getByRole('link', { name: 'Account' });
-		const signUp = within(actions).getByRole('link', { name: 'Sign up' });
 
-		expect(account).toHaveAttribute('href', '/tools/account');
-		expect(account).toHaveAttribute('aria-current', 'page');
-		expect(account.compareDocumentPosition(signUp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(screen.getAllByRole('link', { name: 'Account' })).toHaveLength(1);
+		expect(within(actions).getByRole('link', { name: 'Sign up' })).toBeInTheDocument();
+		expect(within(actions).queryByRole('link', { name: 'Account' })).not.toBeInTheDocument();
+		expect(within(actions).queryByRole('button', { name: /Maya/i })).not.toBeInTheDocument();
+	});
+
+	it('shows an identity menu instead of Sign up when signed in', async () => {
+		const user = userEvent.setup();
+		const { container } = render(SiteHeader, {
+			props: {
+				pathname: '/tools/account',
+				headerAccount: {
+					kind: 'signed-in',
+					displayName: 'Maya Singh',
+					initials: 'MS'
+				}
+			}
+		});
+		const actions = container.querySelector('.header-actions');
+		if (!(actions instanceof HTMLElement)) throw new Error('Header actions are required');
+
+		expect(within(actions).queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
+		const identity = within(actions).getByRole('button', { name: /Maya Singh/i });
+		expect(identity).toHaveTextContent('MS');
+
+		await user.click(identity);
+		expect(screen.getByRole('link', { name: 'Your account' })).toHaveAttribute(
+			'href',
+			'/tools/account'
+		);
+		expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
 	});
 
 	it('keeps the utility cluster on one header row so Sign up cannot wrap under the bar', () => {

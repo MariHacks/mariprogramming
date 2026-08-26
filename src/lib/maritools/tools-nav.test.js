@@ -25,7 +25,7 @@ describe('TOOL_NAV_ITEMS', () => {
 	it('names the six tools for the tools sidebar without Account', () => {
 		expect(TOOL_NAV_ITEMS).toEqual([
 			{ href: '/tools/schedule', label: 'Schedule' },
-			{ href: '/tools/free-time', label: 'Free Time' },
+			{ href: '/tools/free-time', label: 'Free time' },
 			{ href: '/tools/semester', label: 'Semester' },
 			{ href: '/tools/catalog', label: 'Catalog' },
 			{ href: '/tools/clubs', label: 'Clubs' },

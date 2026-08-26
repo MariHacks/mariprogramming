@@ -36,15 +36,18 @@ describe('tools layout', () => {
 		expect(container).not.toHaveTextContent(/Showing Fall 2026/i);
 	});
 
-	it('offers a sidebar of MariTools destinations', () => {
+	it('groups MariTools destinations by section in the sidebar', () => {
 		render(ToolsLayout);
 		const nav = screen.getByRole('navigation', { name: 'MariTools' });
 
+		expect(within(nav).getByRole('heading', { name: 'Schedule' })).toBeInTheDocument();
+		expect(within(nav).getByRole('heading', { name: 'Courses' })).toBeInTheDocument();
+		expect(within(nav).getByRole('heading', { name: 'Student life' })).toBeInTheDocument();
 		expect(within(nav).getByRole('link', { name: 'Schedule' })).toHaveAttribute(
 			'href',
 			'/tools/schedule'
 		);
-		expect(within(nav).getByRole('link', { name: 'Free Time' })).toHaveAttribute(
+		expect(within(nav).getByRole('link', { name: 'Free time' })).toHaveAttribute(
 			'href',
 			'/tools/free-time'
 		);
@@ -65,6 +68,7 @@ describe('tools layout', () => {
 			'/tools/forum'
 		);
 		expect(within(nav).queryByRole('link', { name: 'Account' })).not.toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Back to club home' })).toHaveAttribute('href', '/');
 	});
 
 	it('marks the active tool in the sidebar', () => {

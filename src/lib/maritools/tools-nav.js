@@ -51,7 +51,7 @@ export const TOOL_SECTIONS = [
 
 export const TOOL_NAV_ITEMS = [
 	{ href: '/tools/schedule', label: 'Schedule' },
-	{ href: '/tools/free-time', label: 'Free Time' },
+	{ href: '/tools/free-time', label: 'Free time' },
 	{ href: '/tools/semester', label: 'Semester' },
 	{ href: '/tools/catalog', label: 'Catalog' },
 	{ href: '/tools/clubs', label: 'Clubs' },
