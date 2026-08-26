@@ -2,6 +2,7 @@ export const TOOL_SECTIONS = [
 	{
 		id: 'schedule',
 		title: 'Schedule',
+		blurb: 'Plan and compare the week.',
 		items: [
 			{
 				href: '/tools/schedule',
@@ -18,6 +19,7 @@ export const TOOL_SECTIONS = [
 	{
 		id: 'courses',
 		title: 'Courses',
+		blurb: 'Keep the term legible.',
 		items: [
 			{
 				href: '/tools/semester',
@@ -34,6 +36,7 @@ export const TOOL_SECTIONS = [
 	{
 		id: 'student-life',
 		title: 'Student life',
+		blurb: 'Find people and answers.',
 		items: [
 			{
 				href: '/tools/clubs',
