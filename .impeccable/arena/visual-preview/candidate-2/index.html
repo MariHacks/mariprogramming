@@ -3,283 +3,308 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MariTools — Linear instrument preview</title>
+  <title>MariTools — Registrar Commons</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!--
-  THESIS: One continuous campus operating instrument, refusing dashboard cards.
-  OWN-WORLD: Cool paper, navy ink, mist index, blue signal, hairline rules, square controls.
-  STORY: Orient, supply source material, check structured results, then act beside the result.
-  FIRST VIEWPORT: Club header over a grouped 15rem index and an immediate working surface.
-  FORM: Operate mode, restrained palette, flat worksheet staging, assigned arena seed.
-  -->
-  <a class="skip" href="#main">Skip to MariTools</a>
+  <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
-    <a class="club-mark" href="#home">Marianopolis <span>Programming Club</span></a>
-    <nav aria-label="Club navigation">
-      <a href="#about">About</a><a href="#events">Events</a>
-      <a class="current" href="#home">MariTools</a><a href="#account">Account</a>
-      <a class="sign-up" href="https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header">Sign up</a>
+    <a class="club-mark" href="#" aria-label="Marianopolis Programming Club home">
+      <span class="club-mark__seal">M</span><span class="club-mark__name">Programming Club</span>
+    </a>
+    <nav class="site-links" aria-label="Site navigation">
+      <a href="#">Club</a><a href="#">Workshops</a><a class="site-links__current" href="#">MariTools</a>
     </nav>
+    <div class="site-actions">
+      <label class="picker-wrap" for="page-picker"><span>Preview</span>
+        <select id="page-picker" aria-label="Preview a MariTools page">
+          <option value="home">Tools home</option>
+          <option value="schedule" selected>Schedule</option>
+          <option value="free-time">Free time</option>
+          <option value="semester">Semester</option>
+          <option value="catalog">Catalog</option>
+          <option value="clubs">Clubs</option>
+          <option value="forum">Forum</option>
+          <option value="thread">Thread</option>
+          <option value="account">Account</option>
+        </select>
+      </label>
+      <button class="account-trigger" type="button"><span class="account-trigger__dot"></span>Alex Chen</button>
+    </div>
   </header>
-
-  <div class="mobile-bar">
-    <a href="#home">MariTools</a>
-    <details>
-      <summary>Preview pages</summary>
-      <nav aria-label="Mobile MariTools navigation">
-        <a href="#home">Tools home</a><a href="#schedule">Schedule</a>
-        <a href="#free-time">Free Time</a><a href="#semester">Semester</a>
-        <a href="#catalog">Catalog</a><a href="#clubs">Clubs</a>
-        <a href="#forum">Forum</a><a href="#thread">Thread</a><a href="#account">Account</a>
+  <div class="mobile-toolbar"><strong>MariTools</strong><button id="menu-toggle" type="button" aria-expanded="false" aria-controls="tools-sidebar">Browse tools</button></div>
+  <div class="drawer-scrim" id="drawer-scrim" hidden></div>
+  <div class="app-shell">
+    <aside class="tools-sidebar" id="tools-sidebar">
+      <div class="tools-brand-block">
+        <a class="tools-brand" href="#home" data-target="home"><span>Mari</span><strong>Tools</strong></a>
+        <p>Student utility index</p>
+      </div>
+      <nav class="tools-nav" aria-label="MariTools sections">
+        <section class="nav-group"><h2>Schedule</h2>
+          <a href="#schedule" data-target="schedule" class="is-current" aria-current="page"><span>My schedule</span><kbd>1</kbd></a>
+          <a href="#free-time" data-target="free-time"><span>Common free time</span><kbd>2</kbd></a>
+        </section>
+        <section class="nav-group"><h2>Courses</h2>
+          <a href="#semester" data-target="semester"><span>Semester</span><kbd>3</kbd></a>
+          <a href="#catalog" data-target="catalog"><span>Course catalog</span><kbd>4</kbd></a>
+        </section>
+        <section class="nav-group"><h2>Student life</h2>
+          <a href="#clubs" data-target="clubs"><span>Clubs</span><kbd>5</kbd></a>
+          <a href="#forum" data-target="forum"><span>Forum</span><kbd>6</kbd></a>
+        </section>
       </nav>
-    </details>
-  </div>
-
-  <div class="shell">
-    <aside class="sidebar">
-      <a class="tools-mark" href="#home">MariTools <span>↗</span></a>
-      <nav class="tools-nav" aria-label="MariTools">
-        <section><h2>Schedule</h2><div><a class="active" aria-current="page" href="#schedule">My schedule</a><a href="#free-time">Common free time</a></div></section>
-        <section><h2>Courses</h2><div><a href="#semester">Semester</a><a href="#catalog">Course catalog</a></div></section>
-        <section><h2>Student life</h2><div><a href="#clubs">Clubs</a><a href="#forum">Forum</a></div></section>
-      </nav>
-      <footer><a href="/">Back to club home →</a><p>Campus tools for Marianopolis students.</p></footer>
+      <footer class="sidebar-footer">
+        <p><strong>Current session</strong><br>Fall term tools</p>
+        <a href="#">Back to club home <span>↗</span></a>
+      </footer>
     </aside>
 
-    <main id="main">
-      <div class="preview-nav">
-        <span>Visual preview</span>
-        <nav><a href="#home">01 Home</a><a href="#schedule">02 Schedule</a><a href="#free-time">03 Free time</a><a href="#semester">04 Semester</a><a href="#catalog">05 Catalog</a><a href="#clubs">06 Clubs</a><a href="#forum">07 Forum</a><a href="#thread">08 Thread</a><a href="#account">09 Account</a></nav>
-      </div>
+    <main id="main-content" class="workspace">
+      <section class="page page-home" data-page="home" hidden>
+        <header class="index-masthead">
+          <div><p class="context-label">Student utility index</p><h1>What do you need to sort out?</h1></div>
+          <p class="masthead-note">Six small tools for the parts of college life that should take minutes, not a new app.</p>
+        </header>
+        <div class="directory-index">
+          <div class="directory-head"><span>Tool</span><span>Use it for</span><span>Access</span></div>
+          <a class="directory-row" href="#schedule" data-target="schedule"><span class="directory-row__number">01</span><strong>My schedule</strong><span>Turn an Omnivox course list into a week and calendar file.</span><span>Open</span><i>→</i></a>
+          <a class="directory-row" href="#free-time" data-target="free-time"><span class="directory-row__number">02</span><strong>Common free time</strong><span>Compare schedules and find gaps everyone shares.</span><span>Open</span><i>→</i></a>
+          <a class="directory-row" href="#semester" data-target="semester"><span class="directory-row__number">03</span><strong>Semester</strong><span>Read dates and weights from a course outline.</span><span>Private</span><i>→</i></a>
+          <a class="directory-row" href="#catalog" data-target="catalog"><span class="directory-row__number">04</span><strong>Course catalog</strong><span>Browse course facts students have contributed.</span><span>Open</span><i>→</i></a>
+          <a class="directory-row" href="#clubs" data-target="clubs"><span class="directory-row__number">05</span><strong>Clubs</strong><span>Find verified student groups by interest.</span><span>Open</span><i>→</i></a>
+          <a class="directory-row" href="#forum" data-target="forum"><span class="directory-row__number">06</span><strong>Forum</strong><span>Read course questions and campus discussions.</span><span>Read open</span><i>→</i></a>
+        </div>
+        <aside class="index-footnote"><strong>Privacy note</strong><p>Public tools run in your browser. MariTools does not ask for your Omnivox password.</p></aside>
+      </section>
 
-      <section id="home" class="page home">
-        <div class="route"><span>/tools</span><span>Surface 01 of 09</span></div>
-        <div class="home-grid">
-          <header class="page-head">
-            <p class="kicker">Campus tools</p><h1>MariTools</h1>
-            <p>Turn the source material you already have into schedules, course facts, and useful campus information.</p>
-            <a class="signal-link" href="#schedule">Start with your schedule →</a>
-          </header>
-          <div class="directory">
-            <section><h2>Plan</h2><div>
-              <a href="#schedule"><strong>My schedule</strong><span>Paste your Omnivox list and download a calendar.</span><b>→</b></a>
-              <a href="#free-time"><strong>Common free time</strong><span>Compare a few schedules and see when everyone is free.</span><b>→</b></a>
-            </div></section>
-            <section><h2>Courses</h2><div>
-              <a href="#semester"><strong>Semester</strong><span>Review dates and weights from a course outline.</span><b>→</b></a>
-              <a href="#catalog"><strong>Course catalog</strong><span>Browse course information students have shared.</span><b>→</b></a>
-            </div></section>
-            <section><h2>Community</h2><div>
-              <a href="#clubs"><strong>Clubs</strong><span>Find campus clubs from verified listings.</span><b>→</b></a>
-              <a href="#forum"><strong>Forum</strong><span>Read and post questions tagged to real courses.</span><b>→</b></a>
-            </div></section>
+      <section class="page page-schedule" data-page="schedule">
+        <header class="utility-bar">
+          <div><p class="breadcrumb">Schedule / My schedule</p><h1>Week of September 14</h1></div>
+          <div class="utility-actions"><button class="button button--quiet">Today</button><button class="button button--quiet date-step" aria-label="Previous week">←</button><button class="button button--quiet date-step" aria-label="Next week">→</button><button class="button button--ink">Export .ics</button></div>
+        </header>
+        <div class="schedule-stage">
+          <aside class="import-dock">
+            <div class="dock-head"><span class="step-index">1</span><div><strong>Import from Omnivox</strong><p>Paste the compact course list.</p></div></div>
+            <textarea aria-label="Omnivox course list">1  Linear Algebra
+201-NYA-05 sec.00003
+Mon 08:15–09:45 C-301
+Wed 10:00–11:30 C-301
+
+2  Programming
+420-101-MA sec.00001
+Tue 10:00–12:00 A-204</textarea>
+            <button class="button button--signal button--full">Read 5 courses</button>
+            <details><summary>Where to copy this</summary><p>Open your course schedule in Omnivox and choose compact list.</p></details>
+            <div class="import-status"><span>✓</span><p><strong>5 courses recognized</strong><br>13 meetings in this week</p></div>
+          </aside>
+          <div class="week-wrap" aria-label="Weekly course schedule">
+            <div class="week-grid">
+              <div class="week-corner"><span>GMT−4</span></div>
+              <div class="day-head is-today"><strong>Mon</strong><span>14</span></div><div class="day-head"><strong>Tue</strong><span>15</span></div><div class="day-head"><strong>Wed</strong><span>16</span></div><div class="day-head"><strong>Thu</strong><span>17</span></div><div class="day-head"><strong>Fri</strong><span>18</span></div>
+              <div class="time-rail"><span style="--row:0">08:00</span><span style="--row:1">09:00</span><span style="--row:2">10:00</span><span style="--row:3">11:00</span><span style="--row:4">12:00</span><span style="--row:5">13:00</span><span style="--row:6">14:00</span><span style="--row:7">15:00</span><span style="--row:8">16:00</span><span style="--row:9">17:00</span></div>
+              <div class="day-column is-today"></div><div class="day-column"></div><div class="day-column"></div><div class="day-column"></div><div class="day-column"></div>
+              <article class="course-block course-block--blue" style="--day:1;--start:.25;--span:1.5"><strong>Linear Algebra</strong><span>201-NYA-05</span><small>08:15–09:45<br>C-301</small></article>
+              <article class="course-block course-block--ink" style="--day:1;--start:4;--span:2"><strong>Humanities</strong><span>345-102-MQ</span><small>12:00–14:00<br>D-302</small></article>
+              <article class="course-block course-block--cyan" style="--day:2;--start:2;--span:2"><strong>Programming</strong><span>420-101-MA</span><small>10:00–12:00<br>A-204</small></article>
+              <article class="course-block course-block--red" style="--day:2;--start:6.5;--span:1.5"><strong>Mechanics</strong><span>203-NYA-05</span><small>14:30–16:00<br>F-205</small></article>
+              <article class="course-block course-block--blue" style="--day:3;--start:2;--span:1.5"><strong>Linear Algebra</strong><span>201-NYA-05</span><small>10:00–11:30<br>C-301</small></article>
+              <article class="course-block course-block--ink" style="--day:4;--start:.5;--span:1.5"><strong>Humanities</strong><span>345-102-MQ</span><small>08:30–10:00<br>D-302</small></article>
+              <article class="course-block course-block--cyan" style="--day:4;--start:4;--span:2"><strong>Programming lab</strong><span>420-101-MA</span><small>12:00–14:00<br>A-204</small></article>
+              <article class="course-block course-block--red" style="--day:5;--start:2.5;--span:1.5"><strong>Mechanics</strong><span>203-NYA-05</span><small>10:30–12:00<br>F-205</small></article>
+            </div>
           </div>
         </div>
       </section>
 
-      <section id="schedule" class="page wide">
-        <div class="route"><span>/tools/schedule</span><span>Surface 02 of 09</span></div>
-        <header class="page-head"><p class="kicker">Plan your week</p><h1>My schedule</h1><p>Paste your compact Omnivox course list. Check the result before downloading your calendar.</p></header>
-        <details class="disclosure"><summary>How to copy your Omnivox list <span>⌄</span></summary><ol><li>Open your current schedule in Omnivox.</li><li>Choose the compact course list.</li><li>Select the full list and copy it here.</li></ol></details>
-        <div class="source">
-          <label class="field"><span>Omnivox course list</span><textarea rows="7">201-NYA-05 Calculus I&#10;Sec. 00002  Mon 10:15–11:45  C-205&#10;Wed 08:30–10:00  C-205&#10;&#10;420-110-MA Programming I&#10;Sec. 00004  Tue 13:00–14:30  A-312</textarea></label>
-          <aside><strong>What gets read</strong><p>Course codes, sections, weekdays, times, and rooms.</p><p>Nothing is added to the catalog from this page.</p></aside>
+      <section class="page page-free-time" data-page="free-time" hidden>
+        <header class="utility-bar">
+          <div><p class="breadcrumb">Schedule / Common free time</p><h1>Find the gaps you share</h1></div>
+          <div class="duration-control"><span>Minimum gap</span><button>30 min</button><button class="is-selected">60 min</button><button>90 min</button></div>
+        </header>
+        <div class="availability-layout">
+          <div class="people-ledger">
+            <div class="ledger-head"><strong>Schedules</strong><button>+ Add person</button></div>
+            <section class="person-entry"><span class="person-key person-key--a">A</span><div><strong>You</strong><p>5 courses, 13 meetings</p></div><button>Replace</button></section>
+            <section class="person-entry"><span class="person-key person-key--b">B</span><div><strong>Maya</strong><p>4 courses, 11 meetings</p></div><button>Replace</button></section>
+            <section class="person-entry"><span class="person-key person-key--c">C</span><div><strong>Jon</strong><p>6 courses, 15 meetings</p></div><button>Replace</button></section>
+            <div class="paste-station"><label for="person-paste">Paste another Omnivox list</label><textarea id="person-paste" placeholder="Numbered course list"></textarea><button class="button button--signal button--full">Compare schedule</button></div>
+          </div>
+          <div class="gap-results">
+            <div class="gap-summary"><div><span class="status-line"></span><strong>8 shared gaps</strong><p>Monday to Friday, 08:00–18:00</p></div><div class="legend"><span><i class="legend-free"></i>Everyone free</span><span><i class="legend-busy"></i>Someone busy</span></div></div>
+            <div class="availability-grid">
+              <div class="availability-time">08:00<br><br>10:00<br><br>12:00<br><br>14:00<br><br>16:00<br><br>18:00</div>
+              <div class="availability-day"><strong>Monday</strong><i style="--top:18%;--height:12%"></i><i style="--top:55%;--height:19%"></i></div>
+              <div class="availability-day"><strong>Tuesday</strong><i style="--top:5%;--height:14%"></i><i style="--top:38%;--height:11%"></i><i style="--top:75%;--height:14%"></i></div>
+              <div class="availability-day"><strong>Wednesday</strong><i style="--top:28%;--height:18%"></i><i style="--top:65%;--height:13%"></i></div>
+              <div class="availability-day"><strong>Thursday</strong><i style="--top:8%;--height:16%"></i><i style="--top:50%;--height:22%"></i></div>
+              <div class="availability-day"><strong>Friday</strong><i style="--top:22%;--height:20%"></i><i style="--top:58%;--height:15%"></i></div>
+            </div>
+          </div>
         </div>
-        <div class="actions"><button class="button primary">Read schedule</button><span>Example data shown for this preview</span></div>
+      </section>
 
-        <section class="work-section">
-          <div class="section-head"><div><span>Check</span><h2>Review courses</h2></div><p>2 courses read</p></div>
-          <article class="record warning">
-            <div class="record-id"><strong>201-NYA-05</strong><span><b>Section</b> 00002</span><span><b>Teacher</b> Not provided</span></div>
-            <label class="field"><span>Course title</span><input value="Calculus I"></label>
-            <div class="meeting-row"><span><b>Day</b> Monday</span><span><b>Time</b> 10:15–11:45</span><label><b>Room</b><input value="C-205"></label></div>
-            <p class="warning-text">Overlap on Wednesday from 09:30 to 10:00. Check both course times.</p>
+      <section class="page page-semester" data-page="semester" hidden>
+        <header class="index-masthead compact-masthead"><div><p class="context-label">Courses / Semester</p><h1>Turn one outline into a usable term.</h1></div><p class="masthead-note">Review every extracted fact before it is saved. Nothing is shared unless you choose to contribute.</p></header>
+        <div class="semester-flow">
+          <aside class="flow-steps"><ol><li class="is-done"><span>1</span><div><strong>Upload</strong><small>COMP-202-outline.pdf</small></div></li><li class="is-current"><span>2</span><div><strong>Review</strong><small>8 facts found</small></div></li><li><span>3</span><div><strong>Save</strong><small>Private by default</small></div></li></ol></aside>
+          <div class="review-sheet">
+            <div class="review-sheet__head"><div><span class="file-type">PDF</span><strong>COMP-202-outline.pdf</strong><p>4 pages, uploaded just now</p></div><button class="button button--quiet">Replace file</button></div>
+            <div class="fact-table">
+              <div class="fact-head"><span>Field</span><span>Extracted value</span><span>Status</span></div>
+              <label class="fact-row"><span>Course</span><input value="420-202-MA — Data Structures"><em>Confirmed</em></label>
+              <label class="fact-row"><span>Teacher</span><input value="Nadia Tremblay"><em>Confirmed</em></label>
+              <label class="fact-row"><span>Midterm</span><input value="October 22 — 25%"><em>Check date</em></label>
+              <label class="fact-row"><span>Final project</span><input value="December 8 — 35%"><em>Confirmed</em></label>
+              <label class="fact-row"><span>Textbook</span><input value="Algorithms, 4th edition"><em>Optional</em></label>
+            </div>
+            <label class="contribute-row"><input type="checkbox"><span><strong>Contribute these course facts to the catalog</strong><small>Your file stays private. Only the reviewed facts above would be shared.</small></span></label>
+            <div class="review-actions"><button class="button button--quiet">Back</button><button class="button button--signal">Save semester facts</button></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page page-catalog" data-page="catalog" hidden>
+        <header class="catalog-titlebar"><div><p class="breadcrumb">Courses / Shared index</p><h1>Course catalog</h1></div><p>Student-contributed facts for planning a semester. Books are listed for reference only.</p></header>
+        <form class="index-filters">
+          <label class="search-field"><span>⌕</span><input aria-label="Search courses" placeholder="Course code, title, or teacher"></label>
+          <label><span>Term</span><select><option>Fall 2026</option><option>All terms</option></select></label>
+          <label><span>Discipline</span><select><option>All disciplines</option><option>Computer Science</option><option>Mathematics</option></select></label>
+          <button class="button button--ink">Search</button>
+        </form>
+        <div class="catalog-count"><strong>38 courses</strong><span>Updated from verified student outlines</span><button>Sort: course code ↓</button></div>
+        <div class="catalog-index">
+          <div class="catalog-head"><span>Code</span><span>Course</span><span>Category</span><span>Section / teacher</span><span>Term</span><span></span></div>
+          <article class="catalog-row catalog-row--open">
+            <strong class="course-code">420-202-MA</strong><div><h2>Data Structures</h2><p>7 assessments, 1 reference book</p></div><span>Computer Science</span><span>00001<br><small>Nadia Tremblay</small></span><span>Fall 2026</span><button>−</button>
+            <div class="catalog-detail"><div><h3>Assessment outline</h3><dl><div><dt>Assignments</dt><dd>25%</dd></div><div><dt>Midterm</dt><dd>25%</dd></div><div><dt>Final project</dt><dd>35%</dd></div><div><dt>Participation</dt><dd>15%</dd></div></dl></div><div><h3>Book reference</h3><p><strong>Algorithms, 4th edition</strong><br>Robert Sedgewick, Kevin Wayne<br><span class="isbn">ISBN 978-0321573513</span></p><a href="#">View publisher details ↗</a></div></div>
           </article>
-          <article class="record">
-            <div class="record-id"><strong>420-110-MA</strong><span><b>Section</b> 00004</span><span><b>Teacher</b> Not provided</span></div>
-            <label class="field"><span>Course title</span><input value="Programming I"></label>
-            <div class="meeting-row"><span><b>Day</b> Tuesday</span><span><b>Time</b> 13:00–14:30</span><label><b>Room</b><input value="A-312"></label></div>
-          </article>
-        </section>
-
-        <section class="work-section timetable-wrap">
-          <div class="section-head"><div><span>Check</span><h2>Week</h2></div><p>08:00–18:00</p></div>
-          <p class="scroll-note">Scroll horizontally to view all weekdays.</p>
-          <div class="timetable" aria-label="Example weekly timetable">
-            <div class="grid-head">Time</div><div class="grid-head">Mon</div><div class="grid-head">Tue</div><div class="grid-head">Wed</div><div class="grid-head">Thu</div><div class="grid-head">Fri</div>
-            <div class="time-rail"><span>08:00</span><span>09:00</span><span>10:00</span><span>11:00</span><span>12:00</span><span>13:00</span><span>14:00</span><span>15:00</span><span>16:00</span><span>17:00</span></div>
-            <div class="day"><article class="meeting mon"><time>10:15–11:45</time><strong>201-NYA-05</strong><span>Calculus I</span><small>C-205</small></article></div>
-            <div class="day"><article class="meeting tue"><time>13:00–14:30</time><strong>420-110-MA</strong><span>Programming I</span><small>A-312</small></article></div>
-            <div class="day"><article class="meeting wed"><time>08:30–10:00</time><strong>201-NYA-05</strong><span>Calculus I</span><small>C-205</small></article><article class="meeting overlap"><em>Overlap</em><time>09:30–10:30</time><strong>345-101-MQ</strong></article></div>
-            <div class="day empty">No classes</div>
-            <div class="day"><article class="meeting fri"><time>14:00–15:30</time><strong>420-110-MA</strong><span>Programming I</span><small>A-312</small></article></div>
-          </div>
-          <div class="agenda">
-            <article><h3>Monday</h3><p><time>10:15–11:45</time><strong>201-NYA-05</strong><span>Calculus I, C-205</span></p></article>
-            <article><h3>Tuesday</h3><p><time>13:00–14:30</time><strong>420-110-MA</strong><span>Programming I, A-312</span></p></article>
-            <article><h3>Wednesday</h3><p class="conflict"><time>08:30–10:00</time><strong>201-NYA-05</strong><span>Calculus I, overlap from 09:30</span></p></article>
-          </div>
-        </section>
-        <section class="work-section export"><div><span class="mini-label">Act</span><h2>Take it with you</h2><p>Calendar dates use the current Marianopolis term rules.</p></div><button class="button primary">Download calendar (.ics)</button></section>
+          <article class="catalog-row"><strong class="course-code">201-NYA-05</strong><div><h2>Linear Algebra</h2><p>6 assessments, no book listed</p></div><span>Mathematics</span><span>00003<br><small>Marc Deslauriers</small></span><span>Fall 2026</span><button>+</button></article>
+          <article class="catalog-row"><strong class="course-code">203-NYA-05</strong><div><h2>Mechanics</h2><p>8 assessments, 1 reference book</p></div><span>Physics</span><span>00004<br><small>Elena Rossi</small></span><span>Fall 2026</span><button>+</button></article>
+          <article class="catalog-row"><strong class="course-code">345-102-MQ</strong><div><h2>World Views</h2><p>4 assessments, 2 readings</p></div><span>Humanities</span><span>00012<br><small>David Morris</small></span><span>Fall 2026</span><button>+</button></article>
+          <article class="catalog-row"><strong class="course-code">603-101-MQ</strong><div><h2>Introduction to College English</h2><p>5 assessments, 3 readings</p></div><span>English</span><span>00007<br><small>Sarah Ahmed</small></span><span>Fall 2026</span><button>+</button></article>
+          <article class="catalog-row"><strong class="course-code">109-101-MQ</strong><div><h2>Physical Activity and Health</h2><p>5 assessments, no book listed</p></div><span>Physical Education</span><span>00002<br><small>Julie Nguyen</small></span><span>Fall 2026</span><button>+</button></article>
+        </div>
+        <nav class="pagination"><button disabled>← Previous</button><span>Page 1 of 7</span><button>Next →</button></nav>
       </section>
 
-      <section id="free-time" class="page wide">
-        <div class="route"><span>/tools/free-time</span><span>Surface 03 of 09</span></div>
-        <header class="page-head"><p class="kicker">Compare schedules</p><h1>Common free time</h1><p>Paste at least two Omnivox lists and choose how long everyone needs to be free.</p></header>
-        <div class="settings">
-          <fieldset><legend>Minimum gap</legend><label><input type="radio" name="gap"> 30 min</label><label class="selected"><input type="radio" name="gap" checked> 45 min</label><label><input type="radio" name="gap"> 60 min</label><label><input type="radio" name="gap"> Custom</label></fieldset>
-          <label class="field"><span>Optional date</span><input type="date" value="2026-09-08"><small>Uses that day’s effective schedule.</small></label>
+      <section class="page page-clubs" data-page="clubs" hidden>
+        <header class="catalog-titlebar"><div><p class="breadcrumb">Student life / Directory</p><h1>Clubs at Marianopolis</h1></div><p>Verified student groups, what they do, and where to find them.</p></header>
+        <form class="index-filters clubs-filters"><label class="search-field"><span>⌕</span><input placeholder="Search clubs and interests"></label><label><span>Category</span><select><option>All categories</option><option>Academic</option><option>Creative</option></select></label><button class="button button--ink">Filter</button></form>
+        <div class="club-index">
+          <div class="club-head"><span>Organization</span><span>Focus</span><span>Meeting rhythm</span><span>Contact</span></div>
+          <article class="club-row"><div><span class="club-initials">PC</span><div><h2>Programming Club</h2><p>Workshops, peer help, and small builds for any experience level.</p></div></div><span>Technology</span><span>Weekly workshops</span><a href="#">Open listing ↗</a></article>
+          <article class="club-row"><div><span class="club-initials">DS</span><div><h2>Debate Society</h2><p>Practice rounds, public speaking, and intercollegiate events.</p></div></div><span>Academic</span><span>Wednesday lunch</span><a href="#">Open listing ↗</a></article>
+          <article class="club-row"><div><span class="club-initials">EC</span><div><h2>Environmental Committee</h2><p>Campus sustainability projects and community volunteering.</p></div></div><span>Community</span><span>Twice monthly</span><a href="#">Open listing ↗</a></article>
+          <article class="club-row"><div><span class="club-initials">FM</span><div><h2>Film Makers</h2><p>Short films, editing sessions, screenings, and production crews.</p></div></div><span>Creative</span><span>Friday afternoon</span><a href="#">Open listing ↗</a></article>
+          <article class="club-row"><div><span class="club-initials">BM</span><div><h2>Black Students' Association</h2><p>Community, cultural programming, advocacy, and shared events.</p></div></div><span>Community</span><span>Biweekly</span><a href="#">Open listing ↗</a></article>
         </div>
-        <div class="people">
-          <label class="field"><span>Person 1 schedule</span><textarea rows="5">201-NYA-05 Mon 10:15–11:45&#10;420-110-MA Tue 13:00–14:30</textarea></label>
-          <label class="field"><span>Person 2 schedule</span><textarea rows="5">202-NYB-05 Mon 08:30–10:00&#10;603-101-MQ Wed 13:00–14:30</textarea></label>
+        <aside class="submit-club"><div><p class="context-label">Missing a group?</p><h2>Add or correct a club listing</h2></div><p>Sign in to submit official links or updated meeting information. Submissions are reviewed before appearing here.</p><button class="button button--signal">Submit a listing</button></aside>
+      </section>
+
+      <section class="page page-forum" data-page="forum" hidden>
+        <header class="forum-titlebar">
+          <div><p class="breadcrumb">Student life / Forum</p><h1>Campus discussions</h1></div>
+          <div class="forum-tabs"><button class="is-active">Latest</button><button>Courses</button><button>Student life</button><button>Unanswered <span>8</span></button></div>
+        </header>
+        <div class="forum-toolbar"><label class="search-field"><span>⌕</span><input placeholder="Search discussions"></label><label><span>Course</span><select><option>Every course</option><option>420-202-MA</option></select></label><button class="button button--signal">Start a thread</button></div>
+        <div class="topic-list">
+          <div class="topic-head"><span>Topic</span><span>Category</span><span>Course</span><span>Replies</span><span>Latest</span></div>
+          <a class="topic-row topic-row--pinned" href="#thread" data-target="thread"><div><span class="pin-mark">↑</span><h2>How to ask for course help here</h2><p>Start with what you tried and remove personal information.</p></div><span>Forum guide</span><span>General</span><strong>3</strong><time>Sep 15<br><small>Staff</small></time></a>
+          <a class="topic-row" href="#thread" data-target="thread"><div><h2>What should I review before the first Data Structures lab?</h2><p>Coming from 420-101 and trying to get ahead this weekend.</p></div><span>Course help</span><span class="course-chip">420-202-MA</span><strong>12</strong><time>8 min<br><small>Maya L.</small></time></a>
+          <a class="topic-row" href="#thread" data-target="thread"><div><h2>Quiet places for a group call between classes</h2><p>Looking for somewhere that will not disturb people studying.</p></div><span>Campus</span><span>General</span><strong>7</strong><time>24 min<br><small>Jon P.</small></time></a>
+          <a class="topic-row topic-row--unread" href="#thread" data-target="thread"><div><span class="unread-mark"></span><h2>Linear Algebra midterm practice set</h2><p>Does question 4 use the same row-reduction method from class?</p></div><span>Course help</span><span class="course-chip">201-NYA-05</span><strong>18</strong><time>41 min<br><small>Alex C.</small></time></a>
+          <a class="topic-row" href="#thread" data-target="thread"><div><h2>Clubs accepting new members after activities day</h2><p>A running list from club executives.</p></div><span>Student life</span><span>General</span><strong>23</strong><time>1 hr<br><small>Rina K.</small></time></a>
+          <a class="topic-row" href="#thread" data-target="thread"><div><h2>Mechanics lab report formatting</h2><p>Is the uncertainty table included in the page count?</p></div><span>Course help</span><span class="course-chip">203-NYA-05</span><strong>5</strong><time>2 hr<br><small>Leo S.</small></time></a>
+          <a class="topic-row" href="#thread" data-target="thread"><div><h2>Lost calculator near D wing</h2><p>Black Casio with a name written inside the case.</p></div><span>Campus</span><span>General</span><strong>2</strong><time>3 hr<br><small>Amal R.</small></time></a>
         </div>
-        <div class="actions multi"><button class="button primary">Find shared free time</button><button class="button">Add another person</button><button class="button quiet">Download busy times (.json)</button></div>
-        <section class="work-section">
-          <div class="section-head"><div><span>Result</span><h2>Recurring week</h2></div><p>Minimum gap: 45 minutes</p></div>
-          <div class="availability">
-            <section><h3>Monday</h3><p><time>08:00–10:15</time><span>2 h 15 min</span></p><p><time>11:45–16:30</time><span>4 h 45 min</span></p></section>
-            <section><h3>Tuesday</h3><p><time>08:00–13:00</time><span>5 hours</span></p><p><time>14:30–16:30</time><span>2 hours</span></p></section>
-            <section><h3>Wednesday</h3><p><time>08:00–13:00</time><span>5 hours</span></p></section>
-            <section><h3>Thursday</h3><p><time>08:00–16:30</time><span>8 h 30 min</span></p></section>
-            <section><h3>Friday</h3><p class="none">No gap of 45 minutes or longer</p></section>
-          </div>
+        <section class="inline-composer">
+          <div class="composer-heading"><div><span class="composer-avatar">AC</span><div><p class="context-label">New discussion</p><h2>Start a thread</h2></div></div><button class="button button--quiet">Save draft</button></div>
+          <div class="composer-fields"><label><span>Title</span><input placeholder="What do you want to ask or share?"></label><div class="composer-meta"><label><span>Category</span><select><option>Course help</option><option>Student life</option></select></label><label><span>Course tag</span><select><option>No course tag</option><option>420-202-MA</option></select></label></div><label><span>Body</span><textarea placeholder="Include enough context for another student to help."></textarea></label></div>
+          <div class="composer-actions"><p>Be kind. Do not post student numbers or private course files.</p><button class="button button--signal">Post thread</button></div>
         </section>
       </section>
 
-      <section id="semester" class="page form-page">
-        <div class="route"><span>/tools/semester</span><span>Surface 04 of 09</span></div>
-        <header class="page-head"><p class="kicker">Private by default</p><h1>Semester</h1><p>Upload a text-based course outline, then check every extracted field before sharing anything.</p></header>
-        <section class="step"><div class="step-no">01</div><div><h2>Upload outline</h2><label class="file"><input type="file" accept="application/pdf"><span><strong>Choose a PDF</strong><small>PDF, text-based, maximum size from server policy</small></span></label><button class="button primary">Read outline</button></div></section>
-        <section class="step"><div class="step-no">02</div><div><h2>Check extracted fields</h2><div class="notice info">Loaded the saved extraction for this file.</div>
-          <div class="identity"><label><span>Course code</span><input value="420-110-MA"></label><label class="title"><span>Title</span><input value="Programming I"></label><label><span>Section</span><input value="00004"></label><label><span>Teacher</span><input value="M. Tremblay"></label></div>
-          <h3 class="subhead">Assessments</h3><div class="edit-table"><header><span>Title</span><span>Weight</span><span>Date</span></header><div><input value="Midterm"><input value="25%"><input value="2026-10-14"></div><div><input value="Final project"><input value="35%"><input value="—"></div></div>
-          <h3 class="subhead">Textbooks</h3><div class="edit-table"><header><span>Title</span><span>Author</span><span>ISBN</span></header><div><input value="Course notes"><input value="Department"><input value="—"></div></div>
-        </div></section>
-        <section class="step"><div class="step-no">03</div><div><h2>Private or shared</h2><p>Your extraction is already saved privately. Sharing copies only the confirmed fields below.</p><label class="check"><input type="checkbox" checked><span><strong>Share these confirmed fields to the course catalog</strong><small>The PDF stays private.</small></span></label><div class="notice info">Only the fields shown here are shared. The PDF stays private.</div><button class="button primary">Share to catalog</button></div></section>
-      </section>
-
-      <section id="catalog" class="page index-page">
-        <div class="route"><span>/tools/catalog</span><span>Surface 05 of 09</span></div>
-        <header class="page-head"><p class="kicker">Shared course facts</p><h1>Course catalog</h1><p>Browse course information students have checked and chosen to share.</p></header>
-        <form class="filters"><label><span>Term</span><select><option>Current term</option></select></label><label><span>Course code</span><input value="420"></label><button class="button primary">Show courses</button><a href="#catalog">Clear filters</a></form>
-        <div class="result-count"><strong>2 entries</strong><span>Filtered by course code 420</span></div>
-        <div class="catalog">
-          <article><div class="course-id"><strong>420-110-MA</strong><h2>Programming I</h2><dl><div><dt>Term</dt><dd>Current</dd></div><div><dt>Section</dt><dd>00004</dd></div><div><dt>Teacher</dt><dd>M. Tremblay</dd></div></dl></div><div class="facts"><h3>Assessments</h3><header><span>Name</span><span>Weight</span><span>Date</span></header><p><span>Midterm</span><span>25%</span><span>2026-10-14</span></p><p><span>Final project</span><span>35%</span><span>—</span></p><h3>Textbooks</h3><small>Course reference only. MariTools does not sell books.</small><div class="book"><span>Course notes</span><span>Department</span><span>—</span><b>Required</b></div></div></article>
-          <article><div class="course-id"><strong>420-210-MA</strong><h2>Data structures</h2><dl><div><dt>Term</dt><dd>Current</dd></div><div><dt>Section</dt><dd>00001</dd></div><div><dt>Teacher</dt><dd>—</dd></div></dl></div><div class="facts"><h3>Assessments</h3><header><span>Name</span><span>Weight</span><span>Date</span></header><p><span>Lab portfolio</span><span>30%</span><span>—</span></p><h3>Textbooks</h3><small>Course reference only. MariTools does not sell books.</small><div class="book"><span>Algorithms reference</span><span>—</span><span>—</span><span>Optional</span></div></div></article>
+      <section class="page page-thread" data-page="thread" hidden>
+        <header class="thread-header"><nav><a href="#forum" data-target="forum">← All discussions</a><span>Course help</span><span>420-202-MA</span></nav><h1>What should I review before the first Data Structures lab?</h1><p>Started by Maya L. on September 15</p></header>
+        <div class="thread-layout">
+          <article class="post post--origin"><aside><span class="post-avatar">ML</span><strong>Maya L.</strong><small>Original poster</small></aside><div class="post-body"><p>I took the introductory programming course last term, but I have not used linked lists yet. The outline mentions them in the first lab.</p><p>Should I review pointers first, or is the lab meant to introduce both ideas together? I am mainly trying to avoid getting stuck on setup.</p><footer><time>Yesterday at 19:42</time><div><button>Report</button><button>Reply</button></div></footer></div></article>
+          <article class="post"><aside><span class="post-avatar post-avatar--blue">JR</span><strong>Jon R.</strong><small>420-202 student</small></aside><div class="post-body"><p>Review arrays and object references first. We did not need manual pointers. The starter exercise explains the node structure before the graded part.</p><blockquote>The setup check took about ten minutes once Java was on the right version.</blockquote><footer><time>Yesterday at 20:10</time><div><button>Report</button><button>Reply</button></div></footer></div></article>
+          <article class="post post--answer"><aside><span class="post-avatar post-avatar--ink">NK</span><strong>Nora K.</strong><small>Course mentor</small></aside><div class="post-body"><span class="answer-label">Helpful answer</span><p>The most useful review is tracing an array operation by hand, then doing the same with two objects that refer to each other. The lab instructions introduce the linked-list vocabulary.</p><p>Also confirm that the course repository builds before the lab. If that step fails, post the error text without your student number.</p><footer><time>Today at 08:16</time><div><button>Report</button><button>Reply</button></div></footer></div></article>
+          <section class="reply-editor"><div><span class="post-avatar">AC</span><strong>Reply to this discussion</strong></div><textarea placeholder="Write a clear, useful reply…"></textarea><footer><span>Formatting shortcuts supported</span><button class="button button--signal">Post reply</button></footer></section>
         </div>
       </section>
 
-      <section id="clubs" class="page index-page">
-        <div class="route"><span>/tools/clubs</span><span>Surface 06 of 09</span></div>
-        <header class="page-head"><p class="kicker">Student life</p><h1>Clubs</h1><p>Find staff-checked campus club listings and their official links.</p></header>
-        <form class="filters"><label><span>Search</span><input placeholder="Club name or topic"></label><label><span>Category</span><select><option>All categories</option></select></label><button class="button primary">Show clubs</button></form>
-        <div class="result-count"><strong>3 listings</strong><span>Staff-checked links</span></div>
-        <div class="club-list">
-          <article><div><strong>Programming Club</strong><span>Academic</span></div><p>Peer help, workshops, mini-competitions, and space to build.</p><a href="https://www.instagram.com/mari_programming_club/">Instagram ↗</a></article>
-          <article><div><strong>Debate Club</strong><span>Community</span></div><p>Practice structured argument and take part in student debates.</p><a href="#clubs">Official page ↗</a></article>
-          <article><div><strong>Robotics Club</strong><span>Academic</span></div><p>Build and program small robotics projects with other students.</p><a href="#clubs">Official page ↗</a></article>
-        </div>
-        <section class="composer-section"><div class="section-head"><div><span>Contribute</span><h2>Submit a club</h2></div><p>Sent listings are reviewed before publication.</p></div><form class="composer"><label><span>Club name</span><input value="Chess Club"></label><label><span>Category</span><select><option>Community</option></select></label><label class="full"><span>Description</span><textarea rows="3">Weekly casual play and tournament practice.</textarea></label><label><span>Link label</span><input value="Official page"></label><label><span>Website</span><input value="https://example.com"></label><button class="button primary">Send for review</button></form></section>
-      </section>
-
-      <section id="forum" class="page index-page">
-        <div class="route"><span>/tools/forum</span><span>Surface 07 of 09</span></div>
-        <header class="page-head"><p class="kicker">Course and campus discussion</p><h1>Forum</h1><p>Read questions from students and post a thread tagged to a course when useful.</p></header>
-        <form class="filters"><label><span>Category</span><select><option>All categories</option></select></label><label><span>Course</span><select><option>All courses</option><option>420-110-MA</option></select></label><button class="button primary">Show threads</button></form>
-        <div class="threads">
-          <a href="#thread"><strong>How are you reviewing for the Calculus I midterm?</strong><span>Courses</span><span>201-NYA-05</span><b>→</b></a>
-          <a href="#thread"><strong>Programming I project partner thread</strong><span>Courses</span><span>420-110-MA</span><b>→</b></a>
-          <a href="#thread"><strong>Quiet places to work between classes</strong><span>Student life</span><span class="muted">No course</span><b>→</b></a>
-          <a href="#thread"><strong>What should new students know about club fair?</strong><span>Student life</span><span class="muted">No course</span><b>→</b></a>
-        </div>
-        <section class="composer-section"><div class="section-head"><div><span>Ask</span><h2>Start a thread</h2></div><p>Keep titles specific so other students can scan them.</p></div><form class="composer"><label><span>Category</span><select><option>Courses</option></select></label><label><span>Course tag</span><select><option>420-110-MA</option></select></label><label class="full"><span>Title</span><input value="What helped with the first programming lab?"></label><label class="full"><span>Body</span><textarea rows="5">I’m looking for study approaches that worked well for other students.</textarea></label><button class="button primary">Post thread</button></form></section>
-      </section>
-
-      <section id="thread" class="page form-page thread-page">
-        <div class="route"><span>/tools/forum/thread</span><span>Surface 08 of 09</span></div>
-        <nav class="breadcrumb"><a href="#forum">Forum</a><span>/</span><span>Programming I project partner thread</span></nav>
-        <header class="page-head"><h1>Programming I project partner thread</h1><dl class="thread-meta"><div><dt>Category</dt><dd>Courses</dd></div><div><dt>Course</dt><dd>420-110-MA</dd></div></dl></header>
-        <article class="post"><p>Is anyone still looking for a partner for the first programming project?</p><p>I can meet after class on Tuesday and Thursday. I’m comfortable with the early exercises, but I’d like to work with someone who wants to talk through the design before we code.</p><button class="button quiet small">Report</button></article>
-        <section class="replies"><div class="section-head"><div><span>Discussion</span><h2>Replies</h2></div></div><article class="post reply"><p>I’m looking too. Thursday after 15:00 works for me, and I prefer planning first as well.</p><button class="button quiet small">Report</button></article><article class="post reply"><p>You can also post in the course channel so people in the other section see it.</p><button class="button quiet small">Report</button></article></section>
-        <section class="composer-section"><h2>Write a reply</h2><form class="composer"><label class="full"><span>Reply</span><textarea rows="5" placeholder="Add something useful to the discussion"></textarea></label><button class="button primary">Post reply</button></form></section>
-      </section>
-
-      <section id="account" class="page form-page">
-        <div class="route"><span>/tools/account</span><span>Surface 09 of 09</span></div>
-        <header class="page-head"><p class="kicker">Identity and privacy</p><h1>Your account</h1><p>Complete your student profile and choose whether outline text may be analyzed.</p></header>
-        <div class="account">
-          <div class="email"><span>Signed in as</span><strong>student@example.com</strong><button class="button quiet small">Sign out</button></div>
-          <form>
-            <label class="field"><span>Student number</span><input inputmode="numeric" value="1234567"><small>5 to 8 digits. Your number is not shown publicly.</small></label>
-            <label class="field"><span>Display name <em>Optional</em></span><input value="Mari student"></label>
-            <fieldset class="legal"><legend>NVIDIA outline analysis</legend><p>When you upload an outline, its extracted text may be sent to NVIDIA’s analysis service to suggest structured course fields. Your PDF remains private, and you must check the suggested fields before sharing any of them.</p><label class="check"><input type="checkbox" checked><span>I understand and agree to this outline analysis.</span></label></fieldset>
-            <div class="notice success">Account saved. Your outline analysis choice is recorded.</div>
-            <button class="button primary">Save account</button>
-          </form>
+      <section class="page page-account" data-page="account" hidden>
+        <header class="index-masthead compact-masthead"><div><p class="context-label">Account</p><h1>Your MariTools account</h1></div><p class="masthead-note">Identity, saved tools, and privacy controls in one short record.</p></header>
+        <div class="account-layout">
+          <nav class="settings-nav"><a class="is-current" href="#profile">Profile</a><a href="#student">Student details</a><a href="#privacy">Privacy</a></nav>
+          <div class="settings-sheet">
+            <section><header><div><h2>Profile</h2><p>Shown next to discussions and contributions.</p></div><span class="signed-status"><i></i> Signed in</span></header><div class="identity-row"><span class="identity-avatar">AC</span><div><strong>Alex Chen</strong><p>alex.chen@example.com</p></div><button class="button button--quiet">Sign out</button></div></section>
+            <section><header><div><h2>Student details</h2><p>Used only to connect personal semester tools.</p></div></header><div class="setting-row"><label><span>Student number</span><input value="246 801 357"></label><div><span>Storage</span><strong>Encrypted</strong><small>Never displayed publicly</small></div></div><div class="section-actions"><button class="button button--ink">Save changes</button></div></section>
+            <section><header><div><h2>Privacy and data</h2><p>Control what MariTools keeps.</p></div></header><details class="disclosure"><summary><span><strong>How your student number is protected</strong><small>Encryption, access, and deletion details</small></span><span>+</span></summary><p>Your student number is encrypted before storage and is never used as a public identifier.</p></details><div class="danger-row"><div><strong>Delete MariTools account</strong><p>Removes saved schedules and personal semester facts. Public forum posts become anonymous.</p></div><button class="button button--danger">Delete account</button></div></section>
+          </div>
         </div>
       </section>
-
-      <footer class="preview-footer"><strong>MariTools visual preview</strong><span>Linear instrument direction</span><a href="#home">Return to first surface ↑</a></footer>
     </main>
   </div>
+
   <script>
-    (() => {
-      const pages = [...document.querySelectorAll('.page')];
-      const pageIds = new Set(pages.map((page) => page.id));
-      const routeLinks = [...document.querySelectorAll('a[href^="#"]')];
+    const picker = document.querySelector('#page-picker');
+    const pages = [...document.querySelectorAll('[data-page]')];
+    const navLinks = [...document.querySelectorAll('[data-target]')];
+    const sidebar = document.querySelector('#tools-sidebar');
+    const menuToggle = document.querySelector('#menu-toggle');
+    const drawerScrim = document.querySelector('#drawer-scrim');
+    let drawerReturnTarget = null;
 
-      function showRoute() {
-        const requestedId = window.location.hash.slice(1);
-        const pageId = pageIds.has(requestedId) ? requestedId : 'home';
-        const currentPage = pages.find((page) => page.id === pageId);
+    function closeDrawer(restoreFocus = false) {
+      sidebar.classList.remove('is-open');
+      drawerScrim.hidden = true;
+      menuToggle.setAttribute('aria-expanded', 'false');
+      if (restoreFocus && drawerReturnTarget) drawerReturnTarget.focus();
+    }
 
-        pages.forEach((page) => {
-          page.hidden = page.id !== pageId;
-        });
-
-        routeLinks.forEach((link) => {
-          const target = link.getAttribute('href').slice(1);
-          const isForumRoute = pageId === 'thread' && target === 'forum';
-          const isCurrent = target === pageId || isForumRoute;
-          const isToolRoute = link.closest('.tools-nav');
-          const isPreviewRoute = link.closest('.preview-nav');
-          const isMobileRoute = link.closest('.mobile-bar nav');
-
-          if (isToolRoute || isPreviewRoute || isMobileRoute) {
-            link.classList.toggle('active', isCurrent);
-            if (isCurrent) link.setAttribute('aria-current', 'page');
-            else link.removeAttribute('aria-current');
-          }
-        });
-
-        const clubToolsLink = document.querySelector('.site-header a[href="#home"]');
-        const accountLink = document.querySelector('.site-header a[href="#account"]');
-        clubToolsLink.classList.toggle('current', pageId !== 'account');
-        accountLink.classList.toggle('current', pageId === 'account');
-        if (pageId === 'account') {
-          accountLink.setAttribute('aria-current', 'page');
-          clubToolsLink.removeAttribute('aria-current');
-        } else {
-          clubToolsLink.setAttribute('aria-current', 'page');
-          accountLink.removeAttribute('aria-current');
-        }
-
-        const mobileMenu = document.querySelector('.mobile-bar details');
-        const mobileSummary = mobileMenu?.querySelector('summary');
-        const routeTitle = currentPage?.querySelector('h1')?.textContent;
-        if (mobileSummary && routeTitle) mobileSummary.textContent = routeTitle;
-        if (mobileMenu) mobileMenu.open = false;
+    function openDrawer() {
+      drawerReturnTarget = document.activeElement;
+      sidebar.classList.add('is-open');
+      drawerScrim.hidden = false;
+      menuToggle.setAttribute('aria-expanded', 'true');
+      sidebar.querySelector('a, button, select, input, textarea')?.focus();
+    }
+    function showPage(name) {
+      const target = pages.some((page) => page.dataset.page === name) ? name : 'schedule';
+      pages.forEach((page) => { page.hidden = page.dataset.page !== target; });
+      picker.value = target;
+      document.querySelectorAll('.tools-nav a').forEach((link) => {
+        const current = link.dataset.target === target || (target === 'thread' && link.dataset.target === 'forum');
+        link.classList.toggle('is-current', current);
+        if (current) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
+      });
+      closeDrawer(false);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+    picker.addEventListener('change', () => showPage(picker.value));
+    navLinks.forEach((link) => link.addEventListener('click', (event) => {
+      event.preventDefault(); showPage(link.dataset.target); history.replaceState(null, '', '#' + link.dataset.target);
+    }));
+    menuToggle.addEventListener('click', () => sidebar.classList.contains('is-open') ? closeDrawer(true) : openDrawer());
+    drawerScrim.addEventListener('click', () => closeDrawer(true));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && sidebar.classList.contains('is-open')) closeDrawer(true);
+      if (event.key === 'Tab' && sidebar.classList.contains('is-open')) {
+        const focusable = [...sidebar.querySelectorAll('a, button, select, input, textarea, [tabindex]:not([tabindex="-1"])')];
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       }
-
-      window.addEventListener('hashchange', showRoute);
-      showRoute();
-    })();
+      if (/^[1-6]$/.test(event.key) && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) showPage(['schedule','free-time','semester','catalog','clubs','forum'][Number(event.key)-1]);
+    });
+    showPage(location.hash.slice(1) || 'schedule');
   </script>
 </body>
 </html>

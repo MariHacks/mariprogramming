@@ -1,1201 +1,425 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="description" content="High-fidelity MariTools Campus Lab Manual visual preview" />
-		<title>MariTools — Campus Lab Manual</title>
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&amp;family=Inter+Tight:wght@500;600;650;700&amp;display=swap"
-			rel="stylesheet"
-		/>
-		<link rel="stylesheet" href="styles.css" />
-	</head>
-	<body>
-		<!--
-    THESIS: A registrar binder turned into a calm student instrument; no dashboard card grid.
-    OWN-WORLD: Cool paper, mist index panels, ink rules, electric-blue signals, Inter Tight headings.
-    STORY: Orient, supply source material, check structured results, act, confirm beside the action.
-    FIRST VIEWPORT: Club header above a grouped TOC; compact task header and first working control at right.
-    FORM: Campus Lab Manual, user-pinned direction; the signature is the week ruler shared by schedule and availability.
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MariTools calendar-first visual preview">
+  <title>MariTools — Calendar-first instrument</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&family=Inter+Tight:wght@500;600;650;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!--
+    THESIS: MariTools is a registrar instrument, not a student dashboard; timetable geometry replaces the form-first worksheet.
+    OWN-WORLD: cool paper, deep ink, hairline rules, compact controls, scarce electric blue, and crisp Inter typography.
+    STORY: a student sees the week, spots a conflict, imports Omnivox data, and moves through adjacent campus utilities without changing mental models.
+    FIRST VIEWPORT: ink masthead, narrow grouped rail, full-width Mon–Fri calendar, fixed time rail, positioned classes, and a compact import drawer.
+    FORM: calendar-first operational canvas, derived from Google Calendar week density and Fantastical restraint; brief-assigned direction.
   -->
-		<a class="skip-link" href="#main">Skip to main content</a>
+  <a class="skip-link" href="#workspace">Skip to workspace</a>
 
-		<header class="site-header">
-			<a
-				class="club-brand"
-				href="#home"
-				data-page-link="home"
-				aria-label="Marianopolis Programming Club home"
-			>
-				<span class="club-mark" aria-hidden="true">M</span>
-				<span>Marianopolis Programming Club</span>
-			</a>
-			<nav class="site-nav" aria-label="Club navigation">
-				<a href="#about">About</a>
-				<a href="#events">Events</a>
-				<a class="site-current" href="#home" data-page-link="home">MariTools</a>
-				<a href="#account" data-page-link="account">Account</a>
-				<a
-					class="button button-primary button-small"
-					href="https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header"
-					>Sign up</a
-				>
-			</nav>
-			<button class="site-menu" type="button" aria-label="Open site navigation">Menu</button>
-		</header>
+  <header class="site-header">
+    <a class="brand" href="#" data-page-link="home" aria-label="MariTools home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>MariTools</span>
+    </a>
+    <span class="header-context">Marianopolis student utilities</span>
+    <label class="picker-label" for="page-picker">Preview surface</label>
+    <select id="page-picker" aria-label="Choose preview surface">
+      <option value="home">Home</option>
+      <option value="schedule" selected>Schedule</option>
+      <option value="free-time">Free time</option>
+      <option value="semester">Semester</option>
+      <option value="catalog">Catalog</option>
+      <option value="clubs">Clubs</option>
+      <option value="forum">Forum</option>
+      <option value="thread">Thread</option>
+      <option value="account">Account</option>
+    </select>
+    <button class="mobile-menu" type="button" aria-expanded="false" aria-controls="side-nav">Menu</button>
+    <button class="account-chip" type="button" data-page-link="account" aria-label="Open account">
+      <span class="account-dot" aria-hidden="true">MS</span>
+      <span class="account-copy"><strong>Maya S.</strong><small>Account</small></span>
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5.5 6 2.5 2.5L10.5 6"/></svg>
+    </button>
+  </header>
 
-		<div class="preview-bar" aria-label="Preview controls">
-			<div><strong>Visual preview</strong><span>Campus Lab Manual direction</span></div>
-			<label for="page-picker">Surface</label>
-			<select id="page-picker">
-				<option value="home">Tools home</option>
-				<option value="schedule">Schedule</option>
-				<option value="free-time">Common free time</option>
-				<option value="semester">Semester</option>
-				<option value="catalog">Course catalog</option>
-				<option value="clubs">Clubs</option>
-				<option value="forum">Forum</option>
-				<option value="thread">Forum thread</option>
-				<option value="account">Your account</option>
-			</select>
-			<label for="state-picker">State</label>
-			<select id="state-picker">
-				<option value="default">Default view</option>
-				<option value="empty">Empty catalog</option>
-				<option value="loading">Loading schedule</option>
-				<option value="error">Outline error</option>
-				<option value="locked">Locked thread</option>
-				<option value="signed-out">Signed-out account</option>
-			</select>
-		</div>
+  <div class="app-shell">
+    <aside class="sidebar" id="side-nav">
+      <div class="sidebar-top">
+        <span class="term-status"><i></i> Schedule ready</span>
+        <button class="close-menu" type="button" aria-label="Close menu">Close</button>
+      </div>
 
-		<div class="mobile-tools-bar">
-			<a href="#home" data-page-link="home">MariTools</a>
-			<button
-				id="tools-menu-button"
-				type="button"
-				aria-expanded="false"
-				aria-controls="mobile-tools-menu"
-			>
-				<span id="mobile-current">Tools home</span><span aria-hidden="true">⌄</span>
-			</button>
-		</div>
+      <nav aria-label="MariTools">
+        <a class="nav-home" href="#" data-page-link="home">
+          <span>Overview</span><span aria-hidden="true">↗</span>
+        </a>
+        <div class="nav-group">
+          <p>Schedule</p>
+          <a href="#" data-page-link="schedule" class="is-current" aria-current="page"><span>My schedule</span><kbd>S</kbd></a>
+          <a href="#" data-page-link="free-time"><span>Common free time</span><kbd>F</kbd></a>
+        </div>
+        <div class="nav-group">
+          <p>Courses</p>
+          <a href="#" data-page-link="semester"><span>Semester</span><kbd>M</kbd></a>
+          <a href="#" data-page-link="catalog"><span>Course catalog</span><kbd>C</kbd></a>
+        </div>
+        <div class="nav-group">
+          <p>Student life</p>
+          <a href="#" data-page-link="clubs"><span>Clubs</span><kbd>L</kbd></a>
+          <a href="#" data-page-link="forum"><span>Forum</span><kbd>R</kbd></a>
+        </div>
+      </nav>
 
-		<div class="mt-shell">
-			<aside class="tools-sidebar" aria-label="MariTools navigation">
-				<a class="tools-wordmark" href="#home" data-page-link="home"
-					><span>MariTools</span><span class="edition">Student tools</span></a
-				>
-				<nav class="tools-toc">
-					<section class="toc-group">
-						<h2>Schedule</h2>
-						<div class="toc-panel">
-							<a href="#schedule" data-page-link="schedule"
-								><span>My schedule</span><span aria-hidden="true">→</span></a
-							>
-							<a href="#free-time" data-page-link="free-time"
-								><span>Common free time</span><span aria-hidden="true">→</span></a
-							>
-						</div>
-					</section>
-					<section class="toc-group">
-						<h2>Courses</h2>
-						<div class="toc-panel">
-							<a href="#semester" data-page-link="semester"
-								><span>Semester</span><span aria-hidden="true">→</span></a
-							>
-							<a href="#catalog" data-page-link="catalog"
-								><span>Course catalog</span><span aria-hidden="true">→</span></a
-							>
-						</div>
-					</section>
-					<section class="toc-group">
-						<h2>Student life</h2>
-						<div class="toc-panel">
-							<a href="#clubs" data-page-link="clubs"
-								><span>Clubs</span><span aria-hidden="true">→</span></a
-							>
-							<a href="#forum" data-page-link="forum"
-								><span>Forum</span><span aria-hidden="true">→</span></a
-							>
-						</div>
-					</section>
-				</nav>
-				<a class="back-link" href="/">← Back to club home</a>
-			</aside>
+      <div class="sidebar-foot">
+        <p>Made for Marianopolis.</p>
+        <a href="/">Back to club home <span aria-hidden="true">↗</span></a>
+      </div>
+    </aside>
 
-			<div
-				class="mobile-tools-menu"
-				id="mobile-tools-menu"
-				role="dialog"
-				aria-modal="true"
-				aria-label="MariTools navigation"
-				hidden
-			>
-				<div class="mobile-menu-inner">
-					<section>
-						<h2>Schedule</h2>
-						<a href="#schedule" data-page-link="schedule">My schedule</a
-						><a href="#free-time" data-page-link="free-time">Common free time</a>
-					</section>
-					<section>
-						<h2>Courses</h2>
-						<a href="#semester" data-page-link="semester">Semester</a
-						><a href="#catalog" data-page-link="catalog">Course catalog</a>
-					</section>
-					<section>
-						<h2>Student life</h2>
-						<a href="#clubs" data-page-link="clubs">Clubs</a
-						><a href="#forum" data-page-link="forum">Forum</a>
-					</section>
-					<a class="back-link" href="/">← Back to club home</a>
-				</div>
-			</div>
+    <main id="workspace" class="workspace">
+      <section class="page page-schedule is-active" data-page="schedule" aria-labelledby="schedule-title">
+        <div class="schedule-toolbar">
+          <div class="schedule-heading">
+            <h1 id="schedule-title">My schedule</h1>
+            <span class="saved-state"><i></i> Saved just now</span>
+          </div>
+          <div class="week-controls" aria-label="Week controls">
+            <button class="icon-button" type="button" aria-label="Previous week">←</button>
+            <button class="today-button" type="button">Today</button>
+            <button class="icon-button" type="button" aria-label="Next week">→</button>
+            <strong>January 20–24</strong>
+          </div>
+          <div class="schedule-actions">
+            <button class="text-button" type="button">Export .ics</button>
+            <button class="primary-button import-toggle" type="button" aria-expanded="true">Import Omnivox</button>
+          </div>
+        </div>
 
-			<main id="main" tabindex="-1">
-				<section class="page page-active page-index" data-page="home" aria-labelledby="home-title">
-					<header class="page-header index-heading">
-						<p class="context-line">Six practical campus tools</p>
-						<h1 id="home-title">Make campus information usable.</h1>
-						<p>
-							Turn schedules and outlines into structured information, then find what other
-							Marianopolis students have shared.
-						</p>
-					</header>
-					<div class="index-ledger">
-						<section class="index-band">
-							<header>
-								<span class="band-number">A</span>
-								<div>
-									<h2>Schedule</h2>
-									<p>Plan the week from Omnivox data.</p>
-								</div>
-							</header>
-							<div class="index-links">
-								<a href="#schedule" data-page-link="schedule"
-									><span
-										><strong>My schedule</strong
-										><small>Paste your Omnivox list and download a calendar.</small></span
-									><span class="row-arrow">→</span></a
-								>
-								<a href="#free-time" data-page-link="free-time"
-									><span
-										><strong>Common free time</strong
-										><small>Compare a few schedules and see when everyone is free.</small></span
-									><span class="row-arrow">→</span></a
-								>
-							</div>
-						</section>
-						<section class="index-band">
-							<header>
-								<span class="band-number">B</span>
-								<div>
-									<h2>Courses</h2>
-									<p>Review and share course facts.</p>
-								</div>
-							</header>
-							<div class="index-links">
-								<a href="#semester" data-page-link="semester"
-									><span
-										><strong>Semester</strong
-										><small>Review dates and weights from a course outline.</small></span
-									><span class="row-arrow">→</span></a
-								>
-								<a href="#catalog" data-page-link="catalog"
-									><span
-										><strong>Course catalog</strong
-										><small>Browse course information students have shared.</small></span
-									><span class="row-arrow">→</span></a
-								>
-							</div>
-						</section>
-						<section class="index-band">
-							<header>
-								<span class="band-number">C</span>
-								<div>
-									<h2>Student life</h2>
-									<p>Find campus groups and conversations.</p>
-								</div>
-							</header>
-							<div class="index-links">
-								<a href="#clubs" data-page-link="clubs"
-									><span
-										><strong>Clubs</strong
-										><small>Find campus clubs from verified listings.</small></span
-									><span class="row-arrow">→</span></a
-								>
-								<a href="#forum" data-page-link="forum"
-									><span
-										><strong>Forum</strong
-										><small>Read and post questions tagged to real courses.</small></span
-									><span class="row-arrow">→</span></a
-								>
-							</div>
-						</section>
-					</div>
-				</section>
+        <div class="schedule-stage">
+          <div class="calendar-frame" aria-label="Illustrative weekly course schedule">
+            <div class="calendar-corner"><span>EST</span></div>
+            <div class="day-head is-today"><span>Mon</span><strong>20</strong><i>Today</i></div>
+            <div class="day-head"><span>Tue</span><strong>21</strong></div>
+            <div class="day-head"><span>Wed</span><strong>22</strong></div>
+            <div class="day-head"><span>Thu</span><strong>23</strong></div>
+            <div class="day-head"><span>Fri</span><strong>24</strong></div>
 
-				<section
-					class="page page-wide"
-					data-page="schedule"
-					aria-labelledby="schedule-title"
-					hidden
-				>
-					<header class="page-header page-header-with-meta">
-						<div>
-							<h1 id="schedule-title">My schedule</h1>
-							<p>Paste your Omnivox course list. Check the timetable before downloading it.</p>
-						</div>
-						<span class="privacy-note">Processed in this browser</span>
-					</header>
-					<div class="state-view state-loading" hidden role="status" aria-live="polite">
-						<span class="loading-mark" aria-hidden="true"></span>
-						<div>
-							<strong>Reading 7 course meetings</strong>
-							<p>Building the week and checking overlaps.</p>
-						</div>
-					</div>
-					<details class="help-disclosure">
-						<summary>Where to copy your Omnivox schedule</summary>
-						<p>
-							Open My Schedule in Omnivox, select the course list, and copy it with meeting times
-							and rooms included.
-						</p>
-					</details>
-					<section class="workflow-section input-section">
-						<div class="step-heading">
-							<span>01</span>
-							<div>
-								<h2>Paste course list</h2>
-								<p>Include course codes, sections, room numbers, and meeting times.</p>
-							</div>
-						</div>
-						<label class="field-label" for="schedule-source">Omnivox course list</label>
-						<textarea id="schedule-source" class="source-input" rows="5">
-Calculus II — 201-NYB-05, section 02
-Monday 08:30–10:00, Wednesday 10:00–11:30 — A-303
-Programming — 420-202-RE, section 01
-Monday 09:30–11:00, Thursday 13:00–15:00 — F-204</textarea>
-						<div class="action-row">
-							<button class="button button-primary" id="build-schedule" type="button">
-								Build schedule</button
-							><span class="input-hint">Nothing is uploaded.</span
-							><span class="action-confirmation" id="schedule-confirmation" role="status" hidden
-								><span aria-hidden="true">✓</span> Week rebuilt</span
-							>
-						</div>
-					</section>
-					<section class="workflow-section">
-						<div class="step-heading">
-							<span>02</span>
-							<div>
-								<h2>Check the week</h2>
-								<p>
-									Three Monday meetings intersect. Their staggered edges keep each course visible.
-								</p>
-							</div>
-						</div>
-						<div class="notice warning-notice">
-							<strong>Monday has a three-course collision.</strong
-							><span
-								>Calculus II, Programming, and Chemistry tutorial intersect from 09:45 to 10:00.
-								Check the source times.</span
-							>
-						</div>
-						<div class="week-grid-frame">
-							<div class="week-scroll-cue" aria-hidden="true"><span>More days</span><b>→</b></div>
-							<div class="week-grid-wrap" aria-label="Weekly timetable preview" tabindex="0">
-								<div class="week-grid">
-									<div class="corner-cell">Time</div>
-									<div class="day-head"><strong>Mon</strong><span>Sep 8</span></div>
-									<div class="day-head"><strong>Tue</strong><span>Sep 9</span></div>
-									<div class="day-head"><strong>Wed</strong><span>Sep 10</span></div>
-									<div class="day-head"><strong>Thu</strong><span>Sep 11</span></div>
-									<div class="day-head"><strong>Fri</strong><span>Sep 12</span></div>
-									<div class="time-rail">
-										<span>08:00</span><span>09:00</span><span>10:00</span><span>11:00</span
-										><span>12:00</span><span>13:00</span><span>14:00</span><span>15:00</span
-										><span>16:00</span>
-									</div>
-									<div class="day-column day-mon">
-										<article class="meeting calc">
-											<strong>Calculus II</strong><span>08:30–10:00</span><span>A-303</span>
-										</article>
-										<article class="meeting overlap">
-											<em>Overlap</em><strong>Programming</strong><span>09:30–11:00</span
-											><span>F-204</span>
-										</article>
-										<article
-											class="meeting collision-third"
-											title="Chemistry tutorial, 09:45 to 10:30, C-118"
-										>
-											<em>3-way</em><strong>Chem tutorial</strong><span>09:45–10:30</span
-											><span>C-118</span>
-										</article>
-										<article class="meeting english">
-											<strong>English</strong><span>13:00–14:30</span><span>D-115</span>
-										</article>
-									</div>
-									<div class="day-column">
-										<article class="meeting physics">
-											<strong>Mechanics</strong><span>10:00–11:30</span><span>C-402</span>
-										</article>
-										<article class="meeting lab">
-											<strong>Physics lab</strong><span>14:00–16:00</span><span>C-214</span>
-										</article>
-									</div>
-									<div class="day-column">
-										<article class="meeting calc">
-											<strong>Calculus II</strong><span>10:00–11:30</span><span>A-303</span>
-										</article>
-										<article class="meeting humanities">
-											<strong>Humanities</strong><span>12:00–13:30</span><span>B-208</span>
-										</article>
-									</div>
-									<div class="day-column">
-										<article class="meeting programming">
-											<strong>Programming</strong><span>13:00–15:00</span><span>F-204</span>
-										</article>
-									</div>
-									<div class="day-column">
-										<article class="meeting physics">
-											<strong>Mechanics</strong><span>08:30–10:00</span><span>C-402</span>
-										</article>
-										<article class="meeting humanities">
-											<strong>Humanities</strong><span>11:30–13:00</span><span>B-208</span>
-										</article>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="mobile-day-list">
-							<section>
-								<h3>Monday</h3>
-								<p><strong>08:30</strong> Calculus II, A-303</p>
-								<p class="conflict-row">
-									<strong>09:30</strong> Programming, F-204 <span>Overlap</span>
-								</p>
-								<p class="conflict-row">
-									<strong>09:45</strong> Chemistry tutorial, C-118 <span>3-way</span>
-								</p>
-								<p><strong>13:00</strong> English, D-115</p>
-							</section>
-							<section>
-								<h3>Tuesday</h3>
-								<p><strong>10:00</strong> Mechanics, C-402</p>
-								<p><strong>14:00</strong> Physics lab, C-214</p>
-							</section>
-							<section>
-								<h3>Wednesday</h3>
-								<p><strong>10:00</strong> Calculus II, A-303</p>
-								<p><strong>12:00</strong> Humanities, B-208</p>
-							</section>
-						</div>
-					</section>
-					<section class="workflow-section export-row">
-						<div class="step-heading">
-							<span>03</span>
-							<div>
-								<h2>Take it with you</h2>
-								<p>Download a calendar file after the overlap is corrected.</p>
-							</div>
-						</div>
-						<button class="button button-primary" type="button">Download .ics</button>
-					</section>
-				</section>
+            <div class="time-rail">
+              <span style="--row:0">8 AM</span><span style="--row:1">9 AM</span><span style="--row:2">10 AM</span>
+              <span style="--row:3">11 AM</span><span style="--row:4">12 PM</span><span style="--row:5">1 PM</span>
+              <span style="--row:6">2 PM</span><span style="--row:7">3 PM</span><span style="--row:8">4 PM</span>
+              <span style="--row:9">5 PM</span><span style="--row:10">6 PM</span>
+            </div>
+            <div class="day-column today-column" data-day="Monday">
+              <article class="event event-blue" style="--start:1;--duration:1.5;--lane:0;--lanes:1">
+                <strong>Calculus II</strong><span>201-NYB-05</span><small>9:00–10:30 — A-301</small>
+              </article>
+              <article class="event event-ink" style="--start:3.25;--duration:1.75;--lane:0;--lanes:1">
+                <strong>General Chemistry</strong><span>202-NYA-05</span><small>11:15–1:00 — C-203</small>
+              </article>
+              <article class="event event-line" style="--start:7;--duration:1.5;--lane:0;--lanes:1">
+                <strong>English</strong><span>603-101-MQ</span><small>3:00–4:30 — A-205</small>
+              </article>
+            </div>
+            <div class="day-column" data-day="Tuesday">
+              <article class="event event-slate" style="--start:.5;--duration:1.5;--lane:0;--lanes:1">
+                <strong>Mechanics</strong><span>203-NYA-05</span><small>8:30–10:00 — C-401</small>
+              </article>
+              <article class="event event-pale" style="--start:4;--duration:2;--lane:0;--lanes:1">
+                <strong>Philosophy</strong><span>340-101-MQ</span><small>12:00–2:00 — A-206</small>
+              </article>
+              <article class="event event-blue" style="--start:8;--duration:1.5;--lane:0;--lanes:1">
+                <strong>Calculus II</strong><span>201-NYB-05</span><small>4:00–5:30 — A-301</small>
+              </article>
+            </div>
+            <div class="day-column" data-day="Wednesday">
+              <article class="event event-ink" style="--start:1;--duration:2;--lane:0;--lanes:1">
+                <strong>Chemistry lab</strong><span>202-NYA-05</span><small>9:00–11:00 — C-115</small>
+              </article>
+              <article class="event event-line conflict" style="--start:5;--duration:2;--lane:0;--lanes:2">
+                <strong>English</strong><span>603-101-MQ</span><small>1:00–3:00 — A-205</small>
+              </article>
+              <article class="event event-danger conflict" style="--start:5.5;--duration:1.5;--lane:1;--lanes:2">
+                <b>Conflict</b><strong>Peer tutoring</strong><small>1:30–3:00 — Library</small>
+              </article>
+            </div>
+            <div class="day-column" data-day="Thursday">
+              <article class="event event-slate" style="--start:.5;--duration:1.5;--lane:0;--lanes:1">
+                <strong>Mechanics</strong><span>203-NYA-05</span><small>8:30–10:00 — C-401</small>
+              </article>
+              <article class="event event-pale" style="--start:3;--duration:2;--lane:0;--lanes:1">
+                <strong>Humanities</strong><span>345-102-MQ</span><small>11:00–1:00 — A-310</small>
+              </article>
+              <article class="event event-ink" style="--start:7.5;--duration:2;--lane:0;--lanes:1">
+                <strong>Mechanics lab</strong><span>203-NYA-05</span><small>3:30–5:30 — C-012</small>
+              </article>
+            </div>
+            <div class="day-column" data-day="Friday">
+              <article class="event event-blue" style="--start:1;--duration:1.5;--lane:0;--lanes:1">
+                <strong>Calculus II</strong><span>201-NYB-05</span><small>9:00–10:30 — A-301</small>
+              </article>
+              <article class="event event-line" style="--start:4.5;--duration:1.5;--lane:0;--lanes:1">
+                <strong>English</strong><span>603-101-MQ</span><small>12:30–2:00 — A-205</small>
+              </article>
+            </div>
+            <div class="now-line" aria-hidden="true"><span>10:18</span><i></i></div>
+          </div>
 
-				<section class="page page-wide" data-page="free-time" aria-labelledby="free-title" hidden>
-					<header class="page-header">
-						<h1 id="free-title">Common free time</h1>
-						<p>Compare pasted schedules and find gaps that work for everyone.</p>
-					</header>
-					<section class="workflow-section no-rule-top">
-						<div class="step-heading">
-							<span>01</span>
-							<div>
-								<h2>Add schedules</h2>
-								<p>Names stay with the schedule so results are easy to check.</p>
-							</div>
-						</div>
-						<div class="people-grid">
-							<div class="person-source">
-								<header>
-									<strong>Schedule 1</strong><button class="quiet-button">Remove</button>
-								</header>
-								<label>Name<input value="Maya" type="text" /></label
-								><label
-									>Omnivox list<textarea rows="5">
-Calculus II — Mon 08:30–10:00
-Physics lab — Tue 14:00–16:00</textarea>
-								</label>
-							</div>
-							<div class="person-source">
-								<header>
-									<strong>Schedule 2</strong><button class="quiet-button">Remove</button>
-								</header>
-								<label>Name<input value="Leo" type="text" /></label
-								><label
-									>Omnivox list<textarea rows="5">
-Chemistry — Mon 11:00–12:30
-Humanities — Tue 10:00–11:30</textarea>
-								</label>
-							</div>
-							<button class="add-person" type="button"><span>＋</span>Add another schedule</button>
-						</div>
-						<fieldset class="duration-field">
-							<legend>Minimum gap</legend>
-							<label><input type="radio" name="duration" /> 30 min</label
-							><label><input type="radio" name="duration" checked /> 60 min</label
-							><label><input type="radio" name="duration" /> 90 min</label>
-						</fieldset>
-						<button class="button button-primary" type="button">Find common gaps</button>
-					</section>
-					<section class="workflow-section">
-						<div class="step-heading">
-							<span>02</span>
-							<div>
-								<h2>Shared gaps</h2>
-								<p>Four options fit both schedules for at least 60 minutes.</p>
-							</div>
-						</div>
-						<div class="gap-register">
-							<div class="gap-head"><span>Day</span><span>Available</span><span>Length</span></div>
-							<button>
-								<strong>Monday</strong><span>12:30–16:00</span><span>3 h 30</span><i>Choose</i>
-							</button>
-							<button class="selected">
-								<strong>Tuesday</strong><span>11:30–14:00</span><span>2 h 30</span><i>Selected</i>
-							</button>
-							<button>
-								<strong>Wednesday</strong><span>09:00–11:00</span><span>2 h</span><i>Choose</i>
-							</button>
-							<button>
-								<strong>Friday</strong><span>13:30–16:00</span><span>2 h 30</span><i>Choose</i>
-							</button>
-						</div>
-						<div class="availability-strip" aria-label="Availability for the selected Tuesday gap">
-							<span>08</span><span>09</span><span>10</span><span>11</span
-							><span class="free-block">11:30 — everyone free — 14:00</span><span>15</span
-							><span>16</span>
-						</div>
-					</section>
-				</section>
+          <aside class="import-drawer" aria-label="Import schedule">
+            <div class="drawer-head">
+              <div><span>Omnivox import</span><strong>Paste course list</strong></div>
+              <button class="drawer-close" type="button" aria-label="Close import drawer">×</button>
+            </div>
+            <p>Copy the text from <strong>My schedule</strong> in Omnivox. We’ll map times before replacing anything.</p>
+            <textarea aria-label="Omnivox course list" placeholder="Paste your copied schedule here…"></textarea>
+            <div class="parse-status"><span>8 classes detected</span><span>1 conflict</span></div>
+            <button class="primary-button wide" type="button">Review import</button>
+            <details><summary>Where do I find this?</summary><p>Open Omnivox, choose Schedule, select all course rows, then copy.</p></details>
+          </aside>
+        </div>
+      </section>
 
-				<section
-					class="page page-form"
-					data-page="semester"
-					aria-labelledby="semester-title"
-					hidden
-				>
-					<header class="page-header">
-						<h1 id="semester-title">Semester</h1>
-						<p>
-							Upload a course outline, review the extracted dates and weights, then decide what to
-							share.
-						</p>
-					</header>
-					<div class="state-view state-error" hidden role="alert">
-						<span class="state-symbol" aria-hidden="true">!</span>
-						<div>
-							<strong>We could not read this outline</strong>
-							<p>
-								The PDF has no selectable text. Upload a text-based PDF or enter the course details
-								below.
-							</p>
-							<button class="quiet-button" type="button">Choose another PDF</button>
-						</div>
-					</div>
-					<section class="workflow-section no-rule-top">
-						<div class="step-heading">
-							<span>01</span>
-							<div>
-								<h2>Course outline</h2>
-								<p>Your PDF stays private. Only reviewed fields can be shared.</p>
-							</div>
-						</div>
-						<label class="file-row"
-							><span><strong>Choose a PDF</strong><small>PDF, up to 10 MB</small></span
-							><input type="file" accept="application/pdf" /><span class="file-name"
-								>Calculus-II-outline.pdf</span
-							></label
-						>
-						<button class="button button-primary" type="button">Check outline</button>
-					</section>
-					<section class="workflow-section">
-						<div class="step-heading">
-							<span>02</span>
-							<div>
-								<h2>Review extracted fields</h2>
-								<p>Correct anything that does not match the outline.</p>
-							</div>
-						</div>
-						<div class="course-fields form-grid">
-							<label>Course code<input class="data-text" value="201-NYB-05" /></label
-							><label>Section<input class="data-text" value="02" /></label
-							><label class="span-two">Course title<input value="Calculus II" /></label
-							><label class="span-two">Teacher<input value="Marie Tremblay" /></label>
-						</div>
-						<div class="record-editor">
-							<header>
-								<h3>Assessments</h3>
-								<button class="quiet-button">Add assessment</button>
-							</header>
-							<div class="record-head">
-								<span>Title</span><span>Weight</span><span>Date</span><span></span>
-							</div>
-							<div class="record-row">
-								<input aria-label="Assessment title" value="Test 1" /><input
-									aria-label="Assessment weight"
-									value="20%"
-								/><input aria-label="Assessment date" value="2026-09-24" /><button
-									aria-label="Remove Test 1"
-								>
-									×
-								</button>
-							</div>
-							<div class="record-row">
-								<input aria-label="Assessment title" value="Midterm" /><input
-									aria-label="Assessment weight"
-									value="30%"
-								/><input aria-label="Assessment date" value="2026-10-22" /><button
-									aria-label="Remove Midterm"
-								>
-									×
-								</button>
-							</div>
-							<div class="record-row">
-								<input aria-label="Assessment title" value="Final exam" /><input
-									aria-label="Assessment weight"
-									value="40%"
-								/><input aria-label="Assessment date" value="2026-12-15" /><button
-									aria-label="Remove Final exam"
-								>
-									×
-								</button>
-							</div>
-						</div>
-						<div class="record-editor books-editor">
-							<header>
-								<h3>Textbooks</h3>
-								<button class="quiet-button">Add textbook</button>
-							</header>
-							<div class="book-review-row">
-								<label>Title<input value="Calculus: Early Transcendentals" /></label
-								><label>ISBN<input class="data-text" value="9781337613927" /></label
-								><label class="check-label"><input type="checkbox" checked /> Required</label>
-							</div>
-						</div>
-					</section>
-					<section class="workflow-section share-section">
-						<div class="step-heading">
-							<span>03</span>
-							<div>
-								<h2>Private or shared</h2>
-								<p>Your extraction is private unless you choose to contribute confirmed fields.</p>
-							</div>
-						</div>
-						<div class="notice info-notice">
-							<strong>Only the fields shown here are shared.</strong
-							><span>The PDF stays private.</span>
-						</div>
-						<label class="share-choice"
-							><input type="checkbox" checked /><span
-								><strong>Share these confirmed fields to the course catalog</strong
-								><small
-									>This helps classmates check assessments and textbook requirements.</small
-								></span
-							></label
-						>
-						<div class="action-row">
-							<button class="button button-primary" id="share-catalog" type="button">
-								Share to catalog</button
-							><span class="action-confirmation" id="share-confirmation" role="status" hidden
-								><span aria-hidden="true">✓</span> Shared with catalog</span
-							>
-						</div>
-					</section>
-				</section>
+      <section class="page page-home" data-page="home" aria-labelledby="home-title">
+        <div class="page-topline"><span>Student utility desk</span><span>Six tools, one quiet workspace</span></div>
+        <div class="home-intro">
+          <div><h1 id="home-title">Make the semester<br>easier to read.</h1><p>MariTools turns the campus information you already have into a useful schedule, shared availability, course facts, and student discussion.</p></div>
+          <div class="home-today"><span>Monday</span><strong>20</strong><small>3 classes today</small><i></i></div>
+        </div>
+        <div class="tool-ledger">
+          <div class="ledger-group"><h2>Schedule</h2><span>Plan your week</span></div>
+          <button data-page-link="schedule"><b>My schedule</b><span>View a calendar made from your Omnivox list.</span><em>Open →</em></button>
+          <button data-page-link="free-time"><b>Common free time</b><span>Compare schedules and find a gap that works.</span><em>Compare →</em></button>
+          <div class="ledger-group"><h2>Courses</h2><span>Keep the term legible</span></div>
+          <button data-page-link="semester"><b>Semester</b><span>Pull assessments and readings from an outline.</span><em>Review →</em></button>
+          <button data-page-link="catalog"><b>Course catalog</b><span>Browse factual notes shared by students.</span><em>Browse →</em></button>
+          <div class="ledger-group"><h2>Student life</h2><span>Find your people</span></div>
+          <button data-page-link="clubs"><b>Clubs</b><span>Find verified campus groups and their links.</span><em>Explore →</em></button>
+          <button data-page-link="forum"><b>Forum</b><span>Read course-tagged questions from students.</span><em>Read →</em></button>
+        </div>
+      </section>
 
-				<section class="page page-index" data-page="catalog" aria-labelledby="catalog-title" hidden>
-					<header class="page-header">
-						<h1 id="catalog-title">Course catalog</h1>
-						<p>Browse course facts students reviewed and chose to share.</p>
-					</header>
-					<form class="filter-bar">
-						<label
-							>Term<select>
-								<option>Fall 2026</option>
-								<option>Winter 2027</option>
-							</select></label
-						>
-						<label
-							>Course code<input class="data-text" value="201" placeholder="Example: 201-NYB"
-						/></label>
-						<button class="button button-primary" type="button">Show courses</button>
-					</form>
-					<div class="result-line">
-						<strong>3 entries</strong><span>Updated from confirmed student submissions</span>
-					</div>
-					<div class="state-view state-empty" hidden>
-						<span class="state-symbol" aria-hidden="true">0</span>
-						<div>
-							<strong>No shared courses match 201-105</strong>
-							<p>Clear the course code or try a broader department code.</p>
-							<button class="button button-secondary" type="button">Clear course code</button>
-						</div>
-					</div>
-					<div class="catalog-list">
-						<article class="catalog-entry">
-							<header class="course-identity">
-								<strong class="course-code">201-NYB-05</strong>
-								<h2>Calculus II</h2>
-								<dl>
-									<div>
-										<dt>Term</dt>
-										<dd>Fall 2026</dd>
-									</div>
-									<div>
-										<dt>Section</dt>
-										<dd>02</dd>
-									</div>
-									<div>
-										<dt>Teacher</dt>
-										<dd>M. Tremblay</dd>
-									</div>
-								</dl>
-							</header>
-							<div class="course-facts">
-								<section>
-									<h3>Assessments</h3>
-									<div class="fact-head assessment-cols">
-										<span>Name</span><span>Weight</span><span>Date</span>
-									</div>
-									<div class="fact-row assessment-cols">
-										<strong>Test 1</strong><span>20%</span><span>Sep 24</span>
-									</div>
-									<div class="fact-row assessment-cols">
-										<strong>Midterm</strong><span>30%</span><span>Oct 22</span>
-									</div>
-									<div class="fact-row assessment-cols">
-										<strong>Final exam</strong><span>40%</span><span>Dec 15</span>
-									</div>
-								</section>
-								<section>
-									<h3>Textbooks</h3>
-									<p class="reference-only">
-										Course reference only. MariTools does not sell books.
-									</p>
-									<div class="fact-head book-cols">
-										<span>Title</span><span>Author</span><span>ISBN</span><span>Status</span>
-									</div>
-									<div class="fact-row book-cols">
-										<strong>Calculus: Early Transcendentals</strong><span>James Stewart</span
-										><span>9781337613927</span><span class="status-tag">Required</span>
-									</div>
-								</section>
-							</div>
-						</article>
-						<article class="catalog-entry compact-entry">
-							<header class="course-identity">
-								<strong class="course-code">201-103-RE</strong>
-								<h2>Linear Algebra</h2>
-								<dl>
-									<div>
-										<dt>Term</dt>
-										<dd>Fall 2026</dd>
-									</div>
-									<div>
-										<dt>Section</dt>
-										<dd>01</dd>
-									</div>
-									<div>
-										<dt>Teacher</dt>
-										<dd>A. Chen</dd>
-									</div>
-								</dl>
-							</header>
-							<div class="course-facts">
-								<section>
-									<h3>Assessments</h3>
-									<div class="fact-row assessment-cols">
-										<strong>Midterm</strong><span>35%</span><span>Oct 29</span>
-									</div>
-									<div class="fact-row assessment-cols">
-										<strong>Final exam</strong><span>45%</span><span>Dec 17</span>
-									</div>
-								</section>
-								<section>
-									<h3>Textbooks</h3>
-									<p class="reference-only">
-										Course reference only. MariTools does not sell books.
-									</p>
-									<div class="fact-row book-cols">
-										<strong>Linear Algebra and Its Applications</strong><span>David Lay</span
-										><span>9780321982384</span><span>Optional</span>
-									</div>
-								</section>
-							</div>
-						</article>
-					</div>
-				</section>
+      <section class="page page-free" data-page="free-time" aria-labelledby="free-title">
+        <div class="surface-header compact"><div><span class="section-kicker">Schedule comparison</span><h1 id="free-title">Common free time</h1></div><p>Paste each person’s Omnivox list. Available gaps appear directly on the week.</p></div>
+        <div class="free-layout">
+          <aside class="people-panel">
+            <div class="panel-title"><strong>Schedules</strong><span>3 people</span></div>
+            <label><span><i class="person-color one"></i>You</span><textarea placeholder="Paste your schedule…">8 classes detected</textarea></label>
+            <label><span><i class="person-color two"></i>Alex</span><textarea placeholder="Paste Alex’s schedule…">6 classes detected</textarea></label>
+            <label><span><i class="person-color three"></i>Samira</span><textarea placeholder="Paste Samira’s schedule…">7 classes detected</textarea></label>
+            <fieldset><legend>Minimum gap</legend><label><input type="radio" name="duration"> 30 min</label><label><input type="radio" name="duration" checked> 1 hour</label><label><input type="radio" name="duration"> 2 hours</label></fieldset>
+            <button class="primary-button wide">Find common gaps</button>
+          </aside>
+          <div class="availability-result">
+            <div class="result-bar"><div><strong>12 common gaps</strong><span>Based on three pasted schedules</span></div><button class="text-button">Copy results</button></div>
+            <div class="mini-week">
+              <div class="mini-time"><span>9</span><span>10</span><span>11</span><span>12</span><span>1</span><span>2</span><span>3</span><span>4</span></div>
+              <div class="mini-day"><b>Mon 20</b><i class="busy" style="--top:0;--size:2"></i><i class="gap" style="--top:3;--size:2"><span>11–1</span></i><i class="busy" style="--top:6;--size:2"></i></div>
+              <div class="mini-day"><b>Tue 21</b><i class="gap" style="--top:0;--size:2"><span>9–11</span></i><i class="busy" style="--top:3;--size:3"></i><i class="gap" style="--top:7;--size:1.5"><span>4–5:30</span></i></div>
+              <div class="mini-day"><b>Wed 22</b><i class="busy" style="--top:0;--size:3"></i><i class="gap strongest" style="--top:4;--size:3"><span>1–4 — best</span></i></div>
+              <div class="mini-day"><b>Thu 23</b><i class="gap" style="--top:1;--size:1.5"><span>10–11:30</span></i><i class="busy" style="--top:3;--size:3"></i><i class="gap" style="--top:7;--size:1.5"><span>4–5:30</span></i></div>
+              <div class="mini-day"><b>Fri 24</b><i class="busy" style="--top:0;--size:2"></i><i class="gap" style="--top:3;--size:2"><span>12–2</span></i><i class="busy" style="--top:6;--size:2"></i></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-				<section class="page page-index" data-page="clubs" aria-labelledby="clubs-title" hidden>
-					<header class="page-header">
-						<h1 id="clubs-title">Clubs</h1>
-						<p>Find staff-checked campus club listings and their official links.</p>
-					</header>
-					<form class="filter-bar">
-						<label>Search<input placeholder="Club name or activity" /></label>
-						<label
-							>Category<select>
-								<option>All categories</option>
-								<option>Academic</option>
-								<option>Arts and culture</option>
-								<option>Community</option>
-							</select></label
-						>
-						<button class="button button-primary" type="button">Show clubs</button>
-					</form>
-					<div class="result-line">
-						<strong>18 listings</strong><span>Staff-checked links</span>
-					</div>
-					<div class="club-list ruled-list">
-						<article>
-							<div>
-								<h2>Robotics Club</h2>
-								<span>Academic</span>
-							</div>
-							<p>
-								Build autonomous robots and learn mechanical design, electronics, and control
-								systems.
-							</p>
-							<a href="#club">Website ↗</a>
-						</article>
-						<article>
-							<div>
-								<h2>Debate Society</h2>
-								<span>Community</span>
-							</div>
-							<p>Practice argumentation and public speaking through weekly student-led debates.</p>
-							<a href="#club">Instagram ↗</a>
-						</article>
-						<article>
-							<div>
-								<h2>Marianopolis Music Club</h2>
-								<span>Arts and culture</span>
-							</div>
-							<p>Play with other students in casual sessions and campus performances.</p>
-							<div class="stacked-links">
-								<a href="#club">Website ↗</a><a href="#club">Instagram ↗</a>
-							</div>
-						</article>
-						<article>
-							<div>
-								<h2>Women in STEM</h2>
-								<span>Community</span>
-							</div>
-							<p>Peer support, speakers, and student-led conversations about paths through STEM.</p>
-							<a href="#club">Instagram ↗</a>
-						</article>
-					</div>
-					<section class="contribution-section">
-						<header>
-							<h2>Submit a club</h2>
-							<p>Send a listing for staff review. It will not appear publicly until checked.</p>
-						</header>
-						<form class="composer club-composer">
-							<label>Club name<input /></label
-							><label
-								>Category<select>
-									<option>Select a category</option>
-									<option>Academic</option>
-									<option>Arts and culture</option>
-									<option>Community</option>
-								</select></label
-							><label class="span-two">Description<textarea rows="4"></textarea></label
-							><label>Link label<input placeholder="Example: Website" /></label
-							><label>Website<input type="url" placeholder="https://" /></label
-							><button class="button button-primary" type="button">Send for review</button>
-						</form>
-					</section>
-				</section>
+      <section class="page page-semester" data-page="semester" aria-labelledby="semester-title">
+        <div class="surface-header"><div><span class="section-kicker">Outline desk</span><h1 id="semester-title">Build your semester</h1><p>Upload one course outline. Check the extracted dates before anything joins your plan.</p></div><button class="primary-button">Add another outline</button></div>
+        <div class="semester-grid">
+          <div class="upload-receipt">
+            <span class="file-stamp">PDF</span><div><strong>Calculus-II-outline.pdf</strong><small>12 pages — added today</small></div><button class="text-button">Replace</button>
+          </div>
+          <div class="review-sheet">
+            <div class="sheet-head"><div><span>Extraction review</span><h2>Calculus II</h2></div><span class="course-ref">201-NYB-05 — Sec. 02</span></div>
+            <div class="review-row header"><span>Assessment</span><span>Date</span><span>Weight</span><span></span></div>
+            <div class="review-row"><input value="Quiz 1" aria-label="Assessment"><input value="Feb 03" aria-label="Date"><input value="10%" aria-label="Weight"><button aria-label="Remove row">×</button></div>
+            <div class="review-row"><input value="Midterm exam" aria-label="Assessment"><input value="Mar 06" aria-label="Date"><input value="25%" aria-label="Weight"><button aria-label="Remove row">×</button></div>
+            <div class="review-row warned"><input value="Final project" aria-label="Assessment"><input value="Date missing" aria-label="Date"><input value="20%" aria-label="Weight"><button aria-label="Remove row">×</button></div>
+            <button class="add-row">+ Add assessment</button>
+            <label class="share-band"><input type="checkbox" checked><span><strong>Share course facts with the catalog</strong><small>Only the course code, instructor, assessment types, and textbook references are shared.</small></span></label>
+            <div class="sheet-actions"><span>1 field needs attention</span><button class="primary-button">Save semester</button></div>
+          </div>
+        </div>
+      </section>
 
-				<section class="page page-index" data-page="forum" aria-labelledby="forum-title" hidden>
-					<header class="page-header">
-						<h1 id="forum-title">Forum</h1>
-						<p>Read and post questions tagged to courses or student life.</p>
-					</header>
-					<form class="filter-bar forum-filter">
-						<label
-							>Category<select>
-								<option>All categories</option>
-								<option>Course help</option>
-								<option>Student life</option>
-							</select></label
-						><label
-							>Course<select>
-								<option>All courses</option>
-								<option>201-NYB-05</option>
-								<option>420-202-RE</option>
-							</select></label
-						><button class="button button-primary" type="button">Show threads</button>
-					</form>
-					<div class="thread-list ruled-list">
-						<div class="thread-head">
-							<span>Thread</span><span>Category</span><span>Course</span><span></span>
-						</div>
-						<a href="#thread" data-page-link="thread"
-							><strong>How are you preparing for the Calculus II midterm?</strong
-							><span>Course help</span><span class="course-code">201-NYB-05</span><i>→</i></a
-						>
-						<a href="#thread" data-page-link="thread"
-							><strong>Good quiet study spots after 4 p.m.</strong><span>Student life</span
-							><span>No course</span><i>→</i></a
-						>
-						<a href="#thread" data-page-link="thread"
-							><strong>Understanding arrays for Assignment 2</strong><span>Course help</span
-							><span class="course-code">420-202-RE</span><i>→</i></a
-						>
-						<a href="#thread" data-page-link="thread"
-							><strong>Anyone interested in a Friday problem-solving group?</strong
-							><span>Course help</span><span class="course-code">201-NYB-05</span><i>→</i></a
-						>
-						<a href="#thread" data-page-link="thread"
-							><strong>Where to find the club room schedule</strong><span>Student life</span
-							><span>No course</span><i>→</i></a
-						>
-					</div>
-					<section class="contribution-section">
-						<header>
-							<h2>Start a thread</h2>
-							<p>Keep the title specific so classmates can find the discussion later.</p>
-						</header>
-						<form class="composer forum-composer">
-							<label
-								>Category<select>
-									<option>Course help</option>
-									<option>Student life</option>
-								</select></label
-							><label
-								>Course tag<select>
-									<option>201-NYB-05</option>
-									<option>420-202-RE</option>
-									<option>No course</option>
-								</select></label
-							><label class="span-two">Title<input placeholder="What do you want to ask?" /></label
-							><label class="span-two"
-								>Body<textarea
-									rows="6"
-									placeholder="Add the details someone needs to answer."
-								></textarea></label
-							><button class="button button-primary" type="button">Post thread</button>
-						</form>
-					</section>
-				</section>
+      <section class="page page-catalog" data-page="catalog" aria-labelledby="catalog-title">
+        <div class="index-heading"><div><span class="section-kicker">Student-shared reference</span><h1 id="catalog-title">Course catalog</h1></div><div class="index-count"><strong>148</strong><span>course records</span></div></div>
+        <form class="filter-bar"><label class="search-field"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><input type="search" placeholder="Search code, title, or instructor"></label><label><span>Term</span><select><option>Winter</option><option>Fall</option></select></label><label><span>Department</span><select><option>All departments</option><option>Science</option><option>Humanities</option></select></label><button type="button" class="filter-clear">Clear</button></form>
+        <div class="catalog-table">
+          <div class="table-head"><span>Course</span><span>Instructor</span><span>Shared</span><span></span></div>
+          <button class="course-row"><span class="course-code">201-NYB-05</span><span class="course-title"><strong>Calculus II</strong><small>Science — 4 assessments — textbook reference</small></span><span class="instructor">M. Gervais</span><span class="shared-date">Jan 18</span><span class="row-arrow">→</span></button>
+          <button class="course-row"><span class="course-code">202-NYA-05</span><span class="course-title"><strong>General Chemistry</strong><small>Science — lab outline — textbook reference</small></span><span class="instructor">S. Li</span><span class="shared-date">Jan 16</span><span class="row-arrow">→</span></button>
+          <button class="course-row"><span class="course-code">203-NYA-05</span><span class="course-title"><strong>Mechanics</strong><small>Science — 5 assessments — no book listed</small></span><span class="instructor">A. Tremblay</span><span class="shared-date">Jan 12</span><span class="row-arrow">→</span></button>
+          <button class="course-row"><span class="course-code">603-101-MQ</span><span class="course-title"><strong>Introduction to College English</strong><small>English — essay sequence — 2 reading references</small></span><span class="instructor">J. Cohen</span><span class="shared-date">Jan 10</span><span class="row-arrow">→</span></button>
+          <button class="course-row"><span class="course-code">340-101-MQ</span><span class="course-title"><strong>Philosophy and Rationality</strong><small>Humanities — 3 assessments — reading list</small></span><span class="instructor">N. Roy</span><span class="shared-date">Jan 08</span><span class="row-arrow">→</span></button>
+          <button class="course-row"><span class="course-code">345-102-MQ</span><span class="course-title"><strong>World Views</strong><small>Humanities — presentation — essay</small></span><span class="instructor">L. Ahmed</span><span class="shared-date">Dec 19</span><span class="row-arrow">→</span></button>
+        </div>
+        <footer class="index-footer"><span>Showing 6 of 148</span><button class="text-button">Load more courses</button><small>Textbooks are reference information only. MariTools does not sell books.</small></footer>
+      </section>
 
-				<section class="page page-thread" data-page="thread" aria-labelledby="thread-title" hidden>
-					<nav class="breadcrumb" aria-label="Breadcrumb">
-						<a href="#forum" data-page-link="forum">Forum</a><span aria-hidden="true">/</span
-						><span>Calculus II midterm preparation</span>
-					</nav>
-					<header class="page-header thread-header">
-						<h1 id="thread-title">How are you preparing for the Calculus II midterm?</h1>
-						<div class="meta-line">
-							<span><b>Category</b> Course help</span
-							><span><b>Course</b> <span class="course-code">201-NYB-05</span></span>
-						</div>
-					</header>
-					<div class="state-view state-locked" hidden>
-						<span class="state-symbol" aria-hidden="true">×</span>
-						<div>
-							<strong>This thread is locked</strong>
-							<p>You can still read every reply, but new replies are closed.</p>
-						</div>
-					</div>
-					<article class="post original-post">
-						<p>
-							I’m working through the assigned problems, but I’m not sure how much time to spend on
-							related rates compared with integration techniques.
-						</p>
-						<p>
-							Has anyone found a good way to divide the review? I’d especially appreciate
-							suggestions that match what we have covered in class so far.
-						</p>
-						<button class="quiet-button">Report</button>
-					</article>
-					<section class="replies-section">
-						<header>
-							<h2>3 replies</h2>
-							<span>Newest reply 2 hours ago</span>
-						</header>
-						<ul class="reply-list">
-							<li>
-								<div class="reply-meta"><strong>Student reply</strong><span>Yesterday</span></div>
-								<div>
-									<p>
-										I made one page for derivative applications and one page for integration rules.
-										Then I redid the tutorial questions without notes.
-									</p>
-									<button class="quiet-button">Report</button>
-								</div>
-							</li>
-							<li>
-								<div class="reply-meta"><strong>Student reply</strong><span>5 hours ago</span></div>
-								<div>
-									<p>
-										The review sheet from class is a good guide to the balance. I would spend extra
-										time on setting up related-rate equations because that is where small mistakes
-										build up.
-									</p>
-									<button class="quiet-button">Report</button>
-								</div>
-							</li>
-							<li>
-								<div class="reply-meta"><strong>Student reply</strong><span>2 hours ago</span></div>
-								<div>
-									<p>
-										A few of us are meeting in the library on Thursday after 3 p.m. to work through
-										the longer problems.
-									</p>
-									<button class="quiet-button">Report</button>
-								</div>
-							</li>
-						</ul>
-					</section>
-					<section class="reply-composer">
-						<h2>Write a reply</h2>
-						<label for="reply-body">Reply</label
-						><textarea id="reply-body" rows="5" placeholder="Add to the conversation."></textarea
-						><button class="button button-primary" type="button">Post reply</button>
-					</section>
-					<section class="moderation">
-						<h2>Staff moderation</h2>
-						<p>These controls change who can participate in this discussion.</p>
-						<div>
-							<button class="button button-secondary" type="button">Lock thread</button
-							><button class="button button-danger" type="button">Remove thread</button>
-						</div>
-					</section>
-				</section>
+      <section class="page page-clubs" data-page="clubs" aria-labelledby="clubs-title">
+        <div class="index-heading"><div><span class="section-kicker">Verified campus directory</span><h1 id="clubs-title">Clubs at Marianopolis</h1></div><button class="primary-button">Submit a club</button></div>
+        <form class="filter-bar clubs-filter"><label class="search-field"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><input type="search" placeholder="Find a club"></label><label><span>Category</span><select><option>All categories</option><option>Academic</option><option>Arts</option><option>Community</option></select></label><span class="verified-key"><i>✓</i> Verified listing</span></form>
+        <div class="club-list">
+          <a href="#"><span class="club-index">A</span><span><strong>AI & Machine Learning Club</strong><small>Academic — Workshops and project sessions for all experience levels.</small></span><em>Instagram ↗</em></a>
+          <a href="#"><span class="club-index">C</span><span><strong>Chess Club</strong><small>Games — Weekly casual play and student tournaments.</small></span><em>Discord ↗</em></a>
+          <a href="#"><span class="club-index">D</span><span><strong>Debate Society</strong><small>Community — Practice, public speaking, and intercollegiate events.</small></span><em>Website ↗</em></a>
+          <a href="#"><span class="club-index">M</span><span><strong>Mari Programming Club</strong><small>Academic — Peer coding, workshops, mini-competitions, and MariHacks.</small></span><em>Instagram ↗</em></a>
+          <a href="#"><span class="club-index">P</span><span><strong>Photography Club</strong><small>Arts — Photo walks, critiques, and student exhibitions.</small></span><em>Instagram ↗</em></a>
+          <a href="#"><span class="club-index">S</span><span><strong>Sustainability Committee</strong><small>Community — Campus initiatives and environmental action.</small></span><em>Email ↗</em></a>
+        </div>
+      </section>
 
-				<section class="page page-form" data-page="account" aria-labelledby="account-title" hidden>
-					<header class="page-header">
-						<h1 id="account-title">Your account</h1>
-						<p>Complete your student profile to save outlines and contribute to MariTools.</p>
-					</header>
-					<div class="account-state">
-						<div class="state-index">
-							<span>Signed in</span><strong>mira.student@gmail.com</strong>
-						</div>
-						<dl class="profile-summary">
-							<div>
-								<dt>Email</dt>
-								<dd>mira.student@gmail.com</dd>
-							</div>
-							<div>
-								<dt>Display name</dt>
-								<dd>Mira</dd>
-							</div>
-							<div>
-								<dt>Student number</dt>
-								<dd><span class="status-tag status-good">Saved</span></dd>
-							</div>
-							<div>
-								<dt>NVIDIA outline analysis</dt>
-								<dd><span class="status-tag status-warning">Review needed</span></dd>
-							</div>
-						</dl>
-					</div>
-					<div class="state-view state-signed-out" hidden>
-						<span class="state-symbol" aria-hidden="true">M</span>
-						<div>
-							<strong>Sign in to save your work</strong>
-							<p>Use any Google account. You will add your student number after sign-in.</p>
-							<button class="button button-primary" type="button">Continue with Google</button>
-						</div>
-					</div>
-					<section class="workflow-section disclosure-section">
-						<h2>Outline analysis disclosure</h2>
-						<p>
-							When you upload a course outline, MariTools sends the outline text to NVIDIA’s
-							language model service to identify course details, assessment dates, weights, and
-							textbook references. Review every extracted field before saving or sharing it.
-						</p>
-						<p>
-							The original PDF stays private. Sharing course facts is a separate choice on the
-							Semester page.
-						</p>
-						<label class="share-choice"
-							><input type="checkbox" /><span
-								><strong>I have read and accept this disclosure</strong
-								><small>You can change this decision from your account.</small></span
-							></label
-						>
-					</section>
-					<section class="workflow-section profile-form-section">
-						<h2>Student profile</h2>
-						<div class="form-grid">
-							<label
-								>Student number <small>5 to 8 digits</small
-								><input class="data-text" inputmode="numeric" /></label
-							><label>Display name <small>Optional</small><input value="Mira" /></label>
-						</div>
-						<button class="button button-primary" type="button">Save account</button>
-					</section>
-					<div class="account-footnote">
-						<strong>About sign-in</strong>
-						<p>
-							Any Google account works. Your student number is checked for format and is never shown
-							on your public posts.
-						</p>
-					</div>
-				</section>
-			</main>
-		</div>
+      <section class="page page-forum" data-page="forum" aria-labelledby="forum-title">
+        <div class="forum-mast"><div><span class="section-kicker">Student discussion board</span><h1 id="forum-title">Forum</h1></div><button class="primary-button compose-toggle">New topic</button></div>
+        <div class="forum-tabs" role="tablist"><button class="active" role="tab">Latest</button><button role="tab">Unanswered</button><button role="tab">Following</button><label><span class="sr-only">Filter topics</span><input type="search" placeholder="Filter topics"></label></div>
+        <div class="topic-table">
+          <div class="topic-head"><span>Topic</span><span>Replies</span><span>Activity</span></div>
+          <button data-page-link="thread" class="topic-row is-hot"><span class="topic-rank">01</span><span class="topic-main"><strong>How are you studying for the Mechanics midterm?</strong><small><b>203-NYA-05</b> — Asked by Lina — Last reply by Theo</small></span><span class="reply-count">12</span><span class="activity">8 min</span></button>
+          <button data-page-link="thread" class="topic-row"><span class="topic-rank">02</span><span class="topic-main"><strong>Calculus II practice set: question 7</strong><small><b>201-NYB-05</b> — Asked by Noah — Includes image</small></span><span class="reply-count">5</span><span class="activity">31 min</span></button>
+          <button data-page-link="thread" class="topic-row"><span class="topic-rank">03</span><span class="topic-main"><strong>Does anyone have a clean outline for World Views?</strong><small><b>345-102-MQ</b> — Asked by Camille</small></span><span class="reply-count zero">0</span><span class="activity">1 hr</span></button>
+          <button data-page-link="thread" class="topic-row"><span class="topic-rank">04</span><span class="topic-main"><strong>Chemistry lab report formatting question</strong><small><b>202-NYA-05</b> — Asked by Yasmine — Answered</small></span><span class="reply-count">8</span><span class="activity">2 hr</span></button>
+          <button data-page-link="thread" class="topic-row"><span class="topic-rank">05</span><span class="topic-main"><strong>Best quiet spots for a group review session?</strong><small><b>Campus</b> — Asked by Marc</small></span><span class="reply-count">18</span><span class="activity">Yesterday</span></button>
+          <button data-page-link="thread" class="topic-row"><span class="topic-rank">06</span><span class="topic-main"><strong>English essay peer review exchange</strong><small><b>603-101-MQ</b> — Asked by Amélie</small></span><span class="reply-count">3</span><span class="activity">Yesterday</span></button>
+        </div>
+        <form class="composer">
+          <div class="composer-label"><strong>Start a new topic</strong><span>Ask clearly and tag the relevant course.</span></div>
+          <label><span>Title</span><input placeholder="What do you want help with?"></label>
+          <label><span>Course</span><select><option>Select a course</option><option>201-NYB-05 — Calculus II</option></select></label>
+          <label class="composer-body"><span>Details</span><textarea placeholder="Add the context someone needs to answer…"></textarea></label>
+          <div class="composer-actions"><small>Be respectful. Don’t post graded answers.</small><button type="button" class="primary-button">Post topic</button></div>
+        </form>
+      </section>
 
-		<script>
-			(() => {
-				const pages = [...document.querySelectorAll('[data-page]')];
-				const links = [...document.querySelectorAll('[data-page-link]')];
-				const picker = document.querySelector('#page-picker');
-				const statePicker = document.querySelector('#state-picker');
-				const menuButton = document.querySelector('#tools-menu-button');
-				const mobileMenu = document.querySelector('#mobile-tools-menu');
-				const mobileCurrent = document.querySelector('#mobile-current');
-				const siteToolsLink = document.querySelector('.site-nav [data-page-link="home"]');
-				const siteAccountLink = document.querySelector('.site-nav [data-page-link="account"]');
-				const titles = {
-					home: 'Tools home',
-					schedule: 'Schedule',
-					'free-time': 'Common free time',
-					semester: 'Semester',
-					catalog: 'Course catalog',
-					clubs: 'Clubs',
-					forum: 'Forum',
-					thread: 'Forum thread',
-					account: 'Your account'
-				};
-				const statePages = {
-					empty: 'catalog',
-					loading: 'schedule',
-					error: 'semester',
-					locked: 'thread',
-					'signed-out': 'account'
-				};
-				let menuReturnFocus = null;
+      <section class="page page-thread" data-page="thread" aria-labelledby="thread-title">
+        <div class="thread-crumb"><button data-page-link="forum">← All topics</button><span>203-NYA-05</span></div>
+        <div class="thread-grid">
+          <article class="thread-content">
+            <header><h1 id="thread-title">How are you studying for the Mechanics midterm?</h1><p>Asked by <strong>Lina M.</strong> on January 20 — 12 replies</p></header>
+            <div class="post original-post"><aside><span>LM</span><strong>Lina M.</strong><small>Today, 9:12</small></aside><div><p>I’m comfortable with kinematics, but the force-diagram questions are taking me too long. Has anyone found a good way to check the direction of friction before starting the equations?</p><p>I’m working through the assigned practice set rather than looking for graded answers.</p><div class="post-tools"><button>Reply</button><button>Copy link</button><button>Report</button></div></div></div>
+            <div class="reply-divider"><span>3 replies</span></div>
+            <div class="post"><aside><span>TK</span><strong>Theo K.</strong><small>Today, 9:38</small></aside><div><p>I draw the contact surface first, then mark the motion you would expect without friction. Friction points against that relative motion. It made the sign choice much more consistent for me.</p><div class="post-tools"><button>Reply</button><button>Report</button></div></div></div>
+            <div class="post"><aside><span>NA</span><strong>Noor A.</strong><small>Today, 10:04</small></aside><div><p>The worked example from lecture 6 was useful. I redo it with the incline reversed and check whether the equations still make physical sense.</p><div class="post-tools"><button>Reply</button><button>Report</button></div></div></div>
+            <form class="reply-box"><strong>Join the discussion</strong><textarea placeholder="Write a helpful reply…"></textarea><div><small>Course discussion is visible to signed-in students.</small><button class="primary-button" type="button">Post reply</button></div></form>
+          </article>
+          <aside class="thread-aside"><div><span>Course</span><strong>203-NYA-05</strong><small>Mechanics</small></div><div><span>Status</span><strong>Open</strong><small>Last activity 8 min ago</small></div><button>Follow topic</button></aside>
+        </div>
+      </section>
 
-				function showPage(name, updateHash = true, preserveState = false) {
-					if (!preserveState) {
-						statePicker.value = 'default';
-						document.body.dataset.previewState = 'default';
-						document.querySelector('#build-schedule').disabled = false;
-					}
-					const target = pages.find((page) => page.dataset.page === name) || pages[0];
-					pages.forEach((page) => {
-						const active = page === target;
-						page.hidden = !active;
-						page.classList.toggle('page-active', active);
-					});
-					links.forEach((link) => {
-						const current =
-							link.dataset.pageLink === name ||
-							(name === 'thread' && link.dataset.pageLink === 'forum');
-						link.classList.toggle('nav-current', current);
-						if (current) link.setAttribute('aria-current', 'page');
-						else link.removeAttribute('aria-current');
-					});
-					picker.value = name;
-					mobileCurrent.textContent = titles[name];
-					siteToolsLink.classList.toggle('site-current', name !== 'account');
-					siteAccountLink.classList.toggle('site-current', name === 'account');
-					mobileMenu.hidden = true;
-					menuButton.setAttribute('aria-expanded', 'false');
-					document.body.classList.remove('tools-menu-open');
-					if (updateHash) history.replaceState(null, '', '#' + name);
-					window.scrollTo({ top: 0, behavior: 'instant' });
-					requestAnimationFrame(updateScrollCue);
-				}
+      <section class="page page-account" data-page="account" aria-labelledby="account-title">
+        <div class="account-header"><span class="section-kicker">Identity and saved data</span><h1 id="account-title">Account</h1><p>Manage the school identity used to save schedules and join student discussions.</p></div>
+        <div class="settings-sheet">
+          <section class="setting-row identity-row"><div><h2>Profile</h2><p>Shown beside forum posts and shared course contributions.</p></div><div class="identity"><span>MS</span><div><strong>Maya Singh</strong><small>maya.s@example.com</small></div></div><button class="text-button">Edit name</button></section>
+          <section class="setting-row"><div><h2>Saved schedule</h2><p>Your imported schedule is available on this browser and account.</p></div><div class="setting-value"><strong>8 classes</strong><small>Updated today at 10:18</small></div><button class="text-button">Open schedule</button></section>
+          <section class="setting-row"><div><h2>Forum identity</h2><p>Your full email is never shown on posts.</p></div><div class="setting-value"><strong>Maya S.</strong><small>3 topics — 11 replies</small></div><button class="text-button">View activity</button></section>
+          <section class="setting-row danger-setting"><div><h2>Sign out</h2><p>Saved local data stays on this device unless you clear it.</p></div><button class="outline-button">Sign out</button></section>
+          <details class="legal-block"><summary><span><strong>Data and sign-in disclosure</strong><small>How authentication and NVIDIA-hosted tools may process submitted content</small></span><b>+</b></summary><div><p>MariTools uses your school identity to associate saved schedules and forum activity. Content sent to assisted extraction tools may be processed by the named provider only for that task.</p><button class="text-button">Read full disclosure</button></div></details>
+        </div>
+      </section>
+    </main>
+  </div>
 
-				links.forEach((link) =>
-					link.addEventListener('click', (event) => {
-						event.preventDefault();
-						showPage(link.dataset.pageLink);
-					})
-				);
-				picker.addEventListener('change', () => showPage(picker.value));
-				statePicker.addEventListener('change', () => {
-					const state = statePicker.value;
-					document.body.dataset.previewState = state;
-					document.querySelector('#build-schedule').disabled = state === 'loading';
-					if (state !== 'default') showPage(statePages[state], true, true);
-				});
-				function closeToolsMenu({ returnFocus = false } = {}) {
-					if (mobileMenu.hidden) return;
-					mobileMenu.hidden = true;
-					menuButton.setAttribute('aria-expanded', 'false');
-					document.body.classList.remove('tools-menu-open');
-					if (returnFocus && menuReturnFocus) menuReturnFocus.focus();
-				}
-				menuButton.addEventListener('click', () => {
-					const open = mobileMenu.hidden;
-					mobileMenu.hidden = !open;
-					menuButton.setAttribute('aria-expanded', String(open));
-					document.body.classList.toggle('tools-menu-open', open);
-					if (open) {
-						menuReturnFocus = document.activeElement;
-						mobileMenu.querySelector('a').focus();
-					}
-				});
-				document.addEventListener('pointerdown', (event) => {
-					if (
-						!mobileMenu.hidden &&
-						!mobileMenu.contains(event.target) &&
-						!menuButton.contains(event.target)
-					)
-						closeToolsMenu();
-				});
-				document.addEventListener('keydown', (event) => {
-					if (event.key === 'Escape' && !mobileMenu.hidden) {
-						closeToolsMenu({ returnFocus: true });
-						return;
-					}
-					if (event.key === 'Tab' && !mobileMenu.hidden) {
-						const focusable = [
-							...mobileMenu.querySelectorAll(
-								'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
-							)
-						];
-						const first = focusable[0];
-						const last = focusable[focusable.length - 1];
-						if (event.shiftKey && document.activeElement === first) {
-							event.preventDefault();
-							last.focus();
-						} else if (!event.shiftKey && document.activeElement === last) {
-							event.preventDefault();
-							first.focus();
-						}
-					}
-				});
-				document.querySelector('#build-schedule').addEventListener('click', () => {
-					document.querySelector('#schedule-confirmation').hidden = false;
-				});
-				document.querySelector('#share-catalog').addEventListener('click', () => {
-					document.querySelector('#share-confirmation').hidden = false;
-				});
-				const weekGrid = document.querySelector('.week-grid-wrap');
-				const updateScrollCue = () => {
-					const atEnd = weekGrid.scrollLeft + weekGrid.clientWidth >= weekGrid.scrollWidth - 8;
-					weekGrid.closest('.week-grid-frame').classList.toggle('is-scrolled-end', atEnd);
-				};
-				weekGrid.addEventListener('scroll', updateScrollCue, { passive: true });
-				window.addEventListener('resize', updateScrollCue);
-				const initial = location.hash.slice(1);
-				showPage(titles[initial] ? initial : 'home', false);
-				updateScrollCue();
-			})();
-		</script>
-	</body>
+  <div class="scrim" hidden></div>
+
+  <script>
+    const picker = document.querySelector('#page-picker');
+    const pages = [...document.querySelectorAll('[data-page]')];
+    const links = [...document.querySelectorAll('[data-page-link]')];
+    const sidebarLinks = [...document.querySelectorAll('.sidebar [data-page-link]')];
+    const menu = document.querySelector('.mobile-menu');
+    const sidebar = document.querySelector('.sidebar');
+    const scrim = document.querySelector('.scrim');
+    const closeMenuButton = document.querySelector('.close-menu');
+    const scheduleStage = document.querySelector('.schedule-stage');
+    const importDrawer = document.querySelector('.import-drawer');
+    const importToggle = document.querySelector('.import-toggle');
+    let menuReturnTarget = null;
+
+    function showPage(name) {
+      pages.forEach((page) => page.classList.toggle('is-active', page.dataset.page === name));
+      sidebarLinks.forEach((link) => {
+        const active = link.dataset.pageLink === name || (name === 'thread' && link.dataset.pageLink === 'forum');
+        link.classList.toggle('is-current', active);
+        active ? link.setAttribute('aria-current', 'page') : link.removeAttribute('aria-current');
+      });
+      picker.value = name;
+      document.body.dataset.surface = name;
+      document.querySelector('.workspace').scrollTop = 0;
+      closeMenu();
+    }
+
+    function openMenu() {
+      menuReturnTarget = document.activeElement;
+      sidebar.classList.add('is-open');
+      sidebar.removeAttribute('inert');
+      sidebar.setAttribute('aria-hidden', 'false');
+      menu.setAttribute('aria-expanded', 'true');
+      scrim.hidden = false;
+      closeMenuButton.focus();
+    }
+
+    function closeMenu() {
+      const wasOpen = sidebar.classList.contains('is-open');
+      sidebar.classList.remove('is-open');
+      menu.setAttribute('aria-expanded', 'false');
+      scrim.hidden = true;
+      if (window.matchMedia('(max-width: 820px)').matches) {
+        sidebar.setAttribute('inert', '');
+        sidebar.setAttribute('aria-hidden', 'true');
+      } else {
+        sidebar.removeAttribute('inert');
+        sidebar.removeAttribute('aria-hidden');
+      }
+      if (wasOpen && menuReturnTarget) menuReturnTarget.focus();
+    }
+
+    picker.addEventListener('change', (event) => showPage(event.target.value));
+    links.forEach((link) => link.addEventListener('click', (event) => {
+      event.preventDefault();
+      showPage(link.dataset.pageLink);
+    }));
+    menu.addEventListener('click', openMenu);
+    closeMenuButton.addEventListener('click', closeMenu);
+    scrim.addEventListener('click', closeMenu);
+    document.querySelector('.drawer-close').addEventListener('click', () => {
+      scheduleStage.classList.add('drawer-hidden');
+      importToggle.setAttribute('aria-expanded', 'false');
+      importDrawer.setAttribute('aria-hidden', 'true');
+      importToggle.focus();
+    });
+    importToggle.addEventListener('click', () => {
+      scheduleStage.classList.remove('drawer-hidden');
+      importToggle.setAttribute('aria-expanded', 'true');
+      importDrawer.setAttribute('aria-hidden', 'false');
+    });
+    document.querySelector('.compose-toggle').addEventListener('click', () => document.querySelector('.composer').scrollIntoView({ behavior: 'smooth' }));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeMenu();
+      if (event.key === 'Tab' && sidebar.classList.contains('is-open')) {
+        const focusable = [...sidebar.querySelectorAll('button, a[href]')];
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    });
+    if (window.matchMedia('(max-width: 820px)').matches) {
+      scheduleStage.classList.add('drawer-hidden');
+      importToggle.setAttribute('aria-expanded', 'false');
+      importDrawer.setAttribute('aria-hidden', 'true');
+      sidebar.setAttribute('inert', '');
+      sidebar.setAttribute('aria-hidden', 'true');
+    }
+    showPage('schedule');
+  </script>
+</body>
 </html>

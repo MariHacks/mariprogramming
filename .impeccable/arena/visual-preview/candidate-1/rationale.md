@@ -1,50 +1,29 @@
-# Candidate 1 rationale
+# Candidate 1 — The Registrar Desk
 
-## Visual world
+## Signature composition
 
-“Campus Lab Manual” treats MariTools as a piece of campus infrastructure: a registrar binder, library finding aid, and corrected lab worksheet translated into a modern web interface. The world is cool paper and mist, dense ink rules, terse labels, fixed columns, and one scarce electric-blue signal. Inter Tight carries the publication voice in page titles and the MariTools wordmark; Inter carries every working control, identifier, date, and time.
+**The Registrar Desk** is a calendar-first operational world. Schedule opens on the timetable itself: a full-width Monday–Friday grid with a fixed time rail, aligned weekday headers, positioned class blocks, a live-time line, and a visibly split Wednesday conflict. Omnivox import is a narrow utility drawer attached to the right edge of the instrument. It supports the calendar instead of replacing it.
 
-The signature is the week ruler. The timetable uses a dark registrar header, an exact time rail, half-hour rules, and meeting blocks that sit inside the grid instead of floating above it. The common-free-time page reuses that visual language as a horizontal availability register, making the two schedule tools feel related without cloning layouts.
+The physical scene is a student checking the week between classes under bright campus lighting. That forced a cool, high-contrast paper surface rather than a dark dashboard. Deep ink belongs to the masthead and a few course blocks; electric blue is reserved for the current day, live time, selection, and primary actions.
 
-The sidebar is a table of contents rather than a generic product rail. Three white mini-panels sit on mist, each corresponding exactly to the Schedule, Courses, and Student life groups. The active page gains a blue inset registration mark. The tools home echoes those groups as three broad ruled bands, which preserves orientation when the sidebar disappears on mobile.
+## Craft stolen, translated
 
-## References translated
+- **Google Calendar week:** time rail, day columns, exact event positioning, half-hour rules, today treatment, and the current-time line.
+- **Fantastical:** restrained calendar chrome, compact date navigation, and event density that remains legible.
+- **Printed registrar timetables:** tabular course codes, hard alignment, useful rules, and overlap treated as a scheduling fact.
+- **Linear and Notion:** a tight grouped table-of-contents rail with short rows and a persistent current state.
+- **When2meet:** stacked participant inputs beside a week-shaped availability result where shared gaps are the main artifact.
+- **Stripe documentation and university catalogs:** filter controls joined into one bar and course records presented as a ruled index.
+- **Discourse and Reddit:** fast-scanning topic rows, strong titles, quiet metadata columns, and composing below the index.
 
-- Printed registrar timetables: fixed weekday columns, tabular times, visible collision handling, and an ink header.
-- Lab manuals and course-outline worksheets: sequential work phases, plain field labels, correction before submission, and rules that separate procedures.
-- Library catalogs and university course listings: identity rail plus aligned facts, persistent filters, terse metadata, and missing-data discipline.
-- Linear and Notion sidebars: compact grouped navigation, stable position, and current-state clarity.
-- Google Calendar and Fantastical: readable week geometry and direct placement of meetings.
-- Discourse, Piazza, and GitHub issue threads: title-led rows, quiet metadata, prose measure, and linear replies.
-- Apple System Settings: grouped destination rows without an icon-card launcher.
+## What this refuses
 
-These references supply category behaviors, not their surface styling. MariTools keeps its own cool palette, square geometry, publication typography, and scarce signal color.
+This candidate explicitly refuses the Round 1 composition of a soft sidebar beside “heading + lead + large textarea + blue button.” Schedule does not begin with a form or a marketing introduction. Forum is not a title above cards, and Catalog is not a search box above tiles. Every important surface leads with the thing students manipulate: calendar, matrix, review sheet, or index.
 
-## Hierarchy sketch used
+## System decisions
 
-```text
-Club header
-Preview surface control
-┌──────── TOC on mist ────────┬──────── paper work area ──────────────┐
-│ MariTools                   │ Page title + one factual sentence      │
-│ Schedule                    │ First control or filter                │
-│ ┌ My schedule             ┐ │ ───────────────────────────────────── │
-│ └ Common free time        ┘ │ Results, review, or week register      │
-│ Courses                     │ ───────────────────────────────────── │
-│ ┌ Semester                ┐ │ Secondary contribution or confirmation│
-│ └ Course catalog          ┘ │                                       │
-│ Student life                │                                       │
-│ ┌ Clubs                   ┐ │                                       │
-│ └ Forum                   ┘ │                                       │
-│ Back to club home           │                                       │
-└─────────────────────────────┴───────────────────────────────────────┘
-```
+Typography uses Inter Tight for concise hierarchy and Inter everywhere else. Times and course codes use proportional Inter with `tabular-nums`; no code-styled type appears. Corners stay square or lightly eased, shadows only explain active physical depth, and structure comes primarily from borders, fills, and alignment. Account stays in the site header. The sidebar exactly mirrors Schedule, Courses, and Student life, with no term selector, cart, Book Delivery link, or initiative strip.
 
-## What I rejected
+## Interaction and adaptation
 
-I rejected a dashboard of equal rounded cards because it would flatten the difference between a quick directory, an import flow, a dense catalog, and a read-heavy thread. I also rejected icon-led navigation, avatar-heavy forum rows, timetable gradients, large metric callouts, a global term selector, and an oversized marketing introduction. Each would make the interface more familiar as software but less specific to student source material.
-
-I rejected a faux developer-console treatment. Course codes and times are technical data, but using a coding typeface would turn the interface into a costume and violate the no-monospace requirement. Weight and tabular numerals provide enough precision.
-
-Finally, I rejected decorative campus nostalgia: beige paper, notebook textures, school crests, doodles, and binder-ring illustrations. The “manual” idea is carried by information structure and alignment, not literal stationery decoration.
-
+The page picker switches all nine preview surfaces. Sidebar rows also navigate, the thread opens from forum rows, Omnivox import can close and reopen, the topic composer scrolls into view, and mobile uses a drawer with scrim and Escape support. At narrow widths, the timetable preserves its geometry through horizontal scrolling rather than collapsing into misleading cards.

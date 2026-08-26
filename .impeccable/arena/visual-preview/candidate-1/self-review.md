@@ -1,32 +1,23 @@
-# Candidate 1 self-review, round 2
+# Self-review — 28/30
 
-## Score: 29 / 30
+## Signature and distinctiveness — 10/10
 
-### Direction fidelity: 9.5 / 10
+The calendar dominates Schedule’s first viewport and reads at thumbnail scale as a registrar week: five ruled columns, time rail, positioned blocks, current-time line, and a split overlap conflict. The ink masthead, narrow TOC, and attached import drawer make the shell recognizable without labels.
 
-The polish pass keeps the Campus Lab Manual direction intact. The grouped TOC, cool paper and mist surfaces, ruled records, rare electric blue, and registrar-style week remain the organizing language across all nine routes. Account stays in the site header. The catalog alone owns the term filter. No Book Delivery navigation or commerce behavior appears.
+**Thumbnail proof:** even at 200 px wide, Candidate 1 is the one with a dense white week grid, dark masthead, blue “now” line, and narrow right-hand import drawer—not a heading-and-form worksheet.
 
-The preview bar still adds a strip that production would not need. Its new state control earns the space for review, but it remains artifact chrome rather than product chrome.
+## Product and information architecture — 9/10
 
-### Information design and task clarity: 9.8 / 10
+All nine surfaces are present and switch through `#page-picker`: home, schedule, free time, semester, catalog, clubs, forum, thread, and account. The sidebar uses the required three groups. Account is in the header; term selection appears only as a Catalog facet. No Book Delivery, cart, or initiative chrome appears. Forum, Catalog, and Clubs use dense ruled lists, while the Semester surface shows human review before saving extracted content.
 
-The state picker now exposes an empty catalog, schedule parsing, an outline error with recovery, a locked thread, and a signed-out account. Each choice opens the relevant route instead of showing a detached demonstration. Build schedule and Share to catalog now confirm beside the action. Account and MariTools current states also switch correctly in the site header.
+One point is held back because this static preview demonstrates interactions locally rather than persisting real imported data.
 
-The schedule warning and timetable now describe and display a three-course collision. The staggered blocks keep each course identifiable, and the mobile day list includes the same conflict.
+## Craft, accessibility, and responsiveness — 9/10
 
-### Visual craft and responsiveness: 9.7 / 10
+Inter Tight and Inter are the only font families. Course codes and times use `tabular-nums`. Keyboard focus is visible, landmark labels are present, reduced motion is honored, the mobile sidebar is a drawer, and the calendar remains geometrically honest on narrow screens. Blue is scarce and stateful; overlap also has a text label and border rather than relying on color.
 
-Desktop, mobile, 820-pixel tablet, and 680-pixel compact layouts were reviewed. Compact tablets get a right-edge "More days" cue that disappears at the end of the horizontal scroll. Catalog rows between 640 and 700 pixels have more vertical room, while narrower rows add labels for author and ISBN. Mobile forum rows now use a clear title, category, course, and arrow order.
+One point is held back because the preview has not been tested with production assistive technology and the illustrative calendar is not a fully interactive scheduling widget.
 
-The mobile tools menu behaves as a dialog: focus moves inside on open, loops in both directions, returns to the trigger on Escape, closes on outside click, and prevents background scrolling. Focus rings include the keyboard-scrollable timetable. Controls keep the shared height token.
+## Total
 
-The remaining production concern is font delivery. This standalone preview preconnects to Google Fonts; the shipping app should follow the repository's self-hosting or font-loading policy.
-
-## Round-two verification
-
-- Desktop and mobile pages render without horizontal document overflow.
-- The tablet timetable cue is visible before scrolling and fades at the right edge.
-- Empty, loading, error, locked, and signed-out state views all render from the state picker.
-- Both action confirmations appear after their buttons are used.
-- The tools menu passes forward and reverse focus-loop, Escape-return, and outside-click checks.
-- `styles.css` contains neither `mono` nor `monospace`.
+**28/30** — high-confidence visual preview with the signature composition fully present and the intended product boundaries intact.

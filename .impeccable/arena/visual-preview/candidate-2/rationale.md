@@ -1,39 +1,37 @@
-# Candidate 2 rationale
+# Candidate 2 rationale — Registrar Commons
 
-## Direction
+## Named world
 
-Candidate 2 treats MariTools as one continuous campus instrument. The fixed index, ruled work areas, and consistent control geometry make nine different tasks feel like parts of the same product. It rejects the usual student dashboard made from interchangeable cards.
+**Registrar Commons** is the visual expression of the assigned Discourse dens world. MariTools behaves like a student-run institutional index: an ink directory rail, cool-paper working surfaces, precise column heads, ruled records, and compact action areas that sit next to the artifact they change.
 
-The visual language is deliberately flat. Cool paper and mist separate the work pane from the navigation. Navy handles structure and electric blue appears only on current states, links, focus rings, and primary actions. Inter Tight gives page headings a compact editorial voice. Inter carries every operational label, course code, date, and time with tabular numerals. No monospace font is used.
+The signature composition is **the discussion ledger**. Forum and Catalog both begin with a narrow query bar followed immediately by a full-width, persistent-column index. The record itself is the page. Forum ends with a Discourse-style composer under the topic list, while Catalog opens one course in place without changing the list grammar.
 
-## Reference translation
+## Craft borrowed
 
-- Linear informed the compact row height, grouped left navigation, sparse state color, and immediate scanability.
-- Apple System Settings informed the tools home as a grouped directory instead of an icon grid.
-- Google Calendar and printed registrar timetables informed the weekday grid, time rail, meeting blocks, and explicit overlap state.
-- University course catalogs informed the dense filter bars, ruled results, and factual textbook treatment.
-- Discourse and GitHub issue threads informed the forum index and single reading column without avatars or reaction clutter.
+- **Reddit:** fast single-pass title scanning, strong title lines, quieter descriptive lines, and dense vertical rhythm without voting or ranking chrome.
+- **Discourse:** topic columns, latest-activity rhythm, embedded composer after the list, and a thread reader built from linear ruled posts.
+- **Stripe Docs:** restrained query controls, documentation-index precision, crisp column headers, and a scarce signal-blue state color.
+- **Google Calendar:** an actual weekday grid with time rail, hour rules, positioned meeting blocks, and a selected current day.
+- **When2meet:** people enter from a compact schedule ledger while shared gaps remain the dominant result.
+- **Linear:** 36-pixel navigation rows, grouped labels, filled current state, and an inset active marker.
 
-These references set the interaction discipline, not the layout. The result stays inside the existing Student Technical Journal identity and the MariTools Campus Lab Manual brief.
+These references supply information geometry and state discipline. Their logos, palettes, and decorative signatures are not copied.
 
-## Information hierarchy
+## Round 1 refusal
 
-The club header remains global. MariTools begins directly below it with a stable three-group index: Schedule, Courses, and Student life. Account stays in the global header. The content pane starts with a compact route line, one page title, and one factual sentence. The first useful control follows immediately.
+I refused the previous heading, lead paragraph, large textarea, blue button worksheet. Schedule opens on the week grid with a narrow import dock, so the calendar remains the dominant silhouette. Forum and Catalog do not use cards, large introductory copy, or floating forms. Their first view is a ruled operational index.
 
-Task pages follow the product sequence where it applies: supply source material, check the structured result, act on it, and see confirmation near the action. Browse pages skip artificial setup and move straight from filters to results.
+## System decisions
 
-## Responsive behavior
+- Cool white and blue-gray paper with a deep ink rail. Signal blue is reserved for active navigation, primary actions, unread state, and the current day.
+- Inter Tight is used for compact page and record titles. Inter carries labels, data, controls, course codes, and times.
+- Course codes and times use tabular numerals, never a code font.
+- Corners stay at two or three pixels. Rules, alternating paper tones, and column alignment create structure instead of shadows.
+- The grouped sidebar mirrors `TOOL_SECTIONS`: Schedule, Courses, Student life. Account remains in the site header.
+- The preview includes home, schedule, free time, semester, catalog, clubs, forum, thread, and account. The header picker switches all nine.
+- Mobile uses a real drawer and preserves list density through horizontal index scrolling instead of turning records into cards.
 
-At desktop widths, the sticky 15rem sidebar behaves like a lab manual table of contents. The timetable keeps its fixed time rail and weekday columns. Below 840px, the sidebar becomes a compact disclosure beneath the club header. The current page name appears in the disclosure trigger. Dense tables and forms collapse into readable rows, while the timetable becomes a day agenda below 640px.
+## Thumbnail claim
 
-## Rejected alternatives
+At 200 pixels wide, Schedule is a time-ruled week with colored class rectangles; Forum is a stack of long, dense ruled topics; Catalog is a compact six-column institutional ledger. Those three silhouettes identify this candidate before the labels are legible.
 
-- A rounded dashboard card grid. It weakens hierarchy and makes unrelated tools look interchangeable.
-- A terminal theme. It mistakes technical subject matter for a reason to use monospace, neon, or command-line decoration.
-- A notebook or graph-paper motif. It adds school-themed texture without helping students complete a task.
-- A calendar-first shell. Schedule is important, but it should not dominate catalog, clubs, forum, semester, and account work.
-- A promotional MariTools landing page. Students arrive to operate the tools, not to read a second club pitch.
-
-## Interaction note
-
-Hash navigation now shows one preview page at a time, marks the matching route in each navigation layer, keeps Forum current on the thread view, moves Account state into the global header, updates the mobile disclosure label, and closes the disclosure after route changes.

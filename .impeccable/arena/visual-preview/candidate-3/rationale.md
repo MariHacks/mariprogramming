@@ -1,37 +1,33 @@
-# Comparison workshop
+# Availability workshop
 
-MariTools is a place students dump awkward campus source material and get something they can check. The seed for this preview is the comparison bench, not a dashboard and not a heatmap.
+MariTools here is a comparison bench. Students paste Omnivox lists and read when a group is actually free. Common free time owns the look. Schedule is the single-person calendar of the same geometry, not a second paste form.
 
-## Visual world
+## Signature composition
 
-Cool paper, mist table of contents, ink rules, electric blue used only for current route, primary actions, links, and free-slot marks. Headings are Inter Tight. Everything else is Inter. Course codes and times use tabular numerals and weight, not a code face.
-
-The memorable object is the free-time workbench. Each person is a numbered station with a heading that says Person 1 schedule, not Schedule 1. Duration is a row of radios. Results are weekday ledgers: time range, length, who is free. Empty days say there is no gap of that length. The schedule week still looks like a registrar grid, because that is how a student checks whether a paste is wrong.
+**The comparison bench.** First viewport of Free Time is a workbar with 30 / 45 / 60 / 90 minute radios, three Person 1 / Person 2 / Person 3 stations as equal columns with ink headers, then a weekday gap matrix with a time rail and positioned blocks. The matrix is the artifact. Paste is input to it, not the page.
 
 ## What I stole
 
-When2meet: people as columns, a duration control, then a week of availability. I kept the sequence and dropped the color field.
+When2meet: people as columns, a duration control, then a week of availability. Dropped the green heatmap.
 
-Cal.com availability: duration as radios, not a slider.
+Google Calendar Find a time: busy as hatched regions, meetings as blocks on an hour rail. Inverted so free gaps carry the blue signal.
 
-Google Calendar week view and printed registrar timetables: time rail, weekday columns, meetings sitting on hour rules. Overlap is a danger rule plus the word Overlap.
+Cal.com: duration as radios, not a slider.
 
-Linear / Notion / MDN: grouped sidebar, current row as fill plus an inset bar, section labels that are not buttons.
+Linear: grouped sidebar, 40px-ish rows, current route as fill plus a 3px inset bar.
 
-University catalogs and Discourse topic lists: identity rail plus facts, title-strong thread rows, no avatar stack.
+Discourse / Reddit: thread title strong, course code and reply counts in columns, composer under the list.
 
-## What I rejected
+University catalog / Stripe docs: filter bar, course code as an identity rail, books labeled reference only.
 
-When2meet heatmaps, avatar circles, invite-friends chrome.
+## Color and type
 
-Card grids, icon launchers, hero metrics, glass, gradient type.
+Cool paper and a steel bench behind the instruments. Ink navy station headers. White week canvas. Electric blue only for free slots, current nav, links, and primary actions. Inter Tight on page titles and the MariTools wordmark. Inter everywhere else. Times and course codes use tabular numerals. No code face.
 
-Terminal / phosphor / school-spirit posters.
+## Round 1 lookalike I refused
 
-Account in the sidebar. Term picker in tools chrome. Book Delivery, cart, prices, covers.
+Heading, a paragraph, a tall textarea, a blue button, and a week grid after scroll. That stack made four candidates look like one app. Schedule in this preview is a paste rail beside a registrar week. Forum is a topic table. Catalog is a code-plus-facts index. Home opens on a five-day gap fragment, not a card launcher.
 
-Middle-dot metadata. Pill badges for ordinary facts. Progress mascots on Semester.
+## Constraints kept
 
-## Risks
-
-The workbench surface (mist behind person stations) can look like a card stack if padding gets sloppy. The week grid is tall at 4rem per hour; that is honest to the spec and heavy on a laptop. Thursday’s empty gap line is easy to miss beside the blue-led rows.
+Account lives in the site header. Sidebar groups match `tools-nav.js`: Schedule, Courses, Student life. No term picker in chrome. Term filter stays on the catalog page. No Book Delivery, cart, or initiative strip.

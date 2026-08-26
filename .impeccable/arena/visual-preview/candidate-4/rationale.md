@@ -1,56 +1,42 @@
-# Quiet ledger
+# Linear workspace
 
-## Visual world
+## Named world
 
-MariTools as a cool-paper register. The left edge is a spine of dots, not a product sidebar. The rest of the viewport is one wide sheet where schedules, catalogs, and semester facts sit in ruled tables. Electric blue is a registration mark: the filled current-page dot, the primary action, the leading edge of a meeting block.
+MariTools as a Linear workspace. Ultra-dense left rail (36px rows, inset current accent) plus a content canvas. Home is an Apple Settings ruled index, not a marketing hub. Catalog and semester use Notion document density with hanging metadata. The week grid uses Google Calendar column geometry at Linear calendar density.
 
-The rail is 11.25rem. Labels stay readable, but the column is a contents index rather than a panel with nested cards. Each group draws a hairline through its dots. The current tool fills the dot and lays a thin paper wash behind the row. Account is not on this spine. It stays in the club header.
+This is Operate chrome. The student is already in a task. The first viewport is the artifact.
 
-The main column opens with a folio line (`MariTools / Course catalog`) and a 2px ink rule, the way a ledger page names itself before the first row. Filter bars use the same double rule. Catalog and semester assessments are HTML tables with hanging numeric columns, not stacked fact cards.
+## Signature composition
 
-The week grid is a printed timetable on that sheet. Paper header, strong hour rules, half-hour hairlines, tabular times. Overlap is a danger rule plus the word Overlap. Free time reuses the five-day register as gap rows, not a second calendar.
+At 1440×900 the club header is 48px. The rail is 15rem of cool mist. Current route is a 36px filled row with a 3px inset blue bar. The canvas opens with a 40px toolbar (Inter Tight 13px title, view switch, actions). Everything under that toolbar is the work surface.
 
-## Hierarchy
+Schedule is a five-day week with a time rail and positioned blocks. Paste lives in a right inspector, the way Linear keeps properties off the timeline. Forum is an issue index (ID, status, title, course, replies, updated) with a one-line composer pinned to the bottom. Catalog is a filter bar, a ruled table, and a hanging-fact peek. Home is Settings groups on the left and a Today feed on the right.
 
-```
-Club header (About, Events, MariTools, Account, Sign up)
-Preview surface select (this artifact only)
-┌─ 11.25rem dotted spine ─┬─ wide paper sheet ─────────────────────┐
-│ MariTools               │ Folio                                  │
-│ Schedule                │ Title + one factual sentence           │
-│   • Schedule            │ First control or filter band           │
-│   • Free Time           │ Ruled review, week grid, or table      │
-│ Courses                 │ Confirm next to the action             │
-│   • Semester            │                                        │
-│   • Catalog             │                                        │
-│ Student life            │                                        │
-│   • Clubs               │                                        │
-│   • Forum               │                                        │
-│ Back to club home       │                                        │
-└─────────────────────────┴────────────────────────────────────────┘
-```
+A 200px thumbnail of Schedule is a timetable. A thumbnail of Forum is a Linear issue list. Neither is a heading, a paragraph, and a blue button.
 
-On a phone the spine becomes a 3rem bar and a grouped drawer. The week grid becomes a Monday-to-Friday agenda.
+## Stolen craft
 
-## References used
+- Linear: rail grouping, 36px rows, inset accent, canvas toolbar, issue IDs, inspector peek, comment bar.
+- Notion: semester page title, hanging property grid, document measure, assessment table as a database.
+- Apple Settings / GitHub Settings: home as a searchable ruled index with chevrons. Account as labeled bands.
+- Google Calendar week: time rail, weekday columns, blocks as geometry, now line, overlap as two blocks in one day.
+- When2meet / Cal.com: person paste stations, duration radios, free gaps as the result (white cell, inset blue rule).
+- Discourse / Reddit / Stripe Docs: forum and catalog as scan-speed lists, not cards.
 
-- Linear and Notion for grouped, compact nav density. Translated into dots on a spine instead of icon rows or nested pages.
-- University course catalogs and library finding aids for identity-plus-facts tables, labeled metadata, and em dashes for missing cells.
-- Printed registrar timetables and Fantastical week views for column geometry. Kept paper and ink, not a dark calendar chrome.
-- When2meet and Cal.com availability for person pastes, duration radios, and gap lists.
-- Discourse topic lists and GitHub issues for title-led rows and inline report, not reaction chrome.
-- GitHub settings and Stripe account pages for the short account worksheet.
-- TurboTax or GitHub PR review for upload, then an editable table, then an explicit share checkbox.
+Palette stays Student Technical Journal: cool paper, ink, mist rail, scarce electric blue. No beige, no purple SaaS, no glass, no mono.
 
-## Rejected
+## Round 1 lookalike refused
 
-- Fat 15rem sidebar with white mini-panels. That is a lab-manual TOC, not a ledger spine.
-- Icon card launchers, hero metrics, and greeting dashboards.
-- Monospace for course codes. Inter tabular-nums and weight do that job.
-- Inverted ink week headers. A register stays on paper.
-- Warm cream, parchment, or beige. Cool paper only.
-- Book Delivery, carts, prices, covers, or a term picker in tools chrome.
-- Account in the rail.
-- Pill chips, avatar stacks, gradient blocks, and glass.
-- Center-dot metadata. Columns and labels instead.
-- A modal for paste, upload, compose, report, or sign-in.
+Round 1 was mist sidebar, paper main, display heading, lead sentence, textarea, blue button, optional grid below the fold. This candidate does not reuse that HTML or that CSS.
+
+Refused on purpose:
+
+- Bullet TOC in the rail
+- Marketing lead on Home
+- Paste field as the first Schedule viewport
+- Forum as title + form
+- Card grids, hero metrics, term picker in chrome, Account in the sidebar, Book Delivery, initiative strip
+
+## Constraints kept
+
+Grouped rail matches `tools-nav.js` (Schedule, Courses, Student life). Account and Sign up stay in the site header. `#page-picker` switches all nine surfaces. Course codes and times use Inter `tabular-nums`. Sample records are labeled. Catalog books are reference only.

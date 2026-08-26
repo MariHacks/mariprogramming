@@ -1,34 +1,25 @@
-# Self-review
+# Self-review · candidate 3
 
-**23 / 30**
+Thumbnail test: Free Time is three ink Person headers over a hatched week of blue free blocks, Schedule is a paste rail glued to a calendar, Forum is a title / course / replies table. None of those read as heading plus lead plus form plus blue button.
+
+## Rubric /30
 
 | Criterion | Score | Note |
 | --- | --- | --- |
-| Shell and IA | 4 / 5 | Grouped TOC, Account in header, back-home footer, mobile drawer. Preview bar is extra chrome judges need, but it competes with the real header. |
-| All nine surfaces | 5 / 5 | Home, schedule, free time, semester, catalog, clubs, forum, thread, account. Realistic Omnivox copy. |
-| Comparison workshop | 4 / 5 | Person stations and ruled gap rows are the point. Custom minutes field exists but does not hide until Custom is selected. Optional names are extra vs spec. |
-| Week grid | 4 / 5 | Time rail, five columns, absolute blocks, overlap label. Wednesday “No classes” is in the header, not a full-height message. Hour geometry is 08:00–18:00 at 4rem, so the grid is long. |
-| Type, color, states | 4 / 5 | Tokens match the spec. Hover/focus/active/disabled/loading exist in CSS. HTML mostly shows the happy path plus one overlap warning. No skeleton or error examples on catalog/forum. |
-| Responsive / a11y | 2 / 5 | Breakpoints and a viewport toggle exist. Skip link, aria-current, labeled fields. Mobile menu is not a focus-managed popover. Site Menu button does nothing. Auth gates and guest Google sign-in are missing. |
+| Craft and polish | 8 / 10 | Operate density is real. Person stations and the week matrix have hour geometry. A few compose grids are slightly loose on small widths. |
+| Coverage | 10 / 10 | Home, schedule, free-time, semester, catalog, clubs, forum, thread, account. Grouped sidebar. Site header with Account. `#page-picker` defaults to Free Time. |
+| Direction | 9 / 10 | Comparison bench is a named composition and the flagship is not a reskin of a form. Could still be mistaken for "the calendar candidate" if a judge only sees Schedule. |
+| Constraints | 10 / 10 | Inter + Inter Tight. Tabular numerals on codes and times. No code face. Account in header. No term picker in chrome. No Book Delivery. |
+| Total | 27 / 30 | |
 
-## Round 2 list
+## What still bothers me
 
-1. Show guest account (`Continue with Google`) and one Semester auth gate without leaving the tools shell.
-2. Catalog and forum: one skeleton band and one no-match empty state, even if they sit behind a small state switch.
-3. Hide the custom-minutes input until Custom is selected. Wire the radio in the preview script.
-4. Shorten the visible week to the occupied hours, or add a sticky weekday header that survives vertical scroll inside the frame.
-5. Make the site Menu button open a real club nav on narrow widths.
-6. Thread: a locked state and an inline confirm for Remove thread.
-7. Clubs: signed-out auth gate as an alternate block.
-8. Check muted `#5a657a` on paper for 4.5:1 at 14px; I darkened it from `#657087` on purpose, but I did not measure every notice pairing.
-9. Person station Remove should disappear when only two people remain. Preview currently shows three, which is fine, but Add another person does not add a station.
-10. Preview should open on Tools home for IA judging, with Free Time still one click away. I defaulted to the signature page so the seed is obvious.
+Thursday's empty gap sits on a full-day hatch. The "No 45-minute gap" label is readable, but the column is visually heavy next to days that have two blue blocks.
 
-## Constraints checked
+The schedule overlap uses a split pair of blocks plus the word Overlap. That is honest. It is also easy to miss if the screenshot crops the Tuesday column.
 
-- No code face in CSS (grep `mono` is clean aside from this review file).
-- Account is not in the sidebar.
-- Term filter lives on catalog only.
-- No Book Delivery, cart, or initiative strip.
-- Sidebar groups match TOOL_SECTIONS.
-- `Free Time` in nav, `Common free time` as the page title.
+Home's mini five-day strip is the right souvenir of the world. It is also the one place that could look like a dashboard widget if the rest of the page were weaker. The ruled destination list beside it is there to stop that.
+
+## States present
+
+Hover and focus on controls and nav. Disabled button language exists in CSS. Warn notice on Tuesday overlap. Success notice on semester extraction. Empty Thursday gap. Signed-in account with student number. Forum composer on the same page as the list.
