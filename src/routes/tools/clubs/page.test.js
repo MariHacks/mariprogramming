@@ -51,7 +51,7 @@ describe('clubs page', () => {
 		});
 		expect(screen.getByText('Robotics')).toBeInTheDocument();
 		expect(screen.getByText('Builds robots')).toBeInTheDocument();
-		expect(screen.getByRole('link', { name: 'Discord' })).toHaveAttribute(
+		expect(screen.getByRole('link', { name: /Discord/ })).toHaveAttribute(
 			'href',
 			'https://example.com'
 		);

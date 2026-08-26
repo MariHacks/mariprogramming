@@ -1,8 +1,16 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { ACADEMIC_TERMS } from '$lib/maritools/term/calendar.js';
+	import '$lib/maritools/styles/index-pages.css';
 
 	export let data;
+
+	/** @type {string | null} */
+	let openEntryId = null;
+
+	$: if (data.entries.length === 1) {
+		openEntryId = data.entries[0]?.id ?? null;
+	}
 
 	function booksOf(entry) {
 		return entry.structured?.books ?? [];
@@ -10,6 +18,21 @@
 
 	function assessmentsOf(entry) {
 		return entry.structured?.assessments ?? [];
+	}
+
+	/** @param {string} id */
+	function toggleEntry(id) {
+		openEntryId = openEntryId === id ? null : id;
+	}
+
+	/** @param {{ structured?: { assessments?: unknown[], books?: unknown[] } }} entry */
+	function entrySummary(entry) {
+		const assessments = assessmentsOf(entry).length;
+		const books = booksOf(entry).length;
+		const parts = [];
+		if (assessments) parts.push(`${assessments} assessment${assessments === 1 ? '' : 's'}`);
+		if (books) parts.push(`${books} reference book${books === 1 ? '' : 's'}`);
+		return parts.length ? parts.join(', ') : 'No structured details yet';
 	}
 </script>
 
@@ -21,18 +44,22 @@
 	/>
 </svelte:head>
 
-<section class="catalog-page page-container">
-	<header class="intro">
-		<h1>Course catalog</h1>
-		<p>
-			Course facts students have shared, including books for a section. You can browse without an
-			account.
-		</p>
+<section class="mt-index-page catalog-page">
+	<header class="mt-titlebar">
+		<div>
+			<h1>Course catalog</h1>
+		</div>
+		<p>Course facts students have shared, including books for a section. You can browse without an account.</p>
 	</header>
 
-	<form method="GET" class="filters">
+	<form method="GET" class="mt-index-filters">
+		<label class="mt-search-field">
+			<span aria-hidden="true">⌕</span>
+			<span>Search</span>
+			<input name="q" value={data.query} aria-label="Search courses" placeholder="Course code, title, or teacher" />
+		</label>
 		<label>
-			Term
+			<span>Term</span>
 			<select name="term">
 				<option value="">All terms</option>
 				{#each ACADEMIC_TERMS as term (term.id)}
@@ -40,167 +67,76 @@
 				{/each}
 			</select>
 		</label>
-		<label>
-			Course code
-			<input name="q" value={data.query} class="code" />
-		</label>
-		<button type="submit" class="primary">Show courses</button>
+		<div></div>
+		<button type="submit" class="mt-dark-button">Search</button>
 	</form>
 
 	{#if data.unavailable}
-		<p class="error" role="alert">The catalog is unavailable right now. Try again.</p>
+		<p class="mt-error" role="alert">The catalog is unavailable right now. Try again.</p>
 	{:else if data.entries.length === 0}
-		<p>No published catalog entries yet.</p>
+		<p class="mt-count-bar">No published catalog entries yet.</p>
 	{:else}
-		<ul class="entries">
+		<div class="mt-count-bar">
+			<strong>{data.entries.length} courses</strong>
+			<span>Updated from reviewed student outlines</span>
+		</div>
+		<div class="mt-index-table">
+			<div class="mt-index-head mt-catalog-row">
+				<span>Code</span><span>Course</span><span>Section</span><span>Teacher</span><span>Term</span><span></span>
+			</div>
 			{#each data.entries as entry (entry.id)}
-				<li>
-					<article>
-						<h2>
-							<span class="code">{entry.courseCode}</span>
-							{entry.title}
-						</h2>
-						<p class="meta">
-							{entry.termId} · sec.{entry.section} · {entry.teacherName}
-						</p>
-						{#if assessmentsOf(entry).length}
-							<h3>Assessments</h3>
-							<ul>
-								{#each assessmentsOf(entry) as assessment, index (`${entry.id}-a-${index}`)}
-									<li>
-										{assessment.title}
-										{#if assessment.weight} · {assessment.weight}%{/if}
-										{#if assessment.date} · {assessment.date}{/if}
-									</li>
-								{/each}
-							</ul>
-						{/if}
-						{#if booksOf(entry).length}
-							<h3>Books</h3>
-							<ul>
+				<article class="mt-catalog-row" class:is-open={openEntryId === entry.id}>
+					<strong class="mt-course-code">{entry.courseCode}</strong>
+					<div>
+						<h2>{entry.title}</h2>
+						<p>{entrySummary(entry)}</p>
+					</div>
+					<span>sec.{entry.section}</span>
+					<span>{entry.teacherName}</span>
+					<span>{entry.termId}</span>
+					<button
+						type="button"
+						class="mt-catalog-toggle"
+						aria-expanded={openEntryId === entry.id}
+						aria-label={`${openEntryId === entry.id ? 'Collapse' : 'Expand'} ${entry.courseCode}`}
+						on:click={() => toggleEntry(entry.id)}
+					>
+						{openEntryId === entry.id ? '−' : '+'}
+					</button>
+					<div class="mt-catalog-detail">
+						<div>
+							<h3>Assessment outline</h3>
+							{#if assessmentsOf(entry).length}
+								<dl>
+									{#each assessmentsOf(entry) as assessment, index (`${entry.id}-a-${index}`)}
+										<div>
+											<dt>{assessment.title}</dt>
+											<dd>{assessment.weight != null ? `${assessment.weight}%` : '—'}</dd>
+										</div>
+									{/each}
+								</dl>
+							{:else}
+								<p>No assessments were shared for this section.</p>
+							{/if}
+						</div>
+						<div>
+							<h3>Book reference</h3>
+							{#if booksOf(entry).length}
 								{#each booksOf(entry) as book, index (`${entry.id}-b-${index}`)}
-									<li>
-										{book.title}{book.author ? `, ${book.author}` : ''}
-										{#if book.required} · required{/if}
-										{#if book.isbn}
-											<span class="code"> {book.isbn}</span>
-										{/if}
-									</li>
+									<p>
+										<strong>{book.title}</strong>
+										{#if book.author}<br />{book.author}{/if}
+										{#if book.isbn}<br /><span>{book.isbn}</span>{/if}
+										{#if book.required}<br />Required{/if}
+									</p>
 								{/each}
-							</ul>
-						{/if}
-					</article>
-				</li>
+							{:else}
+								<p>No book reference was shared for this section.</p>
+							{/if}
+						</div>
+					</div>
+				</article>
 			{/each}
-		</ul>
+		</div>
 	{/if}
 </section>
-
-<style>
-	.catalog-page {
-		display: grid;
-		padding-block: var(--space-xl);
-		gap: var(--space-md);
-	}
-
-	.intro h1 {
-		font-family: var(--font-display);
-		font-size: var(--text-3xl);
-		line-height: 1.05;
-	}
-
-	.intro p {
-		max-width: 52ch;
-	}
-
-	.filters {
-		display: grid;
-		grid-template-columns: minmax(0, 16rem) minmax(0, 16rem) auto;
-		gap: var(--space-sm);
-		align-items: end;
-		border-block: var(--rule);
-		padding-block: var(--space-sm);
-	}
-
-	label {
-		display: grid;
-		gap: var(--space-3xs);
-		font-size: var(--text-sm);
-		font-weight: 600;
-	}
-
-	select,
-	input {
-		height: var(--control-height);
-		padding-inline: var(--space-xs);
-		border: var(--rule-strong);
-		border-radius: var(--radius-sm);
-		background: var(--surface-raised);
-		font: inherit;
-	}
-
-	.code {
-		font-family: var(--font-mono);
-	}
-
-	.primary {
-		height: var(--control-height);
-		padding-inline: var(--space-md);
-		border: 0;
-		border-radius: var(--radius-sm);
-		background: var(--club-blue);
-		color: #fff;
-		font-weight: 650;
-	}
-
-	.primary:focus-visible,
-	select:focus-visible,
-	input:focus-visible {
-		outline: var(--focus-ring-width) solid var(--club-blue);
-		outline-offset: var(--focus-ring-offset);
-	}
-
-	.entries {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.entries li + li {
-		border-block-start: var(--rule);
-	}
-
-	article {
-		display: grid;
-		gap: var(--space-xs);
-		padding-block: var(--space-md);
-	}
-
-	h2 {
-		font-size: var(--text-lg);
-	}
-
-	h3 {
-		font-size: var(--text-sm);
-		font-weight: 700;
-	}
-
-	.meta,
-	.error {
-		font-size: var(--text-sm);
-	}
-
-	.meta {
-		color: var(--quiet-steel);
-	}
-
-	.error {
-		color: var(--danger);
-	}
-
-	@media (max-width: 40rem) {
-		.filters {
-			grid-template-columns: minmax(0, 1fr);
-		}
-	}
-</style>
