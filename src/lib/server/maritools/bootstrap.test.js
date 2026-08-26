@@ -12,6 +12,8 @@ describe('ensureMariToolsSchema', () => {
 		const query = vi
 			.fn()
 			.mockResolvedValueOnce({ rows: [{ table_name: null }] })
+			.mockResolvedValueOnce({ rows: [{ table_name: null }] })
+			.mockResolvedValueOnce({ rows: [{ table_name: null }] })
 			.mockResolvedValue({ rows: [] });
 		const client = { query, release: vi.fn() };
 		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
@@ -19,25 +21,79 @@ describe('ensureMariToolsSchema', () => {
 			default:
 				'CREATE TABLE "mt_academic_terms" ();\n--> statement-breakpoint\nCREATE TABLE "mt_courses" ();'
 		}));
+		vi.doMock('../../../../drizzle/0009_google_calendar_grants.sql?raw', () => ({
+			default: 'CREATE TABLE "mt_google_calendar_grants" ();'
+		}));
+		vi.doMock('../../../../drizzle/0010_free_time_boards.sql?raw', () => ({
+			default: 'CREATE TABLE "mt_free_time_boards" ();'
+		}));
 
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
-		// existence check + BEGIN + 2 DDL + grants + COMMIT
-		expect(query.mock.calls.length).toBe(6);
-		expect(query.mock.calls[1][0]).toBe('BEGIN');
-		expect(String(query.mock.calls[4][0])).toContain('mariprogramming_runtime');
-		expect(query.mock.calls[5][0]).toBe('COMMIT');
+		expect(query.mock.calls.length).toBeGreaterThan(6);
+		expect(query.mock.calls.some((call) => call[0] === 'BEGIN')).toBe(true);
+		expect(query.mock.calls.some((call) => String(call[0]).includes('mariprogramming_runtime'))).toBe(
+			true
+		);
+		expect(query.mock.calls.some((call) => call[0] === 'COMMIT')).toBe(true);
 		expect(client.release).toHaveBeenCalled();
 		expect(pool.end).toHaveBeenCalled();
 	});
 
+	it('applies incremental migrations when only newer tables are missing', async () => {
+		const query = vi.fn(async (sql) => {
+			const text = String(sql);
+			if (text.includes("to_regclass('public.mt_academic_terms')")) {
+				return { rows: [{ table_name: 'mt_academic_terms' }] };
+			}
+			if (text.includes("to_regclass('public.mt_google_calendar_grants')")) {
+				return { rows: [{ table_name: null }] };
+			}
+			if (text.includes("to_regclass('public.mt_free_time_boards')")) {
+				return { rows: [{ table_name: 'mt_free_time_boards' }] };
+			}
+			return { rows: [] };
+		});
+		const client = { query, release: vi.fn() };
+		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
+		vi.doMock('../../../../drizzle/0008_maritools_persistence.sql?raw', () => ({
+			default: 'CREATE TABLE "mt_academic_terms" ();'
+		}));
+		vi.doMock('../../../../drizzle/0009_google_calendar_grants.sql?raw', () => ({
+			default:
+				'CREATE TABLE "mt_google_calendar_grants" ();\n--> statement-breakpoint\nCREATE INDEX "mt_google_calendar_grants_user_idx" ON "mt_google_calendar_grants" ("user_id");'
+		}));
+		vi.doMock('../../../../drizzle/0010_free_time_boards.sql?raw', () => ({
+			default: 'CREATE TABLE "mt_free_time_boards" ();'
+		}));
+
+		const { ensureMariToolsSchema } = await import('./bootstrap.js');
+		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
+		expect(query.mock.calls.some((call) => String(call[0]).includes('CREATE TABLE "mt_google_calendar_grants"'))).toBe(
+			true
+		);
+		expect(
+			query.mock.calls.some(
+				(call) =>
+					String(call[0]).includes('GRANT') && String(call[0]).includes('mt_google_calendar_grants')
+			)
+		).toBe(true);
+		expect(
+			query.mock.calls.some((call) => String(call[0]).includes('CREATE TABLE "mt_free_time_boards"'))
+		).toBe(false);
+	});
+
 	it('skips migration when mt_academic_terms already exists', async () => {
-		const query = vi.fn(async () => ({ rows: [{ table_name: 'mt_academic_terms' }] }));
+		const query = vi
+			.fn()
+			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_academic_terms' }] })
+			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_google_calendar_grants' }] })
+			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_free_time_boards' }] });
 		const client = { query, release: vi.fn() };
 		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
-		expect(query).toHaveBeenCalledTimes(1);
+		expect(query).toHaveBeenCalledTimes(3);
 	});
 });
 

@@ -1,14 +1,71 @@
 import { building } from '$app/environment';
 import pg from 'pg';
-import migrationSql from '../../../../drizzle/0008_maritools_persistence.sql?raw';
+import migrationSql0008 from '../../../../drizzle/0008_maritools_persistence.sql?raw';
+import migrationSql0009 from '../../../../drizzle/0009_google_calendar_grants.sql?raw';
+import migrationSql0010 from '../../../../drizzle/0010_free_time_boards.sql?raw';
 import { readRuntimeEnvironment } from '../config/environment.js';
 import { createMariToolsRepository } from './repository.js';
 
 /** @type {Promise<void> | null} */
 let bootstrapPromise = null;
 
+const RUNTIME_GRANT_TABLES = [
+	'mt_academic_terms',
+	'mt_academic_calendar_rules',
+	'mt_courses',
+	'mt_course_offerings',
+	'mt_student_profiles',
+	'mt_outline_documents',
+	'mt_outline_extractions',
+	'mt_catalog_contributions',
+	'mt_clubs',
+	'mt_club_submissions',
+	'mt_forum_threads',
+	'mt_forum_replies',
+	'mt_forum_reports',
+	'mt_google_calendar_grants',
+	'mt_free_time_boards',
+	'mt_free_time_members'
+];
+
+/** @param {string} sql */
+function splitMigrationStatements(sql) {
+	return String(sql)
+		.split(/-->\s*statement-breakpoint/gu)
+		.map((part) => part.trim())
+		.filter(Boolean);
+}
+
+/** @param {string[]} tables */
+function grantRuntimeTablesSql(tables) {
+	return `
+		GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+		  ${tables.join(',\n\t\t  ')}
+		TO mariprogramming_runtime
+	`;
+}
+
+/** @type {Array<{ sentinel: string, sql: string, grantTables: string[] }>} */
+const INCREMENTAL_MIGRATIONS = [
+	{
+		sentinel: 'mt_academic_terms',
+		sql: migrationSql0008,
+		grantTables: RUNTIME_GRANT_TABLES
+	},
+	{
+		sentinel: 'mt_google_calendar_grants',
+		sql: migrationSql0009,
+		grantTables: ['mt_google_calendar_grants']
+	},
+	{
+		sentinel: 'mt_free_time_boards',
+		sql: migrationSql0010,
+		grantTables: ['mt_free_time_boards', 'mt_free_time_members']
+	}
+];
+
 /**
- * Apply drizzle/0008 when `mt_academic_terms` is missing.
+ * Apply missing MariTools DDL when sentinel tables are absent.
  * Must use a migrator/owner connection (`MIGRATION_DATABASE_URL`), not the
  * least-privilege runtime role.
  *
@@ -25,51 +82,31 @@ export async function ensureMariToolsSchema(databaseUrl, dependencies = {}) {
 	let client;
 	try {
 		client = await pool.connect();
-		const existing = await client.query(
-			"SELECT to_regclass('public.mt_academic_terms')::text AS table_name"
-		);
-		if (existing.rows[0]?.table_name) return;
+		for (const migration of INCREMENTAL_MIGRATIONS) {
+			const existing = await client.query(
+				`SELECT to_regclass('public.${migration.sentinel}')::text AS table_name`
+			);
+			if (existing.rows[0]?.table_name) continue;
 
-		const statements = String(migrationSql)
-			.split(/-->\s*statement-breakpoint/gu)
-			.map((part) => part.trim())
-			.filter(Boolean);
-		if (statements.length === 0) {
-			throw new Error('MariTools persistence SQL is empty');
-		}
-		await client.query('BEGIN');
-		try {
-			for (const statement of statements) {
-				await client.query(statement);
+			const statements = splitMigrationStatements(migration.sql);
+			if (statements.length === 0) {
+				throw new Error(`MariTools migration for ${migration.sentinel} is empty`);
 			}
-			await client.query(`
-				GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
-				  mt_academic_terms,
-				  mt_academic_calendar_rules,
-				  mt_courses,
-				  mt_course_offerings,
-				  mt_student_profiles,
-				  mt_outline_documents,
-				  mt_outline_extractions,
-				  mt_catalog_contributions,
-				  mt_clubs,
-				  mt_club_submissions,
-				  mt_forum_threads,
-				  mt_forum_replies,
-				  mt_forum_reports,
-				  mt_google_calendar_grants,
-				  mt_free_time_boards,
-				  mt_free_time_members
-				TO mariprogramming_runtime
-			`);
-			await client.query('COMMIT');
-		} catch (error) {
+			await client.query('BEGIN');
 			try {
-				await client.query('ROLLBACK');
-			} catch {
-				/* ignore */
+				for (const statement of statements) {
+					await client.query(statement);
+				}
+				await client.query(grantRuntimeTablesSql(migration.grantTables));
+				await client.query('COMMIT');
+			} catch (error) {
+				try {
+					await client.query('ROLLBACK');
+				} catch {
+					/* ignore */
+				}
+				throw error;
 			}
-			throw error;
 		}
 	} finally {
 		try {
@@ -93,7 +130,6 @@ export async function ensureMariToolsBootstrap() {
 		try {
 			const { databaseUrl } = readRuntimeEnvironment();
 			if (!databaseUrl) return;
-			// DDL is operator-only (MIGRATION_DATABASE_URL). Runtime only seeds.
 			const repository = createMariToolsRepository({ databaseUrl });
 			await repository.seedCommittedTerms();
 		} catch (error) {
