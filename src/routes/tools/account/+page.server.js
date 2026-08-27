@@ -36,7 +36,7 @@ export function _createHandlers(dependencies = {}) {
 					callbackURL: `${event.url.origin}/tools/account`,
 					recoveryMessage: recoveryMessageFor(event.url.searchParams.get('state')),
 					nimDisclosure: NIM_DISCLOSURE,
-					unavailable: true
+					...(session ? { unavailable: true } : {})
 				};
 			}
 			throw error;

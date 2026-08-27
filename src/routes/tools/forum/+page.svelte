@@ -105,7 +105,8 @@
 			</div>
 		{/if}
 
-		{#if data.signedIn}
+		{#if !data.unavailable}
+			{#if data.signedIn}
 			<section class="inline-composer" id="composer">
 				<div class="composer-heading">
 					<div>
@@ -160,7 +161,7 @@
 					<p class="field-error" role="alert">{form.error}</p>
 				{/if}
 			</section>
-		{:else}
+			{:else}
 			<section class="inline-composer">
 				<div class="composer-heading">
 					<div>
@@ -174,6 +175,7 @@
 				<p>Read threads without an account. Sign in with Google to post.</p>
 				<a class="primary-button" href="/tools/account">Sign in with Google</a>
 			</section>
+			{/if}
 		{/if}
 	</section>
 </div>

@@ -82,6 +82,14 @@
 	grid-template-columns: minmax(18rem, 1fr) 11rem;
 }
 
+@media (max-width: 700px) {
+	.mt-preview .paint-toolbar,
+	.mt-preview .paint-grid {
+		width: 100%;
+		min-width: 0;
+	}
+}
+
 .mt-preview .inline-composer > p,
 .mt-preview .inline-composer > a {
 	margin: 1rem;

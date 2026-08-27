@@ -73,7 +73,9 @@
 				<strong>Missing a group?</strong>
 				<h2>Add or correct a club listing</h2>
 			</div>
-			{#if data.signedIn}
+			{#if data.unavailable}
+				<p>Club submissions are unavailable right now. Try again later.</p>
+			{:else if data.signedIn}
 				<p>Staff publish a listing after they check it.</p>
 				<form method="POST" action="?/submit">
 					<label>

@@ -92,6 +92,7 @@ describe('forum page', () => {
 			}
 		});
 		expect(screen.getByRole('alert')).toHaveTextContent('unavailable');
+		expect(screen.queryByText('Read threads without an account.')).not.toBeInTheDocument();
 	});
 
 	it('keeps a course filter on Latest and skips invalid dates', () => {

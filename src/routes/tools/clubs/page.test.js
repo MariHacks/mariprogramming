@@ -127,7 +127,7 @@ describe('clubs page', () => {
 			}
 		});
 		expect(screen.getByText('Clubs are unavailable right now. Try again.')).toBeInTheDocument();
-		expect(screen.getByText('No pending submissions.')).toBeInTheDocument();
-		expect(screen.getByText('Sent for review.')).toBeInTheDocument();
+		expect(screen.getByText('Club submissions are unavailable right now. Try again later.')).toBeInTheDocument();
+		expect(screen.queryByText('Sent for review.')).not.toBeInTheDocument();
 	});
 });

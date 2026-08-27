@@ -123,6 +123,17 @@ describe('account page server', () => {
 		const data = await current.load(loadEvent);
 		expect(data.view).toEqual({ kind: 'guest' });
 		expect(data.callbackURL).toBe('http://localhost:5174/tools/account');
+		expect(data.unavailable).toBeUndefined();
+	});
+
+	it('marks signed-in account load unavailable when server configuration is missing', async () => {
+		const current = handlers({
+			readEnvironment: vi.fn(() => {
+				throw new ServerConfigurationError();
+			})
+		});
+		const data = await current.load(event({ locals: { maritools: SESSION } }));
+		expect(data.view).toEqual({ kind: 'incomplete', email: SESSION.email });
 		expect(data.unavailable).toBe(true);
 	});
 
