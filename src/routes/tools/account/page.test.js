@@ -22,7 +22,7 @@ const base = {
 describe('account page', () => {
 	it('offers Google sign-in to a guest', () => {
 		render(AccountPage, { props: { data: { ...base, view: { kind: 'guest' } } } });
-		expect(screen.getByRole('heading', { name: 'Your MariTools account' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Your account' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
 		expect(screen.queryByLabelText('Student number')).not.toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();

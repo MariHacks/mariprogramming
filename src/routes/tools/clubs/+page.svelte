@@ -106,8 +106,8 @@
 				{/if}
 			{:else}
 				<p>
-					Sign in to submit official links or updated meeting information. Staff review submissions
-					before they appear.
+					Sign in to submit official links or updated meeting information. Staff review
+					submissions before they appear.
 				</p>
 				<a class="primary-button" href="/tools/account">Sign in with Google</a>
 			{/if}

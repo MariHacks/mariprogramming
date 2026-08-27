@@ -26,7 +26,7 @@
 	<title>{data.club?.name ?? 'Club'} | Clubs | {MARITOOLS_NAME}</title>
 	<meta
 		name="description"
-		content={data.club?.description ?? 'Published campus club listing on MariTools.'}
+		content={data.club?.description ?? 'Campus club listing.'}
 	/>
 </svelte:head>
 
@@ -56,12 +56,6 @@
 					{:else}
 						<p>No description published yet.</p>
 					{/if}
-				</section>
-				<section>
-					<h2>Meeting rhythm</h2>
-					<p>
-						Confirm the next session through the club's published links.
-					</p>
 				</section>
 				<section>
 					<h2>Contact and links</h2>

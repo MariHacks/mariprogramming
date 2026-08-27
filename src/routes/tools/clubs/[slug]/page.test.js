@@ -31,7 +31,6 @@ describe('club detail page', () => {
 		render(ClubDetailPage, { props: { data: { club: CLUB } } });
 		expect(screen.getByRole('heading', { name: 'Robotics' })).toBeInTheDocument();
 		expect(screen.getByText('Builds robots')).toBeInTheDocument();
-		expect(screen.getByRole('heading', { name: 'Meeting rhythm' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'How to join' })).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: /Discord/ })).toHaveAttribute('href', 'https://example.com');
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
@@ -64,6 +63,7 @@ describe('club detail page', () => {
 		});
 		expect(screen.getByText('No description published yet.')).toBeInTheDocument();
 		expect(screen.getByText('No links published yet.')).toBeInTheDocument();
+		expect(screen.getByText('Use the published links above to get in touch.')).toBeInTheDocument();
 	});
 
 	it('shows a join action when a signup link exists', () => {

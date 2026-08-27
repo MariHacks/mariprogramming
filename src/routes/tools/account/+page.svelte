@@ -55,7 +55,7 @@
 	<section class="page page-account">
 		<header class="index-title">
 			<div>
-				<h1>Your MariTools account</h1>
+				<h1>Your account</h1>
 				{#if data.view.kind === 'guest'}
 					<p>Sign in with Google to save outlines and use the catalog. Any Google account works.</p>
 				{:else if data.view.kind === 'incomplete'}
@@ -64,7 +64,7 @@
 						schedule.
 					</p>
 				{:else}
-					<p>Save personal tools and control what MariTools keeps.</p>
+					<p>Your Google account is linked. Student number stays off other pages.</p>
 				{/if}
 			</div>
 		</header>
@@ -166,7 +166,7 @@
 						<header>
 							<div>
 								<h2>Privacy and data</h2>
-								<p>Control what MariTools keeps.</p>
+								<p>What we store and how the student number is kept.</p>
 							</div>
 						</header>
 						<details>
@@ -242,7 +242,7 @@
 						<header>
 							<div>
 								<h2>Privacy and data</h2>
-								<p>Control what MariTools keeps.</p>
+								<p>What we store and how the student number is kept.</p>
 							</div>
 						</header>
 						<details>

@@ -28,7 +28,7 @@ describe('TOOL_SECTIONS', () => {
 			'Make a board and see when people overlap without an account.',
 			'Upload an outline and check the dates.',
 			'Browse assessments and books students have shared.',
-			"Read a club's focus, meeting time, and how to reach it.",
+			'What a club does and how to reach it.',
 			'Read threads or post with a course tag.'
 		]);
 	});

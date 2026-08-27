@@ -41,7 +41,7 @@ export const TOOL_SECTIONS = [
 			{
 				href: '/tools/clubs',
 				label: 'Clubs',
-				summary: "Read a club's focus, meeting time, and how to reach it."
+				summary: 'What a club does and how to reach it.'
 			},
 			{
 				href: '/tools/forum',

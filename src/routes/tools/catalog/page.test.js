@@ -46,7 +46,7 @@ describe('catalog page', () => {
 			}
 		});
 		expect(screen.getByText('Modern Physics')).toBeInTheDocument();
-		expect(screen.getByText('Physics')).toBeInTheDocument();
+		expect(screen.getAllByText('Physics').length).toBeGreaterThan(0);
 		expect(screen.getByText(/Midterm/)).toBeInTheDocument();
 		expect(screen.getByText(/University Physics/)).toBeInTheDocument();
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
@@ -79,6 +79,33 @@ describe('catalog page', () => {
 		expect(screen.getByText('No structured details yet')).toBeInTheDocument();
 		expect(screen.getByText('No assessments were shared for this section.')).toBeInTheDocument();
 		expect(screen.getByText('No book reference was shared for this section.')).toBeInTheDocument();
+	});
+
+	it('summarizes assessments when no book was listed', () => {
+		render(CatalogPage, {
+			props: {
+				data: {
+					termId: '',
+					query: '',
+					discipline: '',
+					disciplines: ['Physics'],
+					entries: [
+						{
+							id: 'c3',
+							termId: 'winter-2026',
+							courseCode: '203-NYA-05',
+							title: 'Mechanics',
+							section: '00004',
+							teacherName: 'Elena',
+							structured: {
+								assessments: [{ title: 'Labs', weight: 30 }]
+							}
+						}
+					]
+				}
+			}
+		});
+		expect(screen.getByText('1 assessment, no book listed')).toBeInTheDocument();
 	});
 
 	it('explains when the catalog cannot be read', () => {

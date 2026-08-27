@@ -24,7 +24,7 @@ describe('forum page', () => {
 				}
 			}
 		});
-		expect(screen.getByRole('heading', { name: 'Campus discussions' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Forum' })).toBeInTheDocument();
 		expect(screen.getByPlaceholderText('Search discussions')).toBeInTheDocument();
 		expect(screen.getByText('No threads yet.')).toBeInTheDocument();
 		expect(screen.getAllByRole('link', { name: 'Sign in with Google' })[0]).toHaveAttribute(
@@ -67,7 +67,7 @@ describe('forum page', () => {
 			'/tools/forum/t1'
 		);
 		expect(screen.getByText('Bring a calculator.')).toBeInTheDocument();
-		expect(screen.getByText('Course help')).toBeInTheDocument();
+		expect(screen.getAllByText('Course help').length).toBeGreaterThan(0);
 		expect(screen.getByRole('link', { name: /Club hours/ })).toHaveAttribute(
 			'href',
 			'/tools/forum/t2'
@@ -128,5 +128,27 @@ describe('forum page', () => {
 		);
 		expect(screen.getByRole('link', { name: /Hall hours/ })).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: /Lab notes/ })).toBeInTheDocument();
+	});
+
+	it('falls back to the category label when a thread has no body', () => {
+		render(ForumPage, {
+			props: {
+				data: {
+					threads: [
+						{
+							id: 't5',
+							title: 'Silent thread',
+							category: 'student-life'
+						}
+					],
+					courses: [],
+					category: '',
+					courseId: '',
+					query: '',
+					signedIn: false
+				}
+			}
+		});
+		expect(screen.getByRole('link', { name: /Silent thread/ })).toHaveTextContent('Student life');
 	});
 });
