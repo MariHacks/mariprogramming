@@ -3,7 +3,7 @@ import { CANONICAL_OMNIVOX_SCHEDULE } from '../../src/lib/maritools/schedule/fix
 
 test('My Schedule reads the compact Omnivox list', async ({ page }) => {
 	await page.goto('/tools/schedule', { waitUntil: 'networkidle' });
-	await expect(page.getByRole('heading', { name: 'My schedule' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /Week of/ })).toBeVisible();
 	await expect(page.getByLabel('Term')).toHaveCount(0);
 	await expect(
 		page.getByRole('navigation', { name: 'MariTools' }).getByRole('link', { name: 'Schedule' })
@@ -12,10 +12,11 @@ test('My Schedule reads the compact Omnivox list', async ({ page }) => {
 		'href',
 		'/tools/account'
 	);
+	await page.getByRole('button', { name: 'Import Omnivox' }).first().click();
 	await page.getByLabel('Omnivox course list').fill(CANONICAL_OMNIVOX_SCHEDULE);
 	await page.getByRole('button', { name: 'Read schedule' }).click();
-	await expect(page.getByRole('heading', { name: 'Courses' })).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'Week' })).toBeVisible();
+	await expect(page.getByLabel('Weekly course schedule')).toBeVisible();
+	await expect(page.getByRole('heading', { name: /Week of/ })).toBeVisible();
 	await expect(page.getByText('PHE-103-A1')).toBeVisible();
 	await expect(page.getByText('420-SNT-MS')).toBeVisible();
 	await expect(page.getByText('603-103-MQ')).toBeVisible();
