@@ -46,7 +46,7 @@
 	<section class="page page-forum">
 		<header class="forum-titlebar">
 			<div>
-				<h1>Forum</h1>
+				<h1>Campus discussions</h1>
 			</div>
 			<nav class="forum-tabs" aria-label="Forum categories">
 				<a href={tabHref('')} class:is-active={!data.category}>Latest</a>

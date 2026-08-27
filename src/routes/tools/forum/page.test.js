@@ -24,7 +24,7 @@ describe('forum page', () => {
 				}
 			}
 		});
-		expect(screen.getByRole('heading', { name: 'Forum' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Campus discussions' })).toBeInTheDocument();
 		expect(screen.getByPlaceholderText('Search discussions')).toBeInTheDocument();
 		expect(screen.getByText('No threads yet.')).toBeInTheDocument();
 		expect(screen.getAllByRole('link', { name: 'Sign in with Google' })[0]).toHaveAttribute(

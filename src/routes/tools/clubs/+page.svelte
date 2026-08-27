@@ -10,7 +10,7 @@
 	<title>Clubs | {MARITOOLS_NAME}</title>
 	<meta
 		name="description"
-		content="Campus clubs and how to reach them."
+		content="Verified student groups, what they do, and where to find them."
 	/>
 </svelte:head>
 
@@ -18,9 +18,9 @@
 	<section class="page page-clubs">
 		<header class="catalog-titlebar">
 			<div>
-				<h1>Clubs</h1>
+				<h1>Clubs at Marianopolis</h1>
 			</div>
-			<p>Campus clubs and how to reach them.</p>
+			<p>Verified student groups, what they do, and where to find them.</p>
 		</header>
 
 		<form method="GET" class="index-filters clubs-filters">
@@ -106,7 +106,8 @@
 				{/if}
 			{:else}
 				<p>
-					Sign in to add or update a listing. Staff check it before it goes live.
+					Sign in to submit official links or updated meeting information. Staff review
+					submissions before they appear.
 				</p>
 				<a class="primary-button" href="/tools/account">Sign in with Google</a>
 			{/if}
