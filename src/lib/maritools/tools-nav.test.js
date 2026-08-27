@@ -18,6 +18,19 @@ describe('TOOL_SECTIONS', () => {
 			'Forum'
 		]);
 		expect(labels.join(' ')).not.toMatch(/marketplace/i);
+		expect(TOOL_SECTIONS.map((section) => section.blurb)).toEqual([
+			'Plan and compare the week.',
+			'Course outlines and shared facts.',
+			'Find clubs and answers.'
+		]);
+		expect(TOOL_SECTIONS.flatMap((section) => section.items.map((item) => item.summary))).toEqual([
+			'Paste your Omnivox list into a weekly calendar.',
+			'Make a board and see when people overlap without an account.',
+			'Upload an outline and check the dates.',
+			'Browse assessments and books students have shared.',
+			"Read a club's focus, meeting time, and how to reach it.",
+			'Read threads or post with a course tag.'
+		]);
 	});
 });
 

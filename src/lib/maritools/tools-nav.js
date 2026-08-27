@@ -7,46 +7,46 @@ export const TOOL_SECTIONS = [
 			{
 				href: '/tools/schedule',
 				label: 'My schedule',
-				summary: 'Paste your Omnivox list and download a calendar.'
+				summary: 'Paste your Omnivox list into a weekly calendar.'
 			},
 			{
 				href: '/tools/free-time',
 				label: 'Common free time',
-				summary: 'Compare a few schedules and see when everyone is free.'
+				summary: 'Make a board and see when people overlap without an account.'
 			}
 		]
 	},
 	{
 		id: 'courses',
 		title: 'Courses',
-		blurb: 'Keep the term legible.',
+		blurb: 'Course outlines and shared facts.',
 		items: [
 			{
 				href: '/tools/semester',
 				label: 'Semester',
-				summary: 'Review dates and weights from a course outline.'
+				summary: 'Upload an outline and check the dates.'
 			},
 			{
 				href: '/tools/catalog',
 				label: 'Course catalog',
-				summary: 'Browse course information students have shared.'
+				summary: 'Browse assessments and books students have shared.'
 			}
 		]
 	},
 	{
 		id: 'student-life',
 		title: 'Student life',
-		blurb: 'Find people and answers.',
+		blurb: 'Find clubs and answers.',
 		items: [
 			{
 				href: '/tools/clubs',
 				label: 'Clubs',
-				summary: 'Find campus clubs from verified listings.'
+				summary: "Read a club's focus, meeting time, and how to reach it."
 			},
 			{
 				href: '/tools/forum',
 				label: 'Forum',
-				summary: 'Read and post questions tagged to real courses.'
+				summary: 'Read threads or post with a course tag.'
 			}
 		]
 	}

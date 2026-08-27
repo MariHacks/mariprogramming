@@ -5,7 +5,12 @@
 	import '$lib/maritools/styles/index-pages.css';
 
 	const today = new Date();
-	const dayNumber = today.getDate();
+	const todayIso = today.toISOString().slice(0, 10);
+	const todayLabel = today.toLocaleDateString(undefined, {
+		weekday: 'long',
+		month: 'long',
+		day: 'numeric'
+	});
 </script>
 
 <svelte:head>
@@ -15,15 +20,8 @@
 
 <section class="mt-index-page mt-tools-home">
 	<div class="mt-home-intro">
-		<div>
-			<h1>Six useful places.<br />One readable semester.</h1>
-			<p>{MARITOOLS_LINE}</p>
-		</div>
-		<aside class="mt-today-ticket" aria-label="Today">
-			<span>Today</span>
-			<strong>{dayNumber}</strong>
-			<p>Schedule, free time, courses, and campus life in one place.</p>
-		</aside>
+		<h1>{MARITOOLS_NAME}</h1>
+		<time class="mt-home-date" datetime={todayIso}>{todayLabel}</time>
 	</div>
 
 	<div class="mt-tool-index">
