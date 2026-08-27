@@ -94,6 +94,22 @@ describe('catalog page server', () => {
 		});
 	});
 
+	it('returns an empty list when the student store cannot open', async () => {
+		const current = _createHandlers({
+			createRepository: vi.fn(() => {
+				throw new MaritoolsUnavailableError();
+			})
+		});
+		await expect(current.load(event())).resolves.toEqual({
+			entries: [],
+			termId: '',
+			query: '',
+			discipline: '',
+			disciplines: [],
+			unavailable: true
+		});
+	});
+
 	it('rethrows unexpected load failures', async () => {
 		const current = handlers({
 			repository: {

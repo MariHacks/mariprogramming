@@ -1,5 +1,8 @@
 import { fail } from '@sveltejs/kit';
-import { readStaffSignInEnvironment } from '$lib/server/config/environment.js';
+import {
+	ServerConfigurationError,
+	readStaffSignInEnvironment
+} from '$lib/server/config/environment.js';
 import { NIM_DISCLOSURE, accountPageView } from '$lib/server/maritools/community.js';
 import {
 	MaritoolsInputError,
@@ -22,7 +25,22 @@ export function _createHandlers(dependencies = {}) {
 
 	/** @param {any} event */
 	async function load(event) {
-		const { appOrigin } = readEnvironment();
+		let appOrigin;
+		try {
+			({ appOrigin } = readEnvironment());
+		} catch (error) {
+			if (error instanceof ServerConfigurationError) {
+				const session = event.locals.maritools ?? null;
+				return {
+					view: accountPageView(session, null),
+					callbackURL: `${event.url.origin}/tools/account`,
+					recoveryMessage: recoveryMessageFor(event.url.searchParams.get('state')),
+					nimDisclosure: NIM_DISCLOSURE,
+					unavailable: true
+				};
+			}
+			throw error;
+		}
 		const session = event.locals.maritools ?? null;
 		let profile = null;
 		let unavailable = false;

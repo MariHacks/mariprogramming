@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
+import { ServerConfigurationError } from '$lib/server/config/environment.js';
 import { MariToolsNotFoundError, MariToolsUnavailableError, MariToolsValidationError } from '$lib/server/maritools/repository.js';
 import { prerender, _createHandlers } from './+page.server.js';
 
@@ -84,6 +85,15 @@ describe('free-time board page server', () => {
 			})
 		});
 		await expect(closed.load(event())).resolves.toMatchObject({ unavailable: true });
+	});
+
+	it('returns unavailable when server configuration is missing', async () => {
+		const current = handlers({
+			readEnvironment: vi.fn(() => {
+				throw new ServerConfigurationError();
+			})
+		});
+		await expect(current.load(event())).resolves.toMatchObject({ unavailable: true, board: null });
 	});
 
 	it('rethrows unexpected errors', async () => {

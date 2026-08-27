@@ -78,6 +78,10 @@
 	content: '';
 }
 
+.mt-preview .page-free-boards > .index-filters {
+	grid-template-columns: minmax(18rem, 1fr) 11rem;
+}
+
 .mt-preview .inline-composer > p,
 .mt-preview .inline-composer > a {
 	margin: 1rem;

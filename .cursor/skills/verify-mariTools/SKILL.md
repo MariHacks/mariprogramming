@@ -33,6 +33,8 @@ If doctor fails, fix before driving UI.
 
 Primary harness: Playwright (`tests/e2e/maritools-schedule.spec.js`) and `cursor-ide-browser` MCP for exploratory proof.
 
+**Full checklist:** `checklist.md` in this skill directory. Run it before claiming MariTools is shippable. It covers coverage, every `/tools` route returning 200 without Postgres, E2E schedule, focus styling on form controls, and a per-tab visual matrix.
+
 Stable selectors:
 
 - Schedule paste: `textarea` on `/tools/schedule`, button "Parse schedule" or equivalent primary action.

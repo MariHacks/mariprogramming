@@ -327,4 +327,15 @@ describe('openStudentStore', () => {
 		const store = openStudentStore();
 		expect(typeof store.getProfile).toBe('function');
 	});
+
+	it('treats missing runtime config as unavailable', () => {
+		vi.spyOn(environment, 'readRuntimeEnvironment').mockImplementation(() => {
+			throw new Error('Server configuration is unavailable');
+		});
+		expect(() => openStudentStore()).toThrow(MaritoolsUnavailableError);
+		vi.mocked(environment.readRuntimeEnvironment).mockImplementation(() => {
+			throw new MaritoolsUnavailableError();
+		});
+		expect(() => openStudentStore()).toThrow(MaritoolsUnavailableError);
+	});
 });

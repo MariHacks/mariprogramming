@@ -31,7 +31,8 @@ export function _createHandlers(dependencies = {}) {
 		let profile = null;
 		if (session) {
 			try {
-				profile = await createRepository().getProfile(session.userId);
+				const repository = createRepository();
+				profile = await repository.getProfile(session.userId);
 			} catch {
 				profile = null;
 			}

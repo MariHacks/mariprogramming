@@ -199,7 +199,12 @@ export function createStudentStore(inner) {
 }
 
 export function openStudentStore() {
-	return createStudentStore(
-		createMariToolsRepository({ databaseUrl: readRuntimeEnvironment().databaseUrl })
-	);
+	try {
+		return createStudentStore(
+			createMariToolsRepository({ databaseUrl: readRuntimeEnvironment().databaseUrl })
+		);
+	} catch (error) {
+		if (error instanceof MaritoolsUnavailableError) throw error;
+		throw new MaritoolsUnavailableError();
+	}
 }

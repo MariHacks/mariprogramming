@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
+import { ServerConfigurationError } from '$lib/server/config/environment.js';
 import { NIM_DISCLOSURE } from '$lib/server/maritools/community.js';
 import { MaritoolsInputError, MaritoolsUnavailableError } from '$lib/server/maritools/student-store.js';
 import { prerender, _createHandlers } from './+page.server.js';
@@ -108,6 +109,20 @@ describe('account page server', () => {
 		});
 		const data = await current.load(event({ locals: { maritools: SESSION } }));
 		expect(data.view).toEqual({ kind: 'incomplete', email: SESSION.email });
+		expect(data.unavailable).toBe(true);
+	});
+
+	it('still loads when server configuration is missing', async () => {
+		const current = handlers({
+			readEnvironment: vi.fn(() => {
+				throw new ServerConfigurationError();
+			})
+		});
+		const loadEvent = event();
+		loadEvent.url = new URL('http://localhost:5174/tools/account');
+		const data = await current.load(loadEvent);
+		expect(data.view).toEqual({ kind: 'guest' });
+		expect(data.callbackURL).toBe('http://localhost:5174/tools/account');
 		expect(data.unavailable).toBe(true);
 	});
 

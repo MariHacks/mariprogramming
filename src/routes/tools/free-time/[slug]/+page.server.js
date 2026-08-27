@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { availabilityFromFreeCells } from '$lib/maritools/schedule/freeTimeBoard.js';
-import { readRuntimeEnvironment } from '$lib/server/config/environment.js';
+import { readRuntimeEnvironment, ServerConfigurationError } from '$lib/server/config/environment.js';
 import {
 	MariToolsNotFoundError,
 	MariToolsUnavailableError,
@@ -30,7 +30,7 @@ export function _createHandlers(dependencies = {}) {
 				shareUrl: `${appOrigin}/tools/free-time/${board.slug}`
 			};
 		} catch (error) {
-			if (error instanceof MariToolsUnavailableError) {
+			if (error instanceof MariToolsUnavailableError || error instanceof ServerConfigurationError) {
 				return { board: null, unavailable: true };
 			}
 			throw error;

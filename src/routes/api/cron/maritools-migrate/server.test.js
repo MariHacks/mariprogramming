@@ -15,7 +15,7 @@ vi.mock('$lib/server/maritools/repository.js', () => ({
 
 import { readMigrationEnvironment, readRuntimeEnvironment } from '$lib/server/config/environment.js';
 import { ensureMariToolsSchema } from '$lib/server/maritools/bootstrap.js';
-import { _createMariToolsMigrateEndpoint, firstSeededTermId } from './+server.js';
+import { _createMariToolsMigrateEndpoint, _firstSeededTermId } from './+server.js';
 
 const RUNTIME = Object.freeze({
 	databaseUrl: 'postgresql://runtime:password@db.example.com/club',
@@ -217,12 +217,12 @@ describe('MariTools migrate cron', () => {
 	});
 
 	it('reads the first seeded term id', () => {
-		expect(firstSeededTermId(null)).toBeNull();
-		expect(firstSeededTermId([])).toBeNull();
-		expect(firstSeededTermId([{}])).toBeNull();
-		expect(firstSeededTermId([{ term: {} }])).toBeNull();
-		expect(firstSeededTermId([{ term: { id: 'fall-2026' } }])).toBe('fall-2026');
-		expect(firstSeededTermId([{ term: { id: '' } }])).toBeNull();
-		expect(firstSeededTermId([{ term: null }])).toBeNull();
+		expect(_firstSeededTermId(null)).toBeNull();
+		expect(_firstSeededTermId([])).toBeNull();
+		expect(_firstSeededTermId([{}])).toBeNull();
+		expect(_firstSeededTermId([{ term: {} }])).toBeNull();
+		expect(_firstSeededTermId([{ term: { id: 'fall-2026' } }])).toBe('fall-2026');
+		expect(_firstSeededTermId([{ term: { id: '' } }])).toBeNull();
+		expect(_firstSeededTermId([{ term: null }])).toBeNull();
 	});
 });
