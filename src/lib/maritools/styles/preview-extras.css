@@ -1,0 +1,170 @@
+/* Production-only states that the static preview does not have. */
+
+.mt-preview button,
+.mt-preview input,
+.mt-preview select,
+.mt-preview textarea {
+	color: inherit;
+	font: inherit;
+}
+
+.mt-preview button {
+	cursor: pointer;
+}
+
+.mt-preview .empty-calendar {
+	display: grid;
+	min-height: 36rem;
+	place-items: center;
+	padding: 2rem;
+	border-bottom: 1px solid var(--line);
+	background: white;
+	gap: 1rem;
+	text-align: center;
+}
+
+.mt-preview .field-error,
+.mt-preview [role='alert'] {
+	color: var(--red);
+}
+
+.mt-preview .mt-status,
+.mt-preview [role='status'] {
+	color: var(--steel);
+	font-size: 13px;
+}
+
+.mt-preview .now-line {
+	top: calc(58px + var(--now-hours, 2.3) * var(--hour-h));
+}
+
+.mt-preview .tutorial-frame {
+	position: relative;
+	overflow: hidden;
+}
+
+.mt-preview .tutorial-fallback {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	padding: 1rem;
+	text-align: center;
+}
+
+.mt-preview .calendar-modal-actions button {
+	text-decoration: none;
+}
+
+.mt-preview .forum-tabs a {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	min-height: 2.75rem;
+	padding: 0 0.75rem;
+	color: var(--steel);
+	font-size: 0.6875rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.mt-preview .forum-tabs a:hover,
+.mt-preview .forum-tabs a.is-active {
+	color: var(--ink);
+}
+
+.mt-preview .forum-tabs a.is-active::after {
+	position: absolute;
+	right: 0.75rem;
+	bottom: -1px;
+	left: 0.75rem;
+	height: 2px;
+	background: var(--signal);
+	content: '';
+}
+
+.mt-preview .add-outline {
+	position: relative;
+	overflow: hidden;
+}
+
+.mt-preview .add-outline input[type='file'] {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.mt-preview .muted {
+	color: var(--steel);
+	font-style: normal;
+}
+
+.mt-preview .page-account > .field-error,
+.mt-preview .page-account > [role='status'] {
+	margin: 12px clamp(1.25rem, 3vw, 3rem) 0;
+}
+
+.mt-preview .settings-sheet form > label:not(.share-band) {
+	display: grid;
+	gap: 5px;
+	margin-bottom: 16px;
+}
+
+.mt-preview .settings-sheet form > label:not(.share-band) span {
+	color: var(--steel);
+	font-size: 9px;
+}
+
+.mt-preview .settings-sheet form > label:not(.share-band) input {
+	height: 40px;
+	padding: 0 10px;
+	border: 1px solid var(--line-dark);
+}
+
+.mt-preview .settings-sheet .primary-button,
+.mt-preview .settings-sheet .dark-button {
+	margin-top: 4px;
+}
+
+.mt-preview .review-fields {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px 16px;
+	margin: 0 0 24px;
+}
+
+.mt-preview .review-fields label {
+	display: grid;
+	gap: 5px;
+}
+
+.mt-preview .review-fields span {
+	color: var(--steel);
+	font-size: 9px;
+}
+
+.mt-preview .review-fields input {
+	height: 40px;
+	padding: 0 10px;
+	border: 1px solid var(--line-dark);
+}
+
+.mt-preview .review-sheet > [role='status'],
+.mt-preview .review-sheet > .field-error {
+	margin: 0 0 16px;
+}
+
+.mt-preview .sheet-actions > span {
+	color: var(--steel);
+}
+
+.mt-preview .sheet-actions > span.needs-attention {
+	color: var(--red);
+}
+
+@media (max-width: 700px) {
+	.mt-preview .review-fields {
+		grid-template-columns: 1fr;
+	}
+}

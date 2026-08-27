@@ -1,0 +1,115 @@
+/* Production-only rules for catalog, clubs, forum, and thread. */
+
+.mt-preview .catalog-row h2,
+.mt-preview .club-row h2,
+.mt-preview .topic-row h2 {
+	margin: 0;
+}
+
+.mt-preview .submit-club:has(form) {
+	grid-template-columns: minmax(12rem, 0.9fr) minmax(0, 1.4fr);
+	align-items: start;
+}
+
+.mt-preview .submit-club form {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.mt-preview .submit-club form label {
+	display: grid;
+	gap: 0.3rem;
+	color: var(--steel);
+	font-size: 0.625rem;
+	font-weight: 650;
+}
+
+.mt-preview .submit-club form input,
+.mt-preview .submit-club form textarea,
+.mt-preview .submit-club form select {
+	width: 100%;
+	border: 1px solid var(--rule-dark);
+	border-radius: 2px;
+	background: white;
+	font-size: 0.75rem;
+}
+
+.mt-preview .submit-club form input,
+.mt-preview .submit-club form select {
+	height: var(--control-h);
+	padding: 0 0.625rem;
+}
+
+.mt-preview .submit-club form textarea {
+	padding: 0.625rem;
+}
+
+.mt-preview .submit-club article {
+	display: grid;
+	gap: 0.5rem;
+	padding: 0.75rem 0;
+	border-top: 1px solid var(--rule);
+}
+
+.mt-preview .forum-tabs a {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	min-height: 2.75rem;
+	padding: 0 0.75rem;
+	color: var(--steel);
+	font-size: 0.6875rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.mt-preview .forum-tabs a:hover,
+.mt-preview .forum-tabs a.is-active {
+	color: var(--ink);
+}
+
+.mt-preview .forum-tabs a.is-active::after {
+	position: absolute;
+	right: 0.75rem;
+	bottom: -1px;
+	left: 0.75rem;
+	height: 2px;
+	background: var(--signal);
+	content: '';
+}
+
+.mt-preview .inline-composer > p,
+.mt-preview .inline-composer > a {
+	margin: 1rem;
+}
+
+.mt-preview .post-body footer form {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.mt-preview .post-body footer input {
+	height: 1.5rem;
+	width: 10rem;
+	padding: 0 0.4rem;
+	border: 1px solid var(--rule-dark);
+	border-radius: 2px;
+	font-size: 0.625rem;
+}
+
+.mt-preview .reply-editor form {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.mt-preview .page-club-detail > p,
+.mt-preview .page-thread > p {
+	padding: 2rem clamp(1.25rem, 3vw, 3rem);
+}
+
+@media (max-width: 52rem) {
+	.mt-preview .submit-club:has(form) {
+		grid-template-columns: 1fr;
+	}
+}

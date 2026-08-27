@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { isToolNavCurrent, TOOL_SECTIONS } from '$lib/maritools/tools-nav.js';
+	import '$lib/maritools/styles/preview.css';
 
 	$: pathname = $page.url.pathname;
 
