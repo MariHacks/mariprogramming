@@ -13,7 +13,7 @@ vi.mock('$lib/server/maritools/repository.js', () => ({
 	createMariToolsRepository: vi.fn()
 }));
 
-import { readRuntimeEnvironment } from '$lib/server/config/environment.js';
+import { readMigrationEnvironment, readRuntimeEnvironment } from '$lib/server/config/environment.js';
 import { ensureMariToolsSchema } from '$lib/server/maritools/bootstrap.js';
 import { _createMariToolsMigrateEndpoint, firstSeededTermId } from './+server.js';
 
@@ -200,6 +200,20 @@ describe('MariTools migrate cron', () => {
 		const endpoint = _createMariToolsMigrateEndpoint();
 		const response = await endpoint({ request: request(undefined) });
 		expect(response.status).toBe(503);
+	});
+
+	it('uses the default migration reader after cron auth', async () => {
+		vi.mocked(readRuntimeEnvironment).mockReturnValue(RUNTIME);
+		vi.mocked(readMigrationEnvironment).mockImplementation(() => {
+			throw new Error('missing');
+		});
+		const endpoint = _createMariToolsMigrateEndpoint();
+		const response = await endpoint({ request: request(`Bearer ${RUNTIME.cronSecret}`) });
+		expect(response.status).toBe(503);
+		expect(await response.json()).toMatchObject({
+			ok: false,
+			error: 'MIGRATION_DATABASE_URL is required for schema apply'
+		});
 	});
 
 	it('reads the first seeded term id', () => {

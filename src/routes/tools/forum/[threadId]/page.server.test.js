@@ -82,6 +82,20 @@ describe('forum thread page server', () => {
 		expect(data.thread.courseCode).toBe('203-SN3-RE');
 	});
 
+	it('leaves courseCode empty when the tagged course is gone', async () => {
+		const current = handlers({
+			store: {
+				getThread: vi.fn(async () => ({
+					...THREAD_ROW,
+					courseId: '11111111-1111-4111-8111-111111111111'
+				})),
+				listCatalogCourses: vi.fn(async () => [{ id: 'other', code: '201-NYA-05' }])
+			}
+		});
+		const data = await current.load(event());
+		expect(data.thread.courseCode).toBeNull();
+	});
+
 	it('lets a signed-in student reply when the thread is open', async () => {
 		const data = await handlers().load(event({ locals: { maritools: SESSION } }));
 		expect(data.signedIn).toBe(true);

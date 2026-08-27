@@ -91,6 +91,21 @@ describe('forum page server', () => {
 		expect(data.query).toBe('calculator');
 	});
 
+	it('searches threads that omit a title or body', async () => {
+		const current = handlers({
+			store: {
+				listThreads: vi.fn(async () => [
+					{ id: 't1', title: null, body: 'Bring a calculator.', category: 'courses' },
+					{ id: 't2', title: 'Club hours', body: null, category: 'student-life' }
+				])
+			}
+		});
+		const byBody = await current.load(event({ search: '?q=calculator' }));
+		expect(byBody.threads.map((thread) => thread.id)).toEqual(['t1']);
+		const byTitle = await current.load(event({ search: '?q=Club' }));
+		expect(byTitle.threads.map((thread) => thread.id)).toEqual(['t2']);
+	});
+
 	it('forwards category and valid course filters', async () => {
 		const current = handlers();
 		await current.load(event({ search: `?category=courses&course=${COURSE}` }));
