@@ -44,10 +44,11 @@
 						<li>
 							<button
 								type="button"
+								aria-label={item.title}
 								class:is-current={index === stepIndex}
 								on:click={() => (stepIndex = index)}
 							>
-								{item.title}
+								<span>{item.n}</span><b>{item.title}</b>
 							</button>
 						</li>
 					{/each}

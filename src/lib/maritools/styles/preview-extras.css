@@ -43,13 +43,8 @@
 	overflow: hidden;
 }
 
-.mt-preview .tutorial-fallback {
-	position: absolute;
-	inset: 0;
-	display: grid;
-	place-items: center;
-	padding: 1rem;
-	text-align: center;
+.mt-preview .tutorial-screenshots img {
+	display: block;
 }
 
 .mt-preview .calendar-modal-actions button {

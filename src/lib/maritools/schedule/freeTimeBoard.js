@@ -34,7 +34,6 @@ export function paintSlotLabel(time) {
 	const [hours, minutes] = String(time).split(':').map(Number);
 	if (minutes === 30) return ':30';
 	if (hours === 12) return '12 PM';
-	if (hours === 0) return '12 AM';
 	return hours < 12 ? `${hours} AM` : `${hours - 12} PM`;
 }
 
