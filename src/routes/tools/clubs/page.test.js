@@ -28,8 +28,8 @@ describe('clubs page', () => {
 				}
 			}
 		});
-		expect(screen.getByRole('heading', { name: 'Clubs at Marianopolis' })).toBeInTheDocument();
-		expect(screen.getByText(/Verified student groups/)).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Clubs' })).toBeInTheDocument();
+		expect(screen.getByText(/Campus clubs and how to reach them/)).toBeInTheDocument();
 		expect(screen.getByText('No published clubs yet.')).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Sign in with Google' })).toHaveAttribute(
 			'href',
