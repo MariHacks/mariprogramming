@@ -246,6 +246,7 @@
 
 	.tools-main {
 		min-width: 0;
+		background: var(--surface-raised);
 	}
 
 	@media (min-width: 52rem) {
