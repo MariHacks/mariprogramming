@@ -347,6 +347,8 @@ describe('createMariToolsRepository', () => {
 		await expect(
 			queuedRepo([[{ termId: 'x' }]]).getCalendarRules('fall-2026')
 		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(queuedRepo([[]]).getTerm('fall-2026')).resolves.toBeNull();
+		await expect(queuedRepo([[]]).getCalendarRules('fall-2026')).resolves.toBeNull();
 		await expect(
 			queuedRepo([
 				[

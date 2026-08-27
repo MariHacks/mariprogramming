@@ -51,6 +51,7 @@ describe('effectiveWeekdayForDate', () => {
 		expect(effectiveWeekdayForDate('2026-09-08', FALL_RULES)).toBe('Mon');
 		expect(effectiveWeekdayForDate('2026-09-07', FALL_RULES)).toBeNull();
 		expect(effectiveWeekdayForDate('2026-09-05', FALL_RULES)).toBeNull();
+		expect(effectiveWeekdayForDate('2026-09-06', FALL_RULES)).toBeNull();
 	});
 });
 
@@ -76,6 +77,9 @@ describe('commonFreeFromBusy', () => {
 	});
 
 	it('clips busy intervals to the 08:00–18:00 window', () => {
+		expect(
+			commonFreeFromBusy([{ startTime: '07:00', endTime: '09:00' }], 30)
+		).toEqual([{ startTime: '09:00', endTime: '18:00' }]);
 		expect(
 			commonFreeFromBusy([{ startTime: '17:30', endTime: '19:00' }], 30)
 		).toEqual([{ startTime: '08:00', endTime: '17:30' }]);

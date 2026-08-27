@@ -27,6 +27,18 @@ export function paintSlotTimes() {
 }
 
 /**
+ * Visible label for a paint-grid time rail cell.
+ * @param {string} time
+ */
+export function paintSlotLabel(time) {
+	const [hours, minutes] = String(time).split(':').map(Number);
+	if (minutes === 30) return ':30';
+	if (hours === 12) return '12 PM';
+	if (hours === 0) return '12 AM';
+	return hours < 12 ? `${hours} AM` : `${hours - 12} PM`;
+}
+
+/**
  * @param {PaintWeekday} weekday
  * @param {string} time
  */
@@ -63,19 +75,51 @@ export function availabilityFromFreeCells(cells) {
  */
 export function commonFreeCells(members) {
 	if (members.length === 0) return new Set();
-	/** @type {Set<string> | null} */
-	let intersection = null;
-	for (const member of members) {
+	const intersection = freeCellsFromAvailability(members[0]?.availability);
+	for (const member of members.slice(1)) {
 		const cells = freeCellsFromAvailability(member.availability);
-		if (intersection === null) {
-			intersection = new Set(cells);
-			continue;
-		}
 		for (const cell of intersection) {
 			if (!cells.has(cell)) intersection.delete(cell);
 		}
 	}
-	return intersection ?? new Set();
+	return intersection;
+}
+
+/**
+ * Invert class meetings into free cells on the paint grid.
+ * @param {Array<{ meetings?: Array<{ weekday?: string, startTime?: string, endTime?: string }> }>} courses
+ * @returns {Set<string>}
+ */
+export function freeCellsFromCourses(courses) {
+	/** @param {string} time */
+	function parseMinutes(time) {
+		const [hours, minutes] = String(time).split(':').map(Number);
+		return hours * 60 + minutes;
+	}
+
+	const busy = new Set();
+	const slots = paintSlotTimes();
+	for (const course of courses) {
+		for (const meeting of course.meetings ?? []) {
+			const weekday = /** @type {PaintWeekday | undefined} */ (meeting.weekday);
+			if (!weekday || !PAINT_WEEKDAYS.includes(weekday)) continue;
+			const start = parseMinutes(meeting.startTime ?? '');
+			const end = parseMinutes(meeting.endTime ?? '');
+			if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
+			for (const time of slots) {
+				const slot = parseMinutes(time);
+				if (slot >= start && slot < end) busy.add(paintCellKey(weekday, time));
+			}
+		}
+	}
+	const free = new Set();
+	for (const weekday of PAINT_WEEKDAYS) {
+		for (const time of slots) {
+			const key = paintCellKey(weekday, time);
+			if (!busy.has(key)) free.add(key);
+		}
+	}
+	return free;
 }
 
 /**

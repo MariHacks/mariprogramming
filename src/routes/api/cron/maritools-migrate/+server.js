@@ -9,6 +9,12 @@ import { createMariToolsRepository } from '$lib/server/maritools/repository.js';
 
 export const prerender = false;
 
+/** @param {unknown} seeded */
+export function firstSeededTermId(seeded) {
+	if (!Array.isArray(seeded) || !seeded[0] || !seeded[0].term) return null;
+	return seeded[0].term.id || null;
+}
+
 const PRIVATE_HEADERS = Object.freeze({
 	'cache-control': 'no-store',
 	'referrer-policy': 'no-referrer',
@@ -63,7 +69,7 @@ export function _createMariToolsMigrateEndpoint(dependencies = {}) {
 				{
 					ok: true,
 					termCount: listed.length,
-					seededTermId: seeded?.[0]?.term?.id ?? null
+					seededTermId: firstSeededTermId(seeded)
 				},
 				{ headers: PRIVATE_HEADERS }
 			);

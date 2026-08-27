@@ -133,7 +133,7 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 		const migrations = (await readdir(MIGRATIONS_DIRECTORY))
 			.filter((name) => name.endsWith('.sql'))
 			.sort();
-		expect(migrations).toHaveLength(9);
+		expect(migrations).toHaveLength(11);
 		const migrationSql = [];
 		for (const migrationName of migrations) {
 			const migration = await readFile(join(MIGRATIONS_DIRECTORY, migrationName), 'utf8');
@@ -167,9 +167,9 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 	it('applies all tables, foreign keys, indexes, and named checks', () => {
 		expect(
 			query("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'")
-		).toBe('33');
-		expect(query("SELECT count(*) FROM pg_constraint WHERE contype IN ('c', 'f')")).toBe('127');
-		expect(query("SELECT count(*) FROM pg_indexes WHERE schemaname = 'public'")).toBe('111');
+		).toBe('36');
+		expect(query("SELECT count(*) FROM pg_constraint WHERE contype IN ('c', 'f')")).toBe('134');
+		expect(query("SELECT count(*) FROM pg_indexes WHERE schemaname = 'public'")).toBe('118');
 		expect(
 			query(
 				"SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'event_deliveries_sink_valid'"

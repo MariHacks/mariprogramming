@@ -4,6 +4,7 @@ import {
 	gridHourLabels,
 	layoutTimedMeetings,
 	minutesToGridHours,
+	nowLineHours,
 	parseClockTime
 } from './calendarLayout.js';
 
@@ -48,6 +49,31 @@ describe('layoutTimedMeetings', () => {
 		expect(new Set(placed.map((meeting) => meeting.lane))).toEqual(new Set([0, 1]));
 		expect(placed.every((meeting) => meeting.lanes === 2)).toBe(true);
 		expect(placed.every((meeting) => meeting.conflict === true)).toBe(true);
+	});
+
+	it('keeps a later non-overlapping class full width', () => {
+		const placed = layoutTimedMeetings([
+			{ startTime: '09:00', endTime: '11:00' },
+			{ startTime: '13:00', endTime: '15:00' },
+			{ startTime: '13:30', endTime: '15:00' }
+		]);
+
+		expect(placed[0]).toMatchObject({ startTime: '09:00', lanes: 1, conflict: false });
+		expect(placed[1]).toMatchObject({ startTime: '13:00', lanes: 2, conflict: true });
+		expect(placed[2]).toMatchObject({ startTime: '13:30', lanes: 2, conflict: true });
+	});
+});
+
+describe('nowLineHours', () => {
+	it('returns hours from 8 AM for a time on the grid', () => {
+		expect(nowLineHours(new Date(2026, 8, 8, 10, 18))).toBeCloseTo(2.3, 5);
+	});
+
+	it('returns null outside the visible day', () => {
+		expect(nowLineHours(new Date(2026, 8, 8, 7, 0))).toBeNull();
+		expect(nowLineHours(new Date(2026, 8, 8, 19, 0))).toBeNull();
+		expect(nowLineHours(null)).toBeNull();
+		expect(nowLineHours(new Date(Number.NaN))).toBeNull();
 	});
 });
 

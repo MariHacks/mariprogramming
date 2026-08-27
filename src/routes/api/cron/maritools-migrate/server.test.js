@@ -13,8 +13,9 @@ vi.mock('$lib/server/maritools/repository.js', () => ({
 	createMariToolsRepository: vi.fn()
 }));
 
+import { readRuntimeEnvironment } from '$lib/server/config/environment.js';
 import { ensureMariToolsSchema } from '$lib/server/maritools/bootstrap.js';
-import { _createMariToolsMigrateEndpoint } from './+server.js';
+import { _createMariToolsMigrateEndpoint, firstSeededTermId } from './+server.js';
 
 const RUNTIME = Object.freeze({
 	databaseUrl: 'postgresql://runtime:password@db.example.com/club',
@@ -85,5 +86,129 @@ describe('MariTools migrate cron', () => {
 		expect(ensureSchema).toHaveBeenCalledWith(MIGRATION.databaseUrl);
 		expect(seedCommittedTerms).toHaveBeenCalledTimes(1);
 		expect(listTerms).toHaveBeenCalledTimes(1);
+	});
+
+	it('returns a null seeded term when none were inserted', async () => {
+		const endpoint = _createMariToolsMigrateEndpoint({
+			readCronEnvironment: () => RUNTIME,
+			readMigrationEnvironment: () => MIGRATION,
+			ensureMariToolsSchema: vi.fn(async () => undefined),
+			createMariToolsRepository: () => ({
+				seedCommittedTerms: vi.fn(async () => []),
+				listTerms: vi.fn(async () => [])
+			})
+		});
+		const response = await endpoint({
+			request: request(`Bearer ${RUNTIME.cronSecret}`)
+		});
+		expect(await response.json()).toMatchObject({ ok: true, termCount: 0, seededTermId: null });
+	});
+
+	it('returns 503 when runtime config is missing', async () => {
+		const endpoint = _createMariToolsMigrateEndpoint({
+			readCronEnvironment: () => {
+				throw new Error('missing');
+			}
+		});
+		const response = await endpoint({ request: request(`Bearer ${RUNTIME.cronSecret}`) });
+		expect(response.status).toBe(503);
+	});
+
+	it('returns 500 when schema apply fails', async () => {
+		const endpoint = _createMariToolsMigrateEndpoint({
+			readCronEnvironment: () => RUNTIME,
+			readMigrationEnvironment: () => MIGRATION,
+			ensureMariToolsSchema: vi.fn(async () => {
+				throw new Error('apply failed');
+			})
+		});
+		const response = await endpoint({
+			request: request(`Bearer ${RUNTIME.cronSecret}`)
+		});
+		expect(response.status).toBe(500);
+		expect(await response.json()).toMatchObject({ ok: false, error: 'Migration failed' });
+	});
+
+	it('returns a null seeded term when seeding writes nothing', async () => {
+		const endpoint = _createMariToolsMigrateEndpoint({
+			readCronEnvironment: () => RUNTIME,
+			readMigrationEnvironment: () => MIGRATION,
+			ensureMariToolsSchema: vi.fn(async () => undefined),
+			createMariToolsRepository: () => ({
+				seedCommittedTerms: vi.fn(async () => []),
+				listTerms: vi.fn(async () => [])
+			})
+		});
+		const response = await endpoint({
+			request: request(`Bearer ${RUNTIME.cronSecret}`)
+		});
+		expect(await response.json()).toMatchObject({ ok: true, termCount: 0, seededTermId: null });
+	});
+
+	it('treats a seed row without a term id as null', async () => {
+		const endpoint = _createMariToolsMigrateEndpoint({
+			readCronEnvironment: () => RUNTIME,
+			readMigrationEnvironment: () => MIGRATION,
+			ensureMariToolsSchema: vi.fn(async () => undefined),
+			createMariToolsRepository: () => ({
+				seedCommittedTerms: vi.fn(async () => [{}]),
+				listTerms: vi.fn(async () => [{ id: 'fall-2026' }])
+			})
+		});
+		const response = await endpoint({
+			request: request(`Bearer ${RUNTIME.cronSecret}`)
+		});
+		expect(await response.json()).toMatchObject({ ok: true, seededTermId: null, termCount: 1 });
+	});
+
+	it('treats a missing seed payload as a null term id', async () => {
+		const endpoint = _createMariToolsMigrateEndpoint({
+			readCronEnvironment: () => RUNTIME,
+			readMigrationEnvironment: () => MIGRATION,
+			ensureMariToolsSchema: vi.fn(async () => undefined),
+			createMariToolsRepository: () => ({
+				seedCommittedTerms: vi.fn(async () => null),
+				listTerms: vi.fn(async () => [])
+			})
+		});
+		const response = await endpoint({
+			request: request(`Bearer ${RUNTIME.cronSecret}`)
+		});
+		expect(await response.json()).toMatchObject({ ok: true, seededTermId: null });
+	});
+
+	it('treats a seed term without an id as null', async () => {
+		const endpoint = _createMariToolsMigrateEndpoint({
+			readCronEnvironment: () => RUNTIME,
+			readMigrationEnvironment: () => MIGRATION,
+			ensureMariToolsSchema: vi.fn(async () => undefined),
+			createMariToolsRepository: () => ({
+				seedCommittedTerms: vi.fn(async () => [{ term: {} }]),
+				listTerms: vi.fn(async () => [])
+			})
+		});
+		const response = await endpoint({
+			request: request(`Bearer ${RUNTIME.cronSecret}`)
+		});
+		expect(await response.json()).toMatchObject({ ok: true, seededTermId: null });
+	});
+
+	it('uses default environment readers when none are injected', async () => {
+		vi.mocked(readRuntimeEnvironment).mockImplementation(() => {
+			throw new Error('missing');
+		});
+		const endpoint = _createMariToolsMigrateEndpoint();
+		const response = await endpoint({ request: request(undefined) });
+		expect(response.status).toBe(503);
+	});
+
+	it('reads the first seeded term id', () => {
+		expect(firstSeededTermId(null)).toBeNull();
+		expect(firstSeededTermId([])).toBeNull();
+		expect(firstSeededTermId([{}])).toBeNull();
+		expect(firstSeededTermId([{ term: {} }])).toBeNull();
+		expect(firstSeededTermId([{ term: { id: 'fall-2026' } }])).toBe('fall-2026');
+		expect(firstSeededTermId([{ term: { id: '' } }])).toBeNull();
+		expect(firstSeededTermId([{ term: null }])).toBeNull();
 	});
 });

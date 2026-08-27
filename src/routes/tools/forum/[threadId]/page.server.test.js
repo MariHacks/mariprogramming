@@ -27,6 +27,7 @@ function handlers(overrides = {}) {
 	const store = {
 		getThread: vi.fn(async () => THREAD_ROW),
 		listReplies: vi.fn(async () => [{ id: REPLY, threadId: THREAD, body: 'Thanks' }]),
+		listCatalogCourses: vi.fn(async () => []),
 		getProfile: vi.fn(async () => null),
 		isStaff: vi.fn((email, role) => email === 'team@marihacks.com' || role === 'staff'),
 		createReply: vi.fn(async () => ({ id: REPLY })),
@@ -63,9 +64,22 @@ describe('forum thread page server', () => {
 	it('loads a thread for anonymous readers', async () => {
 		const data = await handlers().load(event());
 		expect(data.thread.title).toBe('Midterm tips');
+		expect(data.thread.courseCode).toBeNull();
 		expect(data.replies).toHaveLength(1);
 		expect(data.canReply).toBe(false);
 		expect(JSON.stringify(data)).not.toMatch(/2530622/);
+	});
+
+	it('attaches a catalog course code when the thread is tagged', async () => {
+		const courseId = '11111111-1111-4111-8111-111111111111';
+		const current = handlers({
+			store: {
+				getThread: vi.fn(async () => ({ ...THREAD_ROW, courseId })),
+				listCatalogCourses: vi.fn(async () => [{ id: courseId, code: '203-SN3-RE', title: 'Modern Physics' }])
+			}
+		});
+		const data = await current.load(event());
+		expect(data.thread.courseCode).toBe('203-SN3-RE');
 	});
 
 	it('lets a signed-in student reply when the thread is open', async () => {

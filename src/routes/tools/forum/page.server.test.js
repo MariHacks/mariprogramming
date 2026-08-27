@@ -76,6 +76,21 @@ describe('forum page server', () => {
 		expect((await unknownCourse.load(event())).threads[0].courseCode).toBeNull();
 	});
 
+	it('filters listed threads by search text', async () => {
+		const current = handlers({
+			store: {
+				listThreads: vi.fn(async () => [
+					{ id: THREAD, title: 'Midterm tips', body: 'Bring a calculator.', category: 'courses' },
+					{ id: 't2', title: 'Club hours', body: 'Workshop tonight.', category: 'student-life' }
+				])
+			}
+		});
+		const data = await current.load(event({ search: '?q=calculator' }));
+		expect(data.threads).toHaveLength(1);
+		expect(data.threads[0].title).toBe('Midterm tips');
+		expect(data.query).toBe('calculator');
+	});
+
 	it('forwards category and valid course filters', async () => {
 		const current = handlers();
 		await current.load(event({ search: `?category=courses&course=${COURSE}` }));

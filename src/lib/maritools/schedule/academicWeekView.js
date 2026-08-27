@@ -118,5 +118,5 @@ export function weekTitle(weekStartIso) {
 		return `Week of ${month} ${startDay}`;
 	}
 	const endMonth = end.toLocaleString('en-CA', { month: 'long', timeZone: 'UTC' });
-	return `Week of ${month} ${startDay} – ${endMonth} ${endDay}`;
+	return `Week of ${month} ${startDay} to ${endMonth} ${endDay}`;
 }

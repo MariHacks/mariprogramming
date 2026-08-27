@@ -74,9 +74,12 @@ const INCREMENTAL_MIGRATIONS = [
  *   createPool?: (databaseUrl: string) => InstanceType<typeof pg.Pool>
  * }} [dependencies]
  */
+export function createDefaultMariToolsPool(databaseUrl) {
+	return new pg.Pool({ connectionString: databaseUrl, max: 1 });
+}
+
 export async function ensureMariToolsSchema(databaseUrl, dependencies = {}) {
-	const createPool =
-		dependencies.createPool ?? ((url) => new pg.Pool({ connectionString: url, max: 1 }));
+	const createPool = dependencies.createPool ?? createDefaultMariToolsPool;
 	const pool = createPool(databaseUrl);
 	/** @type {pg.PoolClient | undefined} */
 	let client;
@@ -86,7 +89,8 @@ export async function ensureMariToolsSchema(databaseUrl, dependencies = {}) {
 			const existing = await client.query(
 				`SELECT to_regclass('public.${migration.sentinel}')::text AS table_name`
 			);
-			if (existing.rows[0]?.table_name) continue;
+			const tableName = existing.rows[0] && existing.rows[0].table_name;
+			if (tableName) continue;
 
 			const statements = splitMigrationStatements(migration.sql);
 			if (statements.length === 0) {
@@ -109,10 +113,12 @@ export async function ensureMariToolsSchema(databaseUrl, dependencies = {}) {
 			}
 		}
 	} finally {
-		try {
-			client?.release();
-		} catch {
-			/* ignore */
+		if (client) {
+			try {
+				client.release();
+			} catch {
+				/* ignore */
+			}
 		}
 		try {
 			await pool.end();
@@ -134,10 +140,7 @@ export async function ensureMariToolsBootstrap() {
 			await repository.seedCommittedTerms();
 		} catch (error) {
 			bootstrapPromise = null;
-			console.error(
-				'[maritools-bootstrap]',
-				error instanceof Error ? error.message : 'unknown error'
-			);
+			console.error('[maritools-bootstrap]', error);
 		}
 	})();
 	return bootstrapPromise;

@@ -43,9 +43,15 @@ export function _createHandlers(dependencies = {}) {
 					signedIn: Boolean(identity.session)
 				};
 			}
-			const replies = await store.listReplies(threadId);
+			const [replies, courses] = await Promise.all([
+				store.listReplies(threadId),
+				store.listCatalogCourses()
+			]);
+			const courseCode = thread.courseId
+				? (courses.find((course) => course.id === thread.courseId)?.code ?? null)
+				: null;
 			return {
-				thread,
+				thread: { ...thread, courseCode },
 				replies,
 				staff: identity.staff,
 				signedIn: Boolean(identity.session),

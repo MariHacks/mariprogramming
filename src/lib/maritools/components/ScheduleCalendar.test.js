@@ -8,6 +8,7 @@ describe('ScheduleCalendar', () => {
 	it('renders positioned events for a parsed week grid', () => {
 		render(ScheduleCalendar, {
 			props: {
+				now: new Date(2026, 8, 8, 10, 18),
 				grid: [
 					{
 						date: '2026-09-07',
@@ -78,5 +79,54 @@ describe('ScheduleCalendar', () => {
 		expect(screen.getByText('Calculus II')).toBeInTheDocument();
 		expect(screen.getByText('201-NYB-05')).toBeInTheDocument();
 		expect(screen.getByText('Today')).toBeInTheDocument();
+		expect(document.querySelector('.now-line')).toBeTruthy();
+	});
+
+	it('marks a no-class day and overlapping meetings', () => {
+		render(ScheduleCalendar, {
+			props: {
+				now: new Date(2026, 8, 8, 19, 0),
+				grid: [
+					{
+						date: '2026-09-07',
+						weekday: 'Mon',
+						dayNumber: 7,
+						isToday: false,
+						isNoClass: true,
+						outOfTerm: false,
+						overlap: false,
+						meetings: []
+					},
+					{
+						date: '2026-09-08',
+						weekday: 'Tue',
+						dayNumber: 8,
+						isToday: true,
+						isNoClass: false,
+						outOfTerm: false,
+						overlap: true,
+						meetings: [
+							{
+								title: 'A',
+								courseCode: '201-NYA-05',
+								startTime: '09:00',
+								endTime: '10:30',
+								classroom: 'A'
+							},
+							{
+								title: 'B',
+								courseCode: '201-NYB-05',
+								startTime: '09:30',
+								endTime: '11:00',
+								classroom: 'B'
+							}
+						]
+					}
+				]
+			}
+		});
+		expect(screen.getByText('No class')).toBeInTheDocument();
+		expect(screen.getAllByText('Conflict')).toHaveLength(2);
+		expect(document.querySelector('.now-line')).toBeNull();
 	});
 });

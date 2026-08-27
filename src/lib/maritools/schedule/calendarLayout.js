@@ -69,13 +69,36 @@ export function layoutTimedMeetings(meetings) {
 		});
 	}
 
-	const laneCount = laneEnds.length;
 	for (const meeting of placed) {
-		meeting.lanes = laneCount;
-		meeting.conflict = laneCount > 1;
+		const overlapping = placed.filter((other) => rangesOverlap(meeting, other));
+		meeting.conflict = overlapping.length > 1;
+		meeting.lanes = Math.max(...overlapping.map((item) => item.lane)) + 1;
 	}
 
 	return placed;
+}
+
+/**
+ * @param {TimedMeeting} left
+ * @param {TimedMeeting} right
+ */
+function rangesOverlap(left, right) {
+	return (
+		parseClockTime(left.startTime) < parseClockTime(right.endTime) &&
+		parseClockTime(right.startTime) < parseClockTime(left.endTime)
+	);
+}
+
+/**
+ * Hours from 8 AM for the now-line, or null when the time is off the grid.
+ * @param {Date | null | undefined} date
+ * @returns {number | null}
+ */
+export function nowLineHours(date) {
+	if (!date || Number.isNaN(date.getTime())) return null;
+	const hours = minutesToGridHours(date.getHours() * 60 + date.getMinutes());
+	if (hours < 0 || hours > 10) return null;
+	return hours;
 }
 
 /**

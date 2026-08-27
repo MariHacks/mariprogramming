@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import SemesterPage from './+page.svelte';
 
@@ -14,7 +14,9 @@ describe('semester page', () => {
 	it('accepts a PDF upload when the account is ready', () => {
 		render(SemesterPage, { props: { data: { view: { kind: 'ready' } } } });
 		expect(screen.getByLabelText('Course outline PDF')).toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Read outline' })).toBeInTheDocument();
+		expect(screen.getByText('Add course outline')).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Upload an outline' })).toBeInTheDocument();
+		expect(screen.getByText(/Scanned image PDFs will not work/)).toBeInTheDocument();
 	});
 
 	it('sends incomplete accounts back to finish setup', () => {
@@ -48,8 +50,13 @@ describe('semester page', () => {
 			}
 		});
 		expect(screen.getByDisplayValue('Midterm')).toBeInTheDocument();
-		expect(screen.getByText(/Private use is the default/)).toBeInTheDocument();
-		expect(screen.getByLabelText('Share these fields to the course catalog')).toBeInTheDocument();
+		expect(screen.getByText('Private unless you share.')).toBeInTheDocument();
+		expect(screen.getByText('Share course facts with the catalog')).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				'Only the course code, instructor, assessments, and book references are shared.'
+			)
+		).toBeInTheDocument();
 	});
 
 	it('explains a missing NVIDIA key and a reused extraction', () => {
@@ -68,7 +75,7 @@ describe('semester page', () => {
 			}
 		});
 		expect(screen.getByText(/Automatic extraction is unavailable/)).toBeInTheDocument();
-		expect(screen.getByText('Reused a saved extraction for this file.')).toBeInTheDocument();
+		expect(screen.getByText('Used a saved extraction for this file.')).toBeInTheDocument();
 		cleanup();
 		render(SemesterPage, {
 			props: {
@@ -96,5 +103,31 @@ describe('semester page', () => {
 			}
 		});
 		expect(screen.getByText('Saved to the catalog.')).toBeInTheDocument();
+	});
+
+	it('lets the student add and remove assessment rows', () => {
+		render(SemesterPage, {
+			props: {
+				data: { view: { kind: 'ready' } },
+				form: {
+					extraction: {
+						ok: true,
+						sha256: 'ab'.repeat(32),
+						proposals: {
+							assessments: [{ title: 'Final project', weight: 20, date: '' }],
+							books: [{ title: '', author: '', isbn: '', required: false }]
+						}
+					}
+				}
+			}
+		});
+		expect(screen.getByText(/date missing/)).toBeInTheDocument();
+		expect(screen.getByText(/field needs attention/)).toBeInTheDocument();
+		fireEvent.click(screen.getByRole('button', { name: '+ Add assessment' }));
+		expect(screen.getAllByLabelText('Assessment')).toHaveLength(2);
+		fireEvent.click(screen.getAllByRole('button', { name: 'Remove assessment' })[0]);
+		expect(screen.getAllByLabelText('Assessment')).toHaveLength(1);
+		fireEvent.click(screen.getByRole('checkbox'));
+		expect(screen.getByRole('button', { name: 'Share to catalog' })).toBeInTheDocument();
 	});
 });

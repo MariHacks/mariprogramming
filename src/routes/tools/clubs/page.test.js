@@ -22,13 +22,14 @@ describe('clubs page', () => {
 					pending: [],
 					query: '',
 					category: '',
+					categories: [],
 					signedIn: false,
 					staff: false
 				}
 			}
 		});
-		expect(screen.getByRole('heading', { name: 'Clubs' })).toBeInTheDocument();
-		expect(screen.getByText(/Rooms stay off this page/)).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Clubs at Marianopolis' })).toBeInTheDocument();
+		expect(screen.getByText(/Verified student groups/)).toBeInTheDocument();
 		expect(screen.getByText('No published clubs yet.')).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Sign in with Google' })).toHaveAttribute(
 			'href',
@@ -44,6 +45,7 @@ describe('clubs page', () => {
 					pending: [],
 					query: '',
 					category: '',
+					categories: ['stem'],
 					signedIn: true,
 					staff: false
 				}
@@ -51,14 +53,12 @@ describe('clubs page', () => {
 		});
 		expect(screen.getByText('Robotics')).toBeInTheDocument();
 		expect(screen.getByText('Builds robots')).toBeInTheDocument();
-		expect(screen.getByRole('link', { name: 'Robotics' })).toHaveAttribute(
+		expect(screen.getByRole('link', { name: /Open listing/ })).toHaveAttribute(
 			'href',
 			'/tools/clubs/robotics'
 		);
-		expect(screen.getByRole('link', { name: /Discord/ })).toHaveAttribute(
-			'href',
-			'https://example.com'
-		);
+		expect(screen.getByText('See listing')).toBeInTheDocument();
+		expect(screen.queryByRole('link', { name: /Discord/ })).not.toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Send for review' })).toBeInTheDocument();
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
 	});
@@ -78,6 +78,7 @@ describe('clubs page', () => {
 					],
 					query: 'robot',
 					category: 'stem',
+					categories: ['stem'],
 					signedIn: true,
 					staff: true
 				},
@@ -97,12 +98,13 @@ describe('clubs page', () => {
 					pending: [],
 					query: '',
 					category: '',
+					categories: ['stem'],
 					signedIn: false,
 					staff: false
 				}
 			}
 		});
-		expect(screen.getByRole('link', { name: 'Open listing' })).toHaveAttribute(
+		expect(screen.getByRole('link', { name: /Open listing/ })).toHaveAttribute(
 			'href',
 			'/tools/clubs/robotics'
 		);
@@ -116,6 +118,7 @@ describe('clubs page', () => {
 					pending: [],
 					query: '',
 					category: '',
+					categories: [],
 					signedIn: true,
 					staff: true,
 					unavailable: true

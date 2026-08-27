@@ -167,10 +167,19 @@ describe('createFreeTimeStore', () => {
 	});
 
 	it('lists recent boards', async () => {
-		const store = queuedStore([[BOARD_ROW]]);
-		await expect(store.listBoards(5)).resolves.toEqual([
+		const finite = queuedStore([[BOARD_ROW]]);
+		await expect(finite.listBoards(5)).resolves.toEqual([
 			expect.objectContaining({ slug: 'study-group', members: [] })
 		]);
+		const fallback = queuedStore([[BOARD_ROW]]);
+		await expect(fallback.listBoards(Number.NaN)).resolves.toEqual([
+			expect.objectContaining({ slug: 'study-group', members: [] })
+		]);
+	});
+
+	it('redacts unexpected list errors', async () => {
+		const store = queuedStore([new Error('db down')]);
+		await expect(store.listBoards()).rejects.toBeInstanceOf(MariToolsUnavailableError);
 	});
 
 	it('returns null for a missing slug', async () => {

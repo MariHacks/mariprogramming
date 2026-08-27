@@ -61,6 +61,21 @@ describe('catalog page server', () => {
 		});
 	});
 
+	it('filters published entries by course discipline', async () => {
+		const current = handlers({
+			repository: {
+				listPublishedCatalog: vi.fn(async () => [
+					ENTRY,
+					{ ...ENTRY, id: 'c2', courseCode: '420-202-MA', title: 'Data Structures' }
+				])
+			}
+		});
+		const physics = await current.load(event('?discipline=Physics'));
+		expect(physics.entries).toEqual([ENTRY]);
+		expect(physics.discipline).toBe('Physics');
+		expect(physics.disciplines).toEqual(['Computer Science', 'Physics']);
+	});
+
 	it('returns an empty list when the catalog cannot be read', async () => {
 		const current = handlers({
 			repository: {
@@ -73,6 +88,8 @@ describe('catalog page server', () => {
 			entries: [],
 			termId: '',
 			query: '',
+			discipline: '',
+			disciplines: [],
 			unavailable: true
 		});
 	});

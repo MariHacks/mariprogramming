@@ -3,7 +3,8 @@ import {
 	createOAuthState,
 	verifyOAuthState,
 	beginGoogleCalendarConnect,
-	googleCalendarRedirectUri
+	googleCalendarRedirectUri,
+	redirectToSchedule
 } from './google-calendar-oauth.js';
 
 describe('googleCalendarRedirectUri', () => {
@@ -20,6 +21,9 @@ describe('createOAuthState', () => {
 		const state = createOAuthState(secret);
 		expect(verifyOAuthState(state, secret)).toBe(true);
 		expect(verifyOAuthState(`${state}x`, secret)).toBe(false);
+		expect(verifyOAuthState(null, secret)).toBe(false);
+		expect(verifyOAuthState(`${'a'.repeat(32)}.${'z'.repeat(64)}`, secret)).toBe(false);
+		expect(verifyOAuthState(/** @type {any} */ (null), secret)).toBe(false);
 	});
 });
 
@@ -33,5 +37,16 @@ describe('beginGoogleCalendarConnect', () => {
 		const url = new URL(authorizeUrl);
 		expect(url.hostname).toBe('accounts.google.com');
 		expect(url.searchParams.get('access_type')).toBe('offline');
+	});
+});
+
+describe('redirectToSchedule', () => {
+	it('throws a 303 to the schedule page', () => {
+		expect(() => redirectToSchedule()).toThrow();
+		try {
+			redirectToSchedule('/tools/schedule?gcal=error');
+		} catch (error) {
+			expect(error).toMatchObject({ status: 303, location: '/tools/schedule?gcal=error' });
+		}
 	});
 });

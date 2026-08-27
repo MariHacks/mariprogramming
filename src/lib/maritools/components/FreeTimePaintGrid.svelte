@@ -2,6 +2,7 @@
 	import {
 		PAINT_WEEKDAYS,
 		paintCellKey,
+		paintSlotLabel,
 		paintSlotTimes
 	} from '$lib/maritools/schedule/freeTimeBoard.js';
 
@@ -10,6 +11,9 @@
 
 	/** @type {Set<string>} */
 	export let commonCells = new Set();
+
+	/** @type {string[]} */
+	export let dayHeaders = [...PAINT_WEEKDAYS];
 
 	/** @type {(cells: Set<string>) => void} */
 	export let onChange = () => {};
@@ -37,8 +41,9 @@
 
 	/** @param {Element | null | undefined} target */
 	function paintCell(target) {
-		if (!(target instanceof HTMLElement)) return;
-		const key = target.dataset.cell;
+		const cell = target instanceof Element ? target.closest('.paint-cell') : null;
+		if (!(cell instanceof HTMLElement)) return;
+		const key = cell.dataset.cell;
 		if (!key || paintedCells.has(key)) return;
 		paintedCells.add(key);
 		setCell(key, paintValue === true);
@@ -91,16 +96,16 @@
 		<div class="paint-legend">
 			<span><i class="legend-you"></i>Your free time</span>
 			<span><i class="legend-common"></i>Common free</span>
-			<button type="button" class="text-button" on:click={clearPaint}>Clear</button>
+			<button type="button" class="text-button clear-paint" on:click={clearPaint}>Clear</button>
 		</div>
 	</div>
 	<div class="paint-grid" aria-label="Interactive free-time grid">
-		<b aria-hidden="true"></b>
-		{#each PAINT_WEEKDAYS as weekday (weekday)}
-			<b>{weekday}</b>
+		<b>Time</b>
+		{#each dayHeaders as header (header)}
+			<b>{header}</b>
 		{/each}
 		{#each slotTimes as time (time)}
-			<b class="paint-time">{time}</b>
+			<span class="paint-time">{paintSlotLabel(time)}</span>
 			{#each PAINT_WEEKDAYS as weekday (weekday + time)}
 				{@const key = paintCellKey(weekday, time)}
 				<button
@@ -117,108 +122,7 @@
 			{/each}
 		{/each}
 	</div>
+	<p class="no-login-caption">
+		No login required. Anyone with the link can add availability using a display name.
+	</p>
 </div>
-
-<style>
-	.paint-wrap {
-		display: grid;
-		gap: 0.75rem;
-		padding: 1rem;
-		border: var(--rule);
-		background: var(--surface-raised);
-	}
-
-	.paint-toolbar {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: end;
-		justify-content: space-between;
-		gap: 0.75rem;
-	}
-
-	.paint-toolbar strong {
-		display: block;
-		font-size: var(--text-sm);
-	}
-
-	.paint-toolbar span,
-	.paint-legend span {
-		color: var(--quiet-steel);
-		font-size: var(--text-xs);
-	}
-
-	.paint-legend {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.paint-legend i {
-		display: inline-block;
-		width: 0.75rem;
-		height: 0.75rem;
-		margin-right: 0.25rem;
-		border: 1px solid rgb(var(--midnight-rgb) / 18%);
-		vertical-align: middle;
-	}
-
-	.legend-you {
-		background: rgb(var(--sky-rgb) / 40%);
-	}
-
-	.legend-common {
-		background: #dff4ea;
-	}
-
-	.text-button {
-		border: 0;
-		background: transparent;
-		color: var(--club-blue);
-		font: inherit;
-		font-weight: 650;
-		cursor: pointer;
-	}
-
-	.paint-grid {
-		display: grid;
-		grid-template-columns: 3rem repeat(5, minmax(0, 1fr));
-		grid-auto-rows: 1.35rem;
-		gap: 1px;
-		overflow-x: auto;
-		background: rgb(var(--midnight-rgb) / 8%);
-	}
-
-	.paint-grid > b {
-		display: grid;
-		place-items: center;
-		background: var(--mist);
-		color: var(--quiet-steel);
-		font-size: 0.625rem;
-		font-weight: 650;
-	}
-
-	.paint-time {
-		justify-content: end;
-		padding-right: 0.35rem;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.paint-cell {
-		border: 0;
-		background: #fff;
-		cursor: pointer;
-	}
-
-	.paint-cell.selected {
-		background: rgb(var(--sky-rgb) / 35%);
-	}
-
-	.paint-cell.common {
-		box-shadow: inset 0 -3px 0 #177b59;
-	}
-
-	.paint-cell.common.selected {
-		background: #dff4ea;
-	}
-</style>

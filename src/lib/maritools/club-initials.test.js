@@ -9,4 +9,10 @@ describe('initialsFromClubName', () => {
 	it('falls back to the first two characters', () => {
 		expect(initialsFromClubName('Robotics')).toBe('RO');
 	});
+
+	it('falls back for empty or missing names', () => {
+		expect(initialsFromClubName('')).toBe('');
+		expect(initialsFromClubName(/** @type {any} */ (null))).toBe('');
+		expect(initialsFromClubName(/** @type {any} */ (undefined))).toBe('');
+	});
 });

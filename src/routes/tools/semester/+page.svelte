@@ -3,7 +3,6 @@
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { ACADEMIC_TERMS } from '$lib/maritools/term/calendar.js';
 	import { explicitTermId } from '$lib/maritools/term/session.js';
-	import '$lib/maritools/styles/index-pages.css';
 
 	export let data;
 	export let form = null;
@@ -18,7 +17,11 @@
 	let teacherName = '';
 	let contributeCatalog = false;
 
-	$: if (form?.extraction?.proposals) {
+	let lastExtractionKey = '';
+
+	$: extractionKey = String(form?.extraction?.sha256 ?? '');
+	$: if (form?.extraction?.proposals && extractionKey !== lastExtractionKey) {
+		lastExtractionKey = extractionKey;
 		proposals = form.extraction.proposals;
 		if (!proposals.assessments) proposals.assessments = [];
 		if (!proposals.books) proposals.books = [];
@@ -30,215 +33,237 @@
 	});
 
 	$: selectedTerm = $explicitTermId ?? ACADEMIC_TERMS[0]?.id ?? '';
+	$: termName = ACADEMIC_TERMS.find((term) => term.id === selectedTerm)?.name ?? selectedTerm;
+	$: missingDates = (proposals.assessments ?? []).filter(
+		(row) => String(row.title ?? '').trim() && !String(row.date ?? '').trim()
+	).length;
+
+	function addAssessment() {
+		proposals = {
+			...proposals,
+			assessments: [...(proposals.assessments ?? []), { title: '', weight: '', date: '' }]
+		};
+	}
+
+	/** @param {number} index */
+	function removeAssessment(index) {
+		proposals = {
+			...proposals,
+			assessments: (proposals.assessments ?? []).filter((_, rowIndex) => rowIndex !== index)
+		};
+	}
 </script>
 
 <svelte:head>
 	<title>Semester | {MARITOOLS_NAME}</title>
 	<meta
 		name="description"
-		content="Upload a course outline, review dates and weights, and keep what you confirm."
+		content="Upload a course outline and check the dates before you share anything."
 	/>
 </svelte:head>
 
-<section class="mt-index-page semester-page page-container">
-	<header class="mt-titlebar intro">
-		<h1>Semester</h1>
-		<p>
-			Upload a text PDF of a course outline. Check the dates and weights before anything is shared.
-			Scanned image PDFs will not work.
-		</p>
-	</header>
-
-	{#if data.view.kind === 'need-sign-in'}
-		<p>
-			<a href={resolve('/tools/account', {})}>Sign in</a> and finish your account before uploading an
-			outline.
-		</p>
-	{:else if data.view.kind === 'need-profile'}
-		<p>
-			<a href={resolve('/tools/account', {})}>Finish your account</a> so we can save outlines privately.
-		</p>
-	{:else if data.view.kind === 'need-disclosure'}
-		<p>
-			<a href={resolve('/tools/account', {})}>Confirm the NVIDIA disclosure</a> on your account page
-			before we send outline text for analysis.
-		</p>
-	{:else}
-		<form method="POST" action="?/extract" enctype="multipart/form-data" class="upload mt-stack">
-			<label>
-				Course outline PDF
-				<input type="file" name="outline" accept="application/pdf" required />
-			</label>
-			<button type="submit" class="mt-primary-button">Read outline</button>
-		</form>
-	{/if}
-
-	{#if form?.error}
-		<p class="mt-error" role="alert">{form.error}</p>
-	{/if}
-
-	{#if form?.extraction}
-		{#if form.extraction.ok === false}
-			<p class="mt-status" role="status">
-				{#if form.extraction.reason === 'missing-key'}
-					Automatic extraction is unavailable. Type the assessments and books below. Your upload is
-					saved privately.
+<div class="mt-preview">
+	<section class="page page-semester">
+		<div class="semester-layout">
+			<aside class="course-stack">
+				{#if data.view.kind === 'ready'}
+					<form method="POST" action="?/extract" enctype="multipart/form-data" class="stack-head">
+						<div>
+							<strong>{termName}</strong>
+							<span>{form?.extraction ? '1 course in review' : 'No outlines yet'}</span>
+						</div>
+						<label class="primary-button add-outline">
+							Add course outline
+							<input
+								type="file"
+								name="outline"
+								accept="application/pdf"
+								required
+								aria-label="Course outline PDF"
+								on:change={(event) => event.currentTarget.form?.requestSubmit()}
+							/>
+						</label>
+					</form>
 				{:else}
-					We could not extract this outline automatically. Type the fields below. Your upload is
-					saved privately.
+					<div class="stack-head">
+						<div>
+							<strong>{termName}</strong>
+							<span>Sign in to upload</span>
+						</div>
+					</div>
 				{/if}
-			</p>
-		{/if}
-		{#if form.extraction.cacheHit}
-			<p class="mt-status" role="status">Reused a saved extraction for this file.</p>
-		{/if}
 
-		<form method="POST" action="?/contribute" class="review mt-panel mt-stack">
-			<input type="hidden" name="sha256" value={form.extraction.sha256 ?? ''} />
-			<input type="hidden" name="termId" value={selectedTerm} />
-			<input type="hidden" name="structured" value={structuredJson} />
+				{#if form?.extraction}
+					<button type="button" class="is-selected">
+						<span>{courseCode || 'Course'}</span>
+						<strong>{title || 'Untitled outline'}</strong>
+						<small>{missingDates ? `${missingDates} date missing` : 'Ready to save'}</small>
+					</button>
+				{/if}
+			</aside>
 
-			<label>
-				Course code
-				<input name="courseCode" bind:value={courseCode} class="code" required={contributeCatalog} />
-			</label>
-			<label>
-				Title
-				<input name="title" bind:value={title} required={contributeCatalog} />
-			</label>
-			<label>
-				Section
-				<input name="section" bind:value={section} required={contributeCatalog} />
-			</label>
-			<label>
-				Teacher
-				<input name="teacherName" bind:value={teacherName} required={contributeCatalog} />
-			</label>
+			<div class="review-sheet">
+				{#if data.view.kind === 'need-sign-in'}
+					<div class="sheet-head">
+						<div>
+							<span>Extraction review</span>
+							<h2>Semester</h2>
+							<p>
+								<a href={resolve('/tools/account', {})}>Sign in</a> and finish your account before
+								uploading an outline.
+							</p>
+						</div>
+					</div>
+				{:else if data.view.kind === 'need-profile'}
+					<div class="sheet-head">
+						<div>
+							<span>Extraction review</span>
+							<h2>Semester</h2>
+							<p>
+								<a href={resolve('/tools/account', {})}>Finish your account</a> so we can save
+								outlines privately.
+							</p>
+						</div>
+					</div>
+				{:else if data.view.kind === 'need-disclosure'}
+					<div class="sheet-head">
+						<div>
+							<span>Extraction review</span>
+							<h2>Semester</h2>
+							<p>
+								<a href={resolve('/tools/account', {})}>Confirm the NVIDIA disclosure</a> on your
+								account page before we send outline text for analysis.
+							</p>
+						</div>
+					</div>
+				{:else if !form?.extraction}
+					<div class="sheet-head">
+						<div>
+							<span>Extraction review</span>
+							<h2>Upload an outline</h2>
+							<p>
+								Upload a text PDF of a course outline. Check the dates and weights before you share
+								anything. Scanned image PDFs will not work.
+							</p>
+						</div>
+					</div>
+				{/if}
 
-			<h2>Assessments</h2>
-			{#each proposals.assessments ?? [] as assessment, index (index)}
-				<div class="row">
-					<label>
-						Title
-						<input bind:value={assessment.title} />
-					</label>
-					<label>
-						Weight
-						<input bind:value={assessment.weight} />
-					</label>
-					<label>
-						Date
-						<input bind:value={assessment.date} placeholder="YYYY-MM-DD" />
-					</label>
-				</div>
-			{/each}
+				{#if form?.error}
+					<p class="field-error" role="alert">{form.error}</p>
+				{/if}
 
-			<h2>Books</h2>
-			{#each proposals.books ?? [] as book, index (index)}
-				<div class="row">
-					<label>
-						Title
-						<input bind:value={book.title} />
-					</label>
-					<label>
-						Author
-						<input bind:value={book.author} />
-					</label>
-					<label>
-						ISBN
-						<input bind:value={book.isbn} class="code" />
-					</label>
-					<label class="disclose">
-						<input type="checkbox" bind:checked={book.required} />
-						Required
-					</label>
-				</div>
-			{/each}
+				{#if form?.extraction}
+					{#if form.extraction.ok === false}
+						<p role="status">
+							{#if form.extraction.reason === 'missing-key'}
+								Automatic extraction is unavailable. Type the assessments and books below. Your
+								upload is saved privately.
+							{:else}
+								We could not extract this outline automatically. Type the fields below. Your upload
+								is saved privately.
+							{/if}
+						</p>
+					{/if}
+					{#if form.extraction.cacheHit}
+						<p role="status">Used a saved extraction for this file.</p>
+					{/if}
 
-			<p>
-				Private use is the default. Your PDF stays off the catalog. Sharing copies only the
-				structured fields you confirm.
-			</p>
-			<label class="disclose">
-				<input type="checkbox" bind:checked={contributeCatalog} />
-				Share these fields to the course catalog
-			</label>
-			{#if contributeCatalog}
-				<button type="submit" class="mt-primary-button">Share to catalog</button>
-			{/if}
-		</form>
-	{/if}
+					<form method="POST" action="?/contribute">
+						<input type="hidden" name="sha256" value={form.extraction.sha256 ?? ''} />
+						<input type="hidden" name="termId" value={selectedTerm} />
+						<input type="hidden" name="structured" value={structuredJson} />
 
-	{#if form?.contributed}
-		<p class="mt-status" role="status">Saved to the catalog.</p>
-	{/if}
-</section>
+						<div class="sheet-head">
+							<div>
+								<span>Extraction review</span>
+								<h2>{title || 'Untitled outline'}</h2>
+								<p>Private unless you share. Sharing copies only the fields you confirm.</p>
+							</div>
+							<span class="course-ref"
+								>{courseCode || 'Course code'}{section ? `, Sec. ${section}` : ''}</span
+							>
+						</div>
 
-<style>
-	.semester-page {
-		display: grid;
-		padding-block: var(--space-xl);
-		gap: var(--space-md);
-		max-width: 46rem;
-		background: var(--surface-raised);
-	}
+						<div class="review-fields">
+							<label>
+								<span>Course code</span>
+								<input name="courseCode" bind:value={courseCode} required={contributeCatalog} />
+							</label>
+							<label>
+								<span>Title</span>
+								<input name="title" bind:value={title} required={contributeCatalog} />
+							</label>
+							<label>
+								<span>Section</span>
+								<input name="section" bind:value={section} required={contributeCatalog} />
+							</label>
+							<label>
+								<span>Teacher</span>
+								<input name="teacherName" bind:value={teacherName} required={contributeCatalog} />
+							</label>
+						</div>
 
-	.intro h1 {
-		margin: 0;
-		font-family: var(--font-display);
-		font-size: clamp(1.75rem, 3vw, 2.5rem);
-		line-height: 1.05;
-	}
+						<div class="review-row header">
+							<span>Assessment</span><span>Date</span><span>Weight</span><span></span>
+						</div>
+						{#each proposals.assessments ?? [] as assessment, index (index)}
+							<div
+								class="review-row"
+								class:warned={!String(assessment.date ?? '').trim() &&
+									String(assessment.title ?? '').trim()}
+							>
+								<input bind:value={assessment.title} aria-label="Assessment" />
+								<input bind:value={assessment.date} aria-label="Date" placeholder="YYYY-MM-DD" />
+								<input bind:value={assessment.weight} aria-label="Weight" />
+								<button
+									type="button"
+									on:click={() => removeAssessment(index)}
+									aria-label="Remove assessment">×</button
+								>
+							</div>
+						{/each}
+						{#if missingDates}
+							<p class="field-error">Add a date for each named assessment before sharing.</p>
+						{/if}
+						<button class="add-row" type="button" on:click={addAssessment}>+ Add assessment</button>
 
-	.intro p,
-	p {
-		max-width: 52ch;
-	}
+						{#each proposals.books ?? [] as book, index (index)}
+							<div class="review-row">
+								<input bind:value={book.title} aria-label="Book title" placeholder="Book title" />
+								<input bind:value={book.author} aria-label="Author" placeholder="Author" />
+								<input bind:value={book.isbn} aria-label="ISBN" placeholder="ISBN" />
+								<span></span>
+							</div>
+						{/each}
 
-	.upload,
-	.review,
-	.row {
-		display: grid;
-		gap: var(--space-sm);
-	}
+						<label class="share-band">
+							<input type="checkbox" bind:checked={contributeCatalog} />
+							<span>
+								<strong>Share course facts with the catalog</strong>
+								<small
+									>Only the course code, instructor, assessments, and book references are
+									shared.</small
+								>
+							</span>
+						</label>
+						<div class="sheet-actions">
+							<span class:needs-attention={missingDates > 0}
+								>{missingDates
+									? `${missingDates} field needs attention`
+									: 'Private unless you share.'}</span
+							>
+							{#if contributeCatalog}
+								<button type="submit" class="primary-button">Share to catalog</button>
+							{/if}
+						</div>
+					</form>
+				{/if}
 
-	.review {
-		padding-block-start: var(--space-md);
-	}
-
-	.row {
-		padding-block: var(--space-sm);
-		border-block-start: var(--rule);
-	}
-
-	label {
-		display: grid;
-		gap: var(--space-3xs);
-		font-size: var(--text-sm);
-		font-weight: 600;
-	}
-
-	.disclose {
-		grid-template-columns: auto 1fr;
-		align-items: start;
-		font-weight: 400;
-	}
-
-	input:not([type='checkbox']):not([type='file']) {
-		height: var(--control-height);
-		padding-inline: var(--space-xs);
-		border: var(--rule);
-		border-radius: var(--radius-sm);
-		font: inherit;
-	}
-
-	.code {
-		font-family: var(--font-mono);
-	}
-
-	h2 {
-		font-size: var(--text-sm);
-		font-weight: 700;
-		margin-top: var(--space-sm);
-	}
-</style>
+				{#if form?.contributed}
+					<p role="status">Saved to the catalog.</p>
+				{/if}
+			</div>
+		</div>
+	</section>
+</div>

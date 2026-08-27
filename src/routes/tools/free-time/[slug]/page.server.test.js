@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
-import { MariToolsUnavailableError, MariToolsValidationError } from '$lib/server/maritools/repository.js';
+import { MariToolsNotFoundError, MariToolsUnavailableError, MariToolsValidationError } from '$lib/server/maritools/repository.js';
 import { prerender, _createHandlers } from './+page.server.js';
 
 const BOARD = {
@@ -110,6 +110,20 @@ describe('free-time board page server', () => {
 		).resolves.toMatchObject({ saveSuccess: true, member: { displayName: 'Ada' } });
 	});
 
+	it('treats missing form fields as empty', async () => {
+		const current = handlers();
+		await expect(current.actions.saveMember(saveEvent({}))).resolves.toMatchObject({
+			saveSuccess: true
+		});
+	});
+
+	it('treats missing form fields as empty', async () => {
+		const current = handlers();
+		await expect(current.actions.saveMember(saveEvent({}))).resolves.toMatchObject({
+			saveSuccess: true
+		});
+	});
+
 	it('rejects invalid availability json', async () => {
 		const current = handlers();
 		await expect(
@@ -143,4 +157,70 @@ describe('free-time board page server', () => {
 			)
 		).resolves.toMatchObject({ status: 400 });
 	});
+
+	it('maps not-found and unavailable save failures', async () => {
+		const missing = handlers({
+			store: {
+				getBoardBySlug: vi.fn(async () => BOARD),
+				upsertMemberAvailability: vi.fn(async () => {
+					throw new MariToolsNotFoundError();
+				})
+			}
+		});
+		await expect(
+			missing.actions.saveMember(
+				saveEvent({ displayName: 'Ada', shareToken: 'old', freeJson: '[]' })
+			)
+		).resolves.toMatchObject({ status: 404 });
+
+		const down = handlers({
+			store: {
+				getBoardBySlug: vi.fn(async () => BOARD),
+				upsertMemberAvailability: vi.fn(async () => {
+					throw new MariToolsUnavailableError();
+				})
+			}
+		});
+		await expect(
+			down.actions.saveMember(saveEvent({ displayName: 'Ada', shareToken: '', freeJson: '[]' }))
+		).resolves.toMatchObject({ status: 503 });
+
+		const boom = handlers({
+			store: {
+				getBoardBySlug: vi.fn(async () => BOARD),
+				upsertMemberAvailability: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			}
+		});
+		await expect(
+			boom.actions.saveMember(saveEvent({ displayName: 'Ada', shareToken: '', freeJson: '[]' }))
+		).rejects.toThrow('boom');
+	});
+
+	it('rejects a non-array availability payload', async () => {
+		const current = handlers();
+		await expect(
+			current.actions.saveMember(
+				saveEvent({ displayName: 'Ada', shareToken: 'token', freeJson: '{}' })
+			)
+		).resolves.toMatchObject({ status: 400 });
+	});
+
+	it('ignores non-string availability cells and missing json', async () => {
+		const current = handlers();
+		await expect(
+			current.actions.saveMember(saveEvent({ displayName: 'Ada', shareToken: '' }))
+		).resolves.toMatchObject({ saveSuccess: true });
+		await expect(
+			current.actions.saveMember(
+				saveEvent({
+					displayName: 'Ada',
+					shareToken: '',
+					freeJson: JSON.stringify(['Mon-09:00', 12])
+				})
+			)
+		).resolves.toMatchObject({ saveSuccess: true });
+	});
 });
+

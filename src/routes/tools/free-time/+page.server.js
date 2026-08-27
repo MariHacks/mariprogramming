@@ -38,15 +38,15 @@ export function _createHandlers(dependencies = {}) {
 		const slug = slugInput || slugFromBoardTitle(title);
 		try {
 			const store = createStore();
+			const session = event.locals.maritools;
 			const board = await store.createBoard({
 				slug,
 				title,
 				termId,
-				ownerUserId: event.locals.maritools?.userId ?? null
+				ownerUserId: session && session.userId ? session.userId : null
 			});
 			throw redirect(303, `/tools/free-time/${board.slug}`);
 		} catch (error) {
-			if (error instanceof Response) throw error;
 			if (error instanceof MariToolsValidationError) {
 				return fail(400, { createError: 'Enter a board title and term.' });
 			}

@@ -40,7 +40,15 @@ describe('forum thread page', () => {
 			}
 		});
 		expect(screen.getByRole('heading', { name: 'Midterm tips' })).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: '← All discussions' })).toHaveAttribute(
+			'href',
+			'/tools/forum'
+		);
+		expect(screen.getByText('Course help')).toBeInTheDocument();
+		expect(screen.getByText('Original poster')).toBeInTheDocument();
+		expect(screen.getAllByText('Student').length).toBeGreaterThan(0);
 		expect(screen.getByText('Thanks')).toBeInTheDocument();
+		expect(screen.getByPlaceholderText('Write a clear, useful reply…')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Post reply' })).toBeInTheDocument();
 		expect(screen.getAllByRole('button', { name: 'Report' }).length).toBeGreaterThan(0);
 		expect(screen.getByText('Reply posted.')).toBeInTheDocument();

@@ -35,6 +35,7 @@ function queuedStore(queue) {
 describe('createGoogleCalendarStore', () => {
 	it('rejects invalid configuration', () => {
 		expect(() => createGoogleCalendarStore('')).toThrow(MariToolsUnavailableError);
+		expect(() => createGoogleCalendarStore(/** @type {any} */ (null))).toThrow(MariToolsUnavailableError);
 	});
 
 	it('reports whether a grant exists', async () => {
@@ -45,15 +46,25 @@ describe('createGoogleCalendarStore', () => {
 
 	it('upserts and refreshes access tokens', async () => {
 		const store = queuedStore([[], [], []]);
-		await store.upsertGrant('user-1', {
-			refreshToken: 'refresh',
-			accessToken: 'access',
-			accessTokenExpiresAt: new Date('2030-01-01T00:00:00.000Z')
-		});
+		await store.upsertGrant('user-1', { refreshToken: 'refresh' });
 		await store.updateAccessToken('user-1', {
 			accessToken: 'new-access',
 			accessTokenExpiresAt: new Date('2031-01-01T00:00:00.000Z')
 		});
+	});
+
+	it('updates an existing grant and reads it back', async () => {
+		const existing = {
+			userId: 'user-1',
+			refreshToken: 'old',
+			accessToken: 'old-access',
+			accessTokenExpiresAt: new Date('2030-01-01T00:00:00.000Z')
+		};
+		const store = queuedStore([[existing], [], [existing]]);
+		await store.upsertGrant('user-1', { refreshToken: 'refresh' });
+		await expect(store.getGrant('user-1')).resolves.toMatchObject({ userId: 'user-1' });
+		const missing = queuedStore([[]]);
+		await expect(missing.getGrant('user-2')).resolves.toBeNull();
 	});
 });
 

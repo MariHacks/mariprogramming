@@ -1,16 +1,22 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { ACADEMIC_TERMS } from '$lib/maritools/term/calendar.js';
-	import '$lib/maritools/styles/index-pages.css';
+	import { disciplineFromCourseCode } from './discipline.js';
 
 	export let data;
 
 	/** @type {string | null} */
 	let openEntryId = null;
+	let sortAscending = true;
 
 	$: if (data.entries.length === 1) {
 		openEntryId = data.entries[0]?.id ?? null;
 	}
+
+	$: sortedEntries = [...data.entries].sort((left, right) => {
+		const compared = String(left.courseCode).localeCompare(String(right.courseCode));
+		return sortAscending ? compared : -compared;
+	});
 
 	function booksOf(entry) {
 		return entry.structured?.books ?? [];
@@ -32,7 +38,13 @@
 		const parts = [];
 		if (assessments) parts.push(`${assessments} assessment${assessments === 1 ? '' : 's'}`);
 		if (books) parts.push(`${books} reference book${books === 1 ? '' : 's'}`);
+		else if (assessments) parts.push('no book listed');
 		return parts.length ? parts.join(', ') : 'No structured details yet';
+	}
+
+	/** @param {string} termId */
+	function termLabel(termId) {
+		return ACADEMIC_TERMS.find((term) => term.id === termId)?.name ?? termId;
 	}
 </script>
 
@@ -40,103 +52,121 @@
 	<title>Course catalog | {MARITOOLS_NAME}</title>
 	<meta
 		name="description"
-		content="Browse course facts students have shared, including books for a section."
+		content="Student-contributed facts for planning a semester. Books are reference only."
 	/>
 </svelte:head>
 
-<section class="mt-index-page catalog-page">
-	<header class="mt-titlebar">
-		<div>
-			<h1>Course catalog</h1>
-		</div>
-		<p>Course facts students have shared, including books for a section. You can browse without an account.</p>
-	</header>
-
-	<form method="GET" class="mt-index-filters">
-		<label class="mt-search-field">
-			<span aria-hidden="true">⌕</span>
-			<span>Search</span>
-			<input name="q" value={data.query} aria-label="Search courses" placeholder="Course code, title, or teacher" />
-		</label>
-		<label>
-			<span>Term</span>
-			<select name="term">
-				<option value="">All terms</option>
-				{#each ACADEMIC_TERMS as term (term.id)}
-					<option value={term.id} selected={term.id === data.termId}>{term.name}</option>
-				{/each}
-			</select>
-		</label>
-		<div></div>
-		<button type="submit" class="mt-dark-button">Search</button>
-	</form>
-
-	{#if data.unavailable}
-		<p class="mt-error" role="alert">The catalog is unavailable right now. Try again.</p>
-	{:else if data.entries.length === 0}
-		<p class="mt-count-bar">No published catalog entries yet.</p>
-	{:else}
-		<div class="mt-count-bar">
-			<strong>{data.entries.length} courses</strong>
-			<span>Updated from reviewed student outlines</span>
-		</div>
-		<div class="mt-index-table">
-			<div class="mt-index-head mt-catalog-row">
-				<span>Code</span><span>Course</span><span>Section</span><span>Teacher</span><span>Term</span><span></span>
+<div class="mt-preview">
+	<section class="page page-catalog">
+		<header class="catalog-titlebar">
+			<div>
+				<h1>Course catalog</h1>
 			</div>
-			{#each data.entries as entry (entry.id)}
-				<article class="mt-catalog-row" class:is-open={openEntryId === entry.id}>
-					<strong class="mt-course-code">{entry.courseCode}</strong>
-					<div>
-						<h2>{entry.title}</h2>
-						<p>{entrySummary(entry)}</p>
-					</div>
-					<span>sec.{entry.section}</span>
-					<span>{entry.teacherName}</span>
-					<span>{entry.termId}</span>
-					<button
-						type="button"
-						class="mt-catalog-toggle"
-						aria-expanded={openEntryId === entry.id}
-						aria-label={`${openEntryId === entry.id ? 'Collapse' : 'Expand'} ${entry.courseCode}`}
-						on:click={() => toggleEntry(entry.id)}
-					>
-						{openEntryId === entry.id ? '−' : '+'}
-					</button>
-					<div class="mt-catalog-detail">
+			<p>Student-contributed facts for planning a semester. Books are reference only.</p>
+		</header>
+
+		<form method="GET" class="index-filters">
+			<label class="search-field">
+				<span>⌕</span>
+				<input
+					name="q"
+					value={data.query}
+					aria-label="Search courses"
+					placeholder="Course code, title, or teacher"
+				/>
+			</label>
+			<label>
+				<span>Term</span>
+				<select name="term">
+					<option value="">All terms</option>
+					{#each ACADEMIC_TERMS as term (term.id)}
+						<option value={term.id} selected={term.id === data.termId}>{term.name}</option>
+					{/each}
+				</select>
+			</label>
+			<label>
+				<span>Discipline</span>
+				<select name="discipline" aria-label="Discipline">
+					<option value="">All disciplines</option>
+					{#each data.disciplines ?? [] as option (option)}
+						<option value={option} selected={option === data.discipline}>{option}</option>
+					{/each}
+				</select>
+			</label>
+			<button type="submit" class="dark-button">Search</button>
+		</form>
+
+		{#if data.unavailable}
+			<p class="field-error" role="alert">The catalog is unavailable right now. Try again.</p>
+		{:else if data.entries.length === 0}
+			<p class="catalog-count">No published catalog entries yet.</p>
+		{:else}
+			<div class="catalog-count">
+				<strong>{data.entries.length} courses</strong>
+				<span>Updated from reviewed student outlines</span>
+				<button type="button" on:click={() => (sortAscending = !sortAscending)}>
+					Sort by course code {sortAscending ? '↓' : '↑'}
+				</button>
+			</div>
+			<div class="catalog-index">
+				<div class="catalog-head">
+					<span>Code</span><span>Course</span><span>Category</span><span>Section / teacher</span
+					><span>Term</span><span></span>
+				</div>
+				{#each sortedEntries as entry (entry.id)}
+					<article class="catalog-row" class:catalog-row--open={openEntryId === entry.id}>
+						<strong class="course-code">{entry.courseCode}</strong>
 						<div>
-							<h3>Assessment outline</h3>
-							{#if assessmentsOf(entry).length}
-								<dl>
-									{#each assessmentsOf(entry) as assessment, index (`${entry.id}-a-${index}`)}
-										<div>
-											<dt>{assessment.title}</dt>
-											<dd>{assessment.weight != null ? `${assessment.weight}%` : '—'}</dd>
-										</div>
+							<h2>{entry.title}</h2>
+							<p>{entrySummary(entry)}</p>
+						</div>
+						<span>{disciplineFromCourseCode(entry.courseCode)}</span>
+						<span>{entry.section}<br /><small>{entry.teacherName}</small></span>
+						<span>{termLabel(entry.termId)}</span>
+						<button
+							type="button"
+							class="catalog-toggle"
+							aria-expanded={openEntryId === entry.id}
+							aria-label={`${openEntryId === entry.id ? 'Collapse' : 'Expand'} ${entry.courseCode}`}
+							on:click={() => toggleEntry(entry.id)}
+						>
+							{openEntryId === entry.id ? '−' : '+'}
+						</button>
+						<div class="catalog-detail">
+							<div>
+								<h3>Assessment outline</h3>
+								{#if assessmentsOf(entry).length}
+									<dl>
+										{#each assessmentsOf(entry) as assessment, index (`${entry.id}-a-${index}`)}
+											<div>
+												<dt>{assessment.title}</dt>
+												<dd>{assessment.weight != null ? `${assessment.weight}%` : '-'}</dd>
+											</div>
+										{/each}
+									</dl>
+								{:else}
+									<p>No assessments were shared for this section.</p>
+								{/if}
+							</div>
+							<div>
+								<h3>Book reference</h3>
+								{#if booksOf(entry).length}
+									{#each booksOf(entry) as book, index (`${entry.id}-b-${index}`)}
+										<p>
+											<strong>{book.title}</strong>
+											{#if book.author}<br />{book.author}{/if}
+											{#if book.isbn}<br /><span class="isbn">{book.isbn}</span>{/if}
+											{#if book.required}<br />Required{/if}
+										</p>
 									{/each}
-								</dl>
-							{:else}
-								<p>No assessments were shared for this section.</p>
-							{/if}
+								{:else}
+									<p>No book reference was shared for this section.</p>
+								{/if}
+							</div>
 						</div>
-						<div>
-							<h3>Book reference</h3>
-							{#if booksOf(entry).length}
-								{#each booksOf(entry) as book, index (`${entry.id}-b-${index}`)}
-									<p>
-										<strong>{book.title}</strong>
-										{#if book.author}<br />{book.author}{/if}
-										{#if book.isbn}<br /><span>{book.isbn}</span>{/if}
-										{#if book.required}<br />Required{/if}
-									</p>
-								{/each}
-							{:else}
-								<p>No book reference was shared for this section.</p>
-							{/if}
-						</div>
-					</div>
-				</article>
-			{/each}
-		</div>
-	{/if}
-</section>
+					</article>
+				{/each}
+			</div>
+		{/if}
+	</section>
+</div>

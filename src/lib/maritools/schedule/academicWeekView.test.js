@@ -13,6 +13,7 @@ describe('mondayOfWeek', () => {
 	it('returns the Monday on or before the given date', () => {
 		expect(mondayOfWeek('2026-09-09')).toBe('2026-09-07');
 		expect(mondayOfWeek('2026-09-08')).toBe('2026-09-07');
+		expect(mondayOfWeek('2026-09-13')).toBe('2026-09-07');
 	});
 });
 
@@ -54,6 +55,6 @@ describe('weekTitle', () => {
 	});
 
 	it('labels a week that spans two months', () => {
-		expect(weekTitle('2026-09-28')).toMatch(/Week of September 28/);
+		expect(weekTitle('2026-09-28')).toBe('Week of September 28 to October 2');
 	});
 });

@@ -1,14 +1,15 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { initialsFromDisplayName } from '$lib/maritools/header-account.js';
-	import '$lib/maritools/styles/index-pages.css';
 	import { requestStudentAuthorization } from '$lib/auth/student-sign-in.js';
+	import { endStaffSession } from '$lib/auth/staff-sign-out.js';
 
 	export let data;
 	export let form = null;
 
 	let pending = false;
 	let failed = false;
+	let signOutFailed = false;
 
 	/** @param {string} email */
 	function labelFromEmail(email) {
@@ -27,155 +28,233 @@
 			failed = true;
 		}
 	}
+
+	async function signOut() {
+		if (pending) return;
+		pending = true;
+		signOutFailed = false;
+		try {
+			await endStaffSession();
+			globalThis.location.assign('/tools/account');
+		} catch {
+			pending = false;
+			signOutFailed = true;
+		}
+	}
 </script>
 
 <svelte:head>
 	<title>Your account | {MARITOOLS_NAME}</title>
 	<meta
 		name="description"
-		content="Sign in with Google and save your student number for MariTools."
+		content="Sign in with Google. Save your student number for MariTools."
 	/>
 </svelte:head>
 
-<section class="mt-index-page mt-account-page">
-	<header class="mt-account-header">
-		<h1>Your account</h1>
-		{#if data.view.kind === 'guest'}
-			<p>Sign in with Google to save outlines and contribute to the catalog. Any Google account works.</p>
-		{:else if data.view.kind === 'incomplete'}
-			<p>
-				We keep your student number on the server. It does not show on the catalog, forum, or schedule
-				pages.
-			</p>
-		{:else}
-			<p>Save personal tools and control what MariTools keeps.</p>
-		{/if}
-	</header>
-
-	{#if data.recoveryMessage}
-		<p class="mt-error" role="alert">{data.recoveryMessage}</p>
-	{/if}
-	{#if data.unavailable}
-		<p class="mt-error" role="alert">Account details are unavailable right now. Try again.</p>
-	{/if}
-	{#if form?.error}
-		<p class="mt-error" role="alert">{form.error}</p>
-	{/if}
-	{#if form?.success}
-		<p class="mt-status" role="status">Account saved.</p>
-	{/if}
-
-	<div class="mt-account-sheet">
-		{#if data.view.kind === 'guest'}
-			<section class="mt-account-section">
-				<header>
-					<div>
-						<h2>Sign in</h2>
-						<p>Use Google to save schedules, outlines, and forum posts.</p>
-					</div>
-				</header>
-				<form on:submit|preventDefault={beginSignIn}>
-					<button type="submit" class="mt-primary-button" disabled={pending}>Continue with Google</button>
-				</form>
-				{#if pending}<p class="mt-status" role="status">Opening Google sign-in</p>{/if}
-				{#if failed}<p class="mt-error" role="alert">Sign-in is unavailable. Try again.</p>{/if}
-			</section>
-		{:else if data.view.kind === 'incomplete'}
-			<section class="mt-account-section">
-				<header>
-					<div>
-						<h2>Profile</h2>
-						<p>Shown next to discussions and contributions.</p>
-					</div>
-				</header>
-				<div class="mt-account-identity">
-					<span class="mt-account-avatar">{initialsFromDisplayName(labelFromEmail(data.view.email))}</span>
-					<div>
-						<strong>{labelFromEmail(data.view.email)}</strong>
-						<p>{data.view.email}</p>
-					</div>
-				</div>
-			</section>
-			<section class="mt-account-section">
-				<header>
-					<div>
-						<h2>Student details</h2>
-						<p>Used only to connect your schedule and semester.</p>
-					</div>
-				</header>
-				<form method="POST" action="?/complete" class="mt-account-form">
-					<label>
-						Student number
-						<input
-							name="studentId"
-							inputmode="numeric"
-							autocomplete="off"
-							required
-							minlength="5"
-							maxlength="8"
-						/>
-					</label>
-					<label>
-						Display name, optional
-						<input name="displayName" maxlength="120" />
-					</label>
-					<label class="disclose">
-						<input type="checkbox" name="nimAccepted" />
-						{data.nimDisclosure}
-					</label>
-					<button type="submit" class="mt-primary-button">Save account</button>
-				</form>
-			</section>
-		{:else}
-			<section class="mt-account-section">
-				<header>
-					<div>
-						<h2>Profile</h2>
-						<p>Shown next to discussions and contributions.</p>
-					</div>
-					<span class="mt-account-signed"><i></i> Signed in</span>
-				</header>
-				<div class="mt-account-identity">
-					<span class="mt-account-avatar">
-						{initialsFromDisplayName(data.view.displayName ?? labelFromEmail(data.view.email))}
-					</span>
-					<div>
-						<strong>{data.view.displayName ?? labelFromEmail(data.view.email)}</strong>
-						<p>{data.view.email}</p>
-					</div>
-				</div>
-			</section>
-			<section class="mt-account-section">
-				<header>
-					<div>
-						<h2>Student details</h2>
-						<p>Used only to connect your schedule and semester.</p>
-					</div>
-				</header>
-				<dl class="mt-account-profile">
-					<div>
-						<dt>Student number</dt>
-						<dd>Saved, and kept off other pages.</dd>
-					</div>
-					<div>
-						<dt>NVIDIA outline analysis</dt>
-						<dd>{data.view.nimAccepted ? 'Accepted' : 'Not accepted yet'}</dd>
-					</div>
-				</dl>
-				{#if !data.view.nimAccepted}
-					<form method="POST" action="?/complete" class="mt-account-form">
-						<label>
-							Student number
-							<input name="studentId" inputmode="numeric" required minlength="5" maxlength="8" />
-						</label>
-						<label class="disclose">
-							<input type="checkbox" name="nimAccepted" />
-							{data.nimDisclosure}
-						</label>
-						<button type="submit" class="mt-primary-button">Save account</button>
-					</form>
+<div class="mt-preview">
+	<section class="page page-account">
+		<header class="index-title">
+			<div>
+				<h1>Your MariTools account</h1>
+				{#if data.view.kind === 'guest'}
+					<p>Sign in with Google to save outlines and use the catalog. Any Google account works.</p>
+				{:else if data.view.kind === 'incomplete'}
+					<p>
+						Your student number stays on the server. It does not show on the catalog, forum, or
+						schedule.
+					</p>
+				{:else}
+					<p>Save personal tools and control what MariTools keeps.</p>
 				{/if}
-			</section>
+			</div>
+		</header>
+
+		{#if data.recoveryMessage}
+			<p class="field-error" role="alert">{data.recoveryMessage}</p>
 		{/if}
-	</div>
-</section>
+		{#if data.unavailable}
+			<p class="field-error" role="alert">Account details are unavailable right now. Try again.</p>
+		{/if}
+		{#if form?.error}
+			<p class="field-error" role="alert">{form.error}</p>
+		{/if}
+		{#if form?.success}
+			<p role="status">Account saved.</p>
+		{/if}
+		{#if signOutFailed}
+			<p class="field-error" role="alert">Sign out is unavailable. Try again.</p>
+		{/if}
+
+		<div class="account-layout">
+			<div class="settings-sheet">
+				{#if data.view.kind === 'guest'}
+					<section>
+						<header>
+							<div>
+								<h2>Sign in</h2>
+								<p>Use Google to save schedules, outlines, and forum posts.</p>
+							</div>
+						</header>
+						<form on:submit|preventDefault={beginSignIn}>
+							<button type="submit" class="primary-button" disabled={pending}
+								>Continue with Google</button
+							>
+						</form>
+						{#if pending}<p role="status">Opening Google sign-in</p>{/if}
+						{#if failed}<p class="field-error" role="alert">Sign-in is unavailable. Try again.</p>{/if}
+					</section>
+				{:else if data.view.kind === 'incomplete'}
+					<section>
+						<header>
+							<div>
+								<h2>Profile</h2>
+								<p>Shown next to discussions and contributions.</p>
+							</div>
+							<span class="signed-status"><i></i> Signed in</span>
+						</header>
+						<div class="identity-row">
+							<span class="identity-avatar"
+								>{initialsFromDisplayName(labelFromEmail(data.view.email))}</span
+							>
+							<div>
+								<strong>{labelFromEmail(data.view.email)}</strong>
+								<p>{data.view.email}</p>
+							</div>
+							<button class="quiet-button" type="button" on:click={signOut} disabled={pending}
+								>Sign out</button
+							>
+						</div>
+					</section>
+					<section>
+						<header>
+							<div>
+								<h2>Student details</h2>
+								<p>Used only to connect your schedule and semester.</p>
+							</div>
+						</header>
+						<form method="POST" action="?/complete">
+							<div class="setting-row">
+								<label>
+									<span>Student number</span>
+									<input
+										name="studentId"
+										inputmode="numeric"
+										autocomplete="off"
+										required
+										minlength="5"
+										maxlength="8"
+									/>
+								</label>
+								<div>
+									<span>Storage</span>
+									<strong>Encrypted</strong>
+									<small>Never displayed publicly</small>
+								</div>
+							</div>
+							<label>
+								<span>Display name, optional</span>
+								<input name="displayName" maxlength="120" />
+							</label>
+							<label class="share-band">
+								<input type="checkbox" name="nimAccepted" />
+								<span>{data.nimDisclosure}</span>
+							</label>
+							<button type="submit" class="dark-button">Save changes</button>
+						</form>
+					</section>
+					<section>
+						<header>
+							<div>
+								<h2>Privacy and data</h2>
+								<p>Control what MariTools keeps.</p>
+							</div>
+						</header>
+						<details>
+							<summary>How your student number is protected</summary>
+							<p>
+								Your student number is encrypted before storage and is never used as a public
+								identifier.
+							</p>
+						</details>
+					</section>
+				{:else}
+					<section>
+						<header>
+							<div>
+								<h2>Profile</h2>
+								<p>Shown next to discussions and contributions.</p>
+							</div>
+							<span class="signed-status"><i></i> Signed in</span>
+						</header>
+						<div class="identity-row">
+							<span class="identity-avatar">
+								{initialsFromDisplayName(data.view.displayName ?? labelFromEmail(data.view.email))}
+							</span>
+							<div>
+								<strong>{data.view.displayName ?? labelFromEmail(data.view.email)}</strong>
+								<p>{data.view.email}</p>
+							</div>
+							<button class="quiet-button" type="button" on:click={signOut} disabled={pending}
+								>Sign out</button
+							>
+						</div>
+					</section>
+					<section>
+						<header>
+							<div>
+								<h2>Student details</h2>
+								<p>Used only to connect your schedule and semester.</p>
+							</div>
+						</header>
+						<div class="setting-row">
+							<div>
+								<span>Student number</span>
+								<strong>Saved</strong>
+								<small>Kept off other pages</small>
+							</div>
+							<div>
+								<span>Storage</span>
+								<strong>Encrypted</strong>
+								<small>Never displayed publicly</small>
+							</div>
+						</div>
+						<div class="setting-row">
+							<div>
+								<span>NVIDIA outline analysis</span>
+								<strong>{data.view.nimAccepted ? 'Accepted' : 'Not accepted yet'}</strong>
+							</div>
+						</div>
+						{#if !data.view.nimAccepted}
+							<form method="POST" action="?/complete">
+								<label>
+									<span>Student number</span>
+									<input name="studentId" inputmode="numeric" required minlength="5" maxlength="8" />
+								</label>
+								<label class="share-band">
+									<input type="checkbox" name="nimAccepted" />
+									<span>{data.nimDisclosure}</span>
+								</label>
+								<button type="submit" class="dark-button">Save changes</button>
+							</form>
+						{/if}
+					</section>
+					<section>
+						<header>
+							<div>
+								<h2>Privacy and data</h2>
+								<p>Control what MariTools keeps.</p>
+							</div>
+						</header>
+						<details>
+							<summary>How your student number is protected</summary>
+							<p>
+								Your student number is encrypted before storage and is never used as a public
+								identifier.
+							</p>
+						</details>
+					</section>
+				{/if}
+			</div>
+		</div>
+	</section>
+</div>

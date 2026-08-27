@@ -38,4 +38,18 @@ describe('FreeTimePaintGrid', () => {
 		});
 		expect(screen.getByRole('button', { name: 'Wed 12:00' }).className).toContain('common');
 	});
+
+	it('labels the time rail like the preview grid', () => {
+		render(FreeTimePaintGrid, {
+			props: {
+				freeCells: new Set(),
+				commonCells: new Set(),
+				dayHeaders: ['Mon 20', 'Tue 21', 'Wed 22', 'Thu 23', 'Fri 24']
+			}
+		});
+		expect(screen.getByText('Time')).toBeInTheDocument();
+		expect(screen.getByText('Mon 20')).toBeInTheDocument();
+		expect(screen.getByText('8 AM')).toBeInTheDocument();
+		expect(screen.getAllByText(':30').length).toBeGreaterThan(0);
+	});
 });

@@ -47,13 +47,22 @@ export function _createHandlers(dependencies = {}) {
 			const store = createStore();
 			const identity = await staffContext(event, store);
 			staff = identity.staff;
-			const clubs = filterClubs(await store.listClubs(), query, category);
+			const listed = await store.listClubs();
+			const categories = [
+				...new Set(
+					listed
+						.map((club) => String(club.category ?? '').trim())
+						.filter(Boolean)
+				)
+			].sort();
+			const clubs = filterClubs(listed, query, category);
 			const pending = identity.staff ? await store.listPendingClubSubmissions() : [];
 			return {
 				clubs,
 				pending,
 				query,
 				category,
+				categories,
 				signedIn: Boolean(identity.session),
 				staff: identity.staff
 			};
@@ -64,6 +73,7 @@ export function _createHandlers(dependencies = {}) {
 					pending: [],
 					query,
 					category,
+					categories: [],
 					signedIn: Boolean(session),
 					staff,
 					unavailable: true
