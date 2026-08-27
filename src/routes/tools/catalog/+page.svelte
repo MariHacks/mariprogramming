@@ -52,7 +52,7 @@
 	<title>Course catalog | {MARITOOLS_NAME}</title>
 	<meta
 		name="description"
-		content="Student-contributed facts for planning a semester. Books are reference only."
+		content="Assessments and books students have shared. Books are reference only."
 	/>
 </svelte:head>
 
@@ -62,7 +62,7 @@
 			<div>
 				<h1>Course catalog</h1>
 			</div>
-			<p>Student-contributed facts for planning a semester. Books are reference only.</p>
+			<p>Assessments and books students have shared. Books are reference only.</p>
 		</header>
 
 		<form method="GET" class="index-filters">
