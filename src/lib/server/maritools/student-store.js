@@ -98,9 +98,11 @@ export function createStudentStore(inner) {
 				return rows
 					.filter((row) => {
 						if (!query) return true;
-						return String(row.courseCode ?? '')
-							.toLowerCase()
-							.includes(query);
+						return [row.courseCode, row.title, row.teacherName].some((value) =>
+							String(value ?? '')
+								.toLowerCase()
+								.includes(query)
+						);
 					})
 					.map((row) => ({
 						id: row.id,

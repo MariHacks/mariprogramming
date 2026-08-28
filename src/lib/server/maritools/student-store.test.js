@@ -158,6 +158,20 @@ describe('createStudentStore', () => {
 		await expect(uncoded.listPublishedCatalog({ query: '203' })).resolves.toEqual([]);
 	});
 
+	it('matches catalog query as case-insensitive substring on code, title, or teacher', async () => {
+		const store = createStudentStore(inner());
+		await expect(store.listPublishedCatalog({ query: 'phy' })).resolves.toEqual([
+			expect.objectContaining({ title: 'Modern Physics', courseCode: '203-SN3-RE' })
+		]);
+		await expect(store.listPublishedCatalog({ query: 'Phys' })).resolves.toHaveLength(1);
+		await expect(store.listPublishedCatalog({ query: 'physics' })).resolves.toHaveLength(1);
+		await expect(store.listPublishedCatalog({ query: 'fathola' })).resolves.toEqual([
+			expect.objectContaining({ teacherName: 'Baharak Fatholahzadeh' })
+		]);
+		await expect(store.listPublishedCatalog({ query: 'zzz' })).resolves.toEqual([]);
+		await expect(store.listPublishedCatalog({ query: '   ' })).resolves.toHaveLength(1);
+	});
+
 	it('returns a cached extraction or null', async () => {
 		const store = createStudentStore(inner());
 		await expect(store.getExtraction('ab'.repeat(32))).resolves.toBeNull();
