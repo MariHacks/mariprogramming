@@ -20,7 +20,10 @@
 
 <section class="mt-index-page mt-tools-home">
 	<div class="mt-home-intro">
-		<h1>{MARITOOLS_NAME}</h1>
+		<div class="mt-home-copy">
+			<h1>{MARITOOLS_NAME}</h1>
+			<p class="mt-home-lede">{MARITOOLS_LINE}</p>
+		</div>
 		<time class="mt-home-date" datetime={todayIso}>{todayLabel}</time>
 	</div>
 

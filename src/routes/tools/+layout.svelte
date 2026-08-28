@@ -70,7 +70,7 @@
 				</section>
 			{/each}
 		</nav>
-		<div class="sidebar-note"><span>Winter 2026</span><b>Schedule saved</b></div>
+		<div class="sidebar-note"><span>Winter 2026</span><b>Student tools</b></div>
 		<a class="back-club" href={resolve('/', {})} on:click={closeSidebar}>
 			Back to club home <span aria-hidden="true">↗</span>
 		</a>
@@ -174,6 +174,12 @@
 
 	.tools-nav a:hover {
 		color: var(--club-blue);
+	}
+
+	.tools-nav a:focus-visible {
+		outline: none;
+		border-radius: 2px;
+		box-shadow: 0 0 0 3px rgb(126 166 255 / 35%);
 	}
 
 	.tools-nav a.is-current {

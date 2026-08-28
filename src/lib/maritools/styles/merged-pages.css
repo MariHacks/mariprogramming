@@ -48,8 +48,18 @@
 	margin: 0 clamp(1.25rem, 3vw, 3rem);
 }
 
+.mt-preview .account-layout.account-layout--guest {
+	max-width: none;
+	margin: 0;
+}
+
 .mt-preview .settings-sheet {
 	flex: 1 1 auto;
+}
+
+.mt-preview .settings-sheet.settings-sheet--guest {
+	display: flex;
+	flex-direction: column;
 }
 
 .mt-preview .page-semester {
@@ -167,7 +177,8 @@
 
 .mt-preview .catalog-index,
 .mt-preview .club-index,
-.mt-preview .topic-list {
+.mt-preview .topic-list,
+.mt-preview .directory-empty {
 	flex: 1 1 auto;
 }
 

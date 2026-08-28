@@ -1222,7 +1222,9 @@
 		z-index: 1;
 		left: 0.65rem;
 		color: var(--steel);
-		font-size: 1rem;
+		font-size: 0.75rem;
+		line-height: 1;
+		pointer-events: none;
 	}
 
 	.search-field input {
@@ -1399,10 +1401,43 @@
 		grid-template-columns: minmax(18rem, 1fr) 14rem auto;
 	}
 
+	.directory-empty {
+		display: grid;
+		flex: 1 1 auto;
+		align-content: center;
+		justify-items: start;
+		gap: 0.5rem;
+		min-height: 12rem;
+		padding: 2rem clamp(1.25rem, 3vw, 3rem);
+		border-bottom: 1px solid var(--rule);
+		background: white;
+	}
+
+	.directory-empty strong {
+		color: var(--ink);
+		font-family: var(--font-tight);
+		font-size: 1rem;
+	}
+
+	.directory-empty p {
+		max-width: 40ch;
+		margin: 0;
+		color: var(--steel);
+		font-size: 0.75rem;
+		line-height: 1.5;
+	}
+
+	.directory-empty a {
+		color: var(--signal);
+		font-size: 0.75rem;
+		font-weight: 650;
+		text-decoration: none;
+	}
+
 	.club-head,
 	.club-row {
 		display: grid;
-		grid-template-columns: minmax(22rem, 1.5fr) minmax(8rem, 0.55fr) minmax(10rem, 0.7fr) 8rem;
+		grid-template-columns: minmax(22rem, 1.7fr) minmax(8rem, 0.55fr) 8rem;
 		column-gap: 1.25rem;
 		align-items: center;
 	}
@@ -1416,10 +1451,11 @@
 	}
 
 	.club-row {
-		min-height: 5.25rem;
+		min-height: 4.75rem;
 		border-bottom: 1px solid var(--rule);
 		color: var(--steel);
 		font-size: 0.6875rem;
+		text-decoration: none;
 	}
 
 	.club-row:hover {
@@ -1458,10 +1494,10 @@
 		font-size: 0.625rem;
 	}
 
-	.club-row a {
+	.club-open {
 		color: var(--signal);
 		font-weight: 600;
-		text-decoration: none;
+		text-align: right;
 	}
 
 	.submit-club {
@@ -1672,7 +1708,7 @@
 	.topic-head,
 	.topic-row {
 		display: grid;
-		grid-template-columns: minmax(22rem, 1fr) 8rem 7.5rem 3.5rem 5rem;
+		grid-template-columns: minmax(22rem, 1fr) 8rem 7.5rem 5rem;
 		column-gap: 1rem;
 		align-items: center;
 	}
@@ -1781,6 +1817,20 @@
 		border-top: 2px solid var(--ink);
 		border-bottom: 1px solid var(--ink);
 		background: white;
+	}
+
+	.guest-composer {
+		margin: auto clamp(1.25rem, 3vw, 3rem) 2rem;
+		padding: 1rem 0;
+		border-top: 1px solid var(--rule-dark);
+		color: var(--steel);
+		font-size: 0.75rem;
+		line-height: 1.5;
+	}
+
+	.guest-composer p {
+		margin: 0;
+		max-width: 42ch;
 	}
 
 	.composer-heading {
@@ -2049,15 +2099,58 @@
 		border-top: 0;
 	}
 
+	.account-layout.account-layout--guest {
+		display: flex;
+		flex: 1 1 auto;
+		flex-direction: column;
+		max-width: none;
+		width: auto;
+		margin: 0;
+		min-height: 0;
+	}
+
 	.settings-sheet {
 		border-top: 2px solid var(--ink);
 		border-left: 0;
 		background: white;
 	}
 
+	.settings-sheet.settings-sheet--guest {
+		display: flex;
+		flex: 1 1 auto;
+		flex-direction: column;
+		border-top: 1px solid var(--ink);
+		border-bottom: 0;
+	}
+
 	.settings-sheet > section {
 		padding: 24px 28px;
 		border-bottom: 1px solid var(--line-dark);
+	}
+
+	.settings-sheet--guest > .guest-sign-in {
+		display: grid;
+		flex: 1 1 auto;
+		align-content: start;
+		justify-items: start;
+		gap: 0.85rem;
+		max-width: 28rem;
+		width: 100%;
+		margin: 0;
+		padding: 1.75rem clamp(1.25rem, 3vw, 3rem) 2.5rem;
+		border-bottom: 0;
+	}
+
+	.settings-sheet--guest .oauth-hint {
+		margin: 0;
+		max-width: 32ch;
+		color: var(--steel);
+		font-size: 0.75rem;
+		line-height: 1.45;
+	}
+
+	.settings-sheet--guest .primary-button {
+		min-width: 12rem;
 	}
 
 	.settings-sheet section > header {
@@ -2657,11 +2750,11 @@
 	
 	.club-head,
 	.club-row {
-			grid-template-columns: minmax(300px, 1.5fr) 0.55fr 0.65fr;
+			grid-template-columns: minmax(300px, 1.7fr) 0.55fr 7rem;
 		}
 	
 	.club-head > span:last-child,
-	.club-row > a {
+	.club-row .club-open {
 			display: none;
 		}
 	
@@ -2803,8 +2896,8 @@
 	
 	.club-head,
 	.club-row {
-			grid-template-columns: 330px 100px 150px;
-			width: 580px;
+			grid-template-columns: 330px 100px 120px;
+			width: 560px;
 		}
 	
 	.submit-club {
@@ -2823,8 +2916,8 @@
 	
 	.topic-head,
 	.topic-row {
-			grid-template-columns: 340px 100px 100px 60px 85px;
-			width: 685px;
+			grid-template-columns: 340px 100px 100px 85px;
+			width: 625px;
 		}
 	
 	.inline-composer {

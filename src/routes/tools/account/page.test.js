@@ -27,6 +27,8 @@ describe('account page', () => {
 		});
 		expect(screen.getByRole('heading', { name: 'Your account' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+		expect(screen.getByText(/Opens Google in this browser/)).toBeInTheDocument();
+		expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
 		expect(screen.queryByLabelText('Student number')).not.toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
 	});

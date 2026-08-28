@@ -5,20 +5,35 @@
 }
 
 .mt-preview :focus-visible {
-	outline: 3px solid #7ea6ff;
-	outline-offset: 2px;
+	outline: none;
+	box-shadow: 0 0 0 3px rgb(126 166 255 / 35%);
+}
+
+.mt-preview button:focus-visible,
+.mt-preview a.primary-button:focus-visible,
+.mt-preview a.dark-button:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px rgb(126 166 255 / 35%);
 }
 
 .mt-preview input:focus,
 .mt-preview select:focus,
-.mt-preview textarea:focus {
+.mt-preview textarea:focus,
+.mt-preview .forum-toolbar input:focus,
+.mt-preview .forum-toolbar select:focus,
+.mt-preview .index-filters input:focus,
+.mt-preview .index-filters select:focus {
 	border-color: var(--signal);
 	box-shadow: 0 0 0 3px rgb(126 166 255 / 35%);
 }
 
 .mt-preview input:focus-visible,
 .mt-preview select:focus-visible,
-.mt-preview textarea:focus-visible {
+.mt-preview textarea:focus-visible,
+.mt-preview .forum-toolbar input:focus-visible,
+.mt-preview .forum-toolbar select:focus-visible,
+.mt-preview .index-filters input:focus-visible,
+.mt-preview .index-filters select:focus-visible {
 	outline: none;
 	border-color: var(--signal);
 	box-shadow: 0 0 0 3px rgb(126 166 255 / 35%);

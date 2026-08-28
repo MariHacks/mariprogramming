@@ -43,14 +43,23 @@
 		{#if data.unavailable}
 			<p class="field-error" role="alert">Clubs are unavailable right now. Try again.</p>
 		{:else if data.clubs.length === 0}
-			<p class="catalog-count">No published clubs yet.</p>
+			<div class="directory-empty" role="status">
+				{#if data.query || data.category}
+					<strong>No clubs match those filters.</strong>
+					<p>Clear the search or choose All categories to see every published listing.</p>
+					<a href="/tools/clubs">Reset filters</a>
+				{:else}
+					<strong>No published clubs yet.</strong>
+					<p>Browse stays open while staff review listings. Sign in to submit one.</p>
+				{/if}
+			</div>
 		{:else}
 			<div class="club-index">
 				<div class="club-head">
-					<span>Organization</span><span>Focus</span><span>Meeting rhythm</span><span>Contact</span>
+					<span>Organization</span><span>Focus</span><span>Listing</span>
 				</div>
 				{#each data.clubs as club (club.id)}
-					<article class="club-row">
+					<a class="club-row" href="/tools/clubs/{club.slug}">
 						<div>
 							<span class="club-initials">{initialsFromClubName(club.name)}</span>
 							<div>
@@ -61,9 +70,8 @@
 							</div>
 						</div>
 						<span>{club.category ?? 'General'}</span>
-						<span>See listing</span>
-						<a href="/tools/clubs/{club.slug}">Open listing ↗</a>
-					</article>
+						<span class="club-open">Open listing ↗</span>
+					</a>
 				{/each}
 			</div>
 		{/if}

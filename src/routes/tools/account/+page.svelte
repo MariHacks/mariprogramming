@@ -76,7 +76,7 @@
 			<div>
 				<h1>Your account</h1>
 				{#if data.view.kind === 'guest'}
-					<p>Sign in with Google to save outlines and use the catalog. Any Google account works.</p>
+					<p>Sign in with Google to save schedules, outlines, and forum posts. Any Google account works.</p>
 				{:else if data.view.kind === 'incomplete'}
 					<p>
 						Your student number stays on the server. It does not show on the catalog, forum, or
@@ -104,16 +104,10 @@
 			<p class="field-error" role="alert">Sign out is unavailable. Try again.</p>
 		{/if}
 
-		<div class="account-layout">
-			<div class="settings-sheet">
+		<div class="account-layout" class:account-layout--guest={data.view.kind === 'guest'}>
+			<div class="settings-sheet" class:settings-sheet--guest={data.view.kind === 'guest'}>
 				{#if data.view.kind === 'guest'}
-					<section>
-						<header>
-							<div>
-								<h2>Sign in</h2>
-								<p>Use Google to save schedules, outlines, and forum posts.</p>
-							</div>
-						</header>
+					<section class="guest-sign-in">
 						{#if data.googleSignInConfigured === false}
 							<p class="field-error" role="alert">
 								{googleSignInUnavailableMessage(data.callbackURL)}
@@ -124,6 +118,9 @@
 									>Continue with Google</button
 								>
 							</form>
+							<p class="oauth-hint">
+								Opens Google in this browser. Passkey or account picker may need a tap from you.
+							</p>
 							{#if pending}<p role="status">Opening Google sign-in</p>{/if}
 							{#if failed}<p class="field-error" role="alert">{signInError}</p>{/if}
 						{/if}

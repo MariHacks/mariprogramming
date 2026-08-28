@@ -31,9 +31,33 @@ describe('clubs page', () => {
 		expect(screen.getByRole('heading', { name: 'Clubs' })).toBeInTheDocument();
 		expect(screen.getByText(/Campus clubs and how to reach them/)).toBeInTheDocument();
 		expect(screen.getByText('No published clubs yet.')).toBeInTheDocument();
+		expect(
+			screen.getByText(/Browse stays open while staff review listings/)
+		).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Sign in with Google' })).toHaveAttribute(
 			'href',
 			'/tools/account'
+		);
+	});
+
+	it('explains when filters match nothing', () => {
+		render(ClubsPage, {
+			props: {
+				data: {
+					clubs: [],
+					pending: [],
+					query: 'zzzz',
+					category: '',
+					categories: ['stem'],
+					signedIn: false,
+					staff: false
+				}
+			}
+		});
+		expect(screen.getByText('No clubs match those filters.')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Reset filters' })).toHaveAttribute(
+			'href',
+			'/tools/clubs'
 		);
 	});
 
@@ -57,7 +81,8 @@ describe('clubs page', () => {
 			'href',
 			'/tools/clubs/robotics'
 		);
-		expect(screen.getByText('See listing')).toBeInTheDocument();
+		expect(screen.queryByText('See listing')).not.toBeInTheDocument();
+		expect(screen.queryByText('Meeting rhythm')).not.toBeInTheDocument();
 		expect(screen.queryByRole('link', { name: /Discord/ })).not.toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Send for review' })).toBeInTheDocument();
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();

@@ -84,11 +84,20 @@
 		{#if data.unavailable}
 			<p class="field-error" role="alert">The forum is unavailable right now. Try again.</p>
 		{:else if data.threads.length === 0}
-			<p class="catalog-count">No threads yet.</p>
+			<div class="directory-empty" role="status">
+				{#if data.query || data.category || data.courseId}
+					<strong>No threads match those filters.</strong>
+					<p>Try Latest, clear search, or pick Every course.</p>
+					<a href="/tools/forum">Reset filters</a>
+				{:else}
+					<strong>No threads yet.</strong>
+					<p>Read without an account. Sign in with Google when you want to post.</p>
+				{/if}
+			</div>
 		{:else}
 			<div class="topic-list">
 				<div class="topic-head">
-					<span>Topic</span><span>Category</span><span>Course</span><span>Replies</span><span>Latest</span>
+					<span>Topic</span><span>Category</span><span>Course</span><span>Latest</span>
 				</div>
 				{#each data.threads as thread (thread.id)}
 					<a class="topic-row" href={`/tools/forum/${thread.id}`}>
@@ -98,7 +107,6 @@
 						</div>
 						<span>{categoryLabel(thread.category)}</span>
 						<span class:course-chip={Boolean(thread.courseCode)}>{thread.courseCode ?? 'General'}</span>
-						<strong>-</strong>
 						<time>{formatWhen(thread.createdAt)}</time>
 					</a>
 				{/each}
@@ -161,19 +169,9 @@
 					<p class="field-error" role="alert">{form.error}</p>
 				{/if}
 			</section>
-			{:else}
-			<section class="inline-composer">
-				<div class="composer-heading">
-					<div>
-						<span class="composer-avatar">?</span>
-						<div>
-							<span>New discussion</span>
-							<h2>Start a thread</h2>
-						</div>
-					</div>
-				</div>
-				<p>Read threads without an account. Sign in with Google to post.</p>
-				<a class="primary-button" href="/tools/account">Sign in with Google</a>
+			{:else if data.threads.length > 0}
+			<section class="guest-composer" aria-label="Posting requires sign-in">
+				<p>Read without an account. Use Sign in with Google above when you want to post.</p>
 			</section>
 			{/if}
 		{/if}

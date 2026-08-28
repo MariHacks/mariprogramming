@@ -27,10 +27,10 @@ describe('forum page', () => {
 		expect(screen.getByRole('heading', { name: 'Forum' })).toBeInTheDocument();
 		expect(screen.getByPlaceholderText('Search discussions')).toBeInTheDocument();
 		expect(screen.getByText('No threads yet.')).toBeInTheDocument();
-		expect(screen.getAllByRole('link', { name: 'Sign in with Google' })[0]).toHaveAttribute(
-			'href',
-			'/tools/account'
-		);
+		expect(screen.getByText(/Read without an account/)).toBeInTheDocument();
+		const signInLinks = screen.getAllByRole('link', { name: 'Sign in with Google' });
+		expect(signInLinks).toHaveLength(1);
+		expect(signInLinks[0]).toHaveAttribute('href', '/tools/account');
 	});
 
 	it('lists threads with course tags and the post form when signed in', () => {
@@ -93,6 +93,7 @@ describe('forum page', () => {
 		});
 		expect(screen.getByRole('alert')).toHaveTextContent('unavailable');
 		expect(screen.queryByText('Read threads without an account.')).not.toBeInTheDocument();
+		expect(screen.queryByText(/Read without an account/)).not.toBeInTheDocument();
 	});
 
 	it('keeps a course filter on Latest and skips invalid dates', () => {
