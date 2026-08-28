@@ -28,7 +28,9 @@ function recoveryMessageFor(state) {
  */
 function clearStaleSignInFailure(url, session) {
 	if (!session || url.searchParams.get('state') !== 'unavailable') return;
-	throw redirect(303, `${url.pathname}${url.hash}`);
+	const clean = new URL(url);
+	clean.searchParams.delete('state');
+	throw redirect(303, `${clean.pathname}${clean.search}`);
 }
 
 /** @param {Record<string, any>} [dependencies] */
