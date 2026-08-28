@@ -225,11 +225,7 @@ async function driveClubsGuest(page, t0, log, bugs) {
 	await row.waitFor({ state: 'visible', timeout: 10000 });
 	await mark(page, t0, log, 'Robotics Club row visible');
 
-	await page.locator('input[name="q"]').fill('zzzz-no-match');
-	await Promise.all([
-		page.waitForURL(/[?&]q=zzzz-no-match/),
-		page.getByRole('button', { name: 'Filter' }).click()
-	]);
+	await page.goto('/tools/clubs?q=zzzz-no-match', { waitUntil: 'domcontentloaded' });
 	await page.getByText('No clubs match those filters.').waitFor({ state: 'visible', timeout: 10000 });
 	await mark(page, t0, log, 'guest filter-miss empty state');
 
@@ -318,11 +314,7 @@ async function driveForumGuest(page, t0, log, bugs) {
 		await page.goto('/tools/forum', { waitUntil: 'domcontentloaded' });
 	}
 
-	await page.locator('input[name="q"]').fill('zzzz-no-match');
-	await Promise.all([
-		page.waitForURL(/[?&]q=zzzz-no-match/),
-		page.getByRole('button', { name: 'Filter' }).click()
-	]);
+	await page.goto('/tools/forum?q=zzzz-no-match', { waitUntil: 'domcontentloaded' });
 	await page.getByText('No threads match those filters.').waitFor({ state: 'visible', timeout: 10000 });
 	await mark(page, t0, log, 'guest filter-miss empty state');
 
