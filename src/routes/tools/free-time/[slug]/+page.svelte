@@ -33,39 +33,77 @@
 	let importError = '';
 	let weekStartIso = mondayOfWeek(calendarDate());
 	let restoredOnce = false;
+	/** @type {Record<string, Set<string>>} */
+	let draftByWeek = {};
 
 	const MEMBER_DOTS = ['maya', 'alex', 'samira'];
 
 	$: board = data.board;
 	$: signedIn = Boolean(data.signedInDisplayName);
+	$: myAvailability = (() => {
+		if (!board || !('members' in board)) return null;
+		const members = board.members ?? [];
+		if (shareToken) {
+			const mine = members.find((member) => member.shareToken === shareToken);
+			if (mine) return mine.availability ?? null;
+		}
+		return null;
+	})();
 	$: commonCells =
 		board && !('notFound' in data && data.notFound)
-			? commonFreeCells(board.members ?? [])
+			? commonFreeCells(board.members ?? [], weekStartIso)
 			: new Set();
 	$: heading = weekTitle(weekStartIso);
 	$: dayHeaders = PAINT_WEEKDAYS.map(
 		(weekday, index) => `${weekday} ${Number(addDays(weekStartIso, index).slice(8))}`
 	);
 
+	/**
+	 * @param {string} week
+	 * @param {unknown} [availability]
+	 */
+	function cellsForWeek(week, availability = myAvailability) {
+		if (Object.prototype.hasOwnProperty.call(draftByWeek, week)) {
+			return new Set(draftByWeek[week]);
+		}
+		return freeCellsFromAvailability(availability, week);
+	}
+
+	function stashCurrentWeek() {
+		draftByWeek = { ...draftByWeek, [weekStartIso]: new Set(freeCells) };
+	}
+
 	function goToToday() {
+		stashCurrentWeek();
 		weekStartIso = mondayOfWeek(calendarDate());
+		freeCells = cellsForWeek(weekStartIso);
 	}
 
 	function goToPreviousWeek() {
+		stashCurrentWeek();
 		weekStartIso = addDays(weekStartIso, -7);
+		freeCells = cellsForWeek(weekStartIso);
 	}
 
 	function goToNextWeek() {
+		stashCurrentWeek();
 		weekStartIso = addDays(weekStartIso, 7);
+		freeCells = cellsForWeek(weekStartIso);
 	}
 
 	function applyRestoredState() {
 		if (!browser || !board || restoredOnce) return;
 		restoredOnce = true;
 		const stored = localStorage.getItem(`maritools.free-time.${board.id}.token`);
-		const restored = restoreEditorState(board, stored, data.signedInDisplayName ?? null);
+		const restored = restoreEditorState(
+			board,
+			stored,
+			data.signedInDisplayName ?? null,
+			weekStartIso
+		);
 		shareToken = restored.shareToken;
 		displayName = restored.displayName;
+		draftByWeek = {};
 		freeCells = restored.freeCells;
 	}
 
@@ -88,6 +126,7 @@
 			return;
 		}
 		freeCells = freeCellsFromCourses(parsed.courses);
+		draftByWeek = { ...draftByWeek, [weekStartIso]: new Set(freeCells) };
 		importError = '';
 		importOpen = false;
 	}
@@ -103,7 +142,9 @@
 			shareToken = member.shareToken;
 		}
 		if (member.availability) {
-			freeCells = freeCellsFromAvailability(member.availability);
+			const { [weekStartIso]: _drop, ...rest } = draftByWeek;
+			draftByWeek = rest;
+			freeCells = freeCellsFromAvailability(member.availability, weekStartIso);
 		}
 	}
 </script>
@@ -128,7 +169,7 @@
 				<div>
 					<h1>{heading}</h1>
 					<p class="week-hint">
-						Availability is a Mon–Fri pattern. Week arrows move calendar labels only.
+						Availability is saved per week. Use the arrows to paint a different week.
 					</p>
 				</div>
 				<div class="utility-actions">
@@ -218,6 +259,7 @@
 							formData.set('freeJson', JSON.stringify([...freeCells]));
 							formData.set('shareToken', shareToken);
 							formData.set('displayName', displayName);
+							formData.set('weekStart', weekStartIso);
 							return async ({ result, update }) => {
 								if (result.type === 'failure') {
 									saveMessage = String(result.data?.saveError ?? 'Could not save.');
@@ -230,9 +272,7 @@
 											).member
 										: undefined;
 								applySavedMember(member);
-								await update();
-								restoredOnce = false;
-								applyRestoredState();
+								await update({ reset: false });
 								saveMessage = 'Availability saved.';
 							};
 						}}
@@ -252,6 +292,7 @@
 							</label>
 						{/if}
 						<input type="hidden" name="shareToken" value={shareToken} />
+						<input type="hidden" name="weekStart" value={weekStartIso} />
 						<input type="hidden" name="freeJson" value={JSON.stringify([...freeCells])} />
 						<button type="submit" class="primary-button wide">Save availability</button>
 					</form>

@@ -137,7 +137,7 @@ async function assertSelected(page, cells) {
  * @param {import('@playwright/test').Browser} browser
  * @param {import('@playwright/test').BrowserContextOptions['storageState'] | undefined} storageState
  * @param {string} videoName
- * @param {{ boardTitle: string, member1: string, member2: string, cells1: string[], cells1b: string[], cells2: string[], expectSignedIn?: boolean }} opts
+ * @param {{ boardTitle: string, member1: string, member2: string, cells1: string[], cells1b: string[], cellsWeek2: string[], cells2: string[], expectSignedIn?: boolean }} opts
  */
 async function captureMatrix(browser, storageState, videoName, opts) {
 	const videoDir = path.join(tmpRoot, `${videoName}-video`);
@@ -197,14 +197,23 @@ async function captureMatrix(browser, storageState, videoName, opts) {
 		await page.getByRole('button', { name: 'Next week' }).click();
 		const headingAfter = await page.locator('h1').first().textContent();
 		if (headingBefore === headingAfter) bugs.push('week switch did not change heading');
-		await assertSelected(page, opts.cells1);
+		const nextWeekSelected = await page.locator('.paint-cell.selected').count();
+		if (nextWeekSelected !== 0) {
+			bugs.push(`next week should start empty, found ${nextWeekSelected} selected cells`);
+		}
+		await paintCells(page, opts.cellsWeek2);
+		await assertSelected(page, opts.cellsWeek2);
+		await page.getByRole('button', { name: 'Save availability' }).click();
+		await page.getByText('Availability saved.').waitFor({ state: 'visible' });
 		await mark(
 			page,
 			t0,
 			log,
-			`week switch ${headingBefore} → ${headingAfter}; paint retained (${opts.cells1.length})`
+			`week switch ${headingBefore} → ${headingAfter}; painted distinct week (${opts.cellsWeek2.length})`
 		);
 		await page.getByRole('button', { name: 'Previous week' }).click();
+		await assertSelected(page, opts.cells1);
+		await mark(page, t0, log, 'previous week restored prior paint');
 
 		await page.reload({ waitUntil: 'networkidle' });
 		await page.locator('.paint-cell').first().waitFor({ state: 'visible' });
@@ -303,8 +312,8 @@ async function captureMatrix(browser, storageState, videoName, opts) {
 		if (commonCount < 1) bugs.push('no common free cells after second member');
 		await mark(page, t0, log, `second member saved; common free cells=${commonCount}`);
 
-		const hint = await page.getByText(/Mon–Fri pattern/i).count();
-		if (hint < 1) bugs.push('missing week pattern hint');
+		const hint = await page.getByText(/Availability is saved per week/i).count();
+		if (hint < 1) bugs.push('missing per-week availability hint');
 	} finally {
 		await context.close();
 	}
@@ -332,6 +341,7 @@ async function main() {
 		member2: 'GuestBlake',
 		cells1: ['Mon-09:00', 'Mon-09:30', 'Tue-11:00'],
 		cells1b: ['Mon-09:00', 'Wed-14:00', 'Wed-14:30'],
+		cellsWeek2: ['Thu-10:00', 'Fri-15:00'],
 		cells2: ['Mon-09:00', 'Wed-14:00', 'Fri-10:00'],
 		expectSignedIn: false
 	});
@@ -346,6 +356,7 @@ async function main() {
 			member2: 'GuestBlake',
 			cells1: ['Mon-10:00', 'Mon-10:30', 'Thu-13:00'],
 			cells1b: ['Mon-10:00', 'Fri-15:00', 'Fri-15:30'],
+			cellsWeek2: ['Tue-09:00', 'Wed-13:00'],
 			cells2: ['Mon-10:00', 'Fri-15:00', 'Tue-09:00'],
 			expectSignedIn: true
 		});
@@ -370,7 +381,7 @@ async function main() {
 | Flow | Guest (username) | Account (signed-in) |
 | --- | --- | --- |
 | Paint / Save | ${guestPass ? 'PASS' : 'FAIL'} | ${accountPass ? 'PASS' : 'FAIL'} |
-| Week switch (labels + paint retained) | ${guestPass ? 'PASS' : 'FAIL'} | ${accountPass ? 'PASS' : 'FAIL'} |
+| Week switch (empty next week + distinct paint) | ${guestPass ? 'PASS' : 'FAIL'} | ${accountPass ? 'PASS' : 'FAIL'} |
 | Reload restore | ${guestPass ? 'PASS' : 'FAIL'} | ${accountPass ? 'PASS' : 'FAIL'} |
 | Modify → save → reload | ${guestPass ? 'PASS' : 'FAIL'} | ${accountPass ? 'PASS' : 'FAIL'} |
 | Second member / common free | ${guestPass ? 'PASS' : 'FAIL'} | ${accountPass ? 'PASS' : 'FAIL'} |
@@ -378,7 +389,7 @@ async function main() {
 ## Identity notes
 - Guest: display name + localStorage share token; label "editing as Guest, …"
 - Account: profile display name is locked (no editable field); label "editing as … (signed in)". Second member uses a guest context. Members still keyed by share token (not user id).
-- Availability is a Mon–Fri pattern. Week arrows move calendar labels only (no per-week paint store).
+- Availability is stored per Monday-keyed week (\`availability.byWeek\`). Legacy v1 \`{ free }\` still paints every week until the member saves once under v2.
 
 ## Guest on-camera (guest-weeks-state.webm)
 ${guest.log.map((e) => `- **${e.t.toFixed(2)}s** ${e.label}`).join('\n') || '- (no frames)'}

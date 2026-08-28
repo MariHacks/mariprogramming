@@ -5,6 +5,7 @@ export const PAINT_WEEKDAYS = /** @type {const} */ (['Mon', 'Tue', 'Wed', 'Thu',
 const START_MINUTES = 8 * 60;
 const END_MINUTES = 18 * 60;
 const STEP_MINUTES = 30;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 
 /**
  * @param {number} minutes
@@ -46,19 +47,60 @@ export function paintCellKey(weekday, time) {
 }
 
 /**
- * @param {unknown} availability
+ * @param {unknown} free
  * @returns {Set<string>}
  */
-export function freeCellsFromAvailability(availability) {
-	if (!availability || typeof availability !== 'object' || Array.isArray(availability)) {
-		return new Set();
-	}
-	const free = /** @type {{ free?: unknown }} */ (availability).free;
+function cellsFromFreeList(free) {
 	if (!Array.isArray(free)) return new Set();
 	return new Set(free.filter((cell) => typeof cell === 'string' && cell.length > 0));
 }
 
 /**
+ * @param {unknown} availability
+ * @returns {{ byWeek: Record<string, string[]>, legacyFree: string[] | null }}
+ */
+function readAvailabilityShape(availability) {
+	if (!availability || typeof availability !== 'object' || Array.isArray(availability)) {
+		return { byWeek: {}, legacyFree: null };
+	}
+	const record = /** @type {Record<string, unknown>} */ (availability);
+	/** @type {Record<string, string[]>} */
+	const byWeek = {};
+	const rawByWeek = record.byWeek;
+	if (rawByWeek && typeof rawByWeek === 'object' && !Array.isArray(rawByWeek)) {
+		for (const [week, free] of Object.entries(rawByWeek)) {
+			if (!ISO_DATE.test(week) || !Array.isArray(free)) continue;
+			byWeek[week] = free.filter((cell) => typeof cell === 'string' && cell.length > 0).sort();
+		}
+	}
+	const legacyFree = Array.isArray(record.free)
+		? record.free.filter((cell) => typeof cell === 'string' && cell.length > 0)
+		: null;
+	return { byWeek, legacyFree };
+}
+
+/**
+ * Availability cells for one Monday-keyed week.
+ * Legacy v1 `{ free }` applies to every week until a v2 `byWeek` save exists.
+ * @param {unknown} availability
+ * @param {string} weekStartIso
+ * @returns {Set<string>}
+ */
+export function freeCellsFromAvailability(availability, weekStartIso) {
+	const week =
+		typeof weekStartIso === 'string' && ISO_DATE.test(weekStartIso) ? weekStartIso : '';
+	if (!week) return new Set();
+	const { byWeek, legacyFree } = readAvailabilityShape(availability);
+	if (Object.keys(byWeek).length > 0) {
+		return cellsFromFreeList(byWeek[week] ?? []);
+	}
+	if (legacyFree) return cellsFromFreeList(legacyFree);
+	return new Set();
+}
+
+/**
+ * Legacy helper: serialize a single shared Mon–Fri pattern (v1).
+ * Prefer {@link availabilityWithWeek} for new writes.
  * @param {Set<string>} cells
  */
 export function availabilityFromFreeCells(cells) {
@@ -69,14 +111,38 @@ export function availabilityFromFreeCells(cells) {
 }
 
 /**
+ * Merge painted cells into per-week availability (v2).
+ * Dropping top-level `free` so legacy shared patterns stop masking empty weeks.
+ * @param {unknown} existing
+ * @param {string} weekStartIso
+ * @param {Set<string>} cells
+ */
+export function availabilityWithWeek(existing, weekStartIso, cells) {
+	const week =
+		typeof weekStartIso === 'string' && ISO_DATE.test(weekStartIso) ? weekStartIso : '';
+	if (!week) {
+		return { version: 2, byWeek: {} };
+	}
+	const { byWeek } = readAvailabilityShape(existing);
+	return {
+		version: 2,
+		byWeek: {
+			...byWeek,
+			[week]: [...cells].sort()
+		}
+	};
+}
+
+/**
  * @param {Array<{ availability?: unknown }>} members
+ * @param {string} weekStartIso
  * @returns {Set<string>}
  */
-export function commonFreeCells(members) {
+export function commonFreeCells(members, weekStartIso) {
 	if (members.length === 0) return new Set();
-	const intersection = freeCellsFromAvailability(members[0]?.availability);
+	const intersection = freeCellsFromAvailability(members[0]?.availability, weekStartIso);
 	for (const member of members.slice(1)) {
-		const cells = freeCellsFromAvailability(member.availability);
+		const cells = freeCellsFromAvailability(member.availability, weekStartIso);
 		for (const cell of intersection) {
 			if (!cells.has(cell)) intersection.delete(cell);
 		}
@@ -140,9 +206,10 @@ export function slugFromBoardTitle(title) {
  * @param {{ members?: Array<{ shareToken?: string | null, displayName?: string, availability?: unknown }> } | null | undefined} board
  * @param {string | null | undefined} storedToken
  * @param {string | null | undefined} signedInDisplayName
+ * @param {string} weekStartIso
  * @returns {{ shareToken: string, displayName: string, freeCells: Set<string> }}
  */
-export function restoreEditorState(board, storedToken, signedInDisplayName) {
+export function restoreEditorState(board, storedToken, signedInDisplayName, weekStartIso) {
 	const shareToken = typeof storedToken === 'string' ? storedToken : '';
 	const members = Array.isArray(board?.members) ? board.members : [];
 	if (shareToken) {
@@ -151,7 +218,7 @@ export function restoreEditorState(board, storedToken, signedInDisplayName) {
 			return {
 				shareToken,
 				displayName: typeof me.displayName === 'string' ? me.displayName : '',
-				freeCells: freeCellsFromAvailability(me.availability)
+				freeCells: freeCellsFromAvailability(me.availability, weekStartIso)
 			};
 		}
 	}

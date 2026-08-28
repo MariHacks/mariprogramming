@@ -50,7 +50,11 @@ function saveEvent(fields, params = { slug: 'study-group' }) {
 		request: {
 			formData: async () => {
 				const data = new FormData();
-				for (const [key, value] of Object.entries(fields)) data.set(key, value);
+				const withDefaults = { weekStart: '2026-08-24', ...fields };
+				for (const [key, value] of Object.entries(withDefaults)) {
+					if (value === undefined) continue;
+					data.set(key, value);
+				}
 				return data;
 			}
 		}
@@ -135,24 +139,103 @@ describe('free-time board page server', () => {
 		await expect(boom.load(event())).rejects.toThrow('boom');
 	});
 
-	it('saves member availability', async () => {
+	it('saves member availability for the requested week', async () => {
 		const current = handlers();
 		await expect(
 			current.actions.saveMember(
 				saveEvent({
 					displayName: 'Ada',
 					shareToken: '',
+					weekStart: '2026-08-24',
 					freeJson: JSON.stringify(['Mon-09:00'])
 				})
 			)
 		).resolves.toMatchObject({ saveSuccess: true, member: { displayName: 'Ada' } });
+		expect(current.store.upsertMemberAvailability).toHaveBeenCalledWith(
+			expect.objectContaining({
+				availability: { version: 2, byWeek: { '2026-08-24': ['Mon-09:00'] } }
+			})
+		);
 	});
 
-	it('treats missing form fields as empty', async () => {
+	it('merges the saved week into existing per-week availability', async () => {
+		const current = handlers({
+			store: {
+				getBoardBySlug: vi.fn(async () => ({
+					...BOARD,
+					members: [
+						{
+							id: 'm1',
+							displayName: 'Ada',
+							shareToken: 'token-1',
+							availability: {
+								version: 2,
+								byWeek: { '2026-08-24': ['Mon-09:00'] }
+							}
+						}
+					]
+				})),
+				upsertMemberAvailability: vi.fn(async ({ availability }) => ({
+					id: '80000000-0000-4000-8000-000000000001',
+					displayName: 'Ada',
+					availability,
+					shareToken: 'token-1'
+				}))
+			}
+		});
+		await expect(
+			current.actions.saveMember(
+				saveEvent({
+					displayName: 'Ada',
+					shareToken: 'token-1',
+					weekStart: '2026-08-31',
+					freeJson: JSON.stringify(['Tue-11:00'])
+				})
+			)
+		).resolves.toMatchObject({ saveSuccess: true });
+		expect(current.store.upsertMemberAvailability).toHaveBeenCalledWith(
+			expect.objectContaining({
+				availability: {
+					version: 2,
+					byWeek: {
+						'2026-08-24': ['Mon-09:00'],
+						'2026-08-31': ['Tue-11:00']
+					}
+				}
+			})
+		);
+	});
+
+	it('rejects a weekStart that is not a Monday', async () => {
 		const current = handlers();
-		await expect(current.actions.saveMember(saveEvent({}))).resolves.toMatchObject({
+		await expect(
+			current.actions.saveMember(
+				saveEvent({
+					displayName: 'Ada',
+					shareToken: '',
+					weekStart: '2026-08-25',
+					freeJson: '[]'
+				})
+			)
+		).resolves.toMatchObject({ status: 400 });
+	});
+
+	it('treats missing form fields as empty when weekStart is present', async () => {
+		const current = handlers();
+		await expect(
+			current.actions.saveMember(saveEvent({ weekStart: '2026-08-24' }))
+		).resolves.toMatchObject({
 			saveSuccess: true
 		});
+	});
+
+	it('rejects saves without a weekStart', async () => {
+		const current = handlers();
+		await expect(
+			current.actions.saveMember(
+				saveEvent({ displayName: 'Ada', shareToken: '', freeJson: '[]', weekStart: undefined })
+			)
+		).resolves.toMatchObject({ status: 400 });
 	});
 
 	it('rejects invalid availability json', async () => {

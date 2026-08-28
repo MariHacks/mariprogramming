@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
-import { availabilityFromFreeCells } from '$lib/maritools/schedule/freeTimeBoard.js';
+import { mondayOfWeek } from '$lib/maritools/schedule/academicWeekView.js';
+import { availabilityWithWeek } from '$lib/maritools/schedule/freeTimeBoard.js';
 import { readRuntimeEnvironment, ServerConfigurationError } from '$lib/server/config/environment.js';
 import {
 	MariToolsNotFoundError,
@@ -8,6 +9,19 @@ import {
 } from '$lib/server/maritools/repository.js';
 import { openFreeTimeStore } from '$lib/server/maritools/free-time-store.js';
 import { openStudentStore } from '$lib/server/maritools/student-store.js';
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
+
+/**
+ * @param {unknown} value
+ * @returns {string | null}
+ */
+function requiredMonday(value) {
+	const text = typeof value === 'string' ? value.trim() : '';
+	if (!ISO_DATE.test(text)) return null;
+	if (mondayOfWeek(text) !== text) return null;
+	return text;
+}
 
 export const prerender = false;
 
@@ -68,6 +82,10 @@ export function _createHandlers(dependencies = {}) {
 		const data = await event.request.formData();
 		const displayName = String(data.get('displayName') ?? '');
 		const shareToken = String(data.get('shareToken') ?? '');
+		const weekStart = requiredMonday(data.get('weekStart'));
+		if (!weekStart) {
+			return fail(400, { saveError: 'Pick a valid week before saving.' });
+		}
 		const freeJson = String(data.get('freeJson') ?? '[]');
 		/** @type {string[]} */
 		let free = [];
@@ -82,10 +100,14 @@ export function _createHandlers(dependencies = {}) {
 			const store = createStore();
 			const board = await store.getBoardBySlug(slug);
 			if (!board) return fail(404, { saveError: 'Board not found.' });
+			const existing =
+				shareToken && Array.isArray(board.members)
+					? board.members.find((member) => member.shareToken === shareToken)?.availability
+					: null;
 			const member = await store.upsertMemberAvailability({
 				boardId: board.id,
 				displayName,
-				availability: availabilityFromFreeCells(new Set(free)),
+				availability: availabilityWithWeek(existing, weekStart, new Set(free)),
 				shareToken: shareToken || null
 			});
 			return { member, saveSuccess: true };

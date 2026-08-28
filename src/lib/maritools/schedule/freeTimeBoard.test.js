@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	availabilityFromFreeCells,
+	availabilityWithWeek,
 	commonFreeCells,
 	freeCellsFromAvailability,
 	freeCellsFromCourses,
@@ -29,23 +30,64 @@ describe('paintSlotLabel', () => {
 });
 
 describe('freeCellsFromAvailability', () => {
-	it('round-trips through availabilityFromFreeCells', () => {
-		const cells = new Set([paintCellKey('Mon', '09:00'), paintCellKey('Tue', '10:00')]);
+	const weekA = '2026-08-24';
+	const weekB = '2026-08-31';
+	const mon = paintCellKey('Mon', '09:00');
+	const tue = paintCellKey('Tue', '10:00');
+
+	it('round-trips legacy v1 through availabilityFromFreeCells for any week', () => {
+		const cells = new Set([mon, tue]);
 		const serialized = availabilityFromFreeCells(cells);
-		expect(freeCellsFromAvailability(serialized)).toEqual(cells);
+		expect(serialized).toEqual({ version: 1, free: [...cells].sort() });
+		expect(freeCellsFromAvailability(serialized, weekA)).toEqual(cells);
+		expect(freeCellsFromAvailability(serialized, weekB)).toEqual(cells);
+	});
+
+	it('reads and writes distinct weeks under version 2', () => {
+		const withA = availabilityWithWeek(null, weekA, new Set([mon]));
+		expect(withA).toEqual({ version: 2, byWeek: { [weekA]: [mon] } });
+		const withBoth = availabilityWithWeek(withA, weekB, new Set([tue]));
+		expect(freeCellsFromAvailability(withBoth, weekA)).toEqual(new Set([mon]));
+		expect(freeCellsFromAvailability(withBoth, weekB)).toEqual(new Set([tue]));
+		expect(freeCellsFromAvailability(withBoth, '2026-09-07').size).toBe(0);
+	});
+
+	it('drops legacy free once a week is saved under version 2', () => {
+		const legacy = availabilityFromFreeCells(new Set([mon, tue]));
+		const upgraded = availabilityWithWeek(legacy, weekA, new Set([mon]));
+		expect(upgraded.free).toBeUndefined();
+		expect(freeCellsFromAvailability(upgraded, weekA)).toEqual(new Set([mon]));
+		expect(freeCellsFromAvailability(upgraded, weekB).size).toBe(0);
 	});
 });
 
 describe('commonFreeCells', () => {
-	it('returns only cells every member marked free', () => {
-		const shared = paintCellKey('Wed', '12:00');
-		expect(commonFreeCells([])).toEqual(new Set());
+	const weekA = '2026-08-24';
+	const weekB = '2026-08-31';
+	const shared = paintCellKey('Wed', '12:00');
+
+	it('returns only cells every member marked free for the requested week', () => {
+		expect(commonFreeCells([], weekA)).toEqual(new Set());
 		expect(
-			commonFreeCells([
-				{ availability: availabilityFromFreeCells(new Set([shared, paintCellKey('Mon', '09:00')])) },
-				{ availability: availabilityFromFreeCells(new Set([shared])) }
-			])
+			commonFreeCells(
+				[
+					{
+						availability: availabilityWithWeek(null, weekA, new Set([shared, paintCellKey('Mon', '09:00')]))
+					},
+					{ availability: availabilityWithWeek(null, weekA, new Set([shared])) }
+				],
+				weekA
+			)
 		).toEqual(new Set([shared]));
+		expect(
+			commonFreeCells(
+				[
+					{ availability: availabilityWithWeek(null, weekA, new Set([shared])) },
+					{ availability: availabilityWithWeek(null, weekB, new Set([shared])) }
+				],
+				weekA
+			).size
+		).toBe(0);
 	});
 });
 
@@ -75,9 +117,9 @@ describe('freeCellsFromCourses', () => {
 	});
 
 	it('returns no cells for missing availability payloads', () => {
-		expect(freeCellsFromAvailability(null).size).toBe(0);
-		expect(freeCellsFromAvailability([]).size).toBe(0);
-		expect(freeCellsFromAvailability({}).size).toBe(0);
+		expect(freeCellsFromAvailability(null, '2026-08-24').size).toBe(0);
+		expect(freeCellsFromAvailability([], '2026-08-24').size).toBe(0);
+		expect(freeCellsFromAvailability({}, '2026-08-24').size).toBe(0);
 	});
 });
 
@@ -88,6 +130,8 @@ describe('slugFromBoardTitle', () => {
 });
 
 describe('restoreEditorState', () => {
+	const weekA = '2026-08-24';
+	const weekB = '2026-08-31';
 	const mon = paintCellKey('Mon', '09:00');
 	const tue = paintCellKey('Tue', '11:00');
 	const board = {
@@ -97,33 +141,38 @@ describe('restoreEditorState', () => {
 				id: 'm1',
 				displayName: 'Ada',
 				shareToken: 'tok-ada',
-				availability: availabilityFromFreeCells(new Set([mon, tue]))
+				availability: availabilityWithWeek(
+					availabilityWithWeek(null, weekA, new Set([mon, tue])),
+					weekB,
+					new Set([mon])
+				)
 			},
 			{
 				id: 'm2',
 				displayName: 'Blake',
 				shareToken: 'tok-blake',
-				availability: availabilityFromFreeCells(new Set([mon]))
+				availability: availabilityWithWeek(null, weekA, new Set([mon]))
 			}
 		]
 	};
 
-	it('restores display name and painted cells from the share-token member', () => {
-		const restored = restoreEditorState(board, 'tok-ada', null);
+	it('restores display name and painted cells for the requested week', () => {
+		const restored = restoreEditorState(board, 'tok-ada', null, weekA);
 		expect(restored.shareToken).toBe('tok-ada');
 		expect(restored.displayName).toBe('Ada');
 		expect(restored.freeCells).toEqual(new Set([mon, tue]));
+		expect(restoreEditorState(board, 'tok-ada', null, weekB).freeCells).toEqual(new Set([mon]));
 	});
 
 	it('prefills the signed-in display name when no share token matches', () => {
-		const restored = restoreEditorState(board, '', 'Nick');
+		const restored = restoreEditorState(board, '', 'Nick', weekA);
 		expect(restored.shareToken).toBe('');
 		expect(restored.displayName).toBe('Nick');
 		expect(restored.freeCells.size).toBe(0);
 	});
 
 	it('keeps a stale token but does not wipe the signed-in name when the member is gone', () => {
-		const restored = restoreEditorState({ id: 'board-1', members: [] }, 'tok-gone', 'Nick');
+		const restored = restoreEditorState({ id: 'board-1', members: [] }, 'tok-gone', 'Nick', weekA);
 		expect(restored.shareToken).toBe('tok-gone');
 		expect(restored.displayName).toBe('Nick');
 		expect(restored.freeCells.size).toBe(0);

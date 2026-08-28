@@ -1,12 +1,17 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CANONICAL_OMNIVOX_SCHEDULE } from '$lib/maritools/schedule/fixture.js';
+import { addDays, mondayOfWeek } from '$lib/maritools/schedule/academicWeekView.js';
+import { calendarDate } from '$lib/maritools/term/calendar.js';
 import BoardPage from './+page.svelte';
 
 vi.mock('$app/environment', () => ({ browser: true }));
 vi.mock('$app/forms', () => ({
 	enhance: () => () => {}
 }));
+
+const THIS_WEEK = mondayOfWeek(calendarDate());
+const NEXT_WEEK = addDays(THIS_WEEK, 7);
 
 const BOARD = {
 	id: '70000000-0000-4000-8000-000000000001',
@@ -44,7 +49,7 @@ describe('free-time board page', () => {
 		expect(screen.getByLabelText('Interactive free-time grid')).toBeInTheDocument();
 		expect(screen.getByText('Ada')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Save availability' })).toBeInTheDocument();
-		expect(screen.getByText(/Mon–Fri pattern/i)).toBeInTheDocument();
+		expect(screen.getByText(/Availability is saved per week/i)).toBeInTheDocument();
 	});
 
 	it('restores painted cells and display name from the local share token', () => {
@@ -63,7 +68,10 @@ describe('free-time board page', () => {
 								id: 'm1',
 								displayName: 'Ada',
 								shareToken: 'tok-ada',
-								availability: { version: 1, free: ['Mon-09:00', 'Tue-11:00'] }
+								availability: {
+									version: 2,
+									byWeek: { [THIS_WEEK]: ['Mon-09:00', 'Tue-11:00'] }
+								}
 							}
 						]
 					},
@@ -78,7 +86,7 @@ describe('free-time board page', () => {
 		expect(screen.getByText(/editing as Guest, Ada/i)).toBeInTheDocument();
 	});
 
-	it('keeps painted cells when switching weeks', () => {
+	it('loads a different week when switching away from a painted week', () => {
 		vi.stubGlobal('localStorage', {
 			getItem: vi.fn(() => 'tok-ada'),
 			setItem: vi.fn(),
@@ -94,7 +102,13 @@ describe('free-time board page', () => {
 								id: 'm1',
 								displayName: 'Ada',
 								shareToken: 'tok-ada',
-								availability: { version: 1, free: ['Mon-09:00'] }
+								availability: {
+									version: 2,
+									byWeek: {
+										[THIS_WEEK]: ['Mon-09:00'],
+										[NEXT_WEEK]: ['Wed-14:00']
+									}
+								}
 							}
 						]
 					},
@@ -103,10 +117,12 @@ describe('free-time board page', () => {
 				}
 			}
 		});
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute('aria-pressed', 'true');
 		const before = screen.getByRole('heading', { level: 1 }).textContent;
 		fireEvent.click(screen.getByRole('button', { name: 'Next week' }));
 		expect(screen.getByRole('heading', { level: 1 }).textContent).not.toBe(before);
-		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute('aria-pressed', 'true');
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute('aria-pressed', 'false');
+		expect(screen.getByRole('button', { name: 'Wed 14:00' })).toHaveAttribute('aria-pressed', 'true');
 	});
 
 	it('labels signed-in editors differently from guests', () => {
