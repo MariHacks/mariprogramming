@@ -1,7 +1,7 @@
 /**
  * Honest proof that semester outline file input is button-scoped.
  * Films labeled inert clicks (empty sheet + heading) then Add course outline
- * opening a filechooser (Playwright intercept + on-screen banner).
+ * opening a filechooser (Playwright intercept + page-DOM banner in #svelte).
  *
  * Usage: node scripts/capture-semester-file-picker-fix.mjs [baseUrl]
  * Default baseUrl: http://127.0.0.1:5174
@@ -137,6 +137,19 @@ async function installProofChrome(page) {
 		if (document.getElementById('proof-hud')) return;
 		const style = document.createElement('style');
 		style.textContent = `
+			#proof-page-chooser {
+				position: fixed; top: 0; left: 0; right: 0; z-index: 40; display: block;
+				box-sizing: border-box; margin: 0; padding: 14px 18px;
+				background: #1a2332; color: #ffe08a; border-bottom: 4px solid #ff3b30;
+				font: 700 18px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+				letter-spacing: 0.02em; text-align: center; pointer-events: none;
+			}
+			#proof-page-chooser.ok {
+				background: #14351f; color: #9dffb0; border-bottom-color: #2ecc71;
+			}
+			#proof-page-chooser.bad {
+				background: #3a1414; color: #ff9d9d; border-bottom-color: #e74c3c;
+			}
 			#proof-hud {
 				position: fixed; right: 16px; bottom: 72px; z-index: 2147483646;
 				width: 420px; max-width: calc(100vw - 32px); padding: 10px 12px; border-radius: 8px;
@@ -180,6 +193,19 @@ async function installProofChrome(page) {
 			}
 		`;
 		document.head.appendChild(style);
+
+		// Page-level banner inside the app document (not the HUD). Reviewers
+		// discard #proof-hud; this lives under #svelte / .mt-preview.
+		const pageHost =
+			document.querySelector('#svelte') ||
+			document.querySelector('.mt-preview') ||
+			document.querySelector('.page-semester') ||
+			document.body;
+		const pageBanner = document.createElement('div');
+		pageBanner.id = 'proof-page-chooser';
+		pageBanner.setAttribute('data-proof', 'page-chooser');
+		pageBanner.textContent = 'NO chooser (count 0)';
+		pageHost.prepend(pageBanner);
 
 		const hud = document.createElement('div');
 		hud.id = 'proof-hud';
@@ -229,6 +255,7 @@ async function installProofChrome(page) {
 }
 
 /**
+ * Update the in-document page banner (primary review evidence) and the HUD mirror.
  * @param {import('@playwright/test').Page} page
  * @param {string} text
  * @param {'ok'|'bad'|''} [kind]
@@ -236,13 +263,42 @@ async function installProofChrome(page) {
 async function setBanner(page, text, kind = '') {
 	await page.evaluate(
 		({ text, kind }) => {
+			const pageEl = document.getElementById('proof-page-chooser');
+			if (pageEl) {
+				pageEl.textContent = text;
+				pageEl.className = kind;
+			}
 			const el = document.getElementById('proof-hud-banner');
-			if (!el) return;
-			el.textContent = text;
-			el.className = kind;
+			if (el) {
+				el.textContent = text;
+				el.className = kind;
+			}
 		},
 		{ text, kind }
 	);
+}
+
+/**
+ * Sync page banner from live chooser count (call from filechooser handler).
+ * @param {import('@playwright/test').Page} page
+ */
+async function paintChooserFired(page) {
+	await page.evaluate(() => {
+		const n = Number(window.__proofChooserCount || 0);
+		const text =
+			n > 0 ? `FILECHOOSER FIRED (count ${n})` : 'NO chooser (count 0)';
+		const kind = n > 0 ? 'ok' : '';
+		const pageEl = document.getElementById('proof-page-chooser');
+		if (pageEl) {
+			pageEl.textContent = text;
+			pageEl.className = kind;
+		}
+		const el = document.getElementById('proof-hud-banner');
+		if (el) {
+			el.textContent = text;
+			el.className = kind;
+		}
+	});
 }
 
 /**
@@ -323,6 +379,7 @@ async function main() {
 			window.__proofChooserCount = Number(window.__proofChooserCount || 0) + 1;
 			window.__proofLastChooserAt = Date.now();
 		});
+		await paintChooserFired(page);
 		// Playwright already intercepted the OS dialog; leave files unset.
 		void chooser;
 	});
@@ -331,6 +388,7 @@ async function main() {
 		await page.goto('/tools/semester', { waitUntil: 'networkidle' });
 		await page.waitForSelector('label.add-outline', { timeout: 15000 });
 		await installProofChrome(page);
+		await setBanner(page, 'NO chooser (count 0)', '');
 		await mark(page, t0, log, 'semester ready with Add course outline');
 
 		const geom = await page.evaluate(() => {
@@ -390,8 +448,8 @@ async function main() {
 		await setBanner(
 			page,
 			sheetOk
-				? `1/3 EMPTY SHEET click: NO chooser (count ${choosers.length})`
-				: `1/3 FAIL: empty sheet fired chooser (+${sheetDelta})`,
+				? `NO chooser (count ${choosers.length}) — empty sheet inert`
+				: `FAIL: empty sheet fired chooser (+${sheetDelta})`,
 			sheetOk ? 'ok' : 'bad'
 		);
 		await mark(
@@ -415,8 +473,8 @@ async function main() {
 		await setBanner(
 			page,
 			headOk
-				? `2/3 HEADING click: NO chooser (count ${choosers.length})`
-				: `2/3 FAIL: heading fired chooser (+${headDelta})`,
+				? `NO chooser (count ${choosers.length}) — heading inert`
+				: `FAIL: heading fired chooser (+${headDelta})`,
 			headOk ? 'ok' : 'bad'
 		);
 		await mark(
@@ -443,8 +501,8 @@ async function main() {
 		await setBanner(
 			page,
 			btnOk
-				? `3/3 ADD COURSE OUTLINE: FILECHOOSER FIRED (count ${choosers.length})`
-				: '3/3 FAIL: Add course outline did not open filechooser',
+				? `FILECHOOSER FIRED (count ${choosers.length})`
+				: 'FAIL: Add course outline did not open filechooser',
 			btnOk ? 'ok' : 'bad'
 		);
 		await mark(
@@ -455,7 +513,7 @@ async function main() {
 				? `filechooser fired (count ${choosers.length})`
 				: 'BUG Add course outline did not fire chooser'
 		);
-		await sleep(1800);
+		await sleep(2800);
 
 		const geomOk = geom.input.w < 400 && geom.input.h < 120 && geom.input.w * geom.input.h < 80_000;
 		const pass = sheetOk && headOk && btnOk && geomOk;
