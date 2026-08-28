@@ -209,7 +209,10 @@
 						id="save-availability"
 						method="POST"
 						action="?/saveMember"
-						use:enhance={() => {
+						use:enhance={({ formData }) => {
+							formData.set('freeJson', JSON.stringify([...freeCells]));
+							formData.set('shareToken', shareToken);
+							formData.set('displayName', displayName);
 							return async ({ result, update }) => {
 								if (result.type === 'failure') {
 									saveMessage = String(result.data?.saveError ?? 'Could not save.');
@@ -223,6 +226,8 @@
 										: undefined;
 								applySavedMember(member);
 								await update();
+								restoredOnce = false;
+								applyRestoredState();
 								saveMessage = 'Availability saved.';
 							};
 						}}
