@@ -1,5 +1,9 @@
 /* Production-only rules for catalog, clubs, forum, and thread. */
 
+.mt-preview .page-semester {
+	padding: 0;
+}
+
 .mt-preview .catalog-row h2,
 .mt-preview .club-row h2,
 .mt-preview .topic-row h2 {
@@ -87,6 +91,10 @@
 	.mt-preview .paint-grid {
 		width: 100%;
 		min-width: 0;
+	}
+
+	.mt-preview .page-semester {
+		padding: 0;
 	}
 }
 
