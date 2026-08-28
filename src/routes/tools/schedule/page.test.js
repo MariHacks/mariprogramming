@@ -58,6 +58,19 @@ describe('My schedule', () => {
 		expect(screen.getByText('7 classes detected')).toHaveClass('parse-count');
 	});
 
+	it('keeps the import drawer open after a successful parse so the green count stays visible', () => {
+		const { container } = render(SchedulePage, { props: { data: defaultData } });
+		fireEvent.click(screen.getAllByRole('button', { name: 'Import Omnivox' })[0]);
+		fireEvent.input(screen.getByLabelText('Omnivox course list'), {
+			target: { value: CANONICAL_OMNIVOX_SCHEDULE }
+		});
+		fireEvent.click(screen.getByRole('button', { name: 'Read schedule' }));
+		expect(container.querySelector('.schedule-stage')?.classList.contains('drawer-hidden')).toBe(
+			false
+		);
+		expect(screen.getByText('7 classes detected')).toBeVisible();
+	});
+
 	it('warns when a student number is in the paste', () => {
 		render(SchedulePage, { props: { data: defaultData } });
 		fireEvent.click(screen.getAllByRole('button', { name: 'Import Omnivox' })[0]);

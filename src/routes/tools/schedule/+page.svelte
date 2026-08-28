@@ -41,7 +41,7 @@
 	$: if (form?.result) {
 		result = form.result;
 		parsed = true;
-		drawerOpen = false;
+		drawerOpen = true;
 	}
 
 	$: if (form?.pushError) {
@@ -67,7 +67,7 @@
 		result = parseOmnivox(paste);
 		parsed = true;
 		exportError = '';
-		drawerOpen = !result.ok;
+		drawerOpen = true;
 	}
 
 	function goToToday() {
