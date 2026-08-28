@@ -8,12 +8,21 @@ describe('semester page', () => {
 	it('sends visitors to the account page when they are signed out', () => {
 		render(SemesterPage, { props: { data: { view: { kind: 'need-sign-in' } } } });
 		expect(screen.getByRole('heading', { name: 'Sign in to upload outlines' })).toBeInTheDocument();
-		expect(screen.getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/tools/account');
+		const openAccount = screen.getByRole('link', { name: 'Open account' });
+		expect(openAccount).toHaveAttribute('href', '/tools/account');
+		expect(openAccount).toHaveClass('primary-button');
 		expect(screen.getByText(/Course outlines stay private until you choose to share/)).toBeInTheDocument();
-		expect(screen.getByRole('link', { name: 'Sign in to add an outline' })).toHaveAttribute(
-			'href',
-			'/tools/account'
-		);
+		const stackGate = screen.getByRole('link', { name: 'Sign in to add an outline' });
+		expect(stackGate).toHaveAttribute('href', '/tools/account');
+		expect(stackGate).not.toHaveClass('primary-button');
+		expect(stackGate).toHaveClass('quiet-button');
+		const primaryAccountLinks = screen
+			.getAllByRole('link')
+			.filter(
+				(link) =>
+					link.classList.contains('primary-button') && link.getAttribute('href') === '/tools/account'
+			);
+		expect(primaryAccountLinks).toHaveLength(1);
 		expect(screen.queryByLabelText('Course outline PDF')).not.toBeInTheDocument();
 	});
 

@@ -92,7 +92,7 @@
 							<strong>{termName}</strong>
 							<span>Sign in to upload</span>
 						</div>
-						<a class="primary-button add-outline add-outline--gate" href={resolve('/tools/account', {})}>
+						<a class="quiet-button add-outline--gate" href={resolve('/tools/account', {})}>
 							Sign in to add an outline
 						</a>
 					</div>
