@@ -48,6 +48,9 @@
 					<strong>No clubs match those filters.</strong>
 					<p>Clear the search or choose All categories to see every published listing.</p>
 					<a href="/tools/clubs">Reset filters</a>
+				{:else if data.signedIn}
+					<strong>No published clubs yet.</strong>
+					<p>Use the form below to send a listing for staff review.</p>
 				{:else}
 					<strong>No published clubs yet.</strong>
 					<p>Browse stays open while staff review listings. Sign in to submit one.</p>

@@ -33,6 +33,29 @@ describe('forum page', () => {
 		expect(signInLinks[0]).toHaveAttribute('href', '/tools/account');
 	});
 
+	it('points signed-in students at the composer when the board is empty', () => {
+		render(ForumPage, {
+			props: {
+				data: {
+					threads: [],
+					courses: [],
+					category: '',
+					courseId: '',
+					query: '',
+					signedIn: true
+				}
+			}
+		});
+		expect(screen.getByText('No threads yet.')).toBeInTheDocument();
+		expect(screen.getByText(/Start the first discussion below/)).toBeInTheDocument();
+		expect(screen.queryByText(/Read without an account/)).not.toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Start a thread' })).toHaveAttribute(
+			'href',
+			'#composer'
+		);
+		expect(screen.getByRole('button', { name: 'Post thread' })).toBeInTheDocument();
+	});
+
 	it('lists threads with course tags and the post form when signed in', () => {
 		render(ForumPage, {
 			props: {

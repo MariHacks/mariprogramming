@@ -39,6 +39,15 @@
 	).length;
 	$: isReady = data.view.kind === 'ready';
 	$: gateKind = data.view.kind;
+	$: gateStack =
+		gateKind === 'need-profile'
+			? { status: 'Finish account to upload', action: 'Finish account to add an outline' }
+			: gateKind === 'need-disclosure'
+				? {
+						status: 'Confirm disclosure to upload',
+						action: 'Confirm disclosure to add an outline'
+					}
+				: { status: 'Sign in to upload', action: 'Sign in to add an outline' };
 
 	function addAssessment() {
 		proposals = {
@@ -90,16 +99,16 @@
 					<div class="stack-head">
 						<div>
 							<strong>{termName}</strong>
-							<span>Sign in to upload</span>
+							<span>{gateStack.status}</span>
 						</div>
 						<a class="quiet-button add-outline--gate" href={resolve('/tools/account', {})}>
-							Sign in to add an outline
+							{gateStack.action}
 						</a>
 					</div>
 				{/if}
 
 				{#if form?.extraction}
-					<button type="button" class="is-selected">
+					<button type="button" class="is-selected" class:needs-dates={missingDates > 0}>
 						<span>{courseCode || 'Course'}</span>
 						<strong>{title || 'Untitled outline'}</strong>
 						<small>{missingDates ? `${missingDates} date missing` : 'Ready to save'}</small>

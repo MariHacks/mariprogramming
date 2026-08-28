@@ -43,10 +43,22 @@ describe('semester page', () => {
 		render(SemesterPage, { props: { data: { view: { kind: 'need-profile' } } } });
 		expect(screen.getByRole('heading', { name: 'Finish your account' })).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/tools/account');
+		expect(screen.getByText('Finish account to upload')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Finish account to add an outline' })).toHaveAttribute(
+			'href',
+			'/tools/account'
+		);
+		expect(screen.queryByLabelText('Course outline PDF')).not.toBeInTheDocument();
 		cleanup();
 		render(SemesterPage, { props: { data: { view: { kind: 'need-disclosure' } } } });
 		expect(screen.getByRole('heading', { name: 'Confirm the NVIDIA disclosure' })).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/tools/account');
+		expect(screen.getByText('Confirm disclosure to upload')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Confirm disclosure to add an outline' })).toHaveAttribute(
+			'href',
+			'/tools/account'
+		);
+		expect(screen.queryByLabelText('Course outline PDF')).not.toBeInTheDocument();
 	});
 
 	it('lets a student review extracted assessments privately', () => {
@@ -73,6 +85,30 @@ describe('semester page', () => {
 				'Only the course code, instructor, assessments, and book references are shared.'
 			)
 		).toBeInTheDocument();
+		const selected = screen.getByRole('button', { name: /Untitled outline/ });
+		expect(selected).toHaveTextContent('Ready to save');
+		expect(selected).not.toHaveClass('needs-dates');
+	});
+
+	it('marks missing assessment dates on the selected course chip', () => {
+		render(SemesterPage, {
+			props: {
+				data: { view: { kind: 'ready' } },
+				form: {
+					extraction: {
+						ok: true,
+						sha256: 'ab'.repeat(32),
+						proposals: {
+							assessments: [{ title: 'Midterm', weight: 30, date: '' }],
+							books: []
+						}
+					}
+				}
+			}
+		});
+		const selected = screen.getByRole('button', { name: /Untitled outline/ });
+		expect(selected).toHaveTextContent('1 date missing');
+		expect(selected).toHaveClass('needs-dates');
 	});
 
 	it('explains a missing NVIDIA key and a reused extraction', () => {

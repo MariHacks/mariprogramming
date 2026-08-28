@@ -89,6 +89,9 @@
 					<strong>No threads match those filters.</strong>
 					<p>Try Latest, clear search, or pick Every course.</p>
 					<a href="/tools/forum">Reset filters</a>
+				{:else if data.signedIn}
+					<strong>No threads yet.</strong>
+					<p>Start the first discussion below. Keep student numbers and private files out of posts.</p>
 				{:else}
 					<strong>No threads yet.</strong>
 					<p>Read without an account. Sign in with Google when you want to post.</p>

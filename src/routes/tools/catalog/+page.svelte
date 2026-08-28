@@ -66,7 +66,7 @@
 				<span class="catalog-eyebrow">Courses</span>
 				<h1>Course catalog</h1>
 			</div>
-			<p>Assessments and books students have shared. Books are reference only. Browse without signing in.</p>
+			<p>Assessments and books students have shared. Books are reference only.</p>
 		</header>
 
 		<form method="GET" class="index-filters">

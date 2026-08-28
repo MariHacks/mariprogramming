@@ -40,6 +40,28 @@ describe('clubs page', () => {
 		);
 	});
 
+	it('points signed-in students at the submit form when the directory is empty', () => {
+		render(ClubsPage, {
+			props: {
+				data: {
+					clubs: [],
+					pending: [],
+					query: '',
+					category: '',
+					categories: [],
+					signedIn: true,
+					staff: false
+				}
+			}
+		});
+		expect(screen.getByText('No published clubs yet.')).toBeInTheDocument();
+		expect(
+			screen.getByText(/Use the form below to send a listing for staff review/)
+		).toBeInTheDocument();
+		expect(screen.queryByText(/Sign in to submit one/)).not.toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Send for review' })).toBeInTheDocument();
+	});
+
 	it('explains when filters match nothing', () => {
 		render(ClubsPage, {
 			props: {

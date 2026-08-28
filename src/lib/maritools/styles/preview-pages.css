@@ -1034,6 +1034,10 @@
 	}
 
 	.course-stack button.is-selected small {
+		color: var(--steel);
+	}
+
+	.course-stack button.is-selected.needs-dates small {
 		color: var(--red);
 	}
 
