@@ -2464,15 +2464,9 @@
 		box-shadow: 0 10px 24px rgb(var(--ink-rgb) / 20%);
 	}
 
+	/* Chrome is baked into step-NN.webp to avoid a double title bar. */
 	.mock-browser-bar {
-		display: flex;
-		align-items: center;
-		height: 35px;
-		padding: 0 11px;
-		border: 1px solid #bdc9d7;
-		border-bottom: 0;
-		background: #dfe6ee;
-		gap: 6px;
+		display: none;
 	}
 
 	.mock-browser-bar i {
@@ -2571,7 +2565,7 @@
 	.tutorial-screenshots {
 		position: absolute;
 		z-index: 2;
-		inset: 57px 22px 22px;
+		inset: 22px;
 	}
 
 	.tutorial-screenshots img {
