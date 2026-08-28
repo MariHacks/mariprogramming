@@ -267,7 +267,12 @@ describe('staff order detail', () => {
 			data: {
 				success: true,
 				message: 'Order moved to purchasing.',
-				order: { id: ORDER_ID, fulfillmentStatus: 'purchasing', version: 5 }
+				order: {
+					id: ORDER_ID,
+					paymentStatus: 'paid',
+					fulfillmentStatus: 'purchasing',
+					version: 5
+				}
 			}
 		});
 		await waitFor(() =>
@@ -277,7 +282,11 @@ describe('staff order detail', () => {
 			expect.objectContaining({ type: 'success', status: 200 })
 		);
 		expect(navigationMocks.invalidateAll).toHaveBeenCalledOnce();
-		expect(button).toBeEnabled();
+		const statuses = screen.getByLabelText('Current order status');
+		expect(statuses).toHaveTextContent('Purchasing');
+		expect(statuses).not.toHaveTextContent('Unstarted');
+		expect(screen.queryByRole('button', { name: 'Start purchasing' })).not.toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Mark books received' })).toBeVisible();
 	});
 
 	it('contains an enhanced transport error and restores actions', async () => {

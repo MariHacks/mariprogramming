@@ -347,21 +347,41 @@ async function captureOrders(browser, seeded) {
 	if ((await startPurchasing.count()) === 0) {
 		bugs.push('missing Start purchasing next action');
 	} else {
+		const fulfillmentBadge = page.locator('.heading-statuses .status').nth(1);
+		const beforeBadge = ((await fulfillmentBadge.textContent()) ?? '').trim();
+		if (!/^Unstarted$/i.test(beforeBadge)) {
+			bugs.push(`expected Unstarted badge before advance, got "${beforeBadge}"`);
+		}
 		await startPurchasing.click();
-		await page.getByText(/Purchasing|purchasing started|updated/i).first().waitFor({
-			state: 'visible',
-			timeout: 10000
-		}).catch(() => {});
-		await mark(page, t0, log, 'advanced fulfillment to purchasing');
+		const advanced = await page
+			.locator('.heading-statuses .status')
+			.filter({ hasText: /^Purchasing$/i })
+			.first()
+			.waitFor({ state: 'visible', timeout: 12000 })
+			.then(() => true)
+			.catch(() => false);
+		const stillUpdating = await page.getByText('Updating order').isVisible().catch(() => false);
+		const stillStart = (await page.getByRole('button', { name: 'Start purchasing' }).count()) > 0;
+		const badgeText = ((await fulfillmentBadge.textContent()) ?? '').trim();
+		if (!advanced || stillUpdating || stillStart || !/^Purchasing$/i.test(badgeText)) {
+			bugs.push(
+				`fulfillment did not advance on screen (badge="${badgeText}", updating=${stillUpdating}, startButton=${stillStart})`
+			);
+		} else {
+			await mark(page, t0, log, 'fulfillment badge Purchasing');
+		}
 		await page.screenshot({ path: path.join(outDir, 'order-after-advance.png'), fullPage: false });
 	}
 
 	await page.goto('/staff/book-work', { waitUntil: 'domcontentloaded' });
 	await page.getByRole('heading', { name: 'Book work' }).waitFor({ state: 'visible', timeout: 10000 });
-	await mark(page, t0, log, 'book work after student request seed');
+	await mark(page, t0, log, 'book work seeded request (staff view)');
 	const workText = await page.locator('body').innerText();
 	if (!/Discrete Mathematics/i.test(workText)) {
 		bugs.push('book work missing seeded request item');
+	}
+	if (!workText.includes(seeded.requestRef)) {
+		bugs.push(`book work missing visible request id ${seeded.requestRef}`);
 	}
 	if (/There is no outstanding book work/i.test(workText) && !/Discrete Mathematics/i.test(workText)) {
 		bugs.push('book work empty despite submitted request');
@@ -382,9 +402,14 @@ async function captureOrders(browser, seeded) {
 			'# Staff orders proof',
 			'',
 			`- Seeded order: \`${seeded.reference}\` (\`${seeded.orderId}\`)`,
-			`- Seeded book request: \`${seeded.requestRef}\``,
+			`- Seeded book request (DB → staff Book work, not filmed student UI): \`${seeded.requestRef}\``,
 			`- Video: \`orders-detail-export.webm\``,
 			`- Export CSV: \`bookstore-purchase-list.csv\``,
+			'',
+			'## Claims',
+			'- Advance PASS only if fulfillment badge becomes Purchasing and Start purchasing is gone.',
+			'- Handoff PASS only if `REQ-…` is visible on Book work (seeded staff view).',
+			'- Do not treat HUD labels as proof.',
 			'',
 			'## Timeline',
 			...log.map((entry) => `- ${entry.t.toFixed(2)}s ${entry.label}`),

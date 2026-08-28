@@ -62,15 +62,33 @@
 		timeZone: 'America/Toronto'
 	});
 
+	const fulfillmentFlow = Object.freeze([
+		'unstarted',
+		'purchasing',
+		'received',
+		'ready_for_pickup',
+		'picked_up'
+	]);
+
 	/** @type {HTMLDivElement | undefined} */
 	let errorElement;
 	/** @type {any} */
 	let focusedFailure = null;
 	/** @type {any} */
 	let enhancedForm = null;
+	/** @type {any} */
+	let pendingOrder = null;
 	let submitting = false;
 
-	$: order = data.order;
+	$: if (
+		pendingOrder &&
+		data.order &&
+		data.order.id === pendingOrder.id &&
+		data.order.version >= pendingOrder.version
+	) {
+		pendingOrder = null;
+	}
+	$: order = pendingOrder ?? data.order;
 	$: responseForm = enhancedForm ?? form;
 	$: successMessage = responseForm?.success ? responseForm.message : '';
 
@@ -108,6 +126,39 @@
 		return torontoDate.format(new Date(value));
 	}
 
+	/** @param {string} paymentStatus @param {string} fulfillmentStatus */
+	function nextAfterAdvance(paymentStatus, fulfillmentStatus) {
+		if (paymentStatus !== 'paid') return null;
+		const index = fulfillmentFlow.indexOf(fulfillmentStatus);
+		if (index < 0) return null;
+		const next = fulfillmentFlow[index + 1];
+		return next && Object.hasOwn(nextActionLabels, next) ? next : null;
+	}
+
+	/** @param {any} current @param {any} patch */
+	function applyOrderPatch(current, patch) {
+		if (!current || !patch || typeof patch !== 'object') return current;
+		const paymentStatus =
+			typeof patch.paymentStatus === 'string' ? patch.paymentStatus : current.paymentStatus;
+		const fulfillmentStatus =
+			typeof patch.fulfillmentStatus === 'string'
+				? patch.fulfillmentStatus
+				: current.fulfillmentStatus;
+		const version =
+			Number.isSafeInteger(patch.version) && patch.version > 0 ? patch.version : current.version;
+		return {
+			...current,
+			paymentStatus,
+			fulfillmentStatus,
+			version,
+			nextFulfillmentStatus: nextAfterAdvance(paymentStatus, fulfillmentStatus),
+			canCancel:
+				paymentStatus === 'pending' && fulfillmentStatus === 'unstarted'
+					? current.canCancel
+					: false
+		};
+	}
+
 	function enhanceMutation() {
 		submitting = true;
 		enhancedForm = null;
@@ -115,6 +166,9 @@
 			submitting = false;
 			if (result.type === 'success' || result.type === 'failure') {
 				enhancedForm = result.data;
+				if (result.type === 'success' && result.data?.order) {
+					pendingOrder = applyOrderPatch(pendingOrder ?? data.order, result.data.order);
+				}
 				try {
 					await applyAction(result);
 				} catch {

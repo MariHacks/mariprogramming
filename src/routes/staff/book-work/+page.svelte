@@ -34,8 +34,8 @@
 					<table>
 						<thead>
 							<tr
-								><th>Book</th><th>Requested</th><th>Picked up</th><th>Remaining</th><th>Source</th
-								><th>Age</th><th>Action</th></tr
+								><th>Book</th><th>Reference</th><th>Requested</th><th>Picked up</th><th>Remaining</th
+								><th>Source</th><th>Age</th><th>Action</th></tr
 							>
 						</thead>
 						<tbody>
@@ -45,6 +45,7 @@
 										><strong>{row.title}</strong>{#if row.author}<small>{row.author}</small
 											>{/if}</td
 									>
+									<td><code class="reference">{row.reference}</code></td>
 									<td>{row.requested}</td>
 									<td>{row.pickedUp}</td>
 									<td>{row.remaining}</td>
@@ -149,6 +150,12 @@
 	td strong,
 	td small {
 		display: block;
+	}
+	.reference {
+		font-family: var(--font-mono);
+		font-size: 0.8125rem;
+		letter-spacing: -0.02em;
+		user-select: all;
 	}
 	td form {
 		display: flex;

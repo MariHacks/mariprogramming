@@ -65,6 +65,8 @@ describe('staff book work board', () => {
 		});
 		expect(screen.getByRole('heading', { name: 'Unassigned' })).toBeVisible();
 		expect(screen.getByRole('heading', { name: 'Campus Books' })).toBeVisible();
+		expect(screen.getByText('REQ-ABCDEFGH2345')).toBeVisible();
+		expect(screen.getByText('MPC-ABCDEFGH2345')).toBeVisible();
 		expect(screen.getByRole('button', { name: 'Assign' })).toBeVisible();
 		expect(screen.getByRole('button', { name: 'Record pickup' })).toBeVisible();
 		expect(screen.getByText('2 hours old')).toHaveClass('age-fresh');
