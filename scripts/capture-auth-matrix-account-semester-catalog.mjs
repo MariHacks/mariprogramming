@@ -36,7 +36,12 @@ async function mark(page, t0, log, label) {
 	await sleep(650);
 }
 
-/** Visible on-camera location strip (browser chrome is not in Playwright video). */
+/**
+ * In-page URL strip (Playwright video has no browser chrome).
+ * Appended to document.body so Svelte hydration of .mt-preview cannot wipe it.
+ * Still page DOM (data-proof), not Playwright's own HUD.
+ * @param {import('@playwright/test').Page} page
+ */
 async function showLocationStrip(page) {
 	await page.evaluate(() => {
 		const id = 'auth-matrix-loc';
@@ -50,23 +55,128 @@ async function showLocationStrip(page) {
 				top: '0',
 				left: '0',
 				right: '0',
-				zIndex: '2147483647',
-				padding: '8px 12px',
+				zIndex: '2147483646',
+				padding: '12px 16px',
 				background: '#0b1d34',
 				color: '#f7f9fc',
-				font: '12px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace',
-				pointerEvents: 'none'
+				font: '700 16px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace',
+				pointerEvents: 'none',
+				borderBottom: '4px solid #ff3b30',
+				boxShadow: '0 8px 24px rgba(0,0,0,.35)'
 			});
-			document.documentElement.appendChild(el);
+			document.body.appendChild(el);
+		} else if (el.parentElement !== document.body) {
+			document.body.appendChild(el);
 		}
 		const paint = () => {
 			const next = `URL ${location.href}`;
-			if (el.textContent !== next) el.textContent = next;
+			if (el.isConnected && el.textContent !== next) el.textContent = next;
+			if (!el.isConnected) document.body.appendChild(el);
 		};
 		paint();
-		window.addEventListener('popstate', paint);
-		setInterval(paint, 250);
+		if (!window.__authMatrixLocBound) {
+			window.__authMatrixLocBound = true;
+			window.addEventListener('popstate', paint);
+			setInterval(paint, 200);
+		}
 	});
+}
+
+/**
+ * Page-DOM chooser banner under #svelte (same contract as capture-semester-file-picker-fix).
+ * @param {import('@playwright/test').Page} page
+ */
+async function installChooserProof(page) {
+	await page.evaluate(() => {
+		if (document.getElementById('proof-page-chooser')) return;
+		const style = document.createElement('style');
+		style.textContent = `
+			#proof-page-chooser {
+				position: sticky; top: 0; left: 0; right: 0; z-index: 41; display: block;
+				box-sizing: border-box; margin: 0; padding: 14px 18px;
+				background: #1a2332; color: #ffe08a; border-bottom: 4px solid #ff3b30;
+				font: 700 18px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+				letter-spacing: 0.02em; text-align: center; pointer-events: none;
+			}
+			#proof-page-chooser.ok {
+				background: #14351f; color: #9dffb0; border-bottom-color: #2ecc71;
+			}
+			#proof-page-chooser.bad {
+				background: #3a1414; color: #ff9d9d; border-bottom-color: #e74c3c;
+			}
+			#proof-target-box {
+				position: fixed; z-index: 2147483645; pointer-events: none;
+				border: 3px solid #ff3b30; border-radius: 6px;
+				box-shadow: 0 0 0 2px rgba(255,255,255,0.85);
+			}
+			#proof-target-label {
+				position: fixed; z-index: 2147483645; pointer-events: none;
+				background: #ff3b30; color: white; padding: 3px 8px; border-radius: 4px;
+				font: 700 12px/1.2 ui-sans-serif, system-ui, sans-serif;
+			}
+		`;
+		document.head.appendChild(style);
+		const host =
+			document.querySelector('#svelte') ||
+			document.querySelector('.mt-preview') ||
+			document.querySelector('.page-semester') ||
+			document.body;
+		const pageBanner = document.createElement('div');
+		pageBanner.id = 'proof-page-chooser';
+		pageBanner.setAttribute('data-proof', 'page-chooser');
+		pageBanner.textContent = 'NO chooser (count 0)';
+		host.prepend(pageBanner);
+		const targetBox = document.createElement('div');
+		targetBox.id = 'proof-target-box';
+		document.body.appendChild(targetBox);
+		const targetLabel = document.createElement('div');
+		targetLabel.id = 'proof-target-label';
+		document.body.appendChild(targetLabel);
+		window.__proofChooserCount = 0;
+	});
+}
+
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {string} text
+ * @param {'ok'|'bad'|''} [kind]
+ */
+async function setChooserBanner(page, text, kind = '') {
+	await page.evaluate(
+		({ text, kind }) => {
+			const pageEl = document.getElementById('proof-page-chooser');
+			if (!pageEl) return;
+			pageEl.textContent = text;
+			pageEl.className = kind;
+		},
+		{ text, kind }
+	);
+}
+
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {{x:number,y:number,width:number,height:number}} box
+ * @param {string} label
+ */
+async function highlightTarget(page, box, label) {
+	await page.evaluate(
+		({ box, label }) => {
+			const el = document.getElementById('proof-target-box');
+			const tag = document.getElementById('proof-target-label');
+			if (!el || !tag) return;
+			el.style.left = `${box.x - 4}px`;
+			el.style.top = `${box.y - 4}px`;
+			el.style.width = `${box.width + 8}px`;
+			el.style.height = `${box.height + 8}px`;
+			el.style.display = 'block';
+			tag.textContent = label;
+			tag.style.left = `${Math.max(8, box.x - 4)}px`;
+			tag.style.top = `${Math.max(8, box.y - 28)}px`;
+			tag.style.display = 'block';
+		},
+		{ box, label }
+	);
+	await sleep(700);
 }
 
 /** @param {string} filePath */
@@ -221,36 +331,106 @@ async function main() {
 
 	results.push(
 		await capture(browser, storageState, 'account', 'signed-in', async (page, t0, log, bugs) => {
-			await page.goto('/tools', { waitUntil: 'domcontentloaded', timeout: 20000 });
-			const probeRes = await fetch(`${baseURL}/tools/account?state=unavailable`, {
+			const stalePath = '/tools/account?state=unavailable';
+			const staleUrl = `${baseURL}${stalePath}`;
+
+			await page.goto('/tools/account', { waitUntil: 'networkidle', timeout: 20000 });
+			await page.waitForSelector('.mt-preview', { timeout: 10000 });
+			await sleep(400);
+			await showLocationStrip(page);
+
+			await page.evaluate((stalePath) => {
+				history.replaceState({}, '', stalePath);
+				let loc = document.getElementById('auth-matrix-loc');
+				if (!loc) {
+					loc = document.createElement('div');
+					loc.id = 'auth-matrix-loc';
+					loc.setAttribute('data-proof', 'location');
+					Object.assign(loc.style, {
+						position: 'fixed',
+						top: '0',
+						left: '0',
+						right: '0',
+						zIndex: '2147483646',
+						padding: '12px 16px',
+						background: '#0b1d34',
+						color: '#f7f9fc',
+						font: '700 16px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace',
+						pointerEvents: 'none',
+						borderBottom: '4px solid #ff3b30'
+					});
+					document.body.appendChild(loc);
+				}
+				loc.textContent = `URL ${location.href}`;
+				let note = document.getElementById('auth-matrix-303-note');
+				if (!note) {
+					note = document.createElement('div');
+					note.id = 'auth-matrix-303-note';
+					note.setAttribute('data-proof', 'stale-state');
+					Object.assign(note.style, {
+						position: 'fixed',
+						top: '52px',
+						left: '0',
+						right: '0',
+						zIndex: '2147483646',
+						margin: '0',
+						padding: '12px 16px',
+						background: '#1a2332',
+						color: '#ffe08a',
+						font: '700 15px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
+						borderBottom: '3px solid #ff3b30',
+						pointerEvents: 'none'
+					});
+					document.body.appendChild(note);
+				}
+				note.textContent =
+					'START at ?state=unavailable — next navigation must 303 → /tools/account';
+			}, stalePath);
+			await page.screenshot({
+				path: path.join(outRoot, 'account', 'signed-in-stale-url.png'),
+				fullPage: false
+			});
+			await mark(page, t0, log, `on-camera URL strip shows ${stalePath}`);
+			await sleep(1600);
+
+			const probeRes = await fetch(staleUrl, {
 				method: 'GET',
 				redirect: 'manual',
 				headers: {
-					cookie: storageState.cookies
-						.map((c) => `${c.name}=${c.value}`)
-						.join('; ')
+					cookie: storageState.cookies.map((c) => `${c.name}=${c.value}`).join('; ')
 				}
 			});
 			const probeStatus = probeRes.status;
 			const probeLocation = probeRes.headers.get('location') ?? '';
 			await page.evaluate(
 				({ probeStatus, probeLocation }) => {
-					const el = document.createElement('div');
-					el.id = 'auth-matrix-chapter';
-					Object.assign(el.style, {
-						position: 'fixed',
-						inset: '0',
-						zIndex: '2147483647',
-						padding: '28px 32px',
-						background: '#f7f9fc',
-						color: '#0b1d34',
-						font: '16px/1.4 ui-sans-serif, system-ui'
-					});
-					el.innerHTML = `<p style="margin:0 0 8px;font:12px ui-monospace,Menlo,monospace;color:#69798d">auth-matrix chapter</p>
-						<h1 style="margin:0 0 12px;font-size:28px">Signed-in account</h1>
-						<p style="margin:0 0 12px;max-width:40rem">Probe <code>GET /tools/account?state=unavailable</code> with session → <strong>HTTP ${probeStatus}</strong> Location <code>${probeLocation || '(none)'}</code></p>
-						<p style="margin:0;max-width:40rem">Following into the page next. Failure banner must stay gone.</p>`;
-					document.documentElement.appendChild(el);
+					let note = document.getElementById('auth-matrix-303-note');
+					if (!note) {
+						note = document.createElement('div');
+						note.id = 'auth-matrix-303-note';
+						note.setAttribute('data-proof', 'stale-state');
+						Object.assign(note.style, {
+							position: 'fixed',
+							top: '52px',
+							left: '0',
+							right: '0',
+							zIndex: '2147483646',
+							margin: '0',
+							padding: '12px 16px',
+							background: '#1a2332',
+							color: '#ffe08a',
+							font: '700 15px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
+							borderBottom: '3px solid #ff3b30',
+							pointerEvents: 'none'
+						});
+						document.body.appendChild(note);
+					}
+					note.textContent = `GET ?state=unavailable → HTTP ${probeStatus} Location ${probeLocation || '(none)'}`;
+					note.style.background = probeStatus === 303 ? '#14351f' : '#3a1414';
+					note.style.color = probeStatus === 303 ? '#9dffb0' : '#ff9d9d';
+					note.style.borderBottomColor = probeStatus === 303 ? '#2ecc71' : '#e74c3c';
+					const loc = document.getElementById('auth-matrix-loc');
+					if (loc) loc.textContent = `URL ${location.href}`;
 				},
 				{ probeStatus, probeLocation }
 			);
@@ -259,16 +439,19 @@ async function main() {
 			if (probeLocation !== '/tools/account') {
 				bugs.push(`unexpected Location ${probeLocation}`);
 			}
-			await page.goto('/tools/account?state=unavailable', {
-				waitUntil: 'domcontentloaded',
-				timeout: 20000
-			});
+			await sleep(1200);
+
+			await page.goto(stalePath, { waitUntil: 'networkidle', timeout: 20000 });
+			await page.waitForSelector('.mt-preview', { timeout: 10000 });
+			await sleep(400);
 			await showLocationStrip(page);
-			await page.evaluate((probeStatus) => {
-				const el = document.getElementById('auth-matrix-loc');
-				if (el) el.textContent = `followed ${probeStatus} → ${location.href}`;
-			}, probeStatus);
-			await mark(page, t0, log, `landed ${page.url()}`);
+			await page.evaluate(() => {
+				const note = document.getElementById('auth-matrix-303-note');
+				if (note) note.remove();
+				const loc = document.getElementById('auth-matrix-loc');
+				if (loc) loc.textContent = `URL ${location.href}`;
+			});
+			await mark(page, t0, log, `landed clean ${page.url()}`);
 			if (/state=unavailable/.test(page.url())) bugs.push('stale state=unavailable not cleared');
 			const body = await page.locator('body').innerText();
 			if (/could not finish sign-in/i.test(body)) bugs.push('false unavailable banner with session');
@@ -283,7 +466,7 @@ async function main() {
 				path: path.join(outRoot, 'account', 'signed-in-1280.png'),
 				fullPage: false
 			});
-			await sleep(900);
+			await sleep(1200);
 		})
 	);
 
@@ -315,7 +498,9 @@ async function main() {
 	results.push(
 		await capture(browser, storageState, 'semester', 'signed-in', async (page, t0, log, bugs) => {
 			await page.goto('/tools/semester', { waitUntil: 'networkidle' });
-			await showLocationStrip(page);
+			await page.waitForSelector('label.add-outline', { timeout: 15000 });
+			await installChooserProof(page);
+			await setChooserBanner(page, 'NO chooser (count 0)', '');
 			await mark(page, t0, log, 'signed-in semester upload affordance');
 			const body = await page.locator('body').innerText();
 			if (/Sign in to upload outlines/i.test(body) && /Open account/i.test(body)) {
@@ -341,28 +526,6 @@ async function main() {
 				if (bounds.labelPosition !== 'relative') {
 					bugs.push(`add-outline containing block is ${bounds.labelPosition}`);
 				}
-				await page.evaluate((b) => {
-					const id = 'auth-matrix-bounds';
-					let el = document.getElementById(id);
-					if (!el) {
-						el = document.createElement('div');
-						el.id = id;
-						Object.assign(el.style, {
-							position: 'fixed',
-							bottom: '12px',
-							left: '12px',
-							zIndex: '2147483647',
-							padding: '8px 12px',
-							background: '#1457d9',
-							color: 'white',
-							font: '12px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace',
-							pointerEvents: 'none',
-							borderRadius: '4px'
-						});
-						document.documentElement.appendChild(el);
-					}
-					el.textContent = `file input ${b.inputW}px · label ${b.labelPosition} · coversViewport=${b.coversViewport}`;
-				}, bounds);
 				await mark(
 					page,
 					t0,
@@ -370,26 +533,73 @@ async function main() {
 					`upload bound label=${bounds.labelPosition} inputW=${bounds.inputW}`
 				);
 
-				let fileChooserOpened = false;
-				page.once('filechooser', () => {
-					fileChooserOpened = true;
+				/** @type {import('@playwright/test').FileChooser[]} */
+				const choosers = [];
+				page.on('filechooser', async (chooser) => {
+					choosers.push(chooser);
+					await page.evaluate(() => {
+						window.__proofChooserCount = Number(window.__proofChooserCount || 0) + 1;
+					});
+					void chooser;
 				});
-				const sheet = page.locator('.review-sheet');
-				const box = await sheet.boundingBox();
-				if (!box) bugs.push('review sheet missing for elsewhere click');
+
+				const emptyBox =
+					(await page.locator('.review-sheet .sheet-empty').boundingBox()) ||
+					(await page.locator('.review-sheet').boundingBox());
+				const buttonBox = await page.locator('label.add-outline').boundingBox();
+				if (!emptyBox) bugs.push('review sheet missing for elsewhere click');
 				else {
-					await page.mouse.click(box.x + box.width / 2, box.y + 120);
-					await sleep(700);
-					await page.evaluate((opened) => {
-						const el = document.getElementById('auth-matrix-bounds');
-						if (el) {
-							el.textContent += opened
-								? ' · FAIL: filechooser opened on elsewhere click'
-								: ' · elsewhere click: no filechooser';
-						}
-					}, fileChooserOpened);
-					if (fileChooserOpened) bugs.push('click elsewhere opens file picker');
-					await mark(page, t0, log, 'elsewhere click on review sheet (no filechooser)');
+					await setChooserBanner(page, 'Click EMPTY AREA — expect NO filechooser', '');
+					await highlightTarget(page, emptyBox, 'TARGET: empty area');
+					const beforeEmpty = choosers.length;
+					await page.mouse.click(
+						Math.round(emptyBox.x + emptyBox.width * 0.55),
+						Math.round(emptyBox.y + emptyBox.height * 0.55)
+					);
+					await sleep(900);
+					const emptyOk = choosers.length === beforeEmpty;
+					await setChooserBanner(
+						page,
+						emptyOk
+							? `NO chooser (count ${choosers.length})`
+							: `FAIL: empty click fired chooser`,
+						emptyOk ? 'ok' : 'bad'
+					);
+					if (!emptyOk) bugs.push('click elsewhere opens file picker');
+					await mark(page, t0, log, emptyOk ? 'empty click inert OK' : 'BUG empty fired chooser');
+					await sleep(1100);
+				}
+
+				if (!buttonBox) bugs.push('Add course outline missing for chooser click');
+				else {
+					await setChooserBanner(page, 'Click ADD COURSE OUTLINE — expect filechooser', '');
+					await highlightTarget(page, buttonBox, 'TARGET: Add course outline');
+					const beforeBtn = choosers.length;
+					const chooserPromise = page
+						.waitForEvent('filechooser', { timeout: 5000 })
+						.catch(() => null);
+					await page.mouse.click(
+						Math.round(buttonBox.x + buttonBox.width / 2),
+						Math.round(buttonBox.y + buttonBox.height / 2)
+					);
+					const chooser = await chooserPromise;
+					await sleep(400);
+					const btnOk = Boolean(chooser) || choosers.length > beforeBtn;
+					await setChooserBanner(
+						page,
+						btnOk
+							? `FILECHOOSER FIRED (count ${choosers.length})`
+							: 'FAIL: Add did not open filechooser',
+						btnOk ? 'ok' : 'bad'
+					);
+					if (!btnOk) bugs.push('Add course outline did not fire filechooser');
+					await mark(
+						page,
+						t0,
+						log,
+						btnOk ? `FILECHOOSER FIRED (count ${choosers.length})` : 'BUG Add no chooser'
+					);
+					await sleep(1600);
 				}
 			}
 			await page.screenshot({
