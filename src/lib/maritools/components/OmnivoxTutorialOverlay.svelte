@@ -9,8 +9,12 @@
 	export let onSkip = () => {};
 
 	let stepIndex = 0;
+	/** Hide failed screenshot so the HTML mock frame stays visible. */
+	let screenshotFailed = false;
 
 	$: step = OMNIVOX_TUTORIAL_STEPS[stepIndex];
+	$: stepSrc = `/maritools/omnivox/step-${String(step.n).padStart(2, '0')}.webp`;
+	$: stepSrc, (screenshotFailed = false);
 
 	function next() {
 		if (stepIndex >= OMNIVOX_TUTORIAL_STEPS.length - 1) {
@@ -22,6 +26,12 @@
 
 	function back() {
 		if (stepIndex > 0) stepIndex -= 1;
+	}
+
+	/** @param {Event & { currentTarget: HTMLImageElement }} event */
+	function onScreenshotError(event) {
+		screenshotFailed = true;
+		event.currentTarget.hidden = true;
 	}
 </script>
 
@@ -81,8 +91,10 @@
 					<div class="tutorial-screenshots">
 						<img
 							data-tutorial-step={step.n}
-							src={`/maritools/omnivox/step-${String(step.n).padStart(2, '0')}.webp`}
+							src={stepSrc}
 							alt=""
+							hidden={screenshotFailed}
+							on:error={onScreenshotError}
 						/>
 					</div>
 				</div>
