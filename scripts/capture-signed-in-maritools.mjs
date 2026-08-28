@@ -265,14 +265,57 @@ async function main() {
 			if (!/Start a thread|Post thread/i.test(body)) bugs.push('composer locked while signed in');
 			const title = `Proof thread ${Date.now()}`;
 			await page.locator('#composer input[name="title"]').fill(title);
-			await page.locator('#composer textarea[name="body"]').fill('Signed-in proof post. No student numbers.');
+			await page.locator('#composer select[name="category"]').selectOption('student-life');
+			await page
+				.locator('#composer textarea[name="body"]')
+				.fill('Signed-in proof post. No student numbers.');
 			await page.getByRole('button', { name: 'Post thread' }).click();
-			await page.waitForLoadState('networkidle');
-			await mark(page, t0, log, `posted thread "${title}"`);
-			const after = await page.locator('body').innerText();
-			if (!after.includes(title) && !/reply|thread/i.test(after)) {
-				bugs.push('thread create did not land visibly');
+			try {
+				await page.waitForURL(/\/tools\/forum\/[0-9a-f-]+$/i, { timeout: 20000 });
+			} catch {
+				bugs.push('create did not land on /tools/forum/[id]');
 			}
+			await mark(page, t0, log, `posted thread landed on detail "${title}"`);
+			const detail = await page.locator('body').innerText();
+			if (!detail.includes(title)) bugs.push('thread title missing on detail after create');
+			if (!/Post reply/i.test(detail)) bugs.push('reply composer missing on detail after create');
+
+			const replyText = `Proof reply ${Date.now().toString(36)}`;
+			const replyBox = page.locator('section.reply-editor textarea[name="body"]');
+			if ((await replyBox.count()) < 1) {
+				bugs.push('reply editor section missing');
+			} else {
+				await replyBox.fill(replyText);
+				await mark(page, t0, log, 'reply composer filled on detail');
+				await Promise.all([
+					page.waitForLoadState('domcontentloaded'),
+					page.getByRole('button', { name: 'Post reply' }).click()
+				]);
+				await page.getByText(replyText).waitFor({ state: 'visible', timeout: 20000 });
+				await mark(page, t0, log, `reply visible on detail "${replyText}"`);
+				const afterReply = await page.locator('body').innerText();
+				if (!afterReply.includes(replyText)) bugs.push('reply did not land visibly');
+			}
+
+			await page.goto('/tools/forum', { waitUntil: 'networkidle' });
+			const list = await page.locator('body').innerText();
+			if (!list.includes(title)) bugs.push('new thread missing from forum list');
+			await mark(page, t0, log, 'new thread visible in Latest');
+			const row = page.getByRole('link', { name: new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
+			if ((await row.count()) < 1) {
+				bugs.push('thread row link missing on index');
+			} else {
+				await row.first().click();
+				try {
+					await page.waitForURL(/\/tools\/forum\/[0-9a-f-]+$/i, { timeout: 15000 });
+				} catch {
+					bugs.push('thread row click did not open /tools/forum/[id]');
+				}
+				await mark(page, t0, log, 'opened thread via row click');
+				const again = await page.locator('body').innerText();
+				if (!/Post reply/i.test(again)) bugs.push('reply composer missing after row click');
+			}
+
 			await page.screenshot({ path: path.join(outDir, 'forum-1280.png'), fullPage: false });
 			await sleep(900);
 		})
