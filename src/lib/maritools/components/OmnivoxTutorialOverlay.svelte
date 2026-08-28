@@ -49,7 +49,7 @@
 					<h2>Import from Omnivox</h2>
 					<p>
 						Nine short steps. Your student number and legal name stay out of MariTools. Screens
-						are labeled guides, not live Omnivox captures.
+						are redacted captures of the Omnivox path.
 					</p>
 				</div>
 				<ol>

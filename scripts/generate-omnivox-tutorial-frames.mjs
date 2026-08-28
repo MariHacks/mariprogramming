@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Builds illustrative Omnivox tutorial frames at static/maritools/omnivox/step-NN.webp.
- * These are labeled guide diagrams (same intent as the HTML mock), not live Omnivox captures.
- * Replace with cropped real screenshots when available (never ship student number / legal name).
+ * Fallback generator for static/maritools/omnivox/step-NN.webp.
+ * Production frames are redacted real Omnivox captures from the Scribe guide.
+ * Re-run this only if those assets are missing; never embed student number / legal name.
  */
 import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
