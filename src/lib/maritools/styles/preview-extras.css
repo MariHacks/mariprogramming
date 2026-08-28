@@ -289,6 +289,10 @@
 	overflow: hidden;
 }
 
+.mt-preview .course-stack .stack-head .add-outline {
+	position: relative;
+}
+
 .mt-preview .add-outline input[type='file'] {
 	position: absolute;
 	inset: 0;
