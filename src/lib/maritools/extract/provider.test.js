@@ -109,6 +109,25 @@ describe('createOutlineExtractionProvider', () => {
 		expect((await net.extract({ text: SAMPLE, sha256: 'n' })).reason).toBe('network');
 	});
 
+	it('aborts a hung NIM request and fails closed as network', async () => {
+		const provider = createOutlineExtractionProvider({
+			getKey: () => 'k',
+			timeoutMs: 40,
+			fetchImpl: async (_url, init) => {
+				await new Promise((_, reject) => {
+					const signal = init?.signal;
+					if (!signal) reject(new Error('missing abort signal'));
+					signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+				});
+				return { ok: true, json: async () => ({}) };
+			}
+		});
+		const result = await provider.extract({ text: SAMPLE, sha256: 'hung' });
+		expect(result.ok).toBe(false);
+		expect(result.reason).toBe('network');
+		expect(provider.inferenceCount()).toBe(1);
+	});
+
 	it('rejects a scanned PDF before calling the model', async () => {
 		const provider = createOutlineExtractionProvider({
 			getKey: () => 'k',

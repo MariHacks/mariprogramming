@@ -24,7 +24,8 @@ export function needsTextPdf(text, byteLength = 0) {
  *   fetchImpl?: (url: string, init?: RequestInit) => Promise<{ ok: boolean, json: () => Promise<any> }>,
  *   getKey?: () => string,
  *   getModel?: () => string,
- *   endpoint?: string
+ *   endpoint?: string,
+ *   timeoutMs?: number
  * }} [options]
  */
 export function createOutlineExtractionProvider(options = {}) {
@@ -33,6 +34,7 @@ export function createOutlineExtractionProvider(options = {}) {
 	const fetchImpl = options.fetchImpl ?? fetch;
 	const endpoint =
 		options.endpoint ?? 'https://integrate.api.nvidia.com/v1/chat/completions';
+	const timeoutMs = options.timeoutMs ?? 12_000;
 
 	/**
 	 * @param {{ text: string, sha256?: string, offeringKey?: string, byteLength?: number }} input
@@ -61,6 +63,8 @@ export function createOutlineExtractionProvider(options = {}) {
 
 		inferenceCount += 1;
 		let payload;
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), timeoutMs);
 		try {
 			const response = await fetchImpl(endpoint, {
 				method: 'POST',
@@ -79,7 +83,8 @@ export function createOutlineExtractionProvider(options = {}) {
 								input.text
 						}
 					]
-				})
+				}),
+				signal: controller.signal
 			});
 			if (!response.ok) {
 				return { ok: false, reason: 'http', proposals: null, inferenceCount };
@@ -87,6 +92,8 @@ export function createOutlineExtractionProvider(options = {}) {
 			payload = await response.json();
 		} catch {
 			return { ok: false, reason: 'network', proposals: null, inferenceCount };
+		} finally {
+			clearTimeout(timer);
 		}
 
 		const content = payload?.choices?.[0]?.message?.content;
