@@ -92,6 +92,7 @@
 <style>
 	.tools-shell {
 		display: grid;
+		align-items: stretch;
 		min-height: calc(100vh - 4.5rem - 4.9375rem);
 		background: var(--paper);
 	}
@@ -246,7 +247,10 @@
 	}
 
 	.tools-main {
+		display: flex;
+		flex-direction: column;
 		min-width: 0;
+		min-height: 100%;
 		background: var(--surface-raised);
 	}
 
@@ -256,6 +260,7 @@
 		}
 
 		.tools-sidebar {
+			min-height: 100%;
 			border-block-end: 0;
 			border-inline-end: var(--rule);
 		}

@@ -1,7 +1,57 @@
 /* Production-only rules for catalog, clubs, forum, and thread. */
 
+.mt-preview {
+	--header-h: 4.5rem;
+	--preview-h: 4.9375rem;
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	min-height: 100%;
+}
+
+@media (max-width: 51.999rem) {
+	.mt-preview {
+		--header-h: 4.25rem;
+		--preview-h: 6.5rem;
+	}
+}
+
+.mt-preview .page-semester,
+.mt-preview .page-catalog,
+.mt-preview .page-clubs,
+.mt-preview .page-forum,
+.mt-preview .page-account {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 100%;
+}
+
+.mt-preview .page.page-catalog,
+.mt-preview .page.page-clubs,
+.mt-preview .page.page-forum,
+.mt-preview .page.page-semester {
+	background: var(--white);
+}
+
 .mt-preview .page-semester {
 	padding: 0;
+}
+
+.mt-preview .page-semester .semester-layout {
+	flex: 1 1 auto;
+	min-height: 100%;
+}
+
+.mt-preview .page-semester .course-stack,
+.mt-preview .page-semester .review-sheet {
+	min-height: 100%;
+}
+
+.mt-preview .catalog-index,
+.mt-preview .club-index,
+.mt-preview .topic-list {
+	flex: 1 1 auto;
 }
 
 .mt-preview .catalog-row h2,
