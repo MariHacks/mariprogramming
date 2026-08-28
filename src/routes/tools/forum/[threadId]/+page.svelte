@@ -154,6 +154,11 @@
 							</footer>
 						</form>
 					</section>
+				{:else if !data.signedIn}
+					<section class="guest-composer" aria-label="Replying requires sign-in">
+						<p>Sign in with Google to reply. Reading stays open without an account.</p>
+						<a class="primary-button" href="/tools/account">Sign in with Google</a>
+					</section>
 				{/if}
 
 				{#if data.staff}

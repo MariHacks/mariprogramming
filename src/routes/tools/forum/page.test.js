@@ -26,6 +26,7 @@ describe('forum page', () => {
 		});
 		expect(screen.getByRole('heading', { name: 'Forum' })).toBeInTheDocument();
 		expect(screen.getByPlaceholderText('Search discussions')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Filter' })).toBeInTheDocument();
 		expect(screen.getByText('No threads yet.')).toBeInTheDocument();
 		expect(screen.getByText(/Read without an account/)).toBeInTheDocument();
 		const signInLinks = screen.getAllByRole('link', { name: 'Sign in with Google' });

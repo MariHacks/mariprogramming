@@ -73,4 +73,26 @@ describe('forum thread page', () => {
 		expect(screen.getByRole('button', { name: 'Lock thread' })).toBeInTheDocument();
 		expect(screen.getByText('Moderation applied.')).toBeInTheDocument();
 	});
+
+	it('gates replies for guests without exposing the reply form', () => {
+		render(ThreadPage, {
+			props: {
+				data: {
+					thread: THREAD,
+					replies: [],
+					signedIn: false,
+					canReply: false,
+					staff: false
+				}
+			}
+		});
+		expect(screen.getByRole('heading', { name: 'Midterm tips' })).toBeInTheDocument();
+		expect(screen.getByText(/Sign in with Google to reply/)).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Sign in with Google' })).toHaveAttribute(
+			'href',
+			'/tools/account'
+		);
+		expect(screen.queryByRole('button', { name: 'Post reply' })).not.toBeInTheDocument();
+		expect(screen.queryByPlaceholderText('Write a clear, useful reply…')).not.toBeInTheDocument();
+	});
 });

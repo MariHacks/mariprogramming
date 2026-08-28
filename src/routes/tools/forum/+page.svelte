@@ -74,6 +74,7 @@
 					{/each}
 				</select>
 			</label>
+			<button type="submit" class="dark-button">Filter</button>
 			{#if data.signedIn}
 				<a class="primary-button" href="#composer">Start a thread</a>
 			{:else}
