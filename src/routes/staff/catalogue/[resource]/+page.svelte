@@ -354,10 +354,30 @@
 
 			{#if data.unavailable}
 				<p class="notice error-notice" role="alert">
-					Catalogue data is unavailable. Try again later.
+					Catalogue data is unavailable.
+					<a class="inline-action" href={resolve('/staff/catalogue/[resource]', { resource: data.resource })}
+						>Reload catalogue</a
+					>
 				</p>
 			{:else if displayedRecords.length === 0}
-				<p class="notice">No {data.resource} found.</p>
+				<div class="notice empty-notice">
+					<p>No {data.resource} found.</p>
+					{#if data.search}
+						<a
+							class="inline-action"
+							href={resolve('/staff/catalogue/[resource]', { resource: data.resource })}
+							>Clear search</a
+						>
+					{:else}
+						<!-- eslint-disable svelte/no-navigation-without-resolve -->
+						<a
+							class="inline-action"
+							href={`${resolve('/staff/catalogue/[resource]', { resource: data.resource })}${querySuffix({ add: 1 })}`}
+							>Add {resourceLabel.singular}</a
+						>
+						<!-- eslint-enable svelte/no-navigation-without-resolve -->
+					{/if}
+				</div>
 			{:else}
 				{#if snapshotPreview}
 					<p class="notice">
@@ -1121,6 +1141,33 @@
 	.action-message {
 		padding: 0.8rem 0;
 		font-size: var(--text-sm);
+	}
+
+	.empty-notice {
+		display: grid;
+		gap: 0.5rem;
+		justify-items: start;
+	}
+
+	.empty-notice p,
+	.error-notice {
+		margin: 0;
+	}
+
+	.error-notice {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.inline-action {
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.75rem;
+		color: var(--club-blue);
+		font-weight: 650;
+		text-decoration: none;
 	}
 
 	.error-summary {

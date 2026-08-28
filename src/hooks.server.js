@@ -89,8 +89,12 @@ export function createHandle({
 		const staffPath = isPath(event.url.pathname, STAFF_PATH);
 		const publicStaffSignIn = event.url.pathname === PUBLIC_STAFF_SIGN_IN_PATH;
 		const sessionCookie = hasStaffSessionCookie(event.request);
+		const skipAuth =
+			isBuilding ||
+			(publicStaffSignIn && !sessionCookie) ||
+			(!authPath && !staffPath && !sessionCookie);
 
-		if (isBuilding || publicStaffSignIn || (!authPath && !staffPath && !sessionCookie)) {
+		if (skipAuth) {
 			return finalize(await resolve(event));
 		}
 
@@ -118,7 +122,10 @@ export function createHandle({
 			const authResponse = await withAuth(authenticate);
 			if (authPath) return finalize(/** @type {Response} */ (authResponse));
 		} catch {
-			if (!authPath && !staffPath) return finalize(await resolve(event));
+			// Sign-in must stay reachable when a stale cookie meets an auth outage.
+			if (!authPath && (!staffPath || publicStaffSignIn)) {
+				return finalize(await resolve(event));
+			}
 			return finalize(
 				new Response(AUTH_UNAVAILABLE, {
 					status: 503,

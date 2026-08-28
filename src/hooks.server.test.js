@@ -133,6 +133,35 @@ describe('server authentication hook', () => {
 		expect(current.locals).not.toHaveProperty('session');
 	});
 
+	it('resolves a staff cookie on sign-in so an active session can leave the gate', async () => {
+		const setup = harness({
+			session: approvedSession,
+			account: { providerId: 'google', accountId: 'google-subject-123', userId: 'user-123' }
+		});
+		const current = event('/staff/sign-in', { cookie: 'mari-staff.session_token=signed-token' });
+		await setup.handle({ event: current, resolve: setup.resolve });
+		expect(setup.withAuth).toHaveBeenCalledOnce();
+		expect(current.locals.staff?.email).toBe('team@marihacks.com');
+	});
+
+	it('skips auth work on sign-in when no session cookie is present', async () => {
+		const setup = harness({ runtimeError: new Error('must not run') });
+		const current = event('/staff/sign-in');
+		const response = await setup.handle({ event: current, resolve: setup.resolve });
+		expect(setup.withAuth).not.toHaveBeenCalled();
+		expect(await response.text()).toBe('public response');
+		expect(current.locals.staff).toBeNull();
+	});
+
+	it('keeps sign-in reachable when a stale cookie meets an auth outage', async () => {
+		const setup = harness({ runtimeError: new Error('database-secret') });
+		const current = event('/staff/sign-in', { cookie: 'mari-staff.session_token=stale' });
+		const response = await setup.handle({ event: current, resolve: setup.resolve });
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe('public response');
+		expect(current.locals.staff).toBeNull();
+	});
+
 	it('stores a student Google session without granting staff locals', async () => {
 		const setup = harness({
 			session: {

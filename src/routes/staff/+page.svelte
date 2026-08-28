@@ -61,6 +61,9 @@
 	$: searchResult = responseForm?.success && responseForm.search ? responseForm.search : null;
 	$: visibleListing = searchResult ?? data.listing;
 	$: resultLabel = `${visibleListing.totalCount} ${visibleListing.totalCount === 1 ? 'order' : 'orders'}`;
+	$: filtersActive =
+		!searchResult &&
+		(data.listing.filters.payment !== 'actionable' || data.listing.filters.fulfillment !== 'all');
 
 	afterUpdate(() => {
 		if (responseForm?.errorSummary && responseForm !== focusedFailure) {
@@ -119,7 +122,7 @@
 		<div>
 			<p class="eyebrow">Book delivery operations</p>
 			<h1>Orders</h1>
-			<p class="heading-note">Paid orders waiting for purchase or pickup.</p>
+			<p class="heading-note">Scan paid work, jump by reference, export the purchase list.</p>
 		</div>
 		<form method="post" action={resolve('/staff/orders/export', {})}>
 			<input type="hidden" name="intent" value="purchase_list" />
@@ -156,6 +159,7 @@
 					id="order-search"
 					type="search"
 					name="query"
+					placeholder="MPC-… or email"
 					autocomplete="off"
 					spellcheck="false"
 					required
@@ -182,7 +186,8 @@
 	{/if}
 	{#if data.unavailable}
 		<div class="message message-error" role="alert">
-			Orders are unavailable right now. Reload this page to try again.
+			<p>Orders are unavailable right now.</p>
+			<a class="inline-action" href={resolve('/staff', {})}>Reload orders</a>
 		</div>
 	{:else}
 		<section class="ledger" aria-labelledby={searchResult ? 'search-results-title' : 'queue-title'}>
@@ -206,9 +211,24 @@
 			</header>
 
 			{#if visibleListing.orders.length === 0}
-				<p class="empty-state">
-					{searchResult ? 'No exact match found.' : 'No orders match these filters.'}
-				</p>
+				<div class="empty-state">
+					{#if searchResult}
+						<p>No exact match found. Check the reference or email, then search again.</p>
+					{:else}
+						<p>No orders match these filters.</p>
+						{#if filtersActive}
+							<a class="inline-action" href={resolve('/staff', {})}>Reset to actionable queue</a>
+						{:else}
+							<!-- eslint-disable svelte/no-navigation-without-resolve -->
+							<a
+								class="inline-action"
+								href={`${resolve('/staff', {})}?payment=all&fulfillment=all&page=1`}
+								>Show all payments</a
+							>
+							<!-- eslint-enable svelte/no-navigation-without-resolve -->
+						{/if}
+					{/if}
+				</div>
 			{:else}
 				<div class="order-columns" aria-hidden="true">
 					<span>Order</span>
@@ -258,7 +278,7 @@
 				</ol>
 			{/if}
 
-			{#if visibleListing.hasPrevious || visibleListing.hasNext}
+			{#if visibleListing.orders.length > 0 || visibleListing.hasPrevious || visibleListing.hasNext}
 				<nav class="pagination" aria-label={searchResult ? 'Search pages' : 'Order pages'}>
 					{#if searchResult}
 						{#if visibleListing.hasPrevious}
@@ -268,7 +288,10 @@
 								<button type="submit" aria-label="Previous search page">Previous</button>
 							</form>
 						{/if}
-						<span>Page {visibleListing.page}</span>
+						<span
+							>Page {visibleListing.page} · {visibleListing.totalCount}
+							{visibleListing.totalCount === 1 ? 'result' : 'results'}</span
+						>
 						{#if visibleListing.hasNext}
 							<form method="post" action="?/search">
 								<input type="hidden" name="query" value={searchResult.query} />
@@ -285,7 +308,9 @@
 							>
 							<!-- eslint-enable svelte/no-navigation-without-resolve -->
 						{/if}
-						<span>Page {visibleListing.page}</span>
+						<span
+							>Page {visibleListing.page} · {resultLabel} · {visibleListing.pageSize} per page</span
+						>
 						{#if visibleListing.hasNext}
 							<!-- eslint-disable svelte/no-navigation-without-resolve -->
 							<a
@@ -304,7 +329,7 @@
 <style>
 	.orders-workspace {
 		width: 100%;
-		padding: clamp(2rem, 5vw, 4.5rem) var(--page-gutter) 5rem;
+		padding: clamp(1.25rem, 3vw, 2.5rem) var(--page-gutter) 4rem;
 	}
 
 	.page-heading,
@@ -319,21 +344,22 @@
 
 	.page-heading {
 		justify-content: space-between;
-		gap: 2rem;
-		padding-bottom: clamp(1.5rem, 3vw, 2.5rem);
+		gap: 1.5rem;
+		padding-bottom: 1.25rem;
 		border-bottom: var(--rule-strong);
 	}
 
 	.page-heading h1 {
-		margin-top: 0.4rem;
-		font-size: clamp(2.5rem, 6vw, 5.5rem);
-		letter-spacing: -0.055em;
-		line-height: 0.95;
+		margin-top: 0.25rem;
+		font-size: clamp(1.75rem, 3vw, 2.25rem);
+		letter-spacing: -0.03em;
+		line-height: 1.05;
 	}
 
 	.heading-note {
-		margin-top: 0.8rem;
+		margin-top: 0.45rem;
 		color: var(--color-muted);
+		font-size: 0.875rem;
 	}
 
 	.export-button,
@@ -432,6 +458,13 @@
 		border: 1px solid var(--danger);
 		background: #fff5f6;
 		color: #78142a;
+		display: grid;
+		gap: 0.5rem;
+		justify-items: start;
+	}
+
+	.message-error p {
+		margin: 0;
 	}
 
 	.ledger-heading {
@@ -484,8 +517,8 @@
 	}
 
 	.order-list li {
-		min-height: 5.75rem;
-		padding-block: 1rem;
+		min-height: 4.25rem;
+		padding-block: 0.7rem;
 		border-bottom: var(--rule);
 		transition: background-color var(--motion-fast) var(--ease-out);
 	}
@@ -570,10 +603,34 @@
 	}
 
 	.empty-state {
-		padding: 2.5rem 0;
+		display: grid;
+		gap: 0.75rem;
+		justify-items: start;
+		padding: 2rem 0;
 		border-top: var(--rule-strong);
 		border-bottom: var(--rule);
 		color: var(--color-muted);
+	}
+
+	.inline-action {
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.75rem;
+		color: var(--club-blue);
+		font-size: 0.875rem;
+		font-weight: 650;
+		text-decoration: none;
+	}
+
+	.export-button:focus-visible,
+	.filter-button:focus-visible,
+	.search-control :is(input, button):focus-visible,
+	.pagination :is(a, button):focus-visible,
+	.open-order:focus-visible,
+	.inline-action:focus-visible,
+	.filters select:focus-visible {
+		outline: var(--focus-ring-width) solid var(--color-focus);
+		outline-offset: var(--focus-ring-offset);
 	}
 
 	.pagination {

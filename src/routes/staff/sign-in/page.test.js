@@ -24,7 +24,8 @@ describe('staff sign-in route', () => {
 		});
 		expect(screen.getByRole('heading', { level: 1, name: 'Staff access' })).toBeInTheDocument();
 		expect(screen.queryByText('Book Delivery operations')).not.toBeInTheDocument();
-		expect(screen.getByText('Use the team@marihacks.com Google account.')).toBeInTheDocument();
+		expect(screen.getByText(/team@marihacks.com/)).toBeInTheDocument();
+		expect(screen.getByText(/Sign in with the/i)).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Continue with Google' })).toHaveAttribute(
 			'type',
 			'submit'

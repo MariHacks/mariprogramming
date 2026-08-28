@@ -28,7 +28,7 @@
 <section class="staff-sign-in">
 	<div class="sign-in-frame">
 		<h1>Staff access</h1>
-		<p>Use the team@marihacks.com Google account.</p>
+		<p>Sign in with the <strong>team@marihacks.com</strong> Google account.</p>
 		{#if data.recoveryMessage}<p class="error" role="alert">{data.recoveryMessage}</p>{/if}
 
 		<form on:submit|preventDefault={beginSignIn}>
@@ -36,7 +36,12 @@
 		</form>
 
 		{#if pending}<p class="status" role="status">Opening Google sign-in</p>{/if}
-		{#if failed}<p class="error" role="alert">Sign-in is unavailable. Please try again.</p>{/if}
+		{#if failed}
+			<p class="error" role="alert">
+				Sign-in is unavailable. Please try again.
+				<span class="hint">If Google asks for another account, cancel and use team@marihacks.com.</span>
+			</p>
+		{/if}
 		<a class="exit-link" href={resolve('/', {})}>Back to the club site</a>
 	</div>
 </section>
@@ -95,6 +100,12 @@
 
 	.error {
 		color: var(--danger);
+	}
+
+	.error .hint {
+		display: block;
+		margin-top: 0.35rem;
+		color: var(--quiet-steel);
 	}
 
 	.exit-link {
