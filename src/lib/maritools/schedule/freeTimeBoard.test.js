@@ -7,6 +7,7 @@ import {
 	paintCellKey,
 	paintSlotLabel,
 	paintSlotTimes,
+	restoreEditorState,
 	slugFromBoardTitle
 } from './freeTimeBoard.js';
 
@@ -83,5 +84,48 @@ describe('freeCellsFromCourses', () => {
 describe('slugFromBoardTitle', () => {
 	it('builds a url-safe slug', () => {
 		expect(slugFromBoardTitle('Data Structures study group')).toBe('data-structures-study-group');
+	});
+});
+
+describe('restoreEditorState', () => {
+	const mon = paintCellKey('Mon', '09:00');
+	const tue = paintCellKey('Tue', '11:00');
+	const board = {
+		id: 'board-1',
+		members: [
+			{
+				id: 'm1',
+				displayName: 'Ada',
+				shareToken: 'tok-ada',
+				availability: availabilityFromFreeCells(new Set([mon, tue]))
+			},
+			{
+				id: 'm2',
+				displayName: 'Blake',
+				shareToken: 'tok-blake',
+				availability: availabilityFromFreeCells(new Set([mon]))
+			}
+		]
+	};
+
+	it('restores display name and painted cells from the share-token member', () => {
+		const restored = restoreEditorState(board, 'tok-ada', null);
+		expect(restored.shareToken).toBe('tok-ada');
+		expect(restored.displayName).toBe('Ada');
+		expect(restored.freeCells).toEqual(new Set([mon, tue]));
+	});
+
+	it('prefills the signed-in display name when no share token matches', () => {
+		const restored = restoreEditorState(board, '', 'Nick');
+		expect(restored.shareToken).toBe('');
+		expect(restored.displayName).toBe('Nick');
+		expect(restored.freeCells.size).toBe(0);
+	});
+
+	it('keeps a stale token but does not wipe the signed-in name when the member is gone', () => {
+		const restored = restoreEditorState({ id: 'board-1', members: [] }, 'tok-gone', 'Nick');
+		expect(restored.shareToken).toBe('tok-gone');
+		expect(restored.displayName).toBe('Nick');
+		expect(restored.freeCells.size).toBe(0);
 	});
 });

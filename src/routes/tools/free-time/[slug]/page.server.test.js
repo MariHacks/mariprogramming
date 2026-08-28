@@ -24,18 +24,24 @@ function handlers(overrides = {}) {
 		})),
 		...overrides.store
 	};
+	const students = {
+		getProfile: vi.fn(async () => ({ displayName: 'Zhicheng' })),
+		...overrides.students
+	};
 	return {
 		..._createHandlers({
 			readEnvironment: vi.fn(() => ({ appOrigin: 'https://example.com' })),
 			createStore: vi.fn(() => store),
+			createStudentStore: vi.fn(() => students),
 			...overrides
 		}),
-		store
+		store,
+		students
 	};
 }
 
-function event({ params = { slug: 'study-group' } } = {}) {
-	return { params };
+function event({ params = { slug: 'study-group' }, locals = { maritools: null } } = {}) {
+	return { params, locals };
 }
 
 function saveEvent(fields, params = { slug: 'study-group' }) {
@@ -60,9 +66,31 @@ describe('free-time board page server', () => {
 		const current = handlers();
 		await expect(current.load(event())).resolves.toMatchObject({
 			board: { slug: 'study-group', title: 'Study group' },
-			shareUrl: 'https://example.com/tools/free-time/study-group'
+			shareUrl: 'https://example.com/tools/free-time/study-group',
+			signedInDisplayName: null
 		});
 		expect(current.store.getBoardBySlug).toHaveBeenCalledWith('study-group');
+	});
+
+	it('prefers the student profile display name when signed in', async () => {
+		const current = handlers();
+		await expect(
+			current.load(
+				event({ locals: { maritools: { email: 'nick.zhicheng@gmail.com', userId: 'u1' } } })
+			)
+		).resolves.toMatchObject({ signedInDisplayName: 'Zhicheng' });
+		expect(current.students.getProfile).toHaveBeenCalledWith('u1');
+	});
+
+	it('falls back to the email local-part when the profile has no display name', async () => {
+		const current = handlers({
+			students: { getProfile: vi.fn(async () => ({ displayName: null })) }
+		});
+		await expect(
+			current.load(
+				event({ locals: { maritools: { email: 'nick.zhicheng@gmail.com', userId: 'u1' } } })
+			)
+		).resolves.toMatchObject({ signedInDisplayName: 'nick.zhicheng' });
 	});
 
 	it('returns not found for a missing board', async () => {
@@ -118,13 +146,6 @@ describe('free-time board page server', () => {
 				})
 			)
 		).resolves.toMatchObject({ saveSuccess: true, member: { displayName: 'Ada' } });
-	});
-
-	it('treats missing form fields as empty', async () => {
-		const current = handlers();
-		await expect(current.actions.saveMember(saveEvent({}))).resolves.toMatchObject({
-			saveSuccess: true
-		});
 	});
 
 	it('treats missing form fields as empty', async () => {

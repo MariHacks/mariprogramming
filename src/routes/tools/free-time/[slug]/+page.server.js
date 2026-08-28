@@ -7,31 +7,56 @@ import {
 	MariToolsValidationError
 } from '$lib/server/maritools/repository.js';
 import { openFreeTimeStore } from '$lib/server/maritools/free-time-store.js';
+import { openStudentStore } from '$lib/server/maritools/student-store.js';
 
 export const prerender = false;
+
+/**
+ * @param {{ email?: string } | null | undefined} session
+ * @param {{ displayName?: string | null } | null | undefined} profile
+ */
+function signedInDisplayNameFrom(session, profile) {
+	const fromProfile =
+		typeof profile?.displayName === 'string' ? profile.displayName.trim() : '';
+	if (fromProfile) return fromProfile;
+	const email = typeof session?.email === 'string' ? session.email.trim() : '';
+	if (!email || !email.includes('@')) return null;
+	return email.split('@')[0] || null;
+}
 
 /** @param {Record<string, any>} [dependencies] */
 export function _createHandlers(dependencies = {}) {
 	const readEnvironment = dependencies.readEnvironment ?? readRuntimeEnvironment;
 	const createStore = dependencies.createStore ?? openFreeTimeStore;
+	const createStudentStore = dependencies.createStudentStore ?? openStudentStore;
 
 	/** @param {any} event */
 	async function load(event) {
 		const slug = event.params.slug;
+		const session = event.locals?.maritools ?? null;
 		try {
 			const { appOrigin } = readEnvironment();
 			const store = createStore();
 			const board = await store.getBoardBySlug(slug);
 			if (!board) {
-				return { board: null, notFound: true };
+				return { board: null, notFound: true, signedInDisplayName: null };
+			}
+			let profile = null;
+			if (session?.userId) {
+				try {
+					profile = await createStudentStore().getProfile(session.userId);
+				} catch {
+					profile = null;
+				}
 			}
 			return {
 				board,
-				shareUrl: `${appOrigin}/tools/free-time/${board.slug}`
+				shareUrl: `${appOrigin}/tools/free-time/${board.slug}`,
+				signedInDisplayName: signedInDisplayNameFrom(session, profile)
 			};
 		} catch (error) {
 			if (error instanceof MariToolsUnavailableError || error instanceof ServerConfigurationError) {
-				return { board: null, unavailable: true };
+				return { board: null, unavailable: true, signedInDisplayName: null };
 			}
 			throw error;
 		}

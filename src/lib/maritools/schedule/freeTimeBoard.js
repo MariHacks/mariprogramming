@@ -133,3 +133,33 @@ export function slugFromBoardTitle(title) {
 		.replace(/^-+|-+$/gu, '')
 		.slice(0, 120);
 }
+
+/**
+ * Rebuild paint + identity after reload from the local share token, or prefill a signed-in name.
+ *
+ * @param {{ members?: Array<{ shareToken?: string | null, displayName?: string, availability?: unknown }> } | null | undefined} board
+ * @param {string | null | undefined} storedToken
+ * @param {string | null | undefined} signedInDisplayName
+ * @returns {{ shareToken: string, displayName: string, freeCells: Set<string> }}
+ */
+export function restoreEditorState(board, storedToken, signedInDisplayName) {
+	const shareToken = typeof storedToken === 'string' ? storedToken : '';
+	const members = Array.isArray(board?.members) ? board.members : [];
+	if (shareToken) {
+		const me = members.find((member) => member.shareToken === shareToken);
+		if (me) {
+			return {
+				shareToken,
+				displayName: typeof me.displayName === 'string' ? me.displayName : '',
+				freeCells: freeCellsFromAvailability(me.availability)
+			};
+		}
+	}
+	const signedIn =
+		typeof signedInDisplayName === 'string' ? signedInDisplayName.trim() : '';
+	return {
+		shareToken,
+		displayName: signedIn,
+		freeCells: new Set()
+	};
+}
