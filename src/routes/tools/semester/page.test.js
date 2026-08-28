@@ -7,7 +7,13 @@ afterEach(cleanup);
 describe('semester page', () => {
 	it('sends visitors to the account page when they are signed out', () => {
 		render(SemesterPage, { props: { data: { view: { kind: 'need-sign-in' } } } });
-		expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/tools/account');
+		expect(screen.getByRole('heading', { name: 'Sign in to upload outlines' })).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/tools/account');
+		expect(screen.getByText(/Course outlines stay private until you choose to share/)).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Sign in to add an outline' })).toHaveAttribute(
+			'href',
+			'/tools/account'
+		);
 		expect(screen.queryByLabelText('Course outline PDF')).not.toBeInTheDocument();
 	});
 
@@ -21,16 +27,12 @@ describe('semester page', () => {
 
 	it('sends incomplete accounts back to finish setup', () => {
 		render(SemesterPage, { props: { data: { view: { kind: 'need-profile' } } } });
-		expect(screen.getByRole('link', { name: 'Finish your account' })).toHaveAttribute(
-			'href',
-			'/tools/account'
-		);
+		expect(screen.getByRole('heading', { name: 'Finish your account' })).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/tools/account');
 		cleanup();
 		render(SemesterPage, { props: { data: { view: { kind: 'need-disclosure' } } } });
-		expect(screen.getByRole('link', { name: 'Confirm the NVIDIA disclosure' })).toHaveAttribute(
-			'href',
-			'/tools/account'
-		);
+		expect(screen.getByRole('heading', { name: 'Confirm the NVIDIA disclosure' })).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Open account' })).toHaveAttribute('href', '/tools/account');
 	});
 
 	it('lets a student review extracted assessments privately', () => {

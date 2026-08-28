@@ -37,6 +37,8 @@
 	$: missingDates = (proposals.assessments ?? []).filter(
 		(row) => String(row.title ?? '').trim() && !String(row.date ?? '').trim()
 	).length;
+	$: isReady = data.view.kind === 'ready';
+	$: gateKind = data.view.kind;
 
 	function addAssessment() {
 		proposals = {
@@ -66,7 +68,7 @@
 	<section class="page page-semester">
 		<div class="semester-layout">
 			<aside class="course-stack">
-				{#if data.view.kind === 'ready'}
+				{#if isReady}
 					<form method="POST" action="?/extract" enctype="multipart/form-data" class="stack-head">
 						<div>
 							<strong>{termName}</strong>
@@ -90,6 +92,9 @@
 							<strong>{termName}</strong>
 							<span>Sign in to upload</span>
 						</div>
+						<a class="primary-button add-outline add-outline--gate" href={resolve('/tools/account', {})}>
+							Sign in to add an outline
+						</a>
 					</div>
 				{/if}
 
@@ -99,53 +104,70 @@
 						<strong>{title || 'Untitled outline'}</strong>
 						<small>{missingDates ? `${missingDates} date missing` : 'Ready to save'}</small>
 					</button>
+				{:else if !isReady}
+					<div class="stack-placeholder" aria-hidden="true">
+						<span>PDF outline</span>
+						<strong>Your courses appear here after upload</strong>
+					</div>
 				{/if}
 			</aside>
 
 			<div class="review-sheet">
-				{#if data.view.kind === 'need-sign-in'}
-					<div class="sheet-head">
-						<div>
-							<span>Extraction review</span>
-							<h2>Semester</h2>
-							<p>
-								<a href={resolve('/tools/account', {})}>Sign in</a> and finish your account before
-								uploading an outline.
-							</p>
+				{#if gateKind === 'need-sign-in'}
+					<div class="sheet-empty">
+						<div class="sheet-head">
+							<div>
+								<span>Semester</span>
+								<h2>Sign in to upload outlines</h2>
+								<p>
+									Course outlines stay private until you choose to share. Sign in with Google, then
+									upload a text PDF to review dates and weights.
+								</p>
+							</div>
 						</div>
+						<a class="primary-button" href={resolve('/tools/account', {})}>Open account</a>
 					</div>
-				{:else if data.view.kind === 'need-profile'}
-					<div class="sheet-head">
-						<div>
-							<span>Extraction review</span>
-							<h2>Semester</h2>
-							<p>
-								<a href={resolve('/tools/account', {})}>Finish your account</a> so we can save
-								outlines privately.
-							</p>
+				{:else if gateKind === 'need-profile'}
+					<div class="sheet-empty">
+						<div class="sheet-head">
+							<div>
+								<span>Semester</span>
+								<h2>Finish your account</h2>
+								<p>
+									Add the remaining account details so we can save outlines privately to your
+									profile.
+								</p>
+							</div>
 						</div>
+						<a class="primary-button" href={resolve('/tools/account', {})}>Open account</a>
 					</div>
-				{:else if data.view.kind === 'need-disclosure'}
-					<div class="sheet-head">
-						<div>
-							<span>Extraction review</span>
-							<h2>Semester</h2>
-							<p>
-								<a href={resolve('/tools/account', {})}>Confirm the NVIDIA disclosure</a> on your
-								account page before we send outline text for analysis.
-							</p>
+				{:else if gateKind === 'need-disclosure'}
+					<div class="sheet-empty">
+						<div class="sheet-head">
+							<div>
+								<span>Semester</span>
+								<h2>Confirm the NVIDIA disclosure</h2>
+								<p>
+									Confirm the disclosure on your account page before outline text is sent for
+									automatic analysis. You can still edit everything before sharing.
+								</p>
+							</div>
 						</div>
+						<a class="primary-button" href={resolve('/tools/account', {})}>Open account</a>
 					</div>
 				{:else if !form?.extraction}
-					<div class="sheet-head">
-						<div>
-							<span>Extraction review</span>
-							<h2>Upload an outline</h2>
-							<p>
-								Upload a text PDF of a course outline. Check the dates and weights before you share
-								anything. Scanned image PDFs will not work.
-							</p>
+					<div class="sheet-empty">
+						<div class="sheet-head">
+							<div>
+								<span>Semester</span>
+								<h2>Upload an outline</h2>
+								<p>
+									Choose a text PDF of a course outline. Check the dates and weights before you
+									share anything. Scanned image PDFs will not work.
+								</p>
+							</div>
 						</div>
+						<p class="sheet-hint">Use the upload control in the course list to choose a PDF.</p>
 					</div>
 				{/if}
 

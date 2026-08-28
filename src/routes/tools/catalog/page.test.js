@@ -9,8 +9,17 @@ describe('catalog page', () => {
 		render(CatalogPage, { props: { data: { entries: [], termId: '', query: '', discipline: '', disciplines: [] } } });
 		expect(screen.getByRole('heading', { name: 'Course catalog' })).toBeInTheDocument();
 		expect(screen.getByText(/Books are reference only/)).toBeInTheDocument();
-		expect(screen.getByText('No published catalog entries yet.')).toBeInTheDocument();
+		expect(screen.getByText('No published courses yet')).toBeInTheDocument();
+		expect(screen.getByText(/Shared outlines will show up here/)).toBeInTheDocument();
 		expect(screen.getByLabelText('Discipline')).toBeInTheDocument();
+	});
+
+	it('explains when filters match nothing and offers a clear action', () => {
+		render(CatalogPage, {
+			props: { data: { entries: [], termId: 'fall-2026', query: 'ZZZ', discipline: 'Physics', disciplines: ['Physics'] } }
+		});
+		expect(screen.getByText('No courses match these filters')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Clear filters' })).toHaveAttribute('href', '/tools/catalog');
 	});
 
 	it('lists published assessments and books without a student number', () => {
@@ -112,6 +121,7 @@ describe('catalog page', () => {
 		render(CatalogPage, {
 			props: { data: { entries: [], termId: '', query: '', discipline: '', disciplines: [], unavailable: true } }
 		});
-		expect(screen.getByText('The catalog is unavailable right now. Try again.')).toBeInTheDocument();
+		expect(screen.getByText('Catalog data is not loading right now')).toBeInTheDocument();
+		expect(screen.getByText(/Try again in a moment/)).toBeInTheDocument();
 	});
 });

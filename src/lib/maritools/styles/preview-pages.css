@@ -2676,8 +2676,8 @@
 
 	@media (max-width: 700px) {
 	.page-semester {
-			padding-right: 17px;
-			padding-left: 17px;
+			padding-right: 0;
+			padding-left: 0;
 		}
 	
 	.utility-bar {

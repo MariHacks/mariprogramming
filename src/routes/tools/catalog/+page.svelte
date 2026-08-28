@@ -1,4 +1,5 @@
 <script>
+	import { resolve } from '$app/paths';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { ACADEMIC_TERMS } from '$lib/maritools/term/calendar.js';
 	import { disciplineFromCourseCode } from './discipline.js';
@@ -17,6 +18,8 @@
 		const compared = String(left.courseCode).localeCompare(String(right.courseCode));
 		return sortAscending ? compared : -compared;
 	});
+
+	$: filtersActive = Boolean(data.query || data.termId || data.discipline);
 
 	function booksOf(entry) {
 		return entry.structured?.books ?? [];
@@ -60,9 +63,10 @@
 	<section class="page page-catalog">
 		<header class="catalog-titlebar">
 			<div>
+				<span class="catalog-eyebrow">Courses</span>
 				<h1>Course catalog</h1>
 			</div>
-			<p>Assessments and books students have shared. Books are reference only.</p>
+			<p>Assessments and books students have shared. Books are reference only. Browse without signing in.</p>
 		</header>
 
 		<form method="GET" class="index-filters">
@@ -97,13 +101,31 @@
 		</form>
 
 		{#if data.unavailable}
-			<p class="field-error" role="alert">The catalog is unavailable right now. Try again.</p>
+			<div class="catalog-empty" role="status">
+				<strong>Catalog data is not loading right now</strong>
+				<p>Try again in a moment. Your filters are unchanged.</p>
+			</div>
 		{:else if data.entries.length === 0}
-			<p class="catalog-count">No published catalog entries yet.</p>
+			<div class="catalog-empty" role="status">
+				{#if filtersActive}
+					<strong>No courses match these filters</strong>
+					<p>Try another term, discipline, or search phrase.</p>
+					<a href={resolve('/tools/catalog', {})}>Clear filters</a>
+				{:else}
+					<strong>No published courses yet</strong>
+					<p>Shared outlines will show up here after students review and publish course facts.</p>
+				{/if}
+			</div>
 		{:else}
 			<div class="catalog-count">
-				<strong>{data.entries.length} courses</strong>
-				<span>Updated from reviewed student outlines</span>
+				<strong>{data.entries.length} course{data.entries.length === 1 ? '' : 's'}</strong>
+				<span>
+					{#if filtersActive}
+						Filtered results from reviewed student outlines
+					{:else}
+						Updated from reviewed student outlines
+					{/if}
+				</span>
 				<button type="button" on:click={() => (sortAscending = !sortAscending)}>
 					Sort by course code {sortAscending ? '↓' : '↑'}
 				</button>
