@@ -45,6 +45,16 @@ describe('student sign-in client boundary', () => {
 		await expect(requestStudentAuthorization(callbackURL)).rejects.toThrow('Sign-in is unavailable');
 	});
 
+	it('names missing Google OAuth when auth returns the configuration 503', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response('Authentication service is unavailable', { status: 503 }))
+		);
+		await expect(requestStudentAuthorization(callbackURL)).rejects.toThrow(
+			'Google sign-in is not configured'
+		);
+	});
+
 	it('rejects a redirecting handler response and a malformed callback', async () => {
 		vi.stubGlobal(
 			'fetch',

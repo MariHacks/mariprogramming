@@ -16,16 +16,52 @@ afterEach(() => {
 const base = {
 	callbackURL: 'https://club.example.com/tools/account',
 	recoveryMessage: null,
-	nimDisclosure: NIM_DISCLOSURE
+	nimDisclosure: NIM_DISCLOSURE,
+	googleSignInConfigured: true
 };
 
 describe('account page', () => {
 	it('offers Google sign-in to a guest', () => {
-		render(AccountPage, { props: { data: { ...base, view: { kind: 'guest' } } } });
+		render(AccountPage, {
+			props: { data: { ...base, googleSignInConfigured: true, view: { kind: 'guest' } } }
+		});
 		expect(screen.getByRole('heading', { name: 'Your account' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
 		expect(screen.queryByLabelText('Student number')).not.toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
+	});
+
+	it('tells a guest when Google OAuth is not configured on loopback', () => {
+		render(AccountPage, {
+			props: {
+				data: {
+					...base,
+					callbackURL: 'http://127.0.0.1:5174/tools/account',
+					googleSignInConfigured: false,
+					view: { kind: 'guest' }
+				}
+			}
+		});
+		expect(
+			screen.getByText(
+				'Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local to a real Google Cloud OAuth web client, then restart the dev server.'
+			)
+		).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Continue with Google' })).not.toBeInTheDocument();
+	});
+
+	it('tells a guest when Google OAuth is not configured on a public origin', () => {
+		render(AccountPage, {
+			props: {
+				data: {
+					...base,
+					googleSignInConfigured: false,
+					view: { kind: 'guest' }
+				}
+			}
+		});
+		expect(screen.getByText('Google sign-in is not configured on this site.')).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Continue with Google' })).not.toBeInTheDocument();
 	});
 
 	it('asks for a student number and NVIDIA disclosure without showing an existing id', () => {

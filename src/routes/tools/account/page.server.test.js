@@ -31,6 +31,7 @@ function handlers(overrides = {}) {
 		..._createHandlers({
 			readEnvironment: vi.fn(() => ({ appOrigin: ORIGIN })),
 			createRepository: vi.fn(() => repository),
+			isGoogleSignInConfigured: vi.fn(() => true),
 			...overrides
 		}),
 		repository
@@ -58,8 +59,18 @@ describe('account page server', () => {
 			view: { kind: 'guest' },
 			callbackURL: `${ORIGIN}/tools/account`,
 			recoveryMessage: null,
-			nimDisclosure: NIM_DISCLOSURE
+			nimDisclosure: NIM_DISCLOSURE,
+			googleSignInConfigured: true
 		});
+	});
+
+	it('marks Google sign-in unconfigured when credentials are placeholders', async () => {
+		const current = handlers({
+			isGoogleSignInConfigured: vi.fn(() => false)
+		});
+		const data = await current.load(event());
+		expect(data.googleSignInConfigured).toBe(false);
+		expect(data.view).toEqual({ kind: 'guest' });
 	});
 
 	it('explains a failed Google return', async () => {
@@ -116,7 +127,8 @@ describe('account page server', () => {
 		const current = handlers({
 			readEnvironment: vi.fn(() => {
 				throw new ServerConfigurationError();
-			})
+			}),
+			isGoogleSignInConfigured: vi.fn(() => false)
 		});
 		const loadEvent = event();
 		loadEvent.url = new URL('http://localhost:5174/tools/account');
@@ -124,17 +136,20 @@ describe('account page server', () => {
 		expect(data.view).toEqual({ kind: 'guest' });
 		expect(data.callbackURL).toBe('http://localhost:5174/tools/account');
 		expect(data.unavailable).toBeUndefined();
+		expect(data.googleSignInConfigured).toBe(false);
 	});
 
 	it('marks signed-in account load unavailable when server configuration is missing', async () => {
 		const current = handlers({
 			readEnvironment: vi.fn(() => {
 				throw new ServerConfigurationError();
-			})
+			}),
+			isGoogleSignInConfigured: vi.fn(() => false)
 		});
 		const data = await current.load(event({ locals: { maritools: SESSION } }));
 		expect(data.view).toEqual({ kind: 'incomplete', email: SESSION.email });
 		expect(data.unavailable).toBe(true);
+		expect(data.googleSignInConfigured).toBe(false);
 	});
 
 	it('saves a completed account', async () => {

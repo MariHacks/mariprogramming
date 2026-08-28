@@ -372,6 +372,26 @@ export function readStaffSignInEnvironment(source = privateEnvironment) {
 }
 
 /**
+ * True when GOOGLE_CLIENT_ID matches a real Google OAuth web client id shape.
+ * Placeholder values like `local-dev.apps.googleusercontent.com` return false.
+ *
+ * @param {unknown} [source]
+ */
+export function isGoogleOAuthConfigured(source = privateEnvironment) {
+	if (!isEnvironmentRecord(source)) return false;
+	const clientId = source.GOOGLE_CLIENT_ID;
+	const clientSecret = source.GOOGLE_CLIENT_SECRET;
+	return (
+		typeof clientId === 'string' &&
+		GOOGLE_OAUTH_WEB_CLIENT_ID_PATTERN.test(clientId) &&
+		typeof clientSecret === 'string' &&
+		clientSecret.trim().length > 0 &&
+		clientSecret.length <= MAX_CONFIGURATION_VALUE_LENGTH &&
+		clientSecret === clientSecret.trim()
+	);
+}
+
+/**
  * Reads only the provider credential required to expire a Session during a protected staff
  * cancellation. Ledger reads and unrelated staff actions do not depend on Stripe configuration.
  *

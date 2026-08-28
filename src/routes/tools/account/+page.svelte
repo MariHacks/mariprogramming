@@ -9,6 +9,7 @@
 
 	let pending = false;
 	let failed = false;
+	let signInError = '';
 	let signOutFailed = false;
 
 	/** @param {string} email */
@@ -16,16 +17,34 @@
 		return email.split('@')[0] || 'Account';
 	}
 
+	/** @param {string} callbackURL */
+	function googleSignInUnavailableMessage(callbackURL) {
+		try {
+			const host = new URL(callbackURL).hostname;
+			if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1') {
+				return 'Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local to a real Google Cloud OAuth web client, then restart the dev server.';
+			}
+		} catch {
+		}
+		return 'Google sign-in is not configured on this site.';
+	}
+
 	async function beginSignIn() {
-		if (pending) return;
+		if (pending || data.googleSignInConfigured === false) return;
 		pending = true;
 		failed = false;
+		signInError = '';
 		try {
 			const authorizationUrl = await requestStudentAuthorization(data.callbackURL);
 			globalThis.location.assign(authorizationUrl);
-		} catch {
+		} catch (error) {
 			pending = false;
 			failed = true;
+			if (error instanceof Error && error.message === 'Google sign-in is not configured') {
+				signInError = googleSignInUnavailableMessage(data.callbackURL);
+			} else {
+				signInError = 'Sign-in is unavailable. Try again.';
+			}
 		}
 	}
 
@@ -95,13 +114,19 @@
 								<p>Use Google to save schedules, outlines, and forum posts.</p>
 							</div>
 						</header>
-						<form on:submit|preventDefault={beginSignIn}>
-							<button type="submit" class="primary-button" disabled={pending}
-								>Continue with Google</button
-							>
-						</form>
-						{#if pending}<p role="status">Opening Google sign-in</p>{/if}
-						{#if failed}<p class="field-error" role="alert">Sign-in is unavailable. Try again.</p>{/if}
+						{#if data.googleSignInConfigured === false}
+							<p class="field-error" role="alert">
+								{googleSignInUnavailableMessage(data.callbackURL)}
+							</p>
+						{:else}
+							<form on:submit|preventDefault={beginSignIn}>
+								<button type="submit" class="primary-button" disabled={pending}
+									>Continue with Google</button
+								>
+							</form>
+							{#if pending}<p role="status">Opening Google sign-in</p>{/if}
+							{#if failed}<p class="field-error" role="alert">{signInError}</p>{/if}
+						{/if}
 					</section>
 				{:else if data.view.kind === 'incomplete'}
 					<section>

@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import {
 	ServerConfigurationError,
+	isGoogleOAuthConfigured,
 	readStaffSignInEnvironment
 } from '$lib/server/config/environment.js';
 import { NIM_DISCLOSURE, accountPageView } from '$lib/server/maritools/community.js';
@@ -22,9 +23,12 @@ function recoveryMessageFor(state) {
 export function _createHandlers(dependencies = {}) {
 	const readEnvironment = dependencies.readEnvironment ?? readStaffSignInEnvironment;
 	const createRepository = dependencies.createRepository ?? openStudentStore;
+	const googleSignInConfigured =
+		dependencies.isGoogleSignInConfigured ?? (() => isGoogleOAuthConfigured());
 
 	/** @param {any} event */
 	async function load(event) {
+		const signInConfigured = googleSignInConfigured();
 		let appOrigin;
 		try {
 			({ appOrigin } = readEnvironment());
@@ -36,6 +40,7 @@ export function _createHandlers(dependencies = {}) {
 					callbackURL: `${event.url.origin}/tools/account`,
 					recoveryMessage: recoveryMessageFor(event.url.searchParams.get('state')),
 					nimDisclosure: NIM_DISCLOSURE,
+					googleSignInConfigured: signInConfigured,
 					...(session ? { unavailable: true } : {})
 				};
 			}
@@ -56,6 +61,7 @@ export function _createHandlers(dependencies = {}) {
 			callbackURL: `${appOrigin}/tools/account`,
 			recoveryMessage: recoveryMessageFor(event.url.searchParams.get('state')),
 			nimDisclosure: NIM_DISCLOSURE,
+			googleSignInConfigured: signInConfigured,
 			...(unavailable ? { unavailable: true } : {})
 		};
 	}

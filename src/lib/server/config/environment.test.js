@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	ServerConfigurationError,
+	isGoogleOAuthConfigured,
 	readBookDeliveryJobEnvironment,
 	readBookRequestEnvironment,
 	readClubEventDeliveryEnvironment,
@@ -287,6 +288,21 @@ describe('private server environment', () => {
 			isVercel: true
 		});
 		expect(Object.isFrozen(configuration)).toBe(true);
+	});
+
+	it('reports Google OAuth configured only for real web client ids', () => {
+		expect(isGoogleOAuthConfigured(validEnvironment)).toBe(true);
+		expect(
+			isGoogleOAuthConfigured(
+				withEnvironment({ GOOGLE_CLIENT_ID: 'local-dev.apps.googleusercontent.com' })
+			)
+		).toBe(false);
+		expect(
+			isGoogleOAuthConfigured(
+				withEnvironment({ GOOGLE_CLIENT_ID: 'google-client-id.apps.googleusercontent.com' })
+			)
+		).toBe(false);
+		expect(isGoogleOAuthConfigured(withEnvironment({ GOOGLE_CLIENT_SECRET: '' }))).toBe(false);
 	});
 
 	it('accepts a least-privilege restricted Stripe key at runtime', () => {
