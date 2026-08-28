@@ -179,8 +179,13 @@
 						</div>
 						{#if board.members.length === 0}
 							<p class="members-empty">
-								No one has saved yet. Paint free slots, add a display name, then Save so the
-								group can see overlaps.
+								{#if signedIn}
+									No one has saved yet. Paint free slots, then Save so the group can see
+									overlaps.
+								{:else}
+									No one has saved yet. Paint free slots, add a display name, then Save so the
+									group can see overlaps.
+								{/if}
 							</p>
 						{:else}
 							<ul>
@@ -232,15 +237,20 @@
 							};
 						}}
 					>
-						<label class="guest-field">
-							<span>Display name</span>
-							<input name="displayName" bind:value={displayName} placeholder="How others will see you" required />
-							<small
-								>{signedIn
-									? 'Linked to your signed-in MariTools account when you save.'
-									: 'Shown when you are not signed in.'}</small
-							>
-						</label>
+						{#if signedIn}
+							<input type="hidden" name="displayName" value={displayName} />
+						{:else}
+							<label class="guest-field">
+								<span>Display name</span>
+								<input
+									name="displayName"
+									bind:value={displayName}
+									placeholder="How others will see you"
+									required
+								/>
+								<small>Shown when you are not signed in.</small>
+							</label>
+						{/if}
 						<input type="hidden" name="shareToken" value={shareToken} />
 						<input type="hidden" name="freeJson" value={JSON.stringify([...freeCells])} />
 						<button type="submit" class="primary-button wide">Save availability</button>

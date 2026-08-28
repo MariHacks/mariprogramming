@@ -125,12 +125,27 @@ describe('free-time board page', () => {
 				}
 			}
 		});
-		expect(screen.getByPlaceholderText('How others will see you')).toHaveValue('Zhicheng');
+		expect(screen.queryByPlaceholderText('How others will see you')).not.toBeInTheDocument();
+		expect(document.querySelector('input[name="displayName"][type="hidden"]')).not.toBeNull();
 		expect(screen.getByText(/editing as Zhicheng \(signed in\)/i)).toBeInTheDocument();
 		expect(screen.getByText('MayaGuest')).toBeInTheDocument();
 		expect(screen.getAllByText('Zhicheng').length).toBeGreaterThan(0);
 		expect(screen.getByText('Account')).toBeInTheDocument();
 		expect(screen.queryByText(/editing as Guest/i)).not.toBeInTheDocument();
+	});
+
+	it('keeps the display name field for guests', () => {
+		render(BoardPage, {
+			props: {
+				data: {
+					board: BOARD,
+					shareUrl: 'https://example.com/tools/free-time/study-group',
+					signedInDisplayName: null
+				}
+			}
+		});
+		expect(screen.getByPlaceholderText('How others will see you')).toBeInTheDocument();
+		expect(document.querySelector('input[name="displayName"][type="hidden"]')).toBeNull();
 	});
 
 	it('guides an empty board before anyone paints', () => {
@@ -147,6 +162,20 @@ describe('free-time board page', () => {
 		expect(
 			screen.getByText(/add a display name, then Save so the group can see overlaps/i)
 		).toBeInTheDocument();
+	});
+
+	it('omits the display-name tip on empty boards when signed in', () => {
+		render(BoardPage, {
+			props: {
+				data: {
+					board: { ...BOARD, members: [] },
+					shareUrl: 'https://example.com/tools/free-time/study-group',
+					signedInDisplayName: 'Zhicheng'
+				}
+			}
+		});
+		expect(screen.getByText(/Paint free slots, then Save/i)).toBeInTheDocument();
+		expect(screen.queryByText(/add a display name/i)).not.toBeInTheDocument();
 	});
 
 	it('explains unavailable boards', () => {

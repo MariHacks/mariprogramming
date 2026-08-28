@@ -377,26 +377,29 @@ async function main() {
 				await page.reload({ waitUntil: 'networkidle' });
 				await mark(page, t0, log, 'cleared guest share token for signed-in member');
 
-				const nameInput = page.getByPlaceholder('How others will see you');
-				await nameInput.waitFor({ state: 'visible' });
-				const prefilled = (await nameInput.inputValue()).trim();
+				if (await page.getByPlaceholder('How others will see you').count()) {
+					bugs.push('signed-in still shows editable display name field');
+				}
+
+				await page.locator('.editing-as').waitFor({ state: 'visible' });
+				const editing = await page.locator('.editing-as').innerText();
+				if (/Guest/i.test(editing)) bugs.push(`signed-in still labeled Guest: ${editing}`);
+				if (!/signed in/i.test(editing)) {
+					bugs.push(`signed-in editing label missing account cue: ${editing}`);
+				}
+				const prefilled =
+					editing.match(/editing as\s+(.+?)\s+\(signed in\)/i)?.[1]?.trim() ?? '';
 				if (!prefilled) {
-					bugs.push('signed-in display name not prefilled');
+					bugs.push('signed-in display name not shown from profile');
 				} else {
-					await mark(page, t0, log, `signed-in prefilled as ${prefilled}`);
+					await mark(page, t0, log, `signed-in editing as ${prefilled}`);
 				}
 				const expected = String(accountName || prefilled).trim();
 				if (prefilled && expected && prefilled !== expected) {
 					log.push({
 						t: Number(((Date.now() - t0) / 1000).toFixed(2)),
-						label: `note: prefill ${prefilled} vs profile ${expected}`
+						label: `note: shown ${prefilled} vs profile ${expected}`
 					});
-				}
-
-				const editing = await page.locator('.editing-as').innerText();
-				if (/Guest/i.test(editing)) bugs.push(`signed-in still labeled Guest: ${editing}`);
-				if (!/signed in/i.test(editing)) {
-					bugs.push(`signed-in editing label missing account cue: ${editing}`);
 				}
 
 				for (const key of ['Mon-09:00', 'Wed-14:00', 'Wed-14:30']) {

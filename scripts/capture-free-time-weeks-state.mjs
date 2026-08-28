@@ -169,9 +169,15 @@ async function captureMatrix(browser, storageState, videoName, opts) {
 		await page.locator('.paint-cell').first().waitFor({ state: 'visible' });
 
 		if (opts.expectSignedIn) {
-			const name = await page.getByPlaceholder('How others will see you').inputValue();
-			if (!name) bugs.push('signed-in path did not prefill display name');
-			await mark(page, t0, log, `signed-in prefill display name="${name}"`);
+			if (await page.getByPlaceholder('How others will see you').count()) {
+				bugs.push('signed-in still shows editable display name field');
+			}
+			await page.locator('.editing-as').waitFor({ state: 'visible' });
+			const editing = await page.locator('.editing-as').innerText();
+			const name =
+				editing.match(/editing as\s+(.+?)\s+\(signed in\)/i)?.[1]?.trim() ?? '';
+			if (!name) bugs.push('signed-in path did not show profile display name');
+			await mark(page, t0, log, `signed-in editing as "${name}"`);
 		}
 
 		for (const key of opts.cells1) {
@@ -180,8 +186,6 @@ async function captureMatrix(browser, storageState, videoName, opts) {
 		}
 		await mark(page, t0, log, `member1 painted ${opts.cells1.length} cells`);
 		if (!opts.expectSignedIn) {
-			await page.getByPlaceholder('How others will see you').fill(opts.member1);
-		} else if (!(await page.getByPlaceholder('How others will see you').inputValue())) {
 			await page.getByPlaceholder('How others will see you').fill(opts.member1);
 		}
 		await page.getByRole('button', { name: 'Save availability' }).click();
@@ -213,7 +217,11 @@ async function captureMatrix(browser, storageState, videoName, opts) {
 		);
 		try {
 			await assertSelected(page, opts.cells1);
-			const restoredName = await page.getByPlaceholder('How others will see you').inputValue();
+			const restoredName = opts.expectSignedIn
+				? ((await page.locator('.editing-as').innerText()).match(
+						/editing as\s+(.+?)\s+\(signed in\)/i
+					)?.[1]?.trim() ?? '')
+				: await page.getByPlaceholder('How others will see you').inputValue();
 			if (!restoredName) bugs.push('reload wiped display name');
 			await mark(page, t0, log, `reload restore OK (name="${restoredName}", ${opts.cells1.length} cells)`);
 		} catch (error) {
@@ -254,17 +262,42 @@ async function captureMatrix(browser, storageState, videoName, opts) {
 			await mark(page, t0, log, 'reload after modify FAILED');
 		}
 
-		await page.evaluate(() => {
-			for (const key of Object.keys(localStorage)) {
-				if (key.startsWith('maritools.free-time.')) localStorage.removeItem(key);
+		if (opts.expectSignedIn) {
+			const guestVideoDir = path.join(tmpRoot, `${videoName}-guest2-video`);
+			await mkdir(guestVideoDir, { recursive: true });
+			const guestContext = await browser.newContext({
+				viewport: { width: 1280, height: 800 },
+				recordVideo: { dir: guestVideoDir, size: { width: 1280, height: 800 } },
+				baseURL
+			});
+			const guestPage = await guestContext.newPage();
+			try {
+				await guestPage.goto(boardUrl, { waitUntil: 'networkidle' });
+				await mark(page, t0, log, 'guest context → second member path');
+				await paintCells(guestPage, opts.cells2);
+				await guestPage.getByPlaceholder('How others will see you').fill(opts.member2);
+				await guestPage.getByRole('button', { name: 'Save availability' }).click();
+				await guestPage.getByText('Availability saved.').waitFor({ state: 'visible' });
+				await guestPage.getByText('2 saved').waitFor({ state: 'visible' });
+			} finally {
+				await guestContext.close();
 			}
-		});
-		await page.reload({ waitUntil: 'networkidle' });
-		await mark(page, t0, log, 'cleared token → second member path');
-		await paintCells(page, opts.cells2);
-		await page.getByPlaceholder('How others will see you').fill(opts.member2);
-		await page.getByRole('button', { name: 'Save availability' }).click();
-		await page.getByText('Availability saved.').waitFor({ state: 'visible' });
+			await page.reload({ waitUntil: 'networkidle' });
+			await page.locator('.paint-cell').first().waitFor({ state: 'visible' });
+		} else {
+			await page.evaluate(() => {
+				for (const key of Object.keys(localStorage)) {
+					if (key.startsWith('maritools.free-time.')) localStorage.removeItem(key);
+				}
+			});
+			await page.reload({ waitUntil: 'networkidle' });
+			await mark(page, t0, log, 'cleared token → second member path');
+			await paintCells(page, opts.cells2);
+			await page.getByPlaceholder('How others will see you').fill(opts.member2);
+			await page.getByRole('button', { name: 'Save availability' }).click();
+			await page.getByText('Availability saved.').waitFor({ state: 'visible' });
+			await page.getByText('2 saved').waitFor({ state: 'visible' });
+		}
 		await page.getByText('2 saved').waitFor({ state: 'visible' });
 		const commonCount = await page.locator('.paint-cell.common').count();
 		if (commonCount < 1) bugs.push('no common free cells after second member');
@@ -344,7 +377,7 @@ async function main() {
 
 ## Identity notes
 - Guest: display name + localStorage share token; label "editing as Guest, …"
-- Account: session email local-part prefills display name; label "editing as … (signed in)". Members still keyed by share token (not user id).
+- Account: profile display name is locked (no editable field); label "editing as … (signed in)". Second member uses a guest context. Members still keyed by share token (not user id).
 - Availability is a Mon–Fri pattern. Week arrows move calendar labels only (no per-week paint store).
 
 ## Guest on-camera (guest-weeks-state.webm)
