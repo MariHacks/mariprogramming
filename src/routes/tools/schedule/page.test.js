@@ -35,6 +35,15 @@ describe('My schedule', () => {
 		expect(screen.queryByText(/scribe/i)).not.toBeInTheDocument();
 	});
 
+	it('shows a clear empty-state CTA before any paste', () => {
+		render(SchedulePage, { props: { data: defaultData } });
+		expect(screen.getByText('Import your Omnivox schedule')).toBeInTheDocument();
+		expect(
+			screen.getByText(/Paste the compact numbered course list to fill this week view/)
+		).toBeInTheDocument();
+		expect(screen.getAllByRole('button', { name: 'Import Omnivox' }).length).toBeGreaterThan(0);
+	});
+
 	it('reads the canonical paste into a positioned calendar', () => {
 		render(SchedulePage, { props: { data: defaultData } });
 		fireEvent.click(screen.getAllByRole('button', { name: 'Import Omnivox' })[0]);
@@ -46,6 +55,7 @@ describe('My schedule', () => {
 		expect(screen.getByText('Badminton and Conditioning')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Add to Google Calendar' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { level: 1 })).not.toHaveTextContent('Week of January 20');
+		expect(screen.getByText('7 classes detected')).toHaveClass('parse-count');
 	});
 
 	it('warns when a student number is in the paste', () => {

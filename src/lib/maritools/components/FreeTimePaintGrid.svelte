@@ -99,6 +99,11 @@
 			<button type="button" class="text-button clear-paint" on:click={clearPaint}>Clear</button>
 		</div>
 	</div>
+	{#if freeCells.size === 0 && commonCells.size === 0}
+		<p class="paint-empty-hint">
+			Paint free slots below, or import an Omnivox schedule from the side panel.
+		</p>
+	{/if}
 	<div class="paint-grid" aria-label="Interactive free-time grid">
 		<b>Time</b>
 		{#each dayHeaders as header (header)}

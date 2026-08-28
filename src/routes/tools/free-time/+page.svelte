@@ -98,7 +98,10 @@
 		{:else}
 			<div class="boards-help">
 				<strong>No boards yet</strong>
-				<p>Create a board, then share the private link. You do not need an account.</p>
+				<p>
+					Create a board, share the private link, and have everyone paint when they are free. Common
+					overlaps show in green.
+				</p>
 			</div>
 		{/if}
 

@@ -13,24 +13,61 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'static', 'maritools', 'omnivox');
 
 const STEPS = [
-	{ n: 1, title: 'Open Omnivox', focus: 'main' },
-	{ n: 2, title: 'Student number', focus: 'field' },
-	{ n: 3, title: 'Log in', focus: 'field' },
-	{ n: 4, title: 'Course Schedule', focus: 'sidebar' },
-	{ n: 5, title: 'Obtain my schedule', focus: 'action' },
-	{ n: 6, title: 'Printer-friendly version', focus: 'action' },
-	{ n: 7, title: 'Compact list', focus: 'action' },
-	{ n: 8, title: 'View', focus: 'action' },
-	{ n: 9, title: 'Copy the list', focus: 'action' }
+	{
+		n: 1,
+		title: 'Open Omnivox',
+		cue: 'marianopolis.omnivox.ca',
+		detail: 'Use the college Omnivox login page in your browser.'
+	},
+	{
+		n: 2,
+		title: 'Student number',
+		cue: 'Student number',
+		detail: 'Sign in with your student number here. MariTools never asks for it.'
+	},
+	{
+		n: 3,
+		title: 'Log in',
+		cue: 'Log In',
+		detail: 'Submit the Omnivox login form to continue.'
+	},
+	{
+		n: 4,
+		title: 'Course Schedule',
+		cue: 'Course Schedule',
+		detail: 'Open Course Schedule from the left Omnivox menu.'
+	},
+	{
+		n: 5,
+		title: 'Obtain my schedule',
+		cue: 'Obtain my schedule',
+		detail: 'Choose the semester, then open Obtain my schedule.'
+	},
+	{
+		n: 6,
+		title: 'Printer-friendly version',
+		cue: 'printer-friendly version',
+		detail: 'Click the yellow banner for the printer-friendly view.'
+	},
+	{
+		n: 7,
+		title: 'Compact list',
+		cue: 'Compact printable semester schedule',
+		detail: 'Pick the compact list, not the full grid format.'
+	},
+	{
+		n: 8,
+		title: 'View',
+		cue: 'View',
+		detail: 'Open the compact list so you can copy it.'
+	},
+	{
+		n: 9,
+		title: 'Copy the list',
+		cue: '1  Course title…',
+		detail: 'Copy only the numbered courses. Leave out name and student number.'
+	}
 ];
-
-/** @param {'main'|'field'|'sidebar'|'action'} kind */
-function focusRect(kind) {
-	if (kind === 'sidebar') return { x: 12, y: 148, w: 120, h: 38 };
-	if (kind === 'field') return { x: 220, y: 168, w: 360, h: 38 };
-	if (kind === 'action') return { x: 210, y: 248, w: 380, h: 52 };
-	return { x: 250, y: 220, w: 280, h: 38 };
-}
 
 function escapeXml(value) {
 	return String(value)
@@ -41,8 +78,11 @@ function escapeXml(value) {
 }
 
 function svgFor(step) {
-	const focus = focusRect(step.focus);
 	const title = escapeXml(step.title);
+	const cue = escapeXml(step.cue);
+	const detail = escapeXml(step.detail);
+	const sidebarActive = step.n === 4 ? '#1457d9' : '#5b6b7c';
+	const sidebarWeight = step.n === 4 ? '700' : '400';
 	return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420">
   <rect width="800" height="420" fill="#ffffff"/>
@@ -50,12 +90,15 @@ function svgFor(step) {
   <rect x="0" y="0" width="168" height="420" fill="#f5f7fa" stroke="#d7dfe9"/>
   <text x="22" y="42" fill="#14233a" font-family="Inter, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">Omnivox</text>
   <text x="22" y="78" fill="#5b6b7c" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">Services</text>
-  <text x="22" y="108" fill="#5b6b7c" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">Course Schedule</text>
+  <text x="22" y="108" fill="${sidebarActive}" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12" font-weight="${sidebarWeight}">Course Schedule</text>
   <text x="22" y="138" fill="#5b6b7c" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">Documents</text>
-  <text x="400" y="150" text-anchor="middle" fill="#5b6b7c" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">Step ${step.n}</text>
-  <text x="400" y="188" text-anchor="middle" fill="#14233a" font-family="Inter, Helvetica, Arial, sans-serif" font-size="28" font-weight="700">${title}</text>
-  <text x="400" y="218" text-anchor="middle" fill="#708199" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">Illustrative guide frame</text>
-  <rect x="${focus.x}" y="${focus.y}" width="${focus.w}" height="${focus.h}" fill="rgba(20,87,217,0.08)" stroke="#1457d9" stroke-width="2"/>
+  <text x="484" y="48" text-anchor="middle" fill="#708199" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">Step ${step.n} of 9</text>
+  <text x="484" y="92" text-anchor="middle" fill="#14233a" font-family="Inter, Helvetica, Arial, sans-serif" font-size="26" font-weight="700">${title}</text>
+  <text x="484" y="122" text-anchor="middle" fill="#516278" font-family="Inter, Helvetica, Arial, sans-serif" font-size="13">${detail}</text>
+  <rect x="220" y="160" width="528" height="200" rx="4" fill="#f7f9fc" stroke="#1457d9" stroke-width="2"/>
+  <text x="484" y="210" text-anchor="middle" fill="#708199" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">Look for</text>
+  <text x="484" y="250" text-anchor="middle" fill="#1457d9" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" font-weight="700">${cue}</text>
+  <text x="484" y="290" text-anchor="middle" fill="#516278" font-family="Inter, Helvetica, Arial, sans-serif" font-size="12">Labeled guide · no personal data</text>
 </svg>`;
 }
 
@@ -84,5 +127,5 @@ for (const step of STEPS) {
 
 	unlinkSync(svgPath);
 	unlinkSync(pngPath);
-	console.log(`wrote ${webpPath}`);
+	console.log('wrote', webpPath);
 }

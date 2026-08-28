@@ -199,16 +199,11 @@
 	}
 
 	.schedule-stage.drawer-hidden {
-		grid-template-columns: minmax(760px, 1fr) 0;
+		grid-template-columns: minmax(760px, 1fr);
 	}
 
 	.schedule-stage.drawer-hidden .import-drawer {
-		overflow: hidden;
-		padding-right: 0;
-		padding-left: 0;
-		border-left: 0;
-		opacity: 0;
-		visibility: hidden;
+		display: none;
 	}
 
 	.calendar-frame {
@@ -501,14 +496,23 @@
 
 	.parse-status {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
 		margin: 10px 0 15px;
+		gap: 8px;
 		color: var(--steel);
 		font-size: 9px;
 	}
 
-	.parse-status span:last-child {
+	.parse-status .parse-count {
+		color: #0c6747;
+		font-weight: 650;
+	}
+
+	.parse-status .parse-fail,
+	.parse-status .parse-conflict {
 		color: var(--red);
+		font-weight: 650;
 	}
 
 	.tutorial-again {

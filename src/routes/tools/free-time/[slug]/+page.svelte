@@ -101,7 +101,6 @@
 						><button type="button" aria-label="Next week" on:click={goToNextWeek}>→</button>
 					</div>
 					<a class="quiet-button" href="/tools/free-time">All boards</a>
-					<button class="primary-button" type="submit" form="save-availability">Save availability</button>
 				</div>
 			</div>
 
@@ -133,20 +132,34 @@
 					</label>
 
 					<div class="members">
-						<div><strong>Members</strong><span>{board.members.length} added</span></div>
-						<ul>
-							{#each board.members as member, index (member.id)}
-								<li>
-									<i class="member-dot {MEMBER_DOTS[index % MEMBER_DOTS.length]}"></i>
-									<span>
-										{member.displayName}
-										{#if displayName && member.displayName === displayName}
-											<small>You, editing</small>
-										{/if}
-									</span>
-								</li>
-							{/each}
-						</ul>
+						<div>
+							<strong>Members</strong>
+							<span
+								>{board.members.length === 0
+									? 'Waiting for the first save'
+									: `${board.members.length} saved`}</span
+							>
+						</div>
+						{#if board.members.length === 0}
+							<p class="members-empty">
+								No one has saved yet. Paint free slots, add a display name, then Save so the
+								group can see overlaps.
+							</p>
+						{:else}
+							<ul>
+								{#each board.members as member, index (member.id)}
+									<li>
+										<i class="member-dot {MEMBER_DOTS[index % MEMBER_DOTS.length]}"></i>
+										<span>
+											{member.displayName}
+											{#if displayName && member.displayName === displayName}
+												<small>You, editing</small>
+											{/if}
+										</span>
+									</li>
+								{/each}
+							</ul>
+						{/if}
 					</div>
 
 					<form
@@ -154,10 +167,13 @@
 						method="POST"
 						action="?/saveMember"
 						use:enhance={() => {
-							return async ({ result }) => {
+							return async ({ result, update }) => {
 								if (result.type === 'failure') {
 									saveMessage = String(result.data?.saveError ?? 'Could not save.');
+									return;
 								}
+								await update();
+								saveMessage = 'Availability saved.';
 							};
 						}}
 					>

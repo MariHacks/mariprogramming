@@ -47,7 +47,10 @@
 				<div>
 					<span>MariTools guide</span>
 					<h2>Import from Omnivox</h2>
-					<p>Nine short steps. Your student number and legal name stay out of MariTools.</p>
+					<p>
+						Nine short steps. Your student number and legal name stay out of MariTools. Screens
+						are labeled guides, not live Omnivox captures.
+					</p>
 				</div>
 				<ol>
 					{#each OMNIVOX_TUTORIAL_STEPS as item, index (item.n)}

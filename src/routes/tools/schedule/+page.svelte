@@ -185,7 +185,10 @@
 				<ScheduleCalendar {grid} />
 			{:else}
 				<div class="empty-calendar">
-					<p>Paste an Omnivox compact list to see your week here.</p>
+					<div class="empty-calendar-copy">
+						<strong>Import your Omnivox schedule</strong>
+						<p>Paste the compact numbered course list to fill this week view.</p>
+					</div>
 					<button class="primary-button" type="button" on:click={openImport}>Import Omnivox</button>
 				</div>
 			{/if}
@@ -203,7 +206,10 @@
 						on:click={() => (drawerOpen = false)}>×</button
 					>
 				</div>
-				<p>Copy the compact numbered course list. Skip the schedule grid and personal details.</p>
+				<p>
+					From Omnivox, open the printer-friendly compact list, copy only the numbered courses, then
+					paste here. Leave out your student number and name.
+				</p>
 				<textarea
 					id="schedule-paste"
 					name="paste"
@@ -213,11 +219,13 @@
 					spellcheck="false"
 				></textarea>
 				{#if parsed}
-					<div class="parse-status">
-						<span>{result.courses.length} classes detected</span>
-						{#if !result.ok}<span>Could not read paste</span>{/if}
+					<div class="parse-status" aria-live="polite">
+						<span class="parse-count">{result.courses.length} classes detected</span>
+						{#if !result.ok}<span class="parse-fail">Could not read paste</span>{/if}
 						{#if conflictDays > 0}
-							<span>{conflictDays} conflict{conflictDays === 1 ? '' : 's'}</span>
+							<span class="parse-conflict"
+								>{conflictDays} conflict{conflictDays === 1 ? '' : 's'}</span
+							>
 						{/if}
 					</div>
 				{/if}

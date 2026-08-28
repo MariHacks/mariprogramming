@@ -101,13 +101,117 @@
 
 .mt-preview .empty-calendar {
 	display: grid;
-	min-height: 36rem;
-	place-items: center;
-	padding: 2rem;
+	min-height: calc(100vh - var(--header-h) - var(--preview-h) - 78px);
+	max-height: calc(100vh - var(--header-h) - var(--preview-h) - 78px);
+	place-content: center;
+	justify-items: center;
+	padding: clamp(2rem, 6vh, 4rem) 2rem;
 	border-bottom: 1px solid var(--line);
-	background: white;
-	gap: 1rem;
+	background:
+		radial-gradient(ellipse 70% 55% at 50% 42%, rgb(126 166 255 / 10%), transparent 70%),
+		white;
+	gap: 1.25rem;
 	text-align: center;
+}
+
+.mt-preview .empty-calendar-copy {
+	display: grid;
+	max-width: 22rem;
+	gap: 0.5rem;
+}
+
+.mt-preview .empty-calendar-copy strong {
+	font-family: var(--font-display);
+	font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+	font-weight: 650;
+	color: var(--ink);
+}
+
+.mt-preview .empty-calendar-copy p {
+	margin: 0;
+	color: var(--steel);
+	font-size: 0.8125rem;
+	line-height: 1.5;
+}
+
+.mt-preview .empty-calendar .primary-button {
+	min-height: 2.75rem;
+	padding: 0 1.25rem;
+	font-size: 0.75rem;
+}
+
+.mt-preview .paint-empty-hint {
+	margin: 0 0 0.85rem;
+	padding: 0.65rem 0.75rem;
+	border: 1px dashed var(--line-dark);
+	background: #f7f9fc;
+	color: #516278;
+	font-size: 0.6875rem;
+	line-height: 1.45;
+}
+
+.mt-preview .members-empty {
+	margin: 0;
+	padding: 0.85rem 0 1rem;
+	color: #516278;
+	font-size: 0.6875rem;
+	line-height: 1.5;
+}
+
+.mt-preview .board-panel .primary-button.wide {
+	min-height: 2.75rem;
+}
+
+.mt-preview .page-schedule,
+.mt-preview .page-free,
+.mt-preview .page-free-boards {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	min-height: 100%;
+	background: white;
+}
+
+.mt-preview .page-schedule .import-drawer,
+.mt-preview .page-free .board-panel {
+	background: #f4f7fb;
+}
+
+.mt-preview .page-free-boards .index-title {
+	align-items: flex-end;
+}
+
+.mt-preview .page-free-boards .boards-help strong {
+	font-size: 0.8125rem;
+}
+
+.mt-preview .page-free-boards .boards-help:first-of-type {
+	margin-top: 1.5rem;
+}
+
+@media (max-width: 700px) {
+	.mt-preview .empty-calendar {
+		min-height: 22rem;
+		max-height: none;
+		padding: 2rem 1.25rem;
+	}
+
+	.mt-preview .page-schedule .utility-actions,
+	.mt-preview .page-free .utility-actions {
+		gap: 0.4rem;
+	}
+
+	.mt-preview .page-schedule .utility-actions .primary-button,
+	.mt-preview .page-schedule .utility-actions .quiet-button,
+	.mt-preview .page-free .utility-actions .primary-button,
+	.mt-preview .page-free .utility-actions .quiet-button {
+		min-height: 2.75rem;
+		padding: 0 0.85rem;
+	}
+
+	.mt-preview .page-free .board-panel {
+		padding: 1.25rem 1rem 1.75rem;
+	}
 }
 
 .mt-preview .field-error,

@@ -26,6 +26,20 @@ describe('free-time board page', () => {
 		expect(screen.getByRole('heading', { name: 'Study group' })).toBeInTheDocument();
 		expect(screen.getByLabelText('Interactive free-time grid')).toBeInTheDocument();
 		expect(screen.getByText('Ada')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Save availability' })).toBeInTheDocument();
+	});
+
+	it('guides an empty board before anyone paints', () => {
+		render(BoardPage, {
+			props: {
+				data: {
+					board: { ...BOARD, members: [] },
+					shareUrl: 'https://example.com/tools/free-time/study-group'
+				}
+			}
+		});
+		expect(screen.getByText(/No one has saved yet/i)).toBeInTheDocument();
+		expect(screen.getByText(/Paint free slots below/i)).toBeInTheDocument();
 	});
 
 	it('explains unavailable boards', () => {
@@ -63,7 +77,7 @@ describe('free-time board page', () => {
 			}
 		});
 		expect(screen.getByText('Availability saved.')).toBeInTheDocument();
-		expect(screen.getAllByRole('button', { name: 'Save availability' })).toHaveLength(2);
+		expect(screen.getAllByRole('button', { name: 'Save availability' })).toHaveLength(1);
 	});
 
 	it('explains missing boards', () => {
