@@ -85,7 +85,7 @@ export async function withRequestAuth(
 
 	try {
 		client = await pool.connect();
-		const database = createDatabase(client);
+		const database = createDatabase(client, environment.databaseUrl);
 		const auth = createRequestAuth(database, environment, {
 			createAdapter,
 			createAuth,

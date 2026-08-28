@@ -4,7 +4,8 @@ const indexRoutes = [
 	{ path: '/tools/catalog', pageClass: 'page-catalog' },
 	{ path: '/tools/clubs', pageClass: 'page-clubs' },
 	{ path: '/tools/forum', pageClass: 'page-forum' },
-	{ path: '/tools/semester', pageClass: 'page-semester' }
+	{ path: '/tools/semester', pageClass: 'page-semester' },
+	{ path: '/tools/account', pageClass: 'page-account' }
 ];
 
 test.describe('MariTools index viewport fill', () => {

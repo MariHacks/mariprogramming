@@ -30,8 +30,26 @@
 .mt-preview .page.page-catalog,
 .mt-preview .page.page-clubs,
 .mt-preview .page.page-forum,
-.mt-preview .page.page-semester {
+.mt-preview .page.page-semester,
+.mt-preview .page.page-account {
 	background: var(--white);
+}
+
+.mt-preview .page-account > .index-title {
+	border-bottom: 0;
+}
+
+.mt-preview .account-layout {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	max-width: 900px;
+	width: 100%;
+	margin: 0 clamp(1.25rem, 3vw, 3rem);
+}
+
+.mt-preview .settings-sheet {
+	flex: 1 1 auto;
 }
 
 .mt-preview .page-semester {
