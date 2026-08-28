@@ -33,8 +33,8 @@ describe('forum thread page', () => {
 		render(ThreadPage, {
 			props: {
 				data: {
-					thread: THREAD,
-					replies: [{ id: 'r1', body: 'Thanks', canManage: false }],
+					thread: { ...THREAD, authorDisplayName: 'Zhich' },
+					replies: [{ id: 'r1', body: 'Thanks', canManage: false, authorDisplayName: 'nick' }],
 					signedIn: true,
 					canReply: true,
 					staff: false
@@ -49,7 +49,11 @@ describe('forum thread page', () => {
 		);
 		expect(screen.getByText('Course help')).toBeInTheDocument();
 		expect(screen.getByText('Original poster')).toBeInTheDocument();
-		expect(screen.getAllByText('Student').length).toBeGreaterThan(0);
+		expect(screen.getByText('Zhich')).toBeInTheDocument();
+		expect(screen.getByText('ZH')).toBeInTheDocument();
+		expect(screen.getByText('nick')).toBeInTheDocument();
+		expect(screen.getByText('NI')).toBeInTheDocument();
+		expect(screen.queryByText('Student')).not.toBeInTheDocument();
 		expect(screen.getByText('Thanks')).toBeInTheDocument();
 		expect(screen.getByPlaceholderText('Write a clear, useful reply…')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Post reply' })).toBeInTheDocument();
@@ -67,6 +71,22 @@ describe('forum thread page', () => {
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+	});
+
+	it('falls back to Student initials when display names are missing', () => {
+		render(ThreadPage, {
+			props: {
+				data: {
+					thread: { ...THREAD, authorDisplayName: null },
+					replies: [{ id: 'r1', body: 'Thanks', canManage: false }],
+					signedIn: true,
+					canReply: true,
+					staff: false
+				}
+			}
+		});
+		expect(screen.getAllByText('Student').length).toBeGreaterThan(0);
+		expect(screen.getAllByText('ST').length).toBeGreaterThan(0);
 	});
 
 	it('lets authors edit and delete their own posts', async () => {

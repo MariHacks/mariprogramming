@@ -1,5 +1,6 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
+	import { initialsFromDisplayName } from '$lib/maritools/header-account.js';
 
 	export let data;
 	export let form;
@@ -8,6 +9,17 @@
 	let openReportId = null;
 	/** @type {string | null} */
 	let editingId = null;
+
+	/** @param {string | null | undefined} name */
+	function authorLabel(name) {
+		const trimmed = typeof name === 'string' ? name.trim() : '';
+		return trimmed || 'Student';
+	}
+
+	/** @param {string | null | undefined} name */
+	function authorInitials(name) {
+		return initialsFromDisplayName(authorLabel(name));
+	}
 
 	/** @param {string | Date | null | undefined} value */
 	function formatWhen(value) {
@@ -109,8 +121,8 @@
 			<div class="thread-layout">
 				<article class="post origin">
 					<aside>
-						<span class="post-avatar">ST</span>
-						<strong>Student</strong>
+						<span class="post-avatar">{authorInitials(data.thread.authorDisplayName)}</span>
+						<strong>{authorLabel(data.thread.authorDisplayName)}</strong>
 						<small>Original poster</small>
 					</aside>
 					<div class="post-body">
@@ -191,8 +203,10 @@
 					{#each data.replies as reply (reply.id)}
 						<article class="post">
 							<aside>
-								<span class="post-avatar post-avatar--blue">ST</span>
-								<strong>Student</strong>
+								<span class="post-avatar post-avatar--blue"
+									>{authorInitials(reply.authorDisplayName)}</span
+								>
+								<strong>{authorLabel(reply.authorDisplayName)}</strong>
 								<small>Reply</small>
 							</aside>
 							<div class="post-body">

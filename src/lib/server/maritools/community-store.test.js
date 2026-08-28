@@ -73,8 +73,19 @@ function inner(overrides = {}) {
 			authorUserId: USER
 		})),
 		listReplies: vi.fn(async () => [{ id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: USER }]),
-		createThread: vi.fn(async () => ({ id: THREAD, title: 'Hi', body: 'Hello', category: 'student-life' })),
-		createReply: vi.fn(async () => ({ id: 'r1', threadId: THREAD, body: 'Thanks' })),
+		createThread: vi.fn(async () => ({
+			id: THREAD,
+			title: 'Hi',
+			body: 'Hello',
+			category: 'student-life',
+			authorUserId: USER
+		})),
+		createReply: vi.fn(async () => ({
+			id: 'r1',
+			threadId: THREAD,
+			body: 'Thanks',
+			authorUserId: USER
+		})),
 		createReport: vi.fn(async () => ({ id: 'rep-1' })),
 		listReports: vi.fn(async () => [
 			{
@@ -111,6 +122,53 @@ describe('community views', () => {
 		expect(canManagePost(USER, { userId: USER })).toBe(true);
 		expect(canManagePost(USER, { userId: 'other', staff: true })).toBe(true);
 		expect(canManagePost(null, { userId: USER })).toBe(false);
+		expect(
+			publicThreadView({
+				id: THREAD,
+				title: 'Hi',
+				body: 'Hello',
+				category: 'courses',
+				authorUserId: USER,
+				authorDisplayName: '  Zhich  ',
+				studentId: '2530622'
+			})
+		).toMatchObject({ authorDisplayName: 'Zhich' });
+		expect(
+			publicThreadView({
+				id: THREAD,
+				title: 'Hi',
+				body: 'Hello',
+				category: 'courses',
+				authorUserId: USER
+			})
+		).not.toHaveProperty('authorUserId');
+		expect(
+			publicThreadView({
+				id: THREAD,
+				title: 'Hi',
+				body: 'Hello',
+				category: 'courses',
+				authorDisplayName: '   '
+			}).authorDisplayName
+		).toBeNull();
+		expect(
+			publicReplyView({
+				id: 'r1',
+				threadId: THREAD,
+				body: 'Thanks',
+				authorUserId: USER,
+				authorDisplayName: 'nick'
+			})
+		).toMatchObject({ authorDisplayName: 'nick' });
+		expect(
+			publicReplyView({
+				id: 'r1',
+				threadId: THREAD,
+				body: 'Thanks',
+				authorUserId: USER,
+				studentId: '2530622'
+			})
+		).not.toHaveProperty('authorUserId');
 	});
 });
 
@@ -200,15 +258,23 @@ describe('createCommunityStore', () => {
 		expect(await store.getThread(THREAD)).toMatchObject({
 			id: THREAD,
 			title: 'Hi',
-			canManage: false
+			canManage: false,
+			authorDisplayName: 'Ada'
 		});
 		const owned = await store.getThread(THREAD, { userId: USER, staff: false });
-		expect(owned).toMatchObject({ canManage: true });
+		expect(owned).toMatchObject({ canManage: true, authorDisplayName: 'Ada' });
 		expect(owned).not.toHaveProperty('authorUserId');
+		expect(JSON.stringify(owned)).not.toContain('2530622');
 		const empty = createCommunityStore(inner({ getThread: vi.fn(async () => null) }));
 		await expect(empty.getThread(THREAD)).resolves.toBeNull();
-		expect((await store.listReplies(THREAD))[0]).not.toHaveProperty('authorUserId');
+		const replies = await store.listReplies(THREAD);
+		expect(replies[0]).toMatchObject({ authorDisplayName: 'Ada' });
+		expect(replies[0]).not.toHaveProperty('authorUserId');
 		expect((await store.listReplies(THREAD, { userId: USER }))[0].canManage).toBe(true);
+		const nameless = createCommunityStore(
+			inner({ getStudentProfile: vi.fn(async () => ({ userId: USER, displayName: null })) })
+		);
+		await expect(nameless.getThread(THREAD)).resolves.toMatchObject({ authorDisplayName: null });
 	});
 
 	it('reports manage rights and updates bodies without leaking authors', async () => {
@@ -280,10 +346,10 @@ describe('createCommunityStore', () => {
 		const store = createCommunityStore(inner());
 		await expect(
 			store.createThread({ authorUserId: USER, title: 'Hi', body: 'Hello', category: 'student-life' })
-		).resolves.toMatchObject({ id: THREAD });
+		).resolves.toMatchObject({ id: THREAD, authorDisplayName: 'Ada' });
 		await expect(
 			store.createReply({ threadId: THREAD, authorUserId: USER, body: 'Thanks' })
-		).resolves.toMatchObject({ body: 'Thanks' });
+		).resolves.toMatchObject({ body: 'Thanks', authorDisplayName: 'Ada' });
 		await expect(
 			store.createReport({
 				targetKind: 'thread',
@@ -295,7 +361,11 @@ describe('createCommunityStore', () => {
 		await expect(store.listReports({ status: 'open' })).resolves.toEqual([
 			expect.objectContaining({ id: 'rep-1', status: 'open' })
 		]);
-		await expect(store.getReply('r1')).resolves.toMatchObject({ id: 'r1', threadId: THREAD });
+		await expect(store.getReply('r1')).resolves.toMatchObject({
+			id: 'r1',
+			threadId: THREAD,
+			authorDisplayName: 'Ada'
+		});
 	});
 
 	it('locks and removes forum records', async () => {

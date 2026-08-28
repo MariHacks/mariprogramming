@@ -32,6 +32,43 @@ export function canManagePost(authorUserId, viewer) {
 	return Boolean(viewer.userId && authorUserId && viewer.userId === authorUserId);
 }
 
+/** @param {unknown} value */
+function normalizeAuthorDisplayName(value) {
+	if (typeof value !== 'string') return null;
+	const trimmed = value.trim();
+	return trimmed || null;
+}
+
+/**
+ * @param {ReturnType<typeof createMariToolsRepository>} inner
+ * @param {Array<{ authorUserId?: string | null } | null | undefined>} rows
+ */
+async function withAuthorDisplayNames(inner, rows) {
+	const ids = [
+		...new Set(
+			rows
+				.map((row) => (typeof row?.authorUserId === 'string' ? row.authorUserId : null))
+				.filter(Boolean)
+		)
+	];
+	/** @type {Map<string, string | null>} */
+	const names = new Map();
+	await Promise.all(
+		ids.map(async (id) => {
+			const profile = await inner.getStudentProfile(id);
+			names.set(id, normalizeAuthorDisplayName(profile?.displayName));
+		})
+	);
+	return rows.map((row) => {
+		if (!row || typeof row !== 'object') return row;
+		const authorUserId = typeof row.authorUserId === 'string' ? row.authorUserId : null;
+		return {
+			...row,
+			authorDisplayName: authorUserId ? (names.get(authorUserId) ?? null) : null
+		};
+	});
+}
+
 /** @param {any} thread */
 export function publicThreadView(thread) {
 	if (!thread || typeof thread !== 'object') return null;
@@ -45,7 +82,8 @@ export function publicThreadView(thread) {
 		termId: thread.termId ?? null,
 		createdAt: thread.createdAt,
 		lockedAt: thread.lockedAt ?? null,
-		removedAt: thread.removedAt ?? null
+		removedAt: thread.removedAt ?? null,
+		authorDisplayName: normalizeAuthorDisplayName(thread.authorDisplayName)
 	};
 }
 
@@ -57,7 +95,8 @@ export function publicReplyView(reply) {
 		threadId: reply.threadId,
 		body: reply.body,
 		createdAt: reply.createdAt,
-		removedAt: reply.removedAt ?? null
+		removedAt: reply.removedAt ?? null,
+		authorDisplayName: normalizeAuthorDisplayName(reply.authorDisplayName)
 	};
 }
 
@@ -206,7 +245,9 @@ export function createCommunityStore(inner) {
 		getThread(id, viewer = null) {
 			return wrap(async () => {
 				const thread = await inner.getThread(id);
-				return withManageFlag(publicThreadView(thread), thread?.authorUserId, viewer);
+				if (!thread) return null;
+				const [enriched] = await withAuthorDisplayNames(inner, [thread]);
+				return withManageFlag(publicThreadView(enriched), thread.authorUserId, viewer);
 			});
 		},
 
@@ -217,8 +258,11 @@ export function createCommunityStore(inner) {
 		listReplies(threadId, viewer = null) {
 			return wrap(async () => {
 				const rows = await inner.listReplies(threadId);
-				return rows
-					.map((row) => withManageFlag(publicReplyView(row), row?.authorUserId, viewer))
+				const enriched = await withAuthorDisplayNames(inner, rows);
+				return enriched
+					.map((row, index) =>
+						withManageFlag(publicReplyView(row), rows[index]?.authorUserId, viewer)
+					)
 					.filter(Boolean);
 			});
 		},
@@ -249,22 +293,38 @@ export function createCommunityStore(inner) {
 
 		/** @param {Record<string, unknown>} input */
 		createThread(input) {
-			return wrap(async () => publicThreadView(await inner.createThread(input)));
+			return wrap(async () => {
+				const created = await inner.createThread(input);
+				const [enriched] = await withAuthorDisplayNames(inner, [created]);
+				return publicThreadView(enriched);
+			});
 		},
 
 		/** @param {Record<string, unknown>} input */
 		createReply(input) {
-			return wrap(async () => publicReplyView(await inner.createReply(input)));
+			return wrap(async () => {
+				const created = await inner.createReply(input);
+				const [enriched] = await withAuthorDisplayNames(inner, [created]);
+				return publicReplyView(enriched);
+			});
 		},
 
 		/** @param {{ id: unknown, body: unknown }} input */
 		updateThread(input) {
-			return wrap(async () => publicThreadView(await inner.updateThread(input)));
+			return wrap(async () => {
+				const updated = await inner.updateThread(input);
+				const [enriched] = await withAuthorDisplayNames(inner, [updated]);
+				return publicThreadView(enriched);
+			});
 		},
 
 		/** @param {{ id: unknown, body: unknown }} input */
 		updateReply(input) {
-			return wrap(async () => publicReplyView(await inner.updateReply(input)));
+			return wrap(async () => {
+				const updated = await inner.updateReply(input);
+				const [enriched] = await withAuthorDisplayNames(inner, [updated]);
+				return publicReplyView(enriched);
+			});
 		},
 
 		/** @param {Record<string, unknown>} input */
@@ -279,7 +339,12 @@ export function createCommunityStore(inner) {
 
 		/** @param {string} id */
 		getReply(id) {
-			return wrap(async () => publicReplyView(await inner.getReply(id)));
+			return wrap(async () => {
+				const reply = await inner.getReply(id);
+				if (!reply) return null;
+				const [enriched] = await withAuthorDisplayNames(inner, [reply]);
+				return publicReplyView(enriched);
+			});
 		},
 
 		lockThread(id) {
