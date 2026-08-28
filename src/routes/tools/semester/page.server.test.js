@@ -257,6 +257,45 @@ describe('semester page server', () => {
 		expect(result.status).toBe(503);
 	});
 
+	it('maps outline save validation errors to an in-page failure instead of 500', async () => {
+		const current = handlers({
+			repository: {
+				getProfile: vi.fn(async () => PROFILE),
+				saveOutlineDocument: vi.fn(async () => {
+					throw new MaritoolsInputError('MARITOOLS_INVALID');
+				})
+			}
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.status).toBe(400);
+		expect(result.data.error).toMatch(/outline/i);
+		expect(current.provider.extract).not.toHaveBeenCalled();
+	});
+
+	it('keeps private review when extracted PDF text has leading whitespace', async () => {
+		const padded = `    ${TEXT} ${TEXT} Extra body so a large PDF still counts as extractable text.`;
+		expect(padded.trim().length).toBeGreaterThan(200);
+		const current = handlers({
+			extractPdf: vi.fn(() => ({
+				text: padded,
+				byteLength: 320_702,
+				sha256: 'cd'.repeat(32)
+			}))
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.extraction?.ok).toBe(true);
+		expect(current.repository.saveOutlineDocument).toHaveBeenCalledWith(
+			expect.objectContaining({
+				extractedText: padded.trim(),
+				sha256: 'cd'.repeat(32)
+			})
+		);
+	});
+
 	it('rejects an empty upload and an oversized PDF', async () => {
 		const current = handlers();
 		const empty = await current.actions.extract(event({ file: new File([], 'empty.pdf') }));

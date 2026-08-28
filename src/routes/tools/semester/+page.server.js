@@ -84,7 +84,8 @@ export function _createHandlers(dependencies = {}) {
 			return fail(400, { error: 'Upload a PDF file.' });
 		}
 		const extracted = extractPdf(bytes);
-		if (needsTextPdf(extracted.text, extracted.byteLength)) {
+		const text = String(extracted.text ?? '').trim();
+		if (needsTextPdf(text, extracted.byteLength)) {
 			return fail(400, {
 				error: 'This looks like a scanned PDF. Export a text PDF from the original document and upload that.'
 			});
@@ -95,7 +96,7 @@ export function _createHandlers(dependencies = {}) {
 				userId: ready.session.userId,
 				sha256: extracted.sha256,
 				byteLength: extracted.byteLength,
-				extractedText: extracted.text
+				extractedText: text
 			});
 			const cached = await repository.getExtraction(extracted.sha256);
 			if (cached) {
@@ -112,7 +113,7 @@ export function _createHandlers(dependencies = {}) {
 			}
 			const provider = createProvider();
 			const result = await provider.extract({
-				text: extracted.text,
+				text,
 				sha256: extracted.sha256,
 				byteLength: extracted.byteLength
 			});
@@ -132,6 +133,11 @@ export function _createHandlers(dependencies = {}) {
 				}
 			};
 		} catch (error) {
+			if (error instanceof MaritoolsInputError) {
+				return fail(400, {
+					error: 'Could not save that outline. Try another PDF or enter the details manually.'
+				});
+			}
 			if (error instanceof MaritoolsUnavailableError) {
 				return fail(503, { error: 'Semester tools are unavailable. Try again.' });
 			}

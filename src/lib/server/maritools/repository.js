@@ -723,7 +723,7 @@ export function createMariToolsRepository({
 			const extractedText =
 				input.extractedText === undefined || input.extractedText === null
 					? null
-					: requiredText(input.extractedText, 2_000_000);
+					: requiredText(String(input.extractedText).trim(), 2_000_000);
 			return redactUnexpected(() =>
 				transact(async (transaction) => {
 					const existing = oneRow(

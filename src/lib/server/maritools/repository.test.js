@@ -561,6 +561,25 @@ describe('createMariToolsRepository', () => {
 				extractedText: 'hello'
 			})
 		).resolves.toEqual(existingDoc);
+		await expect(
+			queuedRepo([[], [existingDoc]]).saveOutlineDocument({
+				userId: USER,
+				sha256: SHA,
+				byteLength: 12,
+				extractedText: '  hello from a real course outline PDF  '
+			})
+		).resolves.toEqual(existingDoc);
+		await expect(
+			createMariToolsRepository({
+				databaseUrl: 'postgresql://x',
+				runTransaction: vi.fn()
+			}).saveOutlineDocument({
+				userId: USER,
+				sha256: SHA,
+				byteLength: 12,
+				extractedText: '   '
+			})
+		).rejects.toBeInstanceOf(MariToolsValidationError);
 
 		const extraction = { id: THREAD, documentSha256: SHA, offeringId: OFFERING };
 		await expect(
