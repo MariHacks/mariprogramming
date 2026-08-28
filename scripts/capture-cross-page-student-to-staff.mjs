@@ -440,12 +440,52 @@ async function main() {
 
 	await staffPage.goto('/tools/clubs', { waitUntil: 'networkidle' });
 	await mark(staffPage, t0, log, 'staff clubs pending');
-	const clubsStaff = await staffPage.locator('body').innerText();
-	if (!clubsStaff.includes(CLUB_NAME)) {
-		bugs.push(`staff clubs pending missing "${CLUB_NAME}"`);
+	const pendingPanel = staffPage.locator('[data-testid="staff-pending-clubs"]');
+	if ((await pendingPanel.count()) === 0) {
+		bugs.push('staff pending queue missing (not authorized or wrong surface)');
+	} else {
+		await pendingPanel.scrollIntoViewIfNeeded();
 	}
+	const pendingArticle = staffPage.locator(`[data-pending-club="${CLUB_NAME}"]`).first();
+	if ((await pendingArticle.count()) === 0) {
+		bugs.push(`staff clubs pending missing "${CLUB_NAME}"`);
+	} else {
+		await pendingArticle.scrollIntoViewIfNeeded();
+		await sleep(400);
+		const inViewport = await pendingArticle.evaluate((el) => {
+			const r = el.getBoundingClientRect();
+			return r.top >= 0 && r.bottom <= window.innerHeight && r.height > 0;
+		});
+		if (!inViewport) {
+			bugs.push(`pending club "${CLUB_NAME}" not in viewport (Robotics-only false pass)`);
+		}
+	}
+	const clubsStaff = await staffPage.locator('body').innerText();
 	if (!/Publish/i.test(clubsStaff)) bugs.push('staff publish controls missing');
-	await mark(staffPage, t0, log, clubsStaff.includes(CLUB_NAME) ? `pending club visible` : 'pending miss');
+	const viewportText = await staffPage.evaluate(() => {
+		const vh = window.innerHeight;
+		return [...document.querySelectorAll('h1, h2, strong, p, a.club-row, [data-pending-club]')]
+			.filter((el) => {
+				const r = el.getBoundingClientRect();
+				return r.bottom > 0 && r.top < vh && r.height > 0;
+			})
+			.map((el) => el.textContent ?? '')
+			.join('\n');
+	});
+	if (/Robotics Club/i.test(viewportText) && !viewportText.includes(CLUB_NAME)) {
+		bugs.push('viewport shows Robotics only; pending club not on camera');
+	}
+	if (!viewportText.includes(CLUB_NAME) && !bugs.some((b) => b.includes(CLUB_NAME))) {
+		bugs.push(`pending club "${CLUB_NAME}" not visible on camera`);
+	}
+	await mark(
+		staffPage,
+		t0,
+		log,
+		bugs.some((b) => /pending|viewport|Robotics only/i.test(b))
+			? 'pending miss'
+			: `pending club visible on camera: ${CLUB_NAME}`
+	);
 	await staffPage.screenshot({ path: path.join(outDir, 'staff-clubs-pending.png'), fullPage: false });
 
 	await staffCtx.close();

@@ -40,6 +40,39 @@
 			<button type="submit" class="dark-button">Filter</button>
 		</form>
 
+		{#if data.staff}
+			<aside class="submit-club staff-pending" data-testid="staff-pending-clubs">
+				<div>
+					<strong>Staff</strong>
+					<h2>Pending listings</h2>
+				</div>
+				{#if form?.published}
+					<p role="status">Published.</p>
+				{/if}
+				{#if data.pending.length === 0}
+					<p>No pending submissions.</p>
+				{:else}
+					<div class="staff-pending-list">
+						{#each data.pending as submission (submission.id)}
+							<article data-pending-club={submission.name}>
+								<strong>{submission.name}</strong>
+								{#if submission.category}
+									<span>{submission.category}</span>
+								{/if}
+								{#if submission.description}
+									<p>{submission.description}</p>
+								{/if}
+								<form method="POST" action="?/publish">
+									<input type="hidden" name="submissionId" value={submission.id} />
+									<button type="submit" class="primary-button">Publish</button>
+								</form>
+							</article>
+						{/each}
+					</div>
+				{/if}
+			</aside>
+		{/if}
+
 		{#if data.unavailable}
 			<p class="field-error" role="alert">Clubs are unavailable right now. Try again.</p>
 		{:else if data.clubs.length === 0}
@@ -124,36 +157,5 @@
 				<a class="primary-button" href="/tools/account">Sign in with Google</a>
 			{/if}
 		</aside>
-
-		{#if data.staff}
-			<aside class="submit-club">
-				<div>
-					<strong>Staff</strong>
-					<h2>Pending listings</h2>
-				</div>
-				{#if form?.published}
-					<p role="status">Published.</p>
-				{/if}
-				{#if data.pending.length === 0}
-					<p>No pending submissions.</p>
-				{:else}
-					{#each data.pending as submission (submission.id)}
-						<article>
-							<strong>{submission.name}</strong>
-							{#if submission.category}
-								<span>{submission.category}</span>
-							{/if}
-							{#if submission.description}
-								<p>{submission.description}</p>
-							{/if}
-							<form method="POST" action="?/publish">
-								<input type="hidden" name="submissionId" value={submission.id} />
-								<button type="submit" class="primary-button">Publish</button>
-							</form>
-						</article>
-					{/each}
-				{/if}
-			</aside>
-		{/if}
 	</section>
 </div>

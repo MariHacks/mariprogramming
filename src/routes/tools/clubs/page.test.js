@@ -135,6 +135,11 @@ describe('clubs page', () => {
 		expect(screen.getByText('Chess')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Publish' })).toBeInTheDocument();
 		expect(screen.getByText('Published.')).toBeInTheDocument();
+		const pending = screen.getByTestId('staff-pending-clubs');
+		const robotics = screen.getByRole('heading', { name: 'Robotics' });
+		expect(
+			pending.compareDocumentPosition(robotics) & Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy();
 	});
 
 	it('links clubs without external URLs to their detail page', () => {

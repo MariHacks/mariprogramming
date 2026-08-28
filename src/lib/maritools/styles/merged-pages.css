@@ -245,6 +245,17 @@
 	border-top: 1px solid var(--rule);
 }
 
+.mt-preview .staff-pending {
+	grid-template-columns: minmax(10rem, 0.7fr) minmax(0, 1.6fr);
+	align-items: start;
+}
+
+.mt-preview .staff-pending-list {
+	max-height: min(22rem, 48vh);
+	overflow: auto;
+	padding-right: 0.25rem;
+}
+
 .mt-preview .forum-tabs a {
 	position: relative;
 	display: inline-flex;
