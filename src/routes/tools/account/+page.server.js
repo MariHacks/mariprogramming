@@ -1,4 +1,4 @@
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import {
 	ServerConfigurationError,
 	isGoogleOAuthConfigured,
@@ -19,6 +19,18 @@ function recoveryMessageFor(state) {
 	return null;
 }
 
+/**
+ * Stale OAuth error callbacks can land on ?state=unavailable after a later
+ * attempt already created a session. Drop the query so signed-in users never
+ * see a contradictory failure banner.
+ * @param {URL} url
+ * @param {unknown} session
+ */
+function clearStaleSignInFailure(url, session) {
+	if (!session || url.searchParams.get('state') !== 'unavailable') return;
+	throw redirect(303, `${url.pathname}${url.hash}`);
+}
+
 /** @param {Record<string, any>} [dependencies] */
 export function _createHandlers(dependencies = {}) {
 	const readEnvironment = dependencies.readEnvironment ?? readStaffSignInEnvironment;
@@ -29,12 +41,13 @@ export function _createHandlers(dependencies = {}) {
 	/** @param {any} event */
 	async function load(event) {
 		const signInConfigured = googleSignInConfigured();
+		const session = event.locals.maritools ?? null;
+		clearStaleSignInFailure(event.url, session);
 		let appOrigin;
 		try {
 			({ appOrigin } = readEnvironment());
 		} catch (error) {
 			if (error instanceof ServerConfigurationError) {
-				const session = event.locals.maritools ?? null;
 				return {
 					view: accountPageView(session, null),
 					callbackURL: `${event.url.origin}/tools/account`,
@@ -46,7 +59,6 @@ export function _createHandlers(dependencies = {}) {
 			}
 			throw error;
 		}
-		const session = event.locals.maritools ?? null;
 		let profile = null;
 		let unavailable = false;
 		if (session) {

@@ -81,6 +81,26 @@ describe('account page server', () => {
 		expect(data.recoveryMessage).toBe('We could not finish sign-in. Try again.');
 	});
 
+	it('hides the failed-return message once Google sign-in already succeeded', async () => {
+		const current = handlers({
+			repository: {
+				getProfile: vi.fn(async () => ({
+					userId: SESSION.userId,
+					studentId: '2530622',
+					displayName: 'Ada',
+					role: 'student',
+					nimDisclosureAcceptedAt: new Date('2026-08-20T00:00:00.000Z')
+				}))
+			}
+		});
+		const loadEvent = event({ locals: { maritools: SESSION } });
+		loadEvent.url = new URL(`${ORIGIN}/tools/account?state=unavailable`);
+		await expect(current.load(loadEvent)).rejects.toMatchObject({
+			status: 303,
+			location: '/tools/account'
+		});
+	});
+
 	it('asks a signed-in student to finish the account without showing a student number', async () => {
 		const current = handlers();
 		const data = await current.load(event({ locals: { maritools: SESSION } }));
