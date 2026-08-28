@@ -30,10 +30,6 @@
 		</section>
 
 		<nav class="event-alternatives editorial-rail" aria-label="Other ways to take part">
-			<a class="ruled-link" href={resolve('/our-workshops', {})}>
-				<span>Browse workshop archive</span>
-				<span aria-hidden="true">→</span>
-			</a>
 			<a class="ruled-link" href={resolve('/resources', {})}>
 				<span>Browse resources</span>
 				<span aria-hidden="true">→</span>

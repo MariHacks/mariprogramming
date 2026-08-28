@@ -651,39 +651,43 @@
 	@media (max-width: 47.999rem) {
 		.hero {
 			grid-template-columns: 1fr;
+			grid-template-rows: auto minmax(42svh, 1fr);
+			min-height: calc(100svh - 4.5rem);
 			height: auto;
 		}
 
 		.hero-copy {
 			min-height: 0;
-			padding: 2.25rem var(--page-gutter) 1.5rem;
+			padding: 1.35rem var(--page-gutter) 0.85rem;
 		}
 
 		.hero h1 {
-			font-size: clamp(2.75rem, 13vw, 4rem);
+			font-size: clamp(2.35rem, 10.5vw, 3.15rem);
 		}
 
 		.hero-lead {
-			margin-block-start: 1rem;
+			margin-block-start: 0.7rem;
 		}
 
 		.hero-body {
-			margin-block-start: 0.75rem;
+			display: none;
 		}
 
 		.hero-actions {
 			align-items: flex-start;
 			flex-direction: column;
-			margin-block-start: 1.5rem;
-			gap: 0.25rem;
+			margin-block-start: 1rem;
+			gap: 0.15rem;
 		}
 
 		.eligibility {
-			margin-block-start: 0.65rem;
+			margin-block-start: 0.45rem;
 		}
 
 		.hero-image {
-			aspect-ratio: 16 / 10;
+			aspect-ratio: unset;
+			min-height: 42svh;
+			height: 100%;
 		}
 
 		.activities,
@@ -743,11 +747,11 @@
 
 	@media (max-width: 24rem) {
 		.hero-copy {
-			padding-block-start: 1.85rem;
+			padding-block-start: 1.1rem;
 		}
 
 		.hero h1 {
-			font-size: 2.6rem;
+			font-size: 2.25rem;
 		}
 	}
 </style>
