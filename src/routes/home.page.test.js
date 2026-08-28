@@ -22,6 +22,19 @@ describe('home route', () => {
 		expect(heroSignup).toHaveAttribute('href', clubContent.signupUrl);
 	});
 
+	it('points the hero secondary action at workshops when no events are listed', () => {
+		render(HomePage);
+		const hero = screen.getByRole('region', { name: 'Come build something with us.' });
+
+		expect(within(hero).getByRole('link', { name: 'Browse workshops' })).toHaveAttribute(
+			'href',
+			'/our-workshops'
+		);
+		expect(
+			within(hero).queryByRole('link', { name: 'Explore upcoming events' })
+		).not.toBeInTheDocument();
+	});
+
 	it('states that beginners can join', () => {
 		render(HomePage);
 

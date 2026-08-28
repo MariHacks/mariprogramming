@@ -15,16 +15,21 @@
 	const primaryLinks = [
 		{ label: 'About', href: '/about-us', external: false },
 		{ label: 'Events', href: '/events', external: false },
-		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false },
+		{ label: 'Workshops', href: '/our-workshops', external: false },
 		{ label: 'MariTools', href: '/tools', external: false }
+	];
+	const statusLinks = [
+		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false }
 	];
 	const compactLinks = primaryLinks.slice(0, 3);
 	const moreLinks = [
 		...primaryLinks.slice(3),
+		...statusLinks,
 		{ label: 'MariHacks', href: 'https://www.marihacks.com/', external: true }
 	];
 	const mobileLinks = [
 		...primaryLinks,
+		...statusLinks,
 		{ label: 'MariHacks', href: 'https://www.marihacks.com/', external: true }
 	];
 	const headerSocialLinks = clubContent.socialLinks.filter(({ label }) =>

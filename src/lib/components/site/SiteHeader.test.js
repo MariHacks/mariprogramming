@@ -24,15 +24,17 @@ describe('SiteHeader', () => {
 			'href',
 			'/events'
 		);
-		expect(within(navigation).getByRole('link', { name: 'Mini-Competitions' })).toHaveAttribute(
+		expect(within(navigation).getByRole('link', { name: 'Workshops' })).toHaveAttribute(
 			'href',
-			'/mini-competitions'
+			'/our-workshops'
 		);
 		expect(within(navigation).getByRole('link', { name: 'MariTools' })).toHaveAttribute(
 			'href',
 			'/tools'
 		);
-		expect(within(navigation).queryByRole('link', { name: 'Workshops' })).not.toBeInTheDocument();
+		expect(
+			within(navigation).queryByRole('link', { name: 'Mini-Competitions' })
+		).not.toBeInTheDocument();
 		expect(within(navigation).queryByRole('link', { name: 'Resources' })).not.toBeInTheDocument();
 	});
 
@@ -222,13 +224,33 @@ describe('SiteHeader', () => {
 		);
 	});
 
-	it('marks Mini-Competitions current in every responsive navigation mode', () => {
+	it('keeps Mini-Competitions reachable from compact and mobile disclosure menus', () => {
 		const { container } = render(SiteHeader, { props: { pathname: '/mini-competitions' } });
 
-		for (const link of container.querySelectorAll('a[href="/mini-competitions"]')) {
+		expect(container.querySelector('#compact-more-menu a[href="/mini-competitions"]')).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+		expect(container.querySelector('#mobile-navigation a[href="/mini-competitions"]')).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+		expect(
+			within(screen.getByRole('navigation', { name: 'Primary navigation' })).queryByRole(
+				'link',
+				{ name: 'Mini-Competitions' }
+			)
+		).not.toBeInTheDocument();
+		expect(container.querySelectorAll('a[href="/mini-competitions"]')).toHaveLength(2);
+	});
+
+	it('marks Workshops current in every responsive navigation mode', () => {
+		const { container } = render(SiteHeader, { props: { pathname: '/our-workshops' } });
+
+		for (const link of container.querySelectorAll('a[href="/our-workshops"]')) {
 			expect(link).toHaveAttribute('aria-current', 'page');
 		}
-		expect(container.querySelectorAll('a[href="/mini-competitions"]')).toHaveLength(3);
+		expect(container.querySelectorAll('a[href="/our-workshops"]')).toHaveLength(3);
 	});
 
 	it('does not expose Book Delivery for a route with a shared path prefix', () => {

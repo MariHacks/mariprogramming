@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 const clubRoutes = [
 	{ label: 'About', path: '/about-us', heading: 'About the club' },
 	{ label: 'Events', path: '/events', heading: 'Events' },
-	{ label: 'Mini-Competitions', path: '/mini-competitions', heading: 'Mini-Competitions' },
+	{ label: 'Workshops', path: '/our-workshops', heading: 'Workshop archive' },
 	{ label: 'MariTools', path: '/tools', heading: 'MariTools' }
 ];
 
@@ -141,8 +141,12 @@ for (const width of [320, 768, 1024]) {
 test('current schedule, workshop archive, and resource paths remain useful', async ({ page }) => {
 	await page.goto('/');
 	const primary = page.getByRole('navigation', { name: 'Primary navigation' });
-	await expect(primary.getByRole('link', { name: 'Workshops' })).toHaveCount(0);
+	await expect(primary.getByRole('link', { name: 'Workshops' })).toHaveAttribute(
+		'href',
+		'/our-workshops'
+	);
 	await expect(primary.getByRole('link', { name: 'Resources' })).toHaveCount(0);
+	await expect(primary.getByRole('link', { name: 'Mini-Competitions' })).toHaveCount(0);
 	await expect(page.getByRole('link', { name: 'Account' })).toHaveAttribute(
 		'href',
 		'/tools/account'

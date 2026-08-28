@@ -1,10 +1,14 @@
 <script>
 	import { resolve } from '$app/paths';
-	import { clubContent, isExternalSignupUrl } from '$lib/content/club';
+	import { clubContent, getUpcomingEvents, isExternalSignupUrl } from '$lib/content/club';
 
 	const workshops = clubContent.workshops.slice(0, 3);
 	const discordUrl = clubContent.socialLinks.find(({ label }) => label === 'Discord')?.url;
 	const mariHacksUrl = clubContent.socialLinks.find(({ label }) => label === 'MariHacks')?.url;
+	const hasUpcomingEvents = getUpcomingEvents(clubContent.events).length > 0;
+	const heroSecondary = hasUpcomingEvents
+		? { label: 'Explore upcoming events', href: '/events' }
+		: { label: 'Browse workshops', href: '/our-workshops' };
 
 	const activities = [
 		{
@@ -102,8 +106,8 @@
 			>
 				Join the club <span aria-hidden="true">{isExternalSignupUrl() ? '↗' : '→'}</span>
 			</a>
-			<a class="quiet-link" href={resolve('/events', {})}
-				>Explore upcoming events <span aria-hidden="true">→</span></a
+			<a class="quiet-link" href={resolve(heroSecondary.href, {})}
+				>{heroSecondary.label} <span aria-hidden="true">→</span></a
 			>
 		</div>
 		<p class="eligibility">Open to all Marianopolis students. No experience required.</p>
@@ -651,27 +655,35 @@
 		}
 
 		.hero-copy {
-			min-height: 31rem;
-			padding: 3rem var(--page-gutter) 2rem;
+			min-height: 0;
+			padding: 2.25rem var(--page-gutter) 1.5rem;
 		}
 
 		.hero h1 {
-			font-size: clamp(3rem, 15vw, 4.25rem);
+			font-size: clamp(2.75rem, 13vw, 4rem);
+		}
+
+		.hero-lead {
+			margin-block-start: 1rem;
+		}
+
+		.hero-body {
+			margin-block-start: 0.75rem;
 		}
 
 		.hero-actions {
 			align-items: flex-start;
 			flex-direction: column;
-			margin-block-start: 2rem;
+			margin-block-start: 1.5rem;
 			gap: 0.25rem;
 		}
 
 		.eligibility {
-			margin-block-start: 0.75rem;
+			margin-block-start: 0.65rem;
 		}
 
 		.hero-image {
-			aspect-ratio: 4 / 3;
+			aspect-ratio: 16 / 10;
 		}
 
 		.activities,
@@ -731,11 +743,11 @@
 
 	@media (max-width: 24rem) {
 		.hero-copy {
-			min-height: 33rem;
+			padding-block-start: 1.85rem;
 		}
 
 		.hero h1 {
-			font-size: 2.9rem;
+			font-size: 2.6rem;
 		}
 	}
 </style>

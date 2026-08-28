@@ -6,7 +6,7 @@ import EventList from './EventList.svelte';
 afterEach(cleanup);
 
 describe('EventList', () => {
-	it('turns an unconfirmed schedule into a useful community action', () => {
+	it('turns an unconfirmed schedule into useful next steps', () => {
 		const { container } = render(EventList, { props: { events: [] } });
 
 		const emptyHeading = screen.getByRole('heading', {
@@ -15,6 +15,11 @@ describe('EventList', () => {
 		});
 		expect(emptyHeading).not.toHaveAttribute('aria-label');
 		expect(emptyHeading).toHaveTextContent('No upcoming events are listed.');
+		expect(screen.getByText('Confirmed dates appear here when published.')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Browse workshops' })).toHaveAttribute(
+			'href',
+			'/our-workshops'
+		);
 		const communityLink = screen.getByRole('link', {
 			name: clubContent.communityAction.label
 		});

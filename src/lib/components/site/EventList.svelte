@@ -1,4 +1,5 @@
 <script>
+	import { resolve } from '$app/paths';
 	import { clubContent } from '$lib/content/club';
 
 	/** @type {Array<{ id: string, startsAt: string, title: string, description?: string }>} */
@@ -40,16 +41,25 @@
 	</ul>
 {:else}
 	<section class="empty-state" aria-label="Event schedule status">
-		<h3>No upcoming events are listed.</h3>
-		<a
-			class="empty-action"
-			href={clubContent.communityAction.url}
-			target="_blank"
-			rel="external noopener noreferrer"
-		>
-			<span>{clubContent.communityAction.label}</span>
-			<span aria-hidden="true">↗</span>
-		</a>
+		<div class="empty-copy">
+			<h3>No upcoming events are listed.</h3>
+			<p>Confirmed dates appear here when published.</p>
+		</div>
+		<nav class="empty-actions" aria-label="While you wait">
+			<a class="empty-action" href={resolve('/our-workshops', {})}>
+				<span>Browse workshops</span>
+				<span aria-hidden="true">→</span>
+			</a>
+			<a
+				class="empty-action"
+				href={clubContent.communityAction.url}
+				target="_blank"
+				rel="external noopener noreferrer"
+			>
+				<span>{clubContent.communityAction.label}</span>
+				<span aria-hidden="true">↗</span>
+			</a>
+		</nav>
 	</section>
 {/if}
 
@@ -117,11 +127,29 @@
 
 	.empty-state {
 		display: grid;
-		align-items: center;
+		align-items: start;
 		min-width: 0;
 		padding-block: var(--space-md);
 		border-block: var(--rule-strong);
 		gap: var(--space-md);
+	}
+
+	.empty-copy {
+		display: grid;
+		gap: var(--space-xs);
+	}
+
+	.empty-copy p {
+		max-width: 36rem;
+		color: var(--quiet-steel);
+		font-size: var(--text-sm);
+		line-height: 1.5;
+	}
+
+	.empty-actions {
+		display: grid;
+		justify-items: start;
+		gap: var(--space-sm);
 	}
 
 	.empty-action {
@@ -166,6 +194,7 @@
 
 		.empty-state {
 			grid-template-columns: minmax(0, 1fr) max-content;
+			align-items: center;
 			column-gap: var(--space-lg);
 		}
 	}

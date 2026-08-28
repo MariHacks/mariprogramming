@@ -57,20 +57,18 @@ for (const viewport of [
 	});
 }
 
-test('Mini-Competitions is a working status destination in every navigation mode', async ({
-	page
-}) => {
+test('Mini-Competitions stays reachable from home and disclosure menus', async ({ page }) => {
 	await page.setViewportSize({ width: 1440, height: 900 });
 	await page.goto('/');
-	await page
-		.getByRole('navigation', { name: 'Primary navigation' })
-		.getByRole('link', {
+	await page.getByRole('link', { name: 'Mini-Competitions status' }).click();
+	await expect(page).toHaveURL('/mini-competitions');
+	await expect(page.getByText('Coming Soon')).toBeVisible();
+	await expect(
+		page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', {
 			name: 'Mini-Competitions',
 			exact: true
 		})
-		.click();
-	await expect(page).toHaveURL('/mini-competitions');
-	await expect(page.getByText('Coming Soon')).toBeVisible();
+	).toHaveCount(0);
 
 	await page.setViewportSize({ width: 768, height: 900 });
 	await page.goto('/');
