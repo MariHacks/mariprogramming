@@ -48,7 +48,8 @@ export function assertIsolatedLiveE2EEnvironment(source) {
 		databaseUrl.hostname !== '127.0.0.1' ||
 		!databaseUrl.port ||
 		environment.STRIPE_SECRET_KEY !== 'sk_test_livee2elocalonly' ||
-		environment.GOOGLE_CLIENT_ID !== 'live-e2e-google-client-id' ||
+		environment.GOOGLE_CLIENT_ID !==
+			'123456789012-livee2elocalonly.apps.googleusercontent.com' ||
 		environment.GOOGLE_CLIENT_SECRET !== 'live-e2e-google-client-secret'
 	) {
 		throw new Error('The live E2E server is not isolated');

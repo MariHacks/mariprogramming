@@ -27,6 +27,20 @@ Start the local development server:
 npm run dev
 ```
 
+Copy `.env.example` to `.env.local` and fill server-only values. For Google sign-in on
+`/tools/account` or `/staff/sign-in`:
+
+1. In Google Cloud Console, create (or reuse) an OAuth **Web application** client.
+2. Add the authorized redirect URI
+   `http://127.0.0.1:<dev-port>/api/auth/callback/google` (and `http://localhost:<dev-port>/...`
+   only if that is your `APP_ORIGIN`).
+3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env.local` to that client.
+4. Set `APP_ORIGIN` and `BETTER_AUTH_URL` to the same origin the browser uses, for example
+   `http://127.0.0.1:5173`.
+
+Placeholder client IDs are rejected at startup. Google itself returns `invalid_client` when a
+nonexistent client ID reaches the authorize endpoint.
+
 The club routes are `/`, `/about-us`, `/our-workshops`, `/events`, and `/resources`. Book
 Delivery begins at `/books`; commerce controls belong only within that route area.
 

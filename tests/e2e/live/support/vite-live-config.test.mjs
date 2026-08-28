@@ -32,7 +32,7 @@ describe('live E2E Vite server double resolver', () => {
 			DATABASE_URL: 'postgresql://runner:local@127.0.0.1:43112/postgres',
 			BOOK_DELIVERY_LAUNCH_STATE: 'live',
 			STRIPE_SECRET_KEY: 'sk_test_livee2elocalonly',
-			GOOGLE_CLIENT_ID: 'live-e2e-google-client-id',
+			GOOGLE_CLIENT_ID: '123456789012-livee2elocalonly.apps.googleusercontent.com',
 			GOOGLE_CLIENT_SECRET: 'live-e2e-google-client-secret'
 		};
 

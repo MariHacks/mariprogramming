@@ -4,6 +4,8 @@ import { env as privateEnvironment } from '$env/dynamic/private';
 import { isIP } from 'node:net';
 
 const DNS_LABEL_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
+const GOOGLE_OAUTH_WEB_CLIENT_ID_PATTERN =
+	/^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/u;
 const GENERIC_CONFIGURATION_ERROR = 'Server configuration is unavailable';
 const MAX_CONFIGURATION_VALUE_LENGTH = 2048;
 const MIN_SECRET_LENGTH = 32;
@@ -557,12 +559,17 @@ export function readRuntimeEnvironment(source = privateEnvironment) {
 		return invalidConfiguration();
 	}
 
+	const googleClientId = requiredString(source, 'GOOGLE_CLIENT_ID');
+	if (!GOOGLE_OAUTH_WEB_CLIENT_ID_PATTERN.test(googleClientId)) {
+		return invalidConfiguration();
+	}
+
 	return Object.freeze({
 		appOrigin,
 		databaseUrl: postgresUrl(requiredString(source, 'DATABASE_URL')),
 		betterAuthSecret,
 		betterAuthOrigin,
-		googleClientId: requiredString(source, 'GOOGLE_CLIENT_ID'),
+		googleClientId,
 		googleClientSecret: requiredString(source, 'GOOGLE_CLIENT_SECRET'),
 		stripeSecretKey,
 		stripeWebhookSecret,

@@ -26,7 +26,7 @@ export function createLiveE2EEnvironment({ baseURL, databaseUrl }) {
 		RATE_LIMIT_HMAC_KEY: 'live-e2e-rate-limit-secret-0000000002',
 		BOOK_CHECKOUT_CAPABILITY_KEY: 'live-e2e-checkout-secret-000000000003',
 		CRON_SECRET: 'live-e2e-cron-secret-0000000000000004',
-		GOOGLE_CLIENT_ID: 'live-e2e-google-client-id',
+		GOOGLE_CLIENT_ID: '123456789012-livee2elocalonly.apps.googleusercontent.com',
 		GOOGLE_CLIENT_SECRET: 'live-e2e-google-client-secret',
 		STRIPE_SECRET_KEY: 'sk_test_livee2elocalonly',
 		STRIPE_WEBHOOK_SECRET: 'whsec_livee2elocalonly',

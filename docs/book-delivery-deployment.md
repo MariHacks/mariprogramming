@@ -129,13 +129,21 @@ Use a forward migration to repair schema mistakes. Do not run an unreviewed reve
 
 Better Auth uses Google only. The application accepts one identity: the verified Google account whose normalized email is exactly `team@marihacks.com`. Aliases, lookalike domains, unverified emails, and other Google accounts are denied before a staff session is issued.
 
-Register these callback shapes in the Google OAuth client:
+Register these callback shapes in the Google OAuth client. The local entry must use the
+exact host and port from `APP_ORIGIN` (`127.0.0.1` and `localhost` are different origins to
+Google):
 
 ```text
-http://localhost:5173/api/auth/callback/google
+http://127.0.0.1:<dev-port>/api/auth/callback/google
+http://localhost:<dev-port>/api/auth/callback/google
 https://<stable-protected-staging-domain>/api/auth/callback/google
 https://mariprogramming.vercel.app/api/auth/callback/google
 ```
+
+`GOOGLE_CLIENT_ID` must be a real Google Cloud OAuth **Web application** client ID of the form
+`<digits>-<suffix>.apps.googleusercontent.com`. Placeholder values such as
+`local-dev.apps.googleusercontent.com` produce Google's `Error 401: invalid_client`. Set
+`GOOGLE_CLIENT_SECRET` to the matching client secret from the same OAuth client.
 
 The staging entry must use the final protected staging domain, not an ephemeral Preview URL. Set `APP_ORIGIN` and `BETTER_AUTH_URL` to the exact origin for each environment. Do not include a path or trailing slash.
 
