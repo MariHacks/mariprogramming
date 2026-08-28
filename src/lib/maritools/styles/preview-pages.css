@@ -673,6 +673,9 @@
 		padding: 22px;
 		border-left: 1px solid var(--line);
 		background: #eef2f7;
+		max-height: calc(100vh - var(--header-h) - var(--preview-h) - 78px);
+		overflow-y: auto;
+		overscroll-behavior: contain;
 	}
 
 	.board-heading {
