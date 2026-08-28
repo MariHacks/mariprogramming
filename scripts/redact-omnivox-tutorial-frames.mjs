@@ -2,8 +2,9 @@
 /**
  * Rebuild static/maritools/omnivox/step-NN.webp from Scribe raw captures.
  *
- * Per step: PII redaction → crop/zoom → press highlight → macOS browser chrome.
- * Login-side photos are kept. Student names/numbers and login field values stay covered.
+ * Per step: PII redaction → press highlight → macOS browser chrome.
+ * Full-frame (no per-step crop/zoom). Login-side photos stay visible.
+ * Student names/numbers and login field values stay covered.
  *
  * Usage:
  *   node scripts/redact-omnivox-tutorial-frames.mjs
@@ -28,15 +29,12 @@ const CHROME_H = 52;
 const URL_HOST = 'marianopolis.omnivox.ca';
 
 /**
- * Per-step compose plan on raw 2252×1638.
- * redactionsctions: [x0,y0,x1,y1,fill] in raw coords (white|panel|header)
- * crop: [x0,y0,x1,y1] raw window to keep (zoom)
+ * Per-step compose plan on raw 2252×1638 (full frame, no crop).
+ * redactions: [x0,y0,x1,y1,fill] in raw coords (white|panel|header)
  * highlight: [x0,y0,x1,y1] raw press target, or null
  */
 const STEPS = {
 	1: {
-		// Full login; photo panel stays visible. No click target (open URL).
-		crop: [0, 40, 2252, 1580],
 		redactions: [
 			[1320, 630, 2050, 780, 'white'],
 			[1320, 820, 2050, 980, 'white']
@@ -44,8 +42,6 @@ const STEPS = {
 		highlight: null
 	},
 	2: {
-		// Emphasize login form; keep left photo. Highlight Student number field.
-		crop: [0, 180, 2252, 1400],
 		redactions: [
 			[1320, 630, 2050, 780, 'white'],
 			[1320, 820, 2050, 980, 'white']
@@ -53,8 +49,6 @@ const STEPS = {
 		highlight: [1320, 590, 2080, 770]
 	},
 	3: {
-		// Same login frame; highlight Log In.
-		crop: [0, 180, 2252, 1400],
 		redactions: [
 			[1320, 630, 2050, 780, 'white'],
 			[1320, 820, 2050, 980, 'white'],
@@ -64,20 +58,14 @@ const STEPS = {
 		highlight: [1830, 990, 2065, 1120]
 	},
 	4: {
-		// Sidebar + a strip of home for aspect; highlight Course Schedule.
-		crop: [0, 0, 1100, 1400],
 		redactions: [[1180, 8, 1620, 120, 'white']],
 		highlight: [95, 855, 345, 915]
 	},
 	5: {
-		// Semester form; cut empty bottom. Highlight Obtain my schedule.
-		crop: [480, 160, 1900, 740],
 		redactions: [[1440, 8, 1800, 120, 'white']],
 		highlight: [1440, 645, 1775, 725]
 	},
 	6: {
-		// Yellow printer banner + personal data strip. Highlight banner.
-		crop: [300, 310, 1700, 760],
 		redactions: [
 			[860, 560, 1140, 660, 'white'],
 			[960, 615, 1120, 660, 'white']
@@ -85,20 +73,14 @@ const STEPS = {
 		highlight: [340, 340, 810, 470]
 	},
 	7: {
-		// Compact option page; cut blank bottom. Highlight Compact radio.
-		crop: [560, 40, 1690, 840],
 		redactions: [[940, 95, 1160, 145, 'white']],
 		highlight: [595, 630, 1145, 700]
 	},
 	8: {
-		// Same page; highlight View.
-		crop: [560, 40, 1690, 840],
 		redactions: [[940, 95, 1160, 145, 'white']],
 		highlight: [1545, 745, 1685, 825]
 	},
 	9: {
-		// Numbered course list (copy target); cut empty footer.
-		crop: [900, 40, 1800, 1080],
 		redactions: [[900, 105, 1360, 170, 'white']],
 		highlight: [1180, 190, 1780, 1050]
 	}
@@ -163,22 +145,16 @@ def draw_highlight(im, box):
     )
     return Image.alpha_composite(im.convert('RGBA'), overlay)
 
-def fit_cover(im, box_w, box_h, focus=None):
-    """Scale to fill the viewport; bias crop toward an optional focus box."""
+def fit_cover(im, box_w, box_h):
+    """Scale to fill the viewport; center crop only for aspect match."""
     w, h = im.size
     scale = max(box_w / w, box_h / h)
     nw, nh = max(box_w, int(round(w * scale))), max(box_h, int(round(h * scale)))
     resized = im.resize((nw, nh), Image.Resampling.LANCZOS).convert('RGB')
-    if focus:
-        fx = int(((focus[0] + focus[2]) / 2) * scale)
-        fy = int(((focus[1] + focus[3]) / 2) * scale)
-        ox = min(max(0, fx - box_w // 2), max(0, nw - box_w))
-        oy = min(max(0, fy - box_h // 2), max(0, nh - box_h))
-    else:
-        ox, oy = (nw - box_w) // 2, (nh - box_h) // 2
+    ox, oy = (nw - box_w) // 2, (nh - box_h) // 2
     return resized.crop((ox, oy, ox + box_w, oy + box_h))
 
-def compose_chrome(content, focus=None):
+def compose_chrome(content):
     """macOS-style browser chrome around content. Output target_w x target_h."""
     W, H = target_w, target_h
     canvas = Image.new('RGB', (W, H), (232, 234, 238))
@@ -210,7 +186,7 @@ def compose_chrome(content, focus=None):
 
     margin = 2
     vw, vh = W - margin * 2, H - chrome_h - margin
-    fitted = fit_cover(content, vw, vh, focus=focus)
+    fitted = fit_cover(content, vw, vh)
     canvas.paste(fitted, (margin, chrome_h))
     return canvas
 
@@ -222,17 +198,11 @@ for step_key, cfg in steps.items():
     for x0, y0, x1, y1, fill in cfg.get('redactions', []):
         draw.rectangle([x0, y0, x1, y1], fill=fills[fill])
 
-    cx0, cy0, cx1, cy1 = cfg['crop']
-    cropped = im.crop((cx0, cy0, cx1, cy1))
-
-    local_focus = None
     hi = cfg.get('highlight')
     if hi:
-        hx0, hy0, hx1, hy1 = hi
-        local_focus = [hx0 - cx0, hy0 - cy0, hx1 - cx0, hy1 - cy0]
-        cropped = draw_highlight(cropped, local_focus)
+        im = draw_highlight(im, hi)
 
-    framed = compose_chrome(cropped, focus=local_focus)
+    framed = compose_chrome(im)
     png_path = work / f'redacted-{step:02d}.png'
     framed.save(png_path)
     print(png_path)
