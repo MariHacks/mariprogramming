@@ -118,6 +118,30 @@ describe('staff order ledger', () => {
 		expect(screen.getByDisplayValue('purchase_list')).toHaveAttribute('type', 'hidden');
 	});
 
+	it('keeps purchase export failures on the ledger instead of navigating away', async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = vi.fn(async () => ({
+			ok: false,
+			status: 403,
+			async blob() {
+				return new Blob(['nope']);
+			}
+		}));
+		try {
+			render(OrdersPage, { props: { data: data() } });
+			await submit(screen.getByRole('button', { name: 'Download purchase list' }));
+			const alert = await screen.findByRole('alert');
+			expect(alert).toHaveTextContent('Purchase export failed. Stay on this page and try again.');
+			expect(screen.getByRole('heading', { level: 1, name: 'Orders' })).toBeVisible();
+			expect(globalThis.fetch).toHaveBeenCalledWith(
+				'/staff/orders/export',
+				expect.objectContaining({ method: 'POST', body: 'intent=purchase_list' })
+			);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
 	it('renders one exact POST search result without moving the email into a link', () => {
 		render(OrdersPage, {
 			props: {

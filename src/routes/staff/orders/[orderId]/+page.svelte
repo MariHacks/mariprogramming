@@ -391,22 +391,23 @@
 		display: flex;
 		align-items: end;
 		justify-content: space-between;
-		gap: 2rem;
-		padding: clamp(1.5rem, 3vw, 2.5rem) 0;
+		gap: 1.25rem;
+		padding: 1rem 0 1.15rem;
 		border-bottom: var(--rule-strong);
 	}
 
 	.order-heading h1 {
-		margin-top: 0.45rem;
+		margin-top: 0.2rem;
 		font-family: var(--font-mono);
-		font-size: clamp(2rem, 5vw, 4rem);
-		letter-spacing: -0.04em;
+		font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+		letter-spacing: -0.03em;
+		line-height: 1.15;
 	}
 
 	.order-heading p:not(.eyebrow) {
-		margin-top: 0.65rem;
+		margin-top: 0.4rem;
 		color: var(--color-muted);
-		font-size: 0.875rem;
+		font-size: 0.8125rem;
 	}
 
 	.heading-statuses {

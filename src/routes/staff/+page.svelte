@@ -56,6 +56,9 @@
 	/** @type {any} */
 	let enhancedForm = null;
 	let searching = false;
+	let exporting = false;
+	let exportError = '';
+	let exportStatus = '';
 
 	$: responseForm = enhancedForm ?? form;
 	$: searchResult = responseForm?.success && responseForm.search ? responseForm.search : null;
@@ -64,8 +67,13 @@
 	$: filtersActive =
 		!searchResult &&
 		(data.listing.filters.payment !== 'actionable' || data.listing.filters.fulfillment !== 'all');
+	$: alertSummary = exportError || responseForm?.errorSummary || '';
 
 	afterUpdate(() => {
+		if (exportError) {
+			errorElement?.focus();
+			return;
+		}
 		if (responseForm?.errorSummary && responseForm !== focusedFailure) {
 			focusedFailure = responseForm;
 			errorElement?.focus();
@@ -73,6 +81,51 @@
 			focusedFailure = null;
 		}
 	});
+
+	/**
+	 * Keep purchase export on the ledger. A full-page POST becomes a dead end when
+	 * the server rejects the request, and some automation surfaces send Origin null.
+	 * @param {SubmitEvent} event
+	 */
+	async function downloadPurchaseList(event) {
+		event.preventDefault();
+		if (exporting) return;
+		exporting = true;
+		exportError = '';
+		exportStatus = 'Preparing purchase list';
+		try {
+			const response = await fetch(resolve('/staff/orders/export', {}), {
+				method: 'POST',
+				headers: { 'content-type': 'application/x-www-form-urlencoded' },
+				body: 'intent=purchase_list',
+				credentials: 'same-origin'
+			});
+			if (!response.ok) {
+				exportError =
+					response.status === 503
+						? 'Purchase export is unavailable. Try again.'
+						: 'Purchase export failed. Stay on this page and try again.';
+				exportStatus = '';
+				return;
+			}
+			const blob = await response.blob();
+			const objectUrl = URL.createObjectURL(blob);
+			const anchor = document.createElement('a');
+			anchor.href = objectUrl;
+			anchor.download = 'bookstore-purchase-list.csv';
+			anchor.rel = 'noopener';
+			document.body.appendChild(anchor);
+			anchor.click();
+			anchor.remove();
+			URL.revokeObjectURL(objectUrl);
+			exportStatus = 'Purchase list downloaded';
+		} catch {
+			exportError = 'Purchase export failed. Stay on this page and try again.';
+			exportStatus = '';
+		} finally {
+			exporting = false;
+		}
+	}
 
 	/** @param {unknown} value */
 	function statusLabel(value) {
@@ -124,9 +177,11 @@
 			<h1>Orders</h1>
 			<p class="heading-note">Scan paid work, jump by reference, export the purchase list.</p>
 		</div>
-		<form method="post" action={resolve('/staff/orders/export', {})}>
+		<form method="post" action={resolve('/staff/orders/export', {})} on:submit={downloadPurchaseList}>
 			<input type="hidden" name="intent" value="purchase_list" />
-			<button class="export-button" type="submit">Download purchase list</button>
+			<button class="export-button" type="submit" disabled={exporting}
+				>Download purchase list</button
+			>
 		</form>
 	</header>
 
@@ -172,7 +227,8 @@
 	</div>
 
 	{#if searching}<p class="request-status" role="status">Searching</p>{/if}
-	{#if responseForm?.errorSummary}
+	{#if exportStatus && !exportError}<p class="request-status" role="status">{exportStatus}</p>{/if}
+	{#if alertSummary}
 		<div
 			class="message message-error"
 			role="alert"
@@ -181,7 +237,7 @@
 			tabindex="-1"
 			bind:this={errorElement}
 		>
-			{responseForm.errorSummary}
+			{alertSummary}
 		</div>
 	{/if}
 	{#if data.unavailable}
@@ -350,10 +406,10 @@
 	}
 
 	.page-heading h1 {
-		margin-top: 0.25rem;
-		font-size: clamp(1.75rem, 3vw, 2.25rem);
+		margin-top: 0.2rem;
+		font-size: clamp(1.35rem, 2.4vw, 1.75rem);
 		letter-spacing: -0.03em;
-		line-height: 1.05;
+		line-height: 1.15;
 	}
 
 	.heading-note {
