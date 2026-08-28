@@ -753,6 +753,51 @@ describe('createMariToolsRepository', () => {
 			queuedRepo([[{ id: REPLY, removedAt: null }], []]).removeReply(REPLY)
 		).rejects.toBeInstanceOf(MariToolsUnavailableError);
 		await expect(
+			queuedRepo([
+				[{ id: THREAD, removedAt: null, body: 'old' }],
+				[{ id: THREAD, removedAt: null, body: 'Edited' }]
+			]).updateThread({ id: THREAD, body: 'Edited' })
+		).resolves.toMatchObject({ id: THREAD, body: 'Edited' });
+		await expect(
+			queuedRepo([
+				[{ id: REPLY, removedAt: null, body: 'old' }],
+				[{ id: REPLY, removedAt: null, body: 'Edited' }]
+			]).updateReply({ id: REPLY, body: 'Edited' })
+		).resolves.toMatchObject({ id: REPLY, body: 'Edited' });
+		await expect(queuedRepo([[{ id: REPLY }]]).getReply(REPLY)).resolves.toMatchObject({
+			id: REPLY
+		});
+		await expect(queuedRepo([[]]).updateThread({ id: THREAD, body: 'Edited' })).rejects.toBeInstanceOf(
+			MariToolsNotFoundError
+		);
+		await expect(
+			queuedRepo([[{ id: THREAD, removedAt: new Date() }]]).updateThread({
+				id: THREAD,
+				body: 'Edited'
+			})
+		).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([[{ id: THREAD, removedAt: null }], []]).updateThread({
+				id: THREAD,
+				body: 'Edited'
+			})
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(queuedRepo([[]]).updateReply({ id: REPLY, body: 'Edited' })).rejects.toBeInstanceOf(
+			MariToolsNotFoundError
+		);
+		await expect(
+			queuedRepo([[{ id: REPLY, removedAt: new Date() }]]).updateReply({
+				id: REPLY,
+				body: 'Edited'
+			})
+		).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([[{ id: REPLY, removedAt: null }], []]).updateReply({
+				id: REPLY,
+				body: 'Edited'
+			})
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(
 			queuedRepo([[]]).createReport({
 				targetKind: 'thread',
 				targetId: THREAD,

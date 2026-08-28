@@ -1,4 +1,4 @@
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import {
 	MaritoolsInputError,
 	MaritoolsUnavailableError,
@@ -24,6 +24,14 @@ export function _createHandlers(dependencies = {}) {
 		return { session, staff: store.isStaff(session.email, profile?.role ?? null) };
 	}
 
+	/** @param {{ session: { userId: string } | null, staff: boolean }} identity */
+	function viewerFrom(identity) {
+		return {
+			userId: identity.session?.userId ?? null,
+			staff: identity.staff
+		};
+	}
+
 	/** @param {any} event */
 	async function load(event) {
 		const threadId = event.params.threadId;
@@ -33,7 +41,8 @@ export function _createHandlers(dependencies = {}) {
 			const store = createStore();
 			const identity = await staffContext(event, store);
 			staff = identity.staff;
-			const thread = await store.getThread(threadId);
+			const viewer = viewerFrom(identity);
+			const thread = await store.getThread(threadId, viewer);
 			if (!thread || thread.removedAt) {
 				return {
 					thread: null,
@@ -44,7 +53,7 @@ export function _createHandlers(dependencies = {}) {
 				};
 			}
 			const [replies, courses] = await Promise.all([
-				store.listReplies(threadId),
+				store.listReplies(threadId, viewer),
 				store.listCatalogCourses()
 			]);
 			const courseCode = thread.courseId
@@ -127,6 +136,87 @@ export function _createHandlers(dependencies = {}) {
 	}
 
 	/** @param {any} event */
+	async function edit(event) {
+		try {
+			const store = createStore();
+			const identity = await staffContext(event, store);
+			if (!identity.session) return fail(401, { error: 'Sign in with Google first.' });
+			const data = await event.request.formData();
+			const targetKind = String(data.get('targetKind') ?? '').trim();
+			const targetId = String(data.get('targetId') ?? '').trim();
+			const body = String(data.get('body') ?? '').trim();
+			if (!targetKind || !targetId || !body) {
+				return fail(400, { error: 'Write an updated post first.' });
+			}
+			const viewer = viewerFrom(identity);
+			if (targetKind === 'thread') {
+				if (!(await store.canManageThread(targetId, viewer))) {
+					return fail(403, { error: 'You cannot edit that.' });
+				}
+				await store.updateThread({ id: targetId, body });
+			} else if (targetKind === 'reply') {
+				if (!(await store.canManageReply(targetId, viewer))) {
+					return fail(403, { error: 'You cannot edit that.' });
+				}
+				await store.updateReply({ id: targetId, body });
+			} else {
+				return fail(400, { error: 'Unknown edit target.' });
+			}
+			return { edited: true };
+		} catch (error) {
+			if (error instanceof MaritoolsInputError) {
+				return fail(400, { error: 'Could not save that edit.' });
+			}
+			if (error instanceof MaritoolsUnavailableError) {
+				return fail(503, { error: 'Edits are unavailable. Try again.' });
+			}
+			throw error;
+		}
+	}
+
+	/** @param {any} event */
+	async function deleteAction(event) {
+		try {
+			const store = createStore();
+			const identity = await staffContext(event, store);
+			if (!identity.session) return fail(401, { error: 'Sign in with Google first.' });
+			const data = await event.request.formData();
+			const targetKind = String(data.get('targetKind') ?? '').trim();
+			const targetId = String(data.get('targetId') ?? '').trim();
+			if (!targetKind || !targetId) {
+				return fail(400, { error: 'Pick something to delete.' });
+			}
+			const viewer = viewerFrom(identity);
+			if (targetKind === 'thread') {
+				if (!(await store.canManageThread(targetId, viewer))) {
+					return fail(403, { error: 'You cannot delete that.' });
+				}
+				await store.removeThread(targetId);
+				throw redirect(303, '/tools/forum');
+			}
+			if (targetKind === 'reply') {
+				if (!(await store.canManageReply(targetId, viewer))) {
+					return fail(403, { error: 'You cannot delete that.' });
+				}
+				await store.removeReply(targetId);
+				return { deleted: true };
+			}
+			return fail(400, { error: 'Unknown delete target.' });
+		} catch (error) {
+			if (error && typeof error === 'object' && 'status' in error && error.status === 303) {
+				throw error;
+			}
+			if (error instanceof MaritoolsInputError) {
+				return fail(400, { error: 'Could not delete that.' });
+			}
+			if (error instanceof MaritoolsUnavailableError) {
+				return fail(503, { error: 'Deletes are unavailable. Try again.' });
+			}
+			throw error;
+		}
+	}
+
+	/** @param {any} event */
 	async function moderate(event) {
 		try {
 			const store = createStore();
@@ -151,7 +241,7 @@ export function _createHandlers(dependencies = {}) {
 		}
 	}
 
-	return { load, actions: { reply, report, moderate } };
+	return { load, actions: { reply, report, edit, delete: deleteAction, moderate } };
 }
 
 const handlers = _createHandlers();

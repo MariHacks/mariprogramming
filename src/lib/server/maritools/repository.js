@@ -1362,6 +1362,64 @@ export function createMariToolsRepository({
 			);
 		},
 
+		/** @param {unknown} id */
+		async getReply(id) {
+			const replyId = requiredUuid(id);
+			return redactUnexpected(async () =>
+				oneRow(
+					await transact((transaction) =>
+						transaction.select().from(mtForumReplies).where(eq(mtForumReplies.id, replyId))
+					)
+				)
+			);
+		},
+
+		/** @param {{ id: unknown, body: unknown }} input */
+		async updateThread(input) {
+			const threadId = requiredUuid(input.id);
+			const body = requiredText(input.body, 20_000);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction.select().from(mtForumThreads).where(eq(mtForumThreads.id, threadId))
+					);
+					if (!existing) return notFound();
+					if (existing.removedAt) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtForumThreads)
+							.set({ body, updatedAt: new Date() })
+							.where(eq(mtForumThreads.id, threadId))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {{ id: unknown, body: unknown }} input */
+		async updateReply(input) {
+			const replyId = requiredUuid(input.id);
+			const body = requiredText(input.body, 20_000);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction.select().from(mtForumReplies).where(eq(mtForumReplies.id, replyId))
+					);
+					if (!existing) return notFound();
+					if (existing.removedAt) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtForumReplies)
+							.set({ body, updatedAt: new Date() })
+							.where(eq(mtForumReplies.id, replyId))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
 		/**
 		 * @param {{
 		 *   targetKind: unknown,

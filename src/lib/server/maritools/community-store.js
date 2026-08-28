@@ -22,6 +22,16 @@ export function slugFromName(name) {
 		.slice(0, 120);
 }
 
+/**
+ * @param {string | null | undefined} authorUserId
+ * @param {{ userId?: string | null, staff?: boolean } | null | undefined} viewer
+ */
+export function canManagePost(authorUserId, viewer) {
+	if (!viewer) return false;
+	if (viewer.staff) return true;
+	return Boolean(viewer.userId && authorUserId && viewer.userId === authorUserId);
+}
+
 /** @param {any} thread */
 export function publicThreadView(thread) {
 	if (!thread || typeof thread !== 'object') return null;
@@ -49,6 +59,17 @@ export function publicReplyView(reply) {
 		createdAt: reply.createdAt,
 		removedAt: reply.removedAt ?? null
 	};
+}
+
+/**
+ * @template {Record<string, unknown>} T
+ * @param {T | null} view
+ * @param {string | null | undefined} authorUserId
+ * @param {{ userId?: string | null, staff?: boolean } | null | undefined} viewer
+ */
+function withManageFlag(view, authorUserId, viewer) {
+	if (!view) return null;
+	return { ...view, canManage: canManagePost(authorUserId, viewer) };
 }
 
 /** @param {any} club */
@@ -178,16 +199,51 @@ export function createCommunityStore(inner) {
 			});
 		},
 
-		/** @param {string} id */
-		getThread(id) {
-			return wrap(async () => publicThreadView(await inner.getThread(id)));
+		/**
+		 * @param {string} id
+		 * @param {{ userId?: string | null, staff?: boolean } | null} [viewer]
+		 */
+		getThread(id, viewer = null) {
+			return wrap(async () => {
+				const thread = await inner.getThread(id);
+				return withManageFlag(publicThreadView(thread), thread?.authorUserId, viewer);
+			});
 		},
 
-		/** @param {string} threadId */
-		listReplies(threadId) {
+		/**
+		 * @param {string} threadId
+		 * @param {{ userId?: string | null, staff?: boolean } | null} [viewer]
+		 */
+		listReplies(threadId, viewer = null) {
 			return wrap(async () => {
 				const rows = await inner.listReplies(threadId);
-				return rows.map(publicReplyView).filter(Boolean);
+				return rows
+					.map((row) => withManageFlag(publicReplyView(row), row?.authorUserId, viewer))
+					.filter(Boolean);
+			});
+		},
+
+		/**
+		 * @param {string} id
+		 * @param {{ userId?: string | null, staff?: boolean } | null | undefined} viewer
+		 */
+		canManageThread(id, viewer) {
+			return wrap(async () => {
+				const thread = await inner.getThread(id);
+				if (!thread || thread.removedAt) return false;
+				return canManagePost(thread.authorUserId, viewer);
+			});
+		},
+
+		/**
+		 * @param {string} id
+		 * @param {{ userId?: string | null, staff?: boolean } | null | undefined} viewer
+		 */
+		canManageReply(id, viewer) {
+			return wrap(async () => {
+				const reply = await inner.getReply(id);
+				if (!reply || reply.removedAt) return false;
+				return canManagePost(reply.authorUserId, viewer);
 			});
 		},
 
@@ -199,6 +255,16 @@ export function createCommunityStore(inner) {
 		/** @param {Record<string, unknown>} input */
 		createReply(input) {
 			return wrap(async () => publicReplyView(await inner.createReply(input)));
+		},
+
+		/** @param {{ id: unknown, body: unknown }} input */
+		updateThread(input) {
+			return wrap(async () => publicThreadView(await inner.updateThread(input)));
+		},
+
+		/** @param {{ id: unknown, body: unknown }} input */
+		updateReply(input) {
+			return wrap(async () => publicReplyView(await inner.updateReply(input)));
 		},
 
 		/** @param {Record<string, unknown>} input */

@@ -11,6 +11,7 @@ import {
 import {
 	MaritoolsInputError,
 	MaritoolsUnavailableError,
+	canManagePost,
 	createCommunityStore,
 	openCommunityStore,
 	publicClubView,
@@ -95,6 +96,10 @@ describe('community views', () => {
 		expect(publicReplyView(undefined)).toBeNull();
 		expect(publicClubView(null)).toBeNull();
 		expect(publicClubView({ id: '1', name: 'Chess', slug: 'chess', links: 'nope' }).links).toEqual([]);
+		expect(canManagePost(USER, null)).toBe(false);
+		expect(canManagePost(USER, { userId: USER })).toBe(true);
+		expect(canManagePost(USER, { userId: 'other', staff: true })).toBe(true);
+		expect(canManagePost(null, { userId: USER })).toBe(false);
 	});
 });
 
@@ -181,10 +186,83 @@ describe('createCommunityStore', () => {
 		const threads = await store.listThreads({ category: 'courses', courseId: COURSE });
 		expect(threads[0]).not.toHaveProperty('authorUserId');
 		await store.listThreads();
-		expect(await store.getThread(THREAD)).toMatchObject({ id: THREAD, title: 'Hi' });
+		expect(await store.getThread(THREAD)).toMatchObject({
+			id: THREAD,
+			title: 'Hi',
+			canManage: false
+		});
+		const owned = await store.getThread(THREAD, { userId: USER, staff: false });
+		expect(owned).toMatchObject({ canManage: true });
+		expect(owned).not.toHaveProperty('authorUserId');
 		const empty = createCommunityStore(inner({ getThread: vi.fn(async () => null) }));
 		await expect(empty.getThread(THREAD)).resolves.toBeNull();
 		expect((await store.listReplies(THREAD))[0]).not.toHaveProperty('authorUserId');
+		expect((await store.listReplies(THREAD, { userId: USER }))[0].canManage).toBe(true);
+	});
+
+	it('reports manage rights and updates bodies without leaking authors', async () => {
+		const repo = inner({
+			getReply: vi.fn(async () => ({
+				id: 'r1',
+				threadId: THREAD,
+				body: 'Thanks',
+				authorUserId: USER
+			})),
+			updateThread: vi.fn(async () => ({
+				id: THREAD,
+				title: 'Hi',
+				body: 'Edited',
+				category: 'courses',
+				authorUserId: USER
+			})),
+			updateReply: vi.fn(async () => ({
+				id: 'r1',
+				threadId: THREAD,
+				body: 'Edited reply',
+				authorUserId: USER
+			}))
+		});
+		const store = createCommunityStore(repo);
+		await expect(store.canManageThread(THREAD, { userId: USER })).resolves.toBe(true);
+		await expect(store.canManageThread(THREAD, { userId: 'other' })).resolves.toBe(false);
+		await expect(store.canManageThread(THREAD, { userId: 'other', staff: true })).resolves.toBe(
+			true
+		);
+		await expect(store.canManageReply('r1', { userId: USER })).resolves.toBe(true);
+		const removedReply = createCommunityStore(
+			inner({
+				getReply: vi.fn(async () => ({
+					id: 'r1',
+					threadId: THREAD,
+					body: 'Thanks',
+					authorUserId: USER,
+					removedAt: new Date()
+				}))
+			})
+		);
+		await expect(removedReply.canManageReply('r1', { userId: USER })).resolves.toBe(false);
+		const removedThread = createCommunityStore(
+			inner({
+				getThread: vi.fn(async () => ({
+					id: THREAD,
+					title: 'Hi',
+					body: 'Hello',
+					category: 'courses',
+					authorUserId: USER,
+					removedAt: new Date()
+				}))
+			})
+		);
+		await expect(removedThread.canManageThread(THREAD, { userId: USER })).resolves.toBe(false);
+		await expect(store.updateThread({ id: THREAD, body: 'Edited' })).resolves.toMatchObject({
+			body: 'Edited'
+		});
+		await expect(store.updateReply({ id: 'r1', body: 'Edited reply' })).resolves.toMatchObject({
+			body: 'Edited reply'
+		});
+		expect(await store.updateThread({ id: THREAD, body: 'Edited' })).not.toHaveProperty(
+			'authorUserId'
+		);
 	});
 
 	it('creates threads, replies, and reports', async () => {
