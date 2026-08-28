@@ -34,6 +34,7 @@ describe('protected staff shell', () => {
 			'href',
 			'/staff/book-work'
 		);
+		expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/staff/reports');
 		expect(screen.getByRole('link', { name: 'Orders' })).toHaveAttribute('aria-current', 'page');
 		expect(screen.getByRole('link', { name: 'Catalogue' })).not.toHaveAttribute(
 			'aria-current',
@@ -82,6 +83,17 @@ describe('protected staff shell', () => {
 			data: { staff: STAFF, pathname: '/staff/catalogue/books' }
 		});
 		expect(screen.getByRole('link', { name: 'Catalogue' })).toHaveAttribute('aria-current', 'page');
+		expect(screen.getByRole('link', { name: 'Orders' })).not.toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+	});
+
+	it('marks reports active on the reports queue', () => {
+		render(StaffLayout, {
+			data: { staff: STAFF, pathname: '/staff/reports' }
+		});
+		expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page');
 		expect(screen.getByRole('link', { name: 'Orders' })).not.toHaveAttribute(
 			'aria-current',
 			'page'

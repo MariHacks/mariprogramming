@@ -1,0 +1,153 @@
+// @ts-nocheck
+// @vitest-environment node
+
+import { describe, expect, it, vi } from 'vitest';
+import { MaritoolsUnavailableError } from '$lib/server/maritools/community-store.js';
+import { _createStaffReportsHandlers } from './+page.server.js';
+
+const STAFF = Object.freeze({
+	userId: 'staff-user',
+	sessionId: 'staff-session',
+	email: 'team@marihacks.com'
+});
+const THREAD = '20000000-0000-4000-8000-000000000001';
+const REPLY = '30000000-0000-4000-8000-000000000001';
+const REPORT = '40000000-0000-4000-8000-000000000001';
+
+function setup(overrides = {}) {
+	const store = {
+		listReports: vi.fn(async () => [
+			{
+				id: REPORT,
+				targetKind: 'thread',
+				targetId: THREAD,
+				reporterUserId: 'reporter-1',
+				reason: 'spam',
+				status: 'open',
+				resolvedAt: null,
+				createdAt: new Date('2026-08-28T16:00:00.000Z')
+			}
+		]),
+		getReply: vi.fn(async () => ({ id: REPLY, threadId: THREAD })),
+		...overrides.store
+	};
+	const handlers = _createStaffReportsHandlers({
+		authorize: vi.fn(() => STAFF),
+		createStore: vi.fn(() => store),
+		...overrides
+	});
+	return { handlers, store };
+}
+
+describe('staff reports load', () => {
+	it('authorizes staff and lists open reports by default', async () => {
+		const { handlers, store } = setup();
+		await expect(
+			handlers.load({ locals: { staff: STAFF }, url: new URL('https://club.example.com/staff/reports') })
+		).resolves.toEqual({
+			reports: [
+				{
+					id: REPORT,
+					targetKind: 'thread',
+					targetId: THREAD,
+					threadId: THREAD,
+					reporterUserId: 'reporter-1',
+					reason: 'spam',
+					status: 'open',
+					resolvedAt: null,
+					createdAt: '2026-08-28T16:00:00.000Z',
+					href: `/tools/forum/${THREAD}`
+				}
+			],
+			statusFilter: 'open',
+			unavailable: false
+		});
+		expect(store.listReports).toHaveBeenCalledWith({ status: 'open' });
+	});
+
+	it('passes an allowed status filter through to the store', async () => {
+		const { handlers, store } = setup({
+			store: {
+				listReports: vi.fn(async () => [])
+			}
+		});
+		await expect(
+			handlers.load({
+				locals: { staff: STAFF },
+				url: new URL('https://club.example.com/staff/reports?status=resolved')
+			})
+		).resolves.toMatchObject({ statusFilter: 'resolved', reports: [], unavailable: false });
+		expect(store.listReports).toHaveBeenCalledWith({ status: 'resolved' });
+	});
+
+	it('lists every report when status=all', async () => {
+		const { handlers, store } = setup({
+			store: {
+				listReports: vi.fn(async () => [])
+			}
+		});
+		await handlers.load({
+			locals: { staff: STAFF },
+			url: new URL('https://club.example.com/staff/reports?status=all')
+		});
+		expect(store.listReports).toHaveBeenCalledWith({});
+	});
+
+	it('resolves reply targets for forum links', async () => {
+		const { handlers, store } = setup({
+			store: {
+				listReports: vi.fn(async () => [
+					{
+						id: REPORT,
+						targetKind: 'reply',
+						targetId: REPLY,
+						reporterUserId: 'reporter-1',
+						reason: 'harassment',
+						status: 'open',
+						resolvedAt: null,
+						createdAt: new Date('2026-08-28T17:00:00.000Z')
+					}
+				]),
+				getReply: vi.fn(async () => ({ id: REPLY, threadId: THREAD }))
+			}
+		});
+		const result = await handlers.load({
+			locals: { staff: STAFF },
+			url: new URL('https://club.example.com/staff/reports')
+		});
+		expect(result.reports[0]).toMatchObject({
+			targetKind: 'reply',
+			threadId: THREAD,
+			href: `/tools/forum/${THREAD}`
+		});
+		expect(store.getReply).toHaveBeenCalledWith(REPLY);
+	});
+
+	it('returns an unavailable queue when the store cannot open', async () => {
+		const { handlers } = setup({
+			createStore: vi.fn(() => {
+				throw new MaritoolsUnavailableError();
+			})
+		});
+		await expect(
+			handlers.load({ locals: { staff: STAFF }, url: new URL('https://club.example.com/staff/reports') })
+		).resolves.toEqual({
+			reports: [],
+			statusFilter: 'open',
+			unavailable: true
+		});
+	});
+
+	it('returns an unavailable queue when listing fails', async () => {
+		const { handlers } = setup({
+			store: {
+				listReports: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		await expect(
+			handlers.load({ locals: { staff: STAFF }, url: new URL('https://club.example.com/staff/reports') })
+		).resolves.toMatchObject({ unavailable: true, reports: [] });
+	});
+});

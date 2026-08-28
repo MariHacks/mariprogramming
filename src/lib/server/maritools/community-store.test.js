@@ -76,6 +76,17 @@ function inner(overrides = {}) {
 		createThread: vi.fn(async () => ({ id: THREAD, title: 'Hi', body: 'Hello', category: 'student-life' })),
 		createReply: vi.fn(async () => ({ id: 'r1', threadId: THREAD, body: 'Thanks' })),
 		createReport: vi.fn(async () => ({ id: 'rep-1' })),
+		listReports: vi.fn(async () => [
+			{
+				id: 'rep-1',
+				targetKind: 'thread',
+				targetId: THREAD,
+				reporterUserId: USER,
+				reason: 'spam',
+				status: 'open'
+			}
+		]),
+		getReply: vi.fn(async () => ({ id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: USER })),
 		lockThread: vi.fn(async () => ({ id: THREAD, lockedAt: new Date() })),
 		removeThread: vi.fn(async () => ({ id: THREAD, removedAt: new Date() })),
 		removeReply: vi.fn(async () => ({ id: 'r1', removedAt: new Date() })),
@@ -281,6 +292,10 @@ describe('createCommunityStore', () => {
 				reason: 'spam'
 			})
 		).resolves.toMatchObject({ id: 'rep-1' });
+		await expect(store.listReports({ status: 'open' })).resolves.toEqual([
+			expect.objectContaining({ id: 'rep-1', status: 'open' })
+		]);
+		await expect(store.getReply('r1')).resolves.toMatchObject({ id: 'r1', threadId: THREAD });
 	});
 
 	it('locks and removes forum records', async () => {

@@ -272,6 +272,16 @@ export function createCommunityStore(inner) {
 			return wrap(() => inner.createReport(input));
 		},
 
+		/** @param {{ status?: unknown }} [input] */
+		listReports(input = {}) {
+			return wrap(() => inner.listReports(input));
+		},
+
+		/** @param {string} id */
+		getReply(id) {
+			return wrap(async () => publicReplyView(await inner.getReply(id)));
+		},
+
 		lockThread(id) {
 			return wrap(async () => publicThreadView(await inner.lockThread(id)));
 		},
