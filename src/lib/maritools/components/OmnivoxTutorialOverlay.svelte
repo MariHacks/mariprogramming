@@ -77,9 +77,6 @@
 					<p>{step.body}</p>
 				</div>
 				<div class="tutorial-frame" data-step={step.n} aria-hidden="true">
-					<div class="mock-browser-bar">
-						<i></i><i></i><i></i><span>marianopolis.omnivox.ca</span>
-					</div>
 					<div class="mock-omnivox">
 						<aside>
 							<b>Omnivox</b><span>Services</span><span>Course Schedule</span><span>Documents</span>

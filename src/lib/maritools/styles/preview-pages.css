@@ -2420,12 +2420,14 @@
 		font-size: 11px;
 	}
 
+	/* Baked chrome in step-NN.webp is the media container; no outer card. */
 	.tutorial-frame {
+		position: relative;
 		display: block;
-		min-height: 370px;
-		padding: 22px;
-		border: 1px solid #aebccc;
-		background: #edf2f7;
+		overflow: hidden;
+		aspect-ratio: 1200 / 872;
+		border-radius: 10px;
+		background: transparent;
 		text-align: left;
 	}
 
@@ -2464,29 +2466,10 @@
 		box-shadow: 0 10px 24px rgb(var(--ink-rgb) / 20%);
 	}
 
-	/* Chrome is baked into step-NN.webp to avoid a double title bar. */
-	.mock-browser-bar {
-		display: none;
-	}
-
-	.mock-browser-bar i {
-		width: 7px;
-		height: 7px;
-		border-radius: 50%;
-		background: #98a6b7;
-	}
-
-	.mock-browser-bar span {
-		margin-left: 8px;
-		color: #53647a;
-		font-size: 9px;
-		text-transform: none;
-	}
-
 	.mock-omnivox {
 		display: grid;
 		grid-template-columns: 145px 1fr;
-		min-height: 290px;
+		min-height: 100%;
 		border: 1px solid #bdc9d7;
 		background: white;
 	}
@@ -2565,14 +2548,13 @@
 	.tutorial-screenshots {
 		position: absolute;
 		z-index: 2;
-		inset: 22px;
+		inset: 0;
 	}
 
 	.tutorial-screenshots img {
 		display: none;
 		width: 100%;
 		height: 100%;
-		background: white;
 		object-fit: contain;
 	}
 
@@ -3027,7 +3009,7 @@
 		}
 	
 	.tutorial-frame {
-			min-height: 300px;
+			border-radius: 8px;
 		}
 	
 	.tutorial-stage footer {
