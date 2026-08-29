@@ -1,7 +1,10 @@
 /**
- * Honest browser proof: club Reject + staff report Resolve/Dismiss.
- * Seeds one pending club and two open forum reports, mints a staff session,
- * records webms under .artifacts/verify-mariTools/.
+ * Honest browser proof: club Reject (+ optional reports).
+ *
+ * Reports Resolve/Dismiss MUST use the real OS-pointer lever instead:
+ *   node scripts/prove-reports-resolve-dismiss-real-pointer.mjs [baseUrl]
+ * The old Playwright recordVideo + DOM #proof-cursor reports tape was Architect-FAIL
+ * (spliced / fake cursor). This script refuses --reports-only for that reason.
  *
  * Usage: node scripts/prove-staff-reject-resolve-dismiss.mjs [baseUrl]
  */
@@ -572,6 +575,13 @@ async function filmReportActions(browser, cookie) {
 
 async function main() {
 	const reportsOnly = process.argv.includes('--reports-only');
+	if (reportsOnly) {
+		console.error(
+			'REFUSED: reports tape must use scripts/prove-reports-resolve-dismiss-real-pointer.mjs (OS cursor + continuous screen capture). Playwright recordVideo + #proof-cursor is Architect-FAIL.'
+		);
+		process.exitCode = 2;
+		return;
+	}
 	await rm(tmpRoot, { recursive: true, force: true });
 	await mkdir(outDir, { recursive: true });
 	await mkdir(tmpRoot, { recursive: true });
@@ -587,59 +597,53 @@ async function main() {
 	});
 	/** @type {{ bugs: string[], log: Array<{t:number,label:string}>, video: string }} */
 	let club = { bugs: [], log: [], video: path.join(outDir, 'club-reject.webm') };
-	let reports;
+	/** @type {{ bugs: string[], log: Array<{t:number,label:string}>, video: string }} */
+	let reports = {
+		bugs: [
+			'reports film deferred to prove-reports-resolve-dismiss-real-pointer.mjs (see SELF-WATCH.md)'
+		],
+		log: [],
+		video: path.join(outDir, 'reports-resolve-dismiss.webm')
+	};
 	try {
-		if (!reportsOnly) {
-			console.log('— club Reject film —');
-			club = await filmClubReject(browser, cookie, seeded);
-		} else {
-			console.log('— skipping club Reject (reports-only) —');
-		}
-		console.log('— reports Resolve/Dismiss film —');
-		reports = await filmReportActions(browser, cookie);
+		console.log('— club Reject film —');
+		club = await filmClubReject(browser, cookie, seeded);
+		console.log(
+			'— skipping reports Resolve/Dismiss here; run prove-reports-resolve-dismiss-real-pointer.mjs —'
+		);
 	} finally {
 		await browser.close();
 	}
 
-	const clubPass = reportsOnly ? true : club.bugs.length === 0;
-	const reportsPass = reports.bugs.length === 0;
-	const verdict = clubPass && reportsPass ? 'PASS' : 'FAIL';
+	const clubPass = club.bugs.length === 0;
+	const reportsPass = false;
+	const verdict = clubPass ? 'CLUB_PASS_REPORTS_DEFERRED' : 'FAIL';
 
 	const notes = [
 		`# Staff Reject / Resolve / Dismiss: ${verdict}`,
 		'',
 		`- Base: ${baseURL}`,
-		`- Mode: ${reportsOnly ? 'reports-only (club tape left untouched)' : 'club + reports'}`,
-		`- Club Reject: ${reportsOnly ? 'SKIPPED' : clubPass ? 'PASS' : 'FAIL'} → \`club-reject.webm\``,
-		`- Reports Resolve+Dismiss: ${reportsPass ? 'PASS' : 'FAIL'} → \`reports-resolve-dismiss.webm\``,
+		`- Club Reject: ${clubPass ? 'PASS' : 'FAIL'} → \`club-reject.webm\``,
+		`- Reports Resolve+Dismiss: DEFERRED → run \`node scripts/prove-reports-resolve-dismiss-real-pointer.mjs\``,
 		`- Club submission: ${seeded.clubId} (${seeded.clubName})`,
-		`- Resolve report: ${seeded.resolveReportId}`,
-		`- Dismiss report: ${seeded.dismissReportId}`,
 		'',
 		'## Club Reject timeline',
-		...(reportsOnly
-			? ['- (not refilmed)']
-			: club.log.map((e) => `- ${e.t.toFixed(2)}s ${e.label}`)),
-		'',
-		'## Reports timeline',
-		...reports.log.map((e) => `- ${e.t.toFixed(2)}s ${e.label}`),
+		...club.log.map((e) => `- ${e.t.toFixed(2)}s ${e.label}`),
 		'',
 		'## Bugs',
-		...(club.bugs.length || reports.bugs.length
-			? [...club.bugs, ...reports.bugs].map((b) => `- ${b}`)
-			: ['- none']),
+		...(club.bugs.length ? club.bugs.map((b) => `- ${b}`) : ['- none (club)']),
+		'- reports: use real-pointer script (Architect rejected fake cursor tape)',
 		''
 	].join('\n');
 
-	await writeFile(path.join(outDir, 'VERDICT.md'), notes);
+	await writeFile(path.join(outDir, 'VERDICT-club-only.md'), notes);
 	await rm(tmpRoot, { recursive: true, force: true });
 
 	console.log(verdict);
-	if (!reportsOnly) console.log('Club:', clubPass ? 'PASS' : 'FAIL', club.video);
-	console.log('Reports:', reportsPass ? 'PASS' : 'FAIL', reports.video);
-	console.log('Notes:', path.join(outDir, 'VERDICT.md'));
-	if (!clubPass || !reportsPass) {
-		console.error([...club.bugs, ...reports.bugs].join('\n'));
+	console.log('Club:', clubPass ? 'PASS' : 'FAIL', club.video);
+	console.log('Reports: DEFERRED (real-pointer script)');
+	if (!clubPass) {
+		console.error(club.bugs.join('\n'));
 		process.exitCode = 1;
 	}
 }
