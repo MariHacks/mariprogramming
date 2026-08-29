@@ -34,7 +34,7 @@ export function createOutlineExtractionProvider(options = {}) {
 	const fetchImpl = options.fetchImpl ?? fetch;
 	const endpoint =
 		options.endpoint ?? 'https://integrate.api.nvidia.com/v1/chat/completions';
-	const timeoutMs = options.timeoutMs ?? 12_000;
+	const timeoutMs = options.timeoutMs ?? 90_000;
 
 	/**
 	 * @param {{ text: string, sha256?: string, offeringKey?: string, byteLength?: number }} input
@@ -79,7 +79,7 @@ export function createOutlineExtractionProvider(options = {}) {
 						{
 							role: 'user',
 							content:
-								'Extract assessments and books as JSON. Use null for unknown fields. Never invent dates. Text:\n' +
+								'Extract assessments and books as JSON with shape {"assessments":[{"title":string,"weight":number|null,"date":"YYYY-MM-DD"|null}],"books":[{"title":string,"author":string|null,"isbn":string|null,"required":boolean}]}. Use null for unknown fields. Never invent dates. Text:\n' +
 								input.text
 						}
 					]
