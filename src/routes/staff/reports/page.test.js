@@ -1,14 +1,29 @@
 // @ts-nocheck
 
 import { cleanup, render, screen } from '@testing-library/svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReportsPage from './+page.svelte';
 
 const THREAD = '20000000-0000-4000-8000-000000000001';
 const REPORT = '40000000-0000-4000-8000-000000000001';
 
+const formMocks = vi.hoisted(() => {
+	const enhance = vi.fn(() => ({ destroy() {} }));
+	return { applyAction: vi.fn(async () => {}), enhance };
+});
+const navigationMocks = vi.hoisted(() => ({ invalidateAll: vi.fn(async () => {}) }));
+
+vi.mock('$app/forms', () => ({
+	enhance: formMocks.enhance,
+	applyAction: formMocks.applyAction
+}));
+vi.mock('$app/navigation', () => ({ invalidateAll: navigationMocks.invalidateAll }));
+
 afterEach(() => {
 	cleanup();
+	formMocks.applyAction.mockClear();
+	formMocks.enhance.mockClear();
+	navigationMocks.invalidateAll.mockClear();
 });
 
 describe('staff reports page', () => {
@@ -49,6 +64,7 @@ describe('staff reports page', () => {
 			'formaction',
 			'?/dismiss'
 		);
+		expect(formMocks.enhance).toHaveBeenCalled();
 	});
 
 	it('hides resolve and dismiss actions for closed reports', () => {

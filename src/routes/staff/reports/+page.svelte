@@ -1,8 +1,14 @@
 <script>
+	import { applyAction, enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
 	/** @type {any} */
 	export let data;
+
+	/** @type {any[]} */
+	let reports = data.reports ?? [];
+	$: reports = data.reports ?? [];
 
 	const torontoDate = new Intl.DateTimeFormat('en-CA', {
 		dateStyle: 'medium',
@@ -25,6 +31,36 @@
 	/** @param {string} kind */
 	function targetLabel(kind) {
 		return kind === 'reply' ? 'Reply' : 'Thread';
+	}
+
+	/** Soft-submit so Resolve/Dismiss remove the row without a full document reload. */
+	function enhanceStatus() {
+		return async (
+			/** @type {{ formData: FormData, result: import('@sveltejs/kit').ActionResult }} */ {
+				formData,
+				result
+			}
+		) => {
+			if (result.type !== 'success' && result.type !== 'failure') return;
+			if (result.type === 'success') {
+				const reportId = String(formData.get('reportId') ?? '');
+				if (reportId) {
+					reports = reports.filter((row) => row.id !== reportId);
+				}
+			}
+			try {
+				await applyAction(result);
+			} catch {
+				// Local queue already reflects the committed status change.
+			}
+			if (result.type === 'success') {
+				try {
+					await invalidateAll();
+				} catch {
+					// Soft update already removed the row from the open queue.
+				}
+			}
+		};
 	}
 </script>
 
@@ -66,13 +102,13 @@
 						{data.statusFilter === 'all' ? 'All reports' : `${data.statusFilter} reports`}
 					</h2>
 					<p>
-						{data.reports.length}
-						{data.reports.length === 1 ? 'report' : 'reports'}
+						{reports.length}
+						{reports.length === 1 ? 'report' : 'reports'}
 					</p>
 				</div>
 			</header>
 
-			{#if data.reports.length === 0}
+			{#if reports.length === 0}
 				<div class="empty-state">
 					{#if data.statusFilter === 'open'}
 						<p>No open reports.</p>
@@ -90,7 +126,7 @@
 					<span>Actions</span>
 				</div>
 				<ol class="report-list">
-					{#each data.reports as report (report.id)}
+					{#each reports as report (report.id)}
 						<li data-report-reason={report.reason} data-report-id={report.id}>
 							<div class="report-identity">
 								<strong>{targetLabel(report.targetKind)}</strong>
@@ -124,7 +160,7 @@
 									<span class="open-target unavailable">Target missing</span>
 								{/if}
 								{#if report.status === 'open'}
-									<form method="post" class="status-actions">
+									<form method="post" class="status-actions" use:enhance={enhanceStatus}>
 										<input type="hidden" name="reportId" value={report.id} />
 										<button type="submit" formaction="?/resolve">Resolve</button>
 										<button type="submit" formaction="?/dismiss">Dismiss</button>
