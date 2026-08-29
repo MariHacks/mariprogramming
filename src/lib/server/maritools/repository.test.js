@@ -710,6 +710,22 @@ describe('createMariToolsRepository', () => {
 		await expect(
 			queuedRepo([[{ status: 'conflict', courseCode: '420-NYA-05' }]]).listConflictCatalog()
 		).resolves.toEqual([{ status: 'conflict', courseCode: '420-NYA-05' }]);
+		const CONTRIB = '70000000-0000-4000-8000-000000000001';
+		await expect(queuedRepo([[]]).resolveCatalogConflict(CONTRIB)).rejects.toBeInstanceOf(
+			MariToolsNotFoundError
+		);
+		await expect(
+			queuedRepo([[{ id: CONTRIB, offeringId: OFFERING, status: 'published' }]]).resolveCatalogConflict(
+				CONTRIB
+			)
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			queuedRepo([
+				[{ id: CONTRIB, offeringId: OFFERING, status: 'conflict' }],
+				[{ id: CONTRIB, offeringId: OFFERING, status: 'published' }],
+				[]
+			]).resolveCatalogConflict(CONTRIB)
+		).resolves.toMatchObject({ id: CONTRIB, status: 'published' });
 		await expect(
 			queuedRepo([uniqueError()]).createClub({ name: 'Chess', slug: 'chess' })
 		).rejects.toBeInstanceOf(MariToolsConflictError);

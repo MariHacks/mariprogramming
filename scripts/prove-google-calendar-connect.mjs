@@ -207,23 +207,24 @@ async function startScreencast(page, framesDir) {
 	};
 }
 
-/** @param {string} framesDir @param {string} dest */
-async function encodeWebm(framesDir, dest) {
+/** @param {string} framesDir @param {string} dest @param {number} wallSeconds */
+async function encodeWebm(framesDir, dest, wallSeconds) {
 	const frames = (await readdir(framesDir)).filter((n) => n.endsWith('.jpg')).sort();
 	if (frames.length === 0) throw new Error('no screencast frames');
+	const fps = Math.max(1, Math.min(30, frames.length / Math.max(wallSeconds, 1)));
 	await new Promise((resolve, reject) => {
 		const ff = spawn(
 			'ffmpeg',
 			[
 				'-y',
 				'-framerate',
-				'8',
+				String(fps.toFixed(3)),
 				'-i',
 				path.join(framesDir, 'frame-%05d.jpg'),
 				'-c:v',
 				'libvpx',
 				'-b:v',
-				'1M',
+				'1.5M',
 				'-pix_fmt',
 				'yuv420p',
 				dest
@@ -359,20 +360,32 @@ async function main() {
 		bugs.push(`fixture dates wrong sep8=${expectedSep8} sep7=${expectedSep7}`);
 	}
 
-	const useCdp = await cdpAvailable();
+	const preferCdp = process.env.GCAL_FORCE_PROFILE !== '1' && (await cdpAvailable());
 	/** @type {import('@playwright/test').Browser | null} */
 	let browser = null;
 	/** @type {import('@playwright/test').BrowserContext} */
 	let context;
 	/** @type {string} */
 	let launchMode;
+	/** @type {boolean} */
+	let useCdp = false;
 
-	if (useCdp) {
-		launchMode = `cdp:${CDP_URL}`;
-		browser = await chromium.connectOverCDP(CDP_URL);
-		context = browser.contexts()[0];
-		if (!context) throw new Error('CDP browser has no context');
-	} else {
+	if (preferCdp) {
+		try {
+			launchMode = `cdp:${CDP_URL}`;
+			browser = await chromium.connectOverCDP(CDP_URL, { timeout: 12_000 });
+			context = browser.contexts()[0];
+			if (!context) throw new Error('CDP browser has no context');
+			useCdp = true;
+		} catch (error) {
+			console.warn(
+				`CDP connect failed (${error instanceof Error ? error.message : String(error)}); falling back to profile copy`
+			);
+			browser = null;
+		}
+	}
+
+	if (!useCdp) {
 		launchMode = 'persistent-profile-copy';
 		let profileSource = '';
 		for (const candidate of SOURCE_PROFILE_CANDIDATES) {
@@ -468,7 +481,7 @@ async function main() {
 			bugs.push('Push to Google Calendar missing after Connect');
 			await page.screenshot({ path: path.join(outDir, 'no-push-cta.png'), fullPage: true });
 		} else {
-			await mark(page, t0, log, 'Push CTA visible after Connect');
+			await mark(page, t0, log, 'Push CTA visible after Connect', 1500);
 			const pushResponsePromise = page.waitForResponse(
 				(res) => {
 					const req = res.request();
@@ -483,8 +496,11 @@ async function main() {
 				},
 				{ timeout: 120_000 }
 			);
-			await page.getByRole('button', { name: 'Push to Google Calendar' }).click();
-			await mark(page, t0, log, 'clicked Push to Google Calendar');
+			const pushBtn = page.getByRole('button', { name: 'Push to Google Calendar' });
+			await pushBtn.scrollIntoViewIfNeeded();
+			await mark(page, t0, log, 'about to click Push to Google Calendar', 1800);
+			await pushBtn.click();
+			await mark(page, t0, log, 'clicked Push to Google Calendar', 1200);
 			const pushResponse = await pushResponsePromise.catch(() => null);
 			if (pushResponse) {
 				const pushBody = await pushResponse.text().catch(() => '');
@@ -547,7 +563,50 @@ async function main() {
 				if (onSep7.length > 0) {
 					bugs.push('Calendar API: event wrongly on 2026-09-07 (Labour Day)');
 				}
-				await mark(page, t0, log, `Calendar API sep8=${onSep8.length} sep7=${onSep7.length}`);
+				await mark(page, t0, log, `Calendar API sep8=${onSep8.length} sep7=${onSep7.length}`, 1200);
+
+				// Show live Calendar API rows on camera (Google Calendar SPA needs a signed-in
+				// profile; the grant token is the same source of truth as the calendar).
+				await page.evaluate((events) => {
+					const existing = document.getElementById('gcal-api-proof');
+					if (existing) existing.remove();
+					const panel = document.createElement('section');
+					panel.id = 'gcal-api-proof';
+					panel.setAttribute(
+						'style',
+						[
+							'position:fixed',
+							'inset:auto 16px 64px 16px',
+							'z-index:2147483646',
+							'max-height:42vh',
+							'overflow:auto',
+							'padding:14px 16px',
+							'border:2px solid #0b1220',
+							'background:#fffdf6',
+							'color:#0b1220',
+							'font:14px/1.4 ui-sans-serif,system-ui,sans-serif',
+							'box-shadow:0 12px 40px rgba(0,0,0,.28)'
+						].join(';')
+					);
+					const rows = events
+						.map(
+							(ev) =>
+								`<li><strong>${ev.summary ?? '(untitled)'}</strong> — ${ev.start ?? ''}</li>`
+						)
+						.join('');
+					panel.innerHTML = `<h2 style="margin:0 0 8px;font-size:16px">On Google Calendar (live API)</h2>
+						<p style="margin:0 0 8px">Primary calendar · Sep 8 2026 · ${events.length} Badminton meeting(s)</p>
+						<ul style="margin:0;padding-left:1.2rem">${rows || '<li>(none)</li>'}</ul>`;
+					document.documentElement.appendChild(panel);
+				}, onSep8.map((ev) => ({
+					summary: ev.summary,
+					start: ev.start?.dateTime ?? ev.start?.date ?? ''
+				})));
+				await mark(page, t0, log, 'Calendar API events overlaid on camera', 2800);
+				await page.screenshot({
+					path: path.join(outDir, 'calendar-api-on-camera.png'),
+					fullPage: false
+				});
 			} catch (error) {
 				bugs.push(
 					`Calendar API verify failed: ${error instanceof Error ? error.message : String(error)}`
@@ -558,7 +617,7 @@ async function main() {
 		}
 
 		await page.screenshot({ path: path.join(outDir, 'final.png'), fullPage: false });
-		await sleep(800);
+		await sleep(1000);
 	} finally {
 		if (screencast) await screencast.stop();
 		await page.close().catch(() => {});
@@ -567,8 +626,9 @@ async function main() {
 	}
 
 	const dest = path.join(outDir, 'google-calendar-connect.webm');
+	const wallSeconds = Math.max(1, (Date.now() - t0) / 1000);
 	if (useCdp) {
-		await encodeWebm(framesDir, dest);
+		await encodeWebm(framesDir, dest, wallSeconds);
 	} else {
 		const videoDir = path.join(tmpRoot, 'video');
 		const videos = [];

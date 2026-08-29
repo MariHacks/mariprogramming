@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, asc, desc, eq, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { ACADEMIC_CALENDAR_RULES, ACADEMIC_TERMS } from '../../maritools/term/calendar.js';
 import {
 	mtAcademicCalendarRules,
@@ -1100,6 +1100,49 @@ export function createMariToolsRepository({
 							.orderBy(asc(mtCourses.code), asc(mtCatalogContributions.createdAt))
 					)
 				)
+			);
+		},
+
+		/**
+		 * Staff picks one conflict peer as published; other live peers for that offering
+		 * become withdrawn so the public catalog can show a single fact set.
+		 * @param {unknown} contributionId
+		 */
+		async resolveCatalogConflict(contributionId) {
+			const id = requiredUuid(contributionId);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtCatalogContributions)
+							.where(eq(mtCatalogContributions.id, id))
+					);
+					if (!existing) return notFound();
+					if (existing.status !== 'conflict') return invalid();
+
+					const published = oneRow(
+						await transaction
+							.update(mtCatalogContributions)
+							.set({ status: 'published', updatedAt: new Date() })
+							.where(eq(mtCatalogContributions.id, id))
+							.returning()
+					);
+					if (!published) return unavailable();
+
+					await transaction
+						.update(mtCatalogContributions)
+						.set({ status: 'withdrawn', updatedAt: new Date() })
+						.where(
+							and(
+								eq(mtCatalogContributions.offeringId, existing.offeringId),
+								ne(mtCatalogContributions.id, id),
+								inArray(mtCatalogContributions.status, ['conflict', 'published'])
+							)
+						);
+
+					return published;
+				})
 			);
 		},
 

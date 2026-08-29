@@ -1,6 +1,6 @@
 /**
  * Staff-facing MariTools catalog conflict queue.
- * Peer contributions for one offering stay side by side. No winner is chosen here.
+ * Peer contributions for one offering stay side by side until staff picks a winner.
  *
  * @typedef {{
  *   id: string,

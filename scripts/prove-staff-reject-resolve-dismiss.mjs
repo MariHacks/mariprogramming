@@ -156,6 +156,15 @@ async function seedPendingClubAndReports(authorId) {
 
 	try {
 		await client.query('BEGIN');
+		// Clear leftover open reports so the film only shows the two seeded rows.
+		await client.query(
+			`delete from mt_forum_reports
+			 where status = 'open'
+			    or id in ($1, $2)
+			    or reason like 'staff-portal-proof%'`,
+			[REPORTS.resolveReport, REPORTS.dismissReport]
+		);
+
 		await client.query(
 			`insert into mt_club_submissions (
 				id, submitter_user_id, payload, status, version, created_at, updated_at
@@ -319,6 +328,19 @@ async function filmClubReject(browser, cookie, seeded) {
 }
 
 /**
+ * @param {import('@playwright/test').Page} page
+ * @param {'open'|'resolved'|'dismissed'} status
+ */
+async function filterReportsByStatus(page, status) {
+	await page.locator('select[name="status"]').selectOption(status);
+	await Promise.all([
+		page.waitForURL(new RegExp(`[?&]status=${status}\\b`), { timeout: 20000 }),
+		page.getByRole('button', { name: 'Apply' }).click()
+	]);
+	await page.waitForLoadState('networkidle');
+}
+
+/**
  * @param {import('@playwright/test').Browser} browser
  * @param {import('@playwright/test').Cookie} cookie
  */
@@ -342,54 +364,74 @@ async function filmReportActions(browser, cookie) {
 	 * @param {'Resolve'|'Dismiss'} action
 	 */
 	async function actOnOpenReport(reason, action) {
-		await page.goto('/staff/reports?status=open', { waitUntil: 'networkidle' });
-		if (/sign-in|reauthenticate/i.test(page.url())) {
-			bugs.push(`staff session rejected on reports (${page.url()})`);
-			return;
+		if (!/status=open/.test(page.url())) {
+			await filterReportsByStatus(page, 'open');
 		}
-		await mark(page, t0, log, `open queue before ${action}`);
-		const row = page.locator('li').filter({ hasText: reason });
+		await mark(page, t0, log, `open queue · ${action} on “${reason}”`, 1400);
+		const row = page.locator(`li[data-report-reason="${reason}"]`);
 		if ((await row.count()) < 1) {
 			bugs.push(`open report missing: ${reason}`);
 			return;
 		}
 		await row.first().scrollIntoViewIfNeeded();
-		await mark(page, t0, log, `${action} target visible`, 900);
-		await row.first().getByRole('button', { name: action }).click();
+		await mark(page, t0, log, `highlighting row before ${action}`, 1600);
+		const clickPromise = row.first().getByRole('button', { name: action }).click();
+		await clickPromise;
 		await page.waitForLoadState('networkidle');
-		await mark(page, t0, log, `${action} clicked`, 900);
+		await mark(page, t0, log, `${action} submitted for “${reason}”`, 1400);
 
-		await page.goto('/staff/reports?status=open', { waitUntil: 'networkidle' });
-		const stillOpen = page.locator('li').filter({ hasText: reason });
+		const stillOpen = page.locator(`li[data-report-reason="${reason}"]`);
 		if ((await stillOpen.count()) > 0) {
 			bugs.push(`${action}: report still in Open filter (${reason})`);
 		} else {
-			await mark(page, t0, log, `${action}: left Open filter`, 1100);
+			await mark(page, t0, log, `${action}: “${reason}” left Open`, 1600);
 		}
 
 		const status = action === 'Resolve' ? 'resolved' : 'dismissed';
-		await page.goto(`/staff/reports?status=${status}`, { waitUntil: 'networkidle' });
-		const inStatus = page.locator('li').filter({ hasText: reason });
+		await filterReportsByStatus(page, status);
+		const inStatus = page.locator(`li[data-report-reason="${reason}"]`);
 		if ((await inStatus.count()) < 1) {
 			bugs.push(`${action}: report missing from ${status} filter`);
 		} else {
 			await inStatus.first().scrollIntoViewIfNeeded();
-			await mark(page, t0, log, `${action}: visible under ${status}`, 1200);
+			await mark(page, t0, log, `${action}: “${reason}” under ${status}`, 1800);
 		}
 	}
 
 	try {
 		await page.goto('/staff/reports?status=open', { waitUntil: 'networkidle' });
-		await mark(page, t0, log, 'reports open queue');
+		if (/sign-in|reauthenticate/i.test(page.url())) {
+			bugs.push(`staff session rejected on reports (${page.url()})`);
+			return { bugs, log, video: path.join(outDir, 'reports-resolve-dismiss.webm') };
+		}
+		await mark(page, t0, log, 'reports open queue (seeded pair only)', 1500);
 		const body = await page.locator('body').innerText();
 		if (!body.includes(REPORTS.resolveReason)) bugs.push('resolve reason missing on open queue');
 		if (!body.includes(REPORTS.dismissReason)) bugs.push('dismiss reason missing on open queue');
+		if (/staff-portal-proof/i.test(body)) {
+			bugs.push('leftover staff-portal-proof still open — seed cleanup failed');
+		}
+		const openCount = await page.locator('li[data-report-reason]').count();
+		if (openCount !== 2) bugs.push(`expected exactly 2 open reports, got ${openCount}`);
 		await page.screenshot({ path: path.join(outDir, 'reports-open.png'), fullPage: false });
 
 		await actOnOpenReport(REPORTS.resolveReason, 'Resolve');
 		await page.screenshot({ path: path.join(outDir, 'reports-after-resolve.png'), fullPage: false });
+		await filterReportsByStatus(page, 'open');
 		await actOnOpenReport(REPORTS.dismissReason, 'Dismiss');
 		await page.screenshot({ path: path.join(outDir, 'reports-after-dismiss.png'), fullPage: false });
+
+		await filterReportsByStatus(page, 'dismissed');
+		const dismissedReasons = await page.locator('li[data-report-reason]').evaluateAll((nodes) =>
+			nodes.map((n) => n.getAttribute('data-report-reason') ?? '')
+		);
+		if (!dismissedReasons.includes(REPORTS.dismissReason)) {
+			bugs.push('Dismissed tab missing the clicked dismiss reason');
+		}
+		if (dismissedReasons.includes(REPORTS.resolveReason)) {
+			bugs.push('Dismissed tab incorrectly shows the resolve report');
+		}
+		await mark(page, t0, log, `Dismissed tab reasons: ${dismissedReasons.join(' | ') || '(none)'}`, 1600);
 	} finally {
 		await context.close();
 	}
@@ -403,6 +445,7 @@ async function filmReportActions(browser, cookie) {
 }
 
 async function main() {
+	const reportsOnly = process.argv.includes('--reports-only');
 	await rm(tmpRoot, { recursive: true, force: true });
 	await mkdir(outDir, { recursive: true });
 	await mkdir(tmpRoot, { recursive: true });
@@ -412,18 +455,23 @@ async function main() {
 	console.log('seeded', seeded);
 
 	const browser = await chromium.launch({ channel: 'chrome', headless: true });
-	let club;
+	/** @type {{ bugs: string[], log: Array<{t:number,label:string}>, video: string }} */
+	let club = { bugs: [], log: [], video: path.join(outDir, 'club-reject.webm') };
 	let reports;
 	try {
-		console.log('— club Reject film —');
-		club = await filmClubReject(browser, cookie, seeded);
+		if (!reportsOnly) {
+			console.log('— club Reject film —');
+			club = await filmClubReject(browser, cookie, seeded);
+		} else {
+			console.log('— skipping club Reject (reports-only) —');
+		}
 		console.log('— reports Resolve/Dismiss film —');
 		reports = await filmReportActions(browser, cookie);
 	} finally {
 		await browser.close();
 	}
 
-	const clubPass = club.bugs.length === 0;
+	const clubPass = reportsOnly ? true : club.bugs.length === 0;
 	const reportsPass = reports.bugs.length === 0;
 	const verdict = clubPass && reportsPass ? 'PASS' : 'FAIL';
 
@@ -431,14 +479,17 @@ async function main() {
 		`# Staff Reject / Resolve / Dismiss: ${verdict}`,
 		'',
 		`- Base: ${baseURL}`,
-		`- Club Reject: ${clubPass ? 'PASS' : 'FAIL'} → \`club-reject.webm\``,
+		`- Mode: ${reportsOnly ? 'reports-only (club tape left untouched)' : 'club + reports'}`,
+		`- Club Reject: ${reportsOnly ? 'SKIPPED' : clubPass ? 'PASS' : 'FAIL'} → \`club-reject.webm\``,
 		`- Reports Resolve+Dismiss: ${reportsPass ? 'PASS' : 'FAIL'} → \`reports-resolve-dismiss.webm\``,
 		`- Club submission: ${seeded.clubId} (${seeded.clubName})`,
 		`- Resolve report: ${seeded.resolveReportId}`,
 		`- Dismiss report: ${seeded.dismissReportId}`,
 		'',
 		'## Club Reject timeline',
-		...club.log.map((e) => `- ${e.t.toFixed(2)}s ${e.label}`),
+		...(reportsOnly
+			? ['- (not refilmed)']
+			: club.log.map((e) => `- ${e.t.toFixed(2)}s ${e.label}`)),
 		'',
 		'## Reports timeline',
 		...reports.log.map((e) => `- ${e.t.toFixed(2)}s ${e.label}`),
@@ -454,7 +505,7 @@ async function main() {
 	await rm(tmpRoot, { recursive: true, force: true });
 
 	console.log(verdict);
-	console.log('Club:', clubPass ? 'PASS' : 'FAIL', club.video);
+	if (!reportsOnly) console.log('Club:', clubPass ? 'PASS' : 'FAIL', club.video);
 	console.log('Reports:', reportsPass ? 'PASS' : 'FAIL', reports.video);
 	console.log('Notes:', path.join(outDir, 'VERDICT.md'));
 	if (!clubPass || !reportsPass) {

@@ -512,6 +512,11 @@ describe('createCommunityStore', () => {
 				listConflictCatalog: vi.fn(async () => [{ status: 'conflict', courseCode: '420-NYA-05' }])
 			}).listConflictCatalog()
 		).resolves.toEqual([{ status: 'conflict', courseCode: '420-NYA-05' }]);
+		await expect(
+			createCommunityStore({
+				resolveCatalogConflict: vi.fn(async (id) => ({ id, status: 'published' }))
+			}).resolveCatalogConflict('70000000-0000-4000-8000-000000000001')
+		).resolves.toMatchObject({ status: 'published' });
 		await expect(store.getReply('r1')).resolves.toMatchObject({
 			id: 'r1',
 			threadId: THREAD,

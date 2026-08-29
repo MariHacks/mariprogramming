@@ -56,6 +56,7 @@ describe('staff catalog conflicts page', () => {
 		expect(screen.getByText(/Right book/)).toBeInTheDocument();
 		expect(screen.getByText('2 peers')).toBeInTheDocument();
 		expect(screen.getByText(/published rows only/i)).toBeInTheDocument();
+		expect(screen.getAllByRole('button', { name: 'Use these facts' })).toHaveLength(2);
 	});
 
 	it('shows an empty state when there are no conflicts', () => {

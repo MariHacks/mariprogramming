@@ -91,7 +91,7 @@
 				</div>
 				<ol class="report-list">
 					{#each data.reports as report (report.id)}
-						<li>
+						<li data-report-reason={report.reason} data-report-id={report.id}>
 							<div class="report-identity">
 								<strong>{targetLabel(report.targetKind)}</strong>
 								<span class="mono">{report.targetId}</span>

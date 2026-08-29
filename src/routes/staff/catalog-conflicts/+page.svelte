@@ -46,7 +46,8 @@
 			<p class="eyebrow">MariTools catalog</p>
 			<h1>Catalog conflicts</h1>
 			<p class="heading-note">
-				Conflicting course facts stay side by side. The public catalog lists published rows only.
+				Conflicting course facts stay side by side until you pick one. The public catalog lists
+				published rows only.
 			</p>
 		</div>
 	</header>
@@ -87,7 +88,7 @@
 						style={`--peer-count: ${Math.max(group.contributions.length, 1)}`}
 					>
 						{#each group.contributions as contribution (contribution.id)}
-							<article class="peer-card">
+							<article class="peer-card" data-conflict-peer={contribution.id}>
 								<header>
 									<span class="status">conflict</span>
 									<span class="mono" title={contribution.documentSha256}
@@ -99,6 +100,10 @@
 									<span class="mono">{contribution.contributorUserId ?? 'anonymous'}</span>
 									<time datetime={contribution.createdAt}>{localDate(contribution.createdAt)}</time>
 								</footer>
+								<form method="post" action="?/resolve" class="resolve-form">
+									<input type="hidden" name="contributionId" value={contribution.id} />
+									<button type="submit" data-testid="resolve-conflict">Use these facts</button>
+								</form>
 							</article>
 						{/each}
 					</div>
@@ -240,6 +245,28 @@
 		font: 0.75rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
+	}
+
+	.resolve-form {
+		margin: 0;
+	}
+
+	.resolve-form button {
+		width: 100%;
+		min-height: 2.5rem;
+		padding: 0.45rem 0.7rem;
+		border: var(--rule-strong);
+		background: #fff;
+		color: var(--midnight, #0b1220);
+		font: inherit;
+		font-size: 0.8125rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+
+	.resolve-form button:focus-visible {
+		outline: var(--focus-ring-width) solid var(--color-focus);
+		outline-offset: var(--focus-ring-offset);
 	}
 
 	@media (max-width: 40rem) {

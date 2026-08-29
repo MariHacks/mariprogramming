@@ -2,7 +2,10 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
-import { MaritoolsUnavailableError } from '$lib/server/maritools/community-store.js';
+import {
+	MaritoolsInputError,
+	MaritoolsUnavailableError
+} from '$lib/server/maritools/community-store.js';
 import { _createStaffCatalogConflictsHandlers } from './+page.server.js';
 
 const STAFF = Object.freeze({
@@ -48,6 +51,11 @@ function setup(overrides = {}) {
 				updatedAt: '2026-08-28T11:00:00.000Z'
 			}
 		]),
+		resolveCatalogConflict: vi.fn(async (id) => ({
+			id,
+			status: 'published',
+			offeringId: OFFERING
+		})),
 		...overrides.store
 	};
 	const handlers = _createStaffCatalogConflictsHandlers({
@@ -56,6 +64,15 @@ function setup(overrides = {}) {
 		...overrides
 	});
 	return { handlers, store };
+}
+
+function actionEvent({ locals = { staff: STAFF }, form = {} } = {}) {
+	const data = new FormData();
+	for (const [key, value] of Object.entries(form)) data.set(key, String(value));
+	return {
+		locals,
+		request: { formData: async () => data }
+	};
 }
 
 describe('staff catalog conflicts load', () => {
@@ -85,5 +102,52 @@ describe('staff catalog conflicts load', () => {
 			groups: [],
 			unavailable: true
 		});
+	});
+});
+
+describe('staff catalog conflicts resolve', () => {
+	it('publishes the chosen peer and redirects to the queue', async () => {
+		const { handlers, store } = setup();
+		await expect(
+			handlers.actions.resolve(actionEvent({ form: { contributionId: CONTRIB_A } }))
+		).rejects.toMatchObject({
+			status: 303,
+			location: '/staff/catalog-conflicts'
+		});
+		expect(store.resolveCatalogConflict).toHaveBeenCalledWith(CONTRIB_A);
+	});
+
+	it('rejects an empty contribution id', async () => {
+		const { handlers, store } = setup();
+		await expect(handlers.actions.resolve(actionEvent({ form: {} }))).resolves.toMatchObject({
+			status: 400
+		});
+		expect(store.resolveCatalogConflict).not.toHaveBeenCalled();
+	});
+
+	it('maps input errors to a 400', async () => {
+		const { handlers } = setup({
+			store: {
+				resolveCatalogConflict: vi.fn(async () => {
+					throw new MaritoolsInputError('bad');
+				})
+			}
+		});
+		await expect(
+			handlers.actions.resolve(actionEvent({ form: { contributionId: CONTRIB_A } }))
+		).resolves.toMatchObject({ status: 400 });
+	});
+
+	it('maps unavailable errors to a 503', async () => {
+		const { handlers } = setup({
+			store: {
+				resolveCatalogConflict: vi.fn(async () => {
+					throw new MaritoolsUnavailableError('down');
+				})
+			}
+		});
+		await expect(
+			handlers.actions.resolve(actionEvent({ form: { contributionId: CONTRIB_A } }))
+		).resolves.toMatchObject({ status: 503 });
 	});
 });

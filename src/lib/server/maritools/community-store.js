@@ -261,6 +261,11 @@ export function createCommunityStore(inner) {
 			return wrap(() => inner.listConflictCatalog());
 		},
 
+		/** @param {string} contributionId */
+		resolveCatalogConflict(contributionId) {
+			return wrap(() => inner.resolveCatalogConflict(contributionId));
+		},
+
 		/** @param {{ category?: string, courseId?: string }} [filter] */
 		listThreads(filter = {}) {
 			return wrap(async () => {

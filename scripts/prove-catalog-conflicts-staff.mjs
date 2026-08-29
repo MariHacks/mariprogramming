@@ -1,5 +1,6 @@
 /**
- * Honest browser proof: staff catalog conflict queue shows peer facts side by side.
+ * Honest browser proof: staff catalog conflict queue shows peer facts side by side,
+ * then staff picks one peer ("Use these facts") and the public catalog shows it.
  * Seeds one offering with two conflict contributions, mints a staff session,
  * records under .artifacts/verify-mariTools/catalog-conflicts/.
  *
@@ -292,7 +293,55 @@ async function main() {
 		if ((await conflictsNav.count()) === 0) bugs.push('Catalog conflicts nav link missing');
 
 		await page.screenshot({ path: path.join(outDir, 'staff-conflict-queue.png'), fullPage: true });
-		await mark(page, t0, log, 'screenshot saved');
+		await mark(page, t0, log, 'side-by-side peers on camera', 1400);
+
+		const leftPeer = page.locator(`[data-conflict-peer="${IDS.left}"]`);
+		if ((await leftPeer.count()) < 1) {
+			bugs.push('left peer card missing');
+		} else {
+			await leftPeer.scrollIntoViewIfNeeded();
+			await mark(page, t0, log, 'choosing Left peer facts', 1600);
+			await Promise.all([
+				page.waitForURL(/\/staff\/catalog-conflicts\/?$/, { timeout: 20000 }),
+				leftPeer.getByTestId('resolve-conflict').click()
+			]);
+			await page.waitForLoadState('networkidle');
+			await mark(page, t0, log, 'after Use these facts (Left)', 1600);
+
+			const afterBody = await page.locator('body').innerText();
+			if (/Left peer book|Right peer book/i.test(afterBody) && !/No catalog conflicts/i.test(afterBody)) {
+				bugs.push('conflict peers still on staff queue after resolve');
+			} else {
+				await mark(page, t0, log, 'queue empty after resolve', 1400);
+			}
+			await page.screenshot({ path: path.join(outDir, 'staff-after-resolve.png'), fullPage: true });
+		}
+
+		await page.goto(`${baseURL}/tools/catalog?term=fall-2026`, {
+			waitUntil: 'networkidle',
+			timeout: 30000
+		});
+		await mark(page, t0, log, 'public catalog after resolve', 1400);
+		const courseRow = page.locator('article.catalog-row').filter({ hasText: COURSE.code });
+		if ((await courseRow.count()) < 1) {
+			bugs.push('chosen offering missing from public catalog');
+		} else {
+			await courseRow.getByRole('button', { name: new RegExp(`Expand ${COURSE.code}`) }).click();
+			await sleep(600);
+			const publishedBody = await courseRow.innerText();
+			if (!publishedBody.includes('Left peer book')) {
+				bugs.push('chosen Left peer facts missing from public catalog');
+			} else {
+				await mark(page, t0, log, 'Left peer book published (expanded)', 1600);
+			}
+			if (publishedBody.includes('Right peer book')) {
+				bugs.push('withdrawn Right peer facts leaked onto public catalog');
+			}
+		}
+		await page.screenshot({
+			path: path.join(outDir, 'public-catalog-after-resolve.png'),
+			fullPage: false
+		});
 	} finally {
 		await context.close();
 		await browser.close();
@@ -312,9 +361,9 @@ async function main() {
 			`- Base: ${baseURL}`,
 			`- Offering: ${IDS.offering}`,
 			`- Course: ${COURSE.code}`,
-			`- Choice: staff queue only; /tools/catalog stays published-only`,
+			`- Choice: Use these facts on Left peer; Right withdrawn`,
 			`- Video: \`catalog-conflicts-staff.webm\``,
-			`- Screenshots: \`public-catalog.png\`, \`staff-conflict-queue.png\``,
+			`- Screenshots: \`public-catalog.png\`, \`staff-conflict-queue.png\`, \`staff-after-resolve.png\`, \`public-catalog-after-resolve.png\``,
 			'',
 			'## Timeline',
 			...log.map((entry) => `- ${entry.t.toFixed(2)}s ${entry.label}`),

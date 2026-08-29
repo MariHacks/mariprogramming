@@ -1,5 +1,7 @@
+import { fail, redirect } from '@sveltejs/kit';
 import { requireStaff } from '$lib/server/auth/authorization.js';
 import {
+	MaritoolsInputError,
 	MaritoolsUnavailableError,
 	openCommunityStore
 } from '$lib/server/maritools/community-store.js';
@@ -28,9 +30,31 @@ export function _createStaffCatalogConflictsHandlers(dependencies = {}) {
 				}
 				throw error;
 			}
-		}
+		},
+		actions: Object.freeze({
+			/** @param {any} event */
+			async resolve(event) {
+				authorize(event.locals);
+				const data = await event.request.formData();
+				const contributionId = String(data.get('contributionId') ?? '').trim();
+				if (!contributionId) return fail(400, { error: 'Pick a conflict peer first.' });
+				try {
+					await createStore().resolveCatalogConflict(contributionId);
+				} catch (error) {
+					if (error instanceof MaritoolsInputError) {
+						return fail(400, { error: 'Could not resolve that conflict.' });
+					}
+					if (error instanceof MaritoolsUnavailableError) {
+						return fail(503, { error: 'Conflict updates are unavailable. Try again.' });
+					}
+					throw error;
+				}
+				throw redirect(303, '/staff/catalog-conflicts');
+			}
+		})
 	});
 }
 
 const handlers = _createStaffCatalogConflictsHandlers();
 export const load = handlers.load;
+export const actions = handlers.actions;
