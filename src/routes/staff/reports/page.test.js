@@ -41,6 +41,39 @@ describe('staff reports page', () => {
 			`/tools/forum/${THREAD}`
 		);
 		expect(screen.getByText('reporter-1')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Resolve' })).toHaveAttribute(
+			'formaction',
+			'?/resolve'
+		);
+		expect(screen.getByRole('button', { name: 'Dismiss' })).toHaveAttribute(
+			'formaction',
+			'?/dismiss'
+		);
+	});
+
+	it('hides resolve and dismiss actions for closed reports', () => {
+		render(ReportsPage, {
+			data: {
+				statusFilter: 'resolved',
+				unavailable: false,
+				reports: [
+					{
+						id: REPORT,
+						targetKind: 'thread',
+						targetId: THREAD,
+						threadId: THREAD,
+						reporterUserId: 'reporter-1',
+						reason: 'already handled',
+						status: 'resolved',
+						resolvedAt: '2026-08-28T19:00:00.000Z',
+						createdAt: '2026-08-28T16:00:00.000Z',
+						href: `/tools/forum/${THREAD}`
+					}
+				]
+			}
+		});
+		expect(screen.queryByRole('button', { name: 'Resolve' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument();
 	});
 
 	it('shows an empty state when the queue has no rows', () => {

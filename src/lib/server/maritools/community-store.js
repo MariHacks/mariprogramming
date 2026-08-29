@@ -367,6 +367,10 @@ export function createCommunityStore(inner) {
 			return wrap(() => inner.listReports(input));
 		},
 
+		/** @param {string} id @param {'resolved' | 'dismissed'} status */
+		setReportStatus(id, status) {
+			return wrap(() => inner.setReportStatus(id, status));
+		},
 
 		/** @param {string} id */
 		getReply(id) {

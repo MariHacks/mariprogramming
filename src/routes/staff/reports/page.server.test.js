@@ -2,7 +2,10 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
-import { MaritoolsUnavailableError } from '$lib/server/maritools/community-store.js';
+import {
+	MaritoolsInputError,
+	MaritoolsUnavailableError
+} from '$lib/server/maritools/community-store.js';
 import { _createStaffReportsHandlers } from './+page.server.js';
 
 const STAFF = Object.freeze({
@@ -29,6 +32,11 @@ function setup(overrides = {}) {
 			}
 		]),
 		getReply: vi.fn(async () => ({ id: REPLY, threadId: THREAD })),
+		setReportStatus: vi.fn(async (id, status) => ({
+			id,
+			status,
+			resolvedAt: new Date('2026-08-28T19:00:00.000Z')
+		})),
 		...overrides.store
 	};
 	const handlers = _createStaffReportsHandlers({
@@ -37,6 +45,15 @@ function setup(overrides = {}) {
 		...overrides
 	});
 	return { handlers, store };
+}
+
+function actionEvent({ locals = { staff: STAFF }, form = {} } = {}) {
+	const data = new FormData();
+	for (const [key, value] of Object.entries(form)) data.set(key, String(value));
+	return {
+		locals,
+		request: { formData: async () => data }
+	};
 }
 
 describe('staff reports load', () => {
@@ -149,5 +166,81 @@ describe('staff reports load', () => {
 		await expect(
 			handlers.load({ locals: { staff: STAFF }, url: new URL('https://club.example.com/staff/reports') })
 		).resolves.toMatchObject({ unavailable: true, reports: [] });
+	});
+
+	it('rethrows unexpected load failures', async () => {
+		const { handlers } = setup({
+			store: {
+				listReports: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			}
+		});
+		await expect(
+			handlers.load({ locals: { staff: STAFF }, url: new URL('https://club.example.com/staff/reports') })
+		).rejects.toThrow('boom');
+	});
+});
+
+describe('staff reports actions', () => {
+	it('resolves an open report', async () => {
+		const { handlers, store } = setup();
+		await expect(
+			handlers.actions.resolve(actionEvent({ form: { reportId: REPORT } }))
+		).resolves.toEqual({ updated: true, status: 'resolved' });
+		expect(store.setReportStatus).toHaveBeenCalledWith(REPORT, 'resolved');
+	});
+
+	it('dismisses an open report', async () => {
+		const { handlers, store } = setup();
+		await expect(
+			handlers.actions.dismiss(actionEvent({ form: { reportId: REPORT } }))
+		).resolves.toEqual({ updated: true, status: 'dismissed' });
+		expect(store.setReportStatus).toHaveBeenCalledWith(REPORT, 'dismissed');
+	});
+
+	it('rejects a missing report id', async () => {
+		const { handlers, store } = setup();
+		expect((await handlers.actions.resolve(actionEvent({ form: {} }))).status).toBe(400);
+		expect(store.setReportStatus).not.toHaveBeenCalled();
+	});
+
+	it('maps store input errors to a bounded failure', async () => {
+		const { handlers } = setup({
+			store: {
+				setReportStatus: vi.fn(async () => {
+					throw new MaritoolsInputError('invalid');
+				})
+			}
+		});
+		expect(
+			(await handlers.actions.dismiss(actionEvent({ form: { reportId: REPORT } }))).status
+		).toBe(400);
+	});
+
+	it('maps store unavailability to a bounded failure', async () => {
+		const { handlers } = setup({
+			store: {
+				setReportStatus: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		expect(
+			(await handlers.actions.resolve(actionEvent({ form: { reportId: REPORT } }))).status
+		).toBe(503);
+	});
+
+	it('rethrows unexpected store failures', async () => {
+		const { handlers } = setup({
+			store: {
+				setReportStatus: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			}
+		});
+		await expect(
+			handlers.actions.resolve(actionEvent({ form: { reportId: REPORT } }))
+		).rejects.toThrow('boom');
 	});
 });

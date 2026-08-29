@@ -123,6 +123,11 @@ function inner(overrides = {}) {
 				status: 'open'
 			}
 		]),
+		setReportStatus: vi.fn(async (id, status) => ({
+			id,
+			status,
+			resolvedAt: new Date('2026-08-28T19:00:00.000Z')
+		})),
 		getReply: vi.fn(async () => ({ id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: USER })),
 		lockThread: vi.fn(async () => ({ id: THREAD, lockedAt: new Date() })),
 		removeThread: vi.fn(async () => ({ id: THREAD, removedAt: new Date() })),
@@ -490,6 +495,18 @@ describe('createCommunityStore', () => {
 		});
 	});
 
+	it('sets report status through the repository', async () => {
+		const repo = inner();
+		const store = createCommunityStore(repo);
+		await expect(store.setReportStatus('rep-1', 'resolved')).resolves.toMatchObject({
+			id: 'rep-1',
+			status: 'resolved'
+		});
+		expect(repo.setReportStatus).toHaveBeenCalledWith('rep-1', 'resolved');
+		await expect(store.setReportStatus('rep-1', 'dismissed')).resolves.toMatchObject({
+			status: 'dismissed'
+		});
+	});
 
 	it('locks and removes forum records', async () => {
 		const store = createCommunityStore(inner());

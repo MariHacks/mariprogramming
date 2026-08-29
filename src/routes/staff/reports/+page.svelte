@@ -87,7 +87,7 @@
 					<span>Reporter</span>
 					<span>Status</span>
 					<span>Filed</span>
-					<span></span>
+					<span>Actions</span>
 				</div>
 				<ol class="report-list">
 					{#each data.reports as report (report.id)}
@@ -112,16 +112,25 @@
 								<span class="cell-label">Filed</span>
 								<time datetime={report.createdAt}>{localDate(report.createdAt)}</time>
 							</div>
-							{#if report.href}
-								<a
-									class="open-target"
-									href={resolve('/tools/forum/[threadId]', { threadId: report.threadId })}
-									aria-label={`Open ${targetLabel(report.targetKind).toLowerCase()}`}
-									>Open {targetLabel(report.targetKind).toLowerCase()}</a
-								>
-							{:else}
-								<span class="open-target unavailable">Target missing</span>
-							{/if}
+							<div class="report-actions">
+								{#if report.href}
+									<a
+										class="open-target"
+										href={resolve('/tools/forum/[threadId]', { threadId: report.threadId })}
+										aria-label={`Open ${targetLabel(report.targetKind).toLowerCase()}`}
+										>Open {targetLabel(report.targetKind).toLowerCase()}</a
+									>
+								{:else}
+									<span class="open-target unavailable">Target missing</span>
+								{/if}
+								{#if report.status === 'open'}
+									<form method="post" class="status-actions">
+										<input type="hidden" name="reportId" value={report.id} />
+										<button type="submit" formaction="?/resolve">Resolve</button>
+										<button type="submit" formaction="?/dismiss">Dismiss</button>
+									</form>
+								{/if}
+							</div>
 						</li>
 					{/each}
 				</ol>
@@ -243,9 +252,35 @@
 		display: grid;
 		grid-template-columns:
 			minmax(10rem, 1.1fr) minmax(12rem, 1.6fr) minmax(8rem, 0.9fr) minmax(5.5rem, 0.55fr)
-			minmax(9rem, 0.9fr) 7.5rem;
+			minmax(9rem, 0.9fr) minmax(11rem, 1.1fr);
 		gap: 1rem;
 		align-items: center;
+	}
+
+	.report-actions {
+		display: grid;
+		gap: 0.45rem;
+		justify-items: end;
+	}
+
+	.status-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		justify-content: flex-end;
+	}
+
+	.status-actions button {
+		min-height: 2.75rem;
+		padding: 0.45rem 0.75rem;
+		border: var(--rule-strong);
+		border-radius: 0;
+		background: white;
+		color: var(--midnight);
+		font: inherit;
+		font-size: 0.8125rem;
+		font-weight: 650;
+		cursor: pointer;
 	}
 
 	.report-columns {
@@ -330,7 +365,7 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: flex-end;
-		min-height: 2.75rem;
+		min-height: 2.25rem;
 		color: var(--club-blue);
 		font-size: 0.875rem;
 		font-weight: 650;
@@ -366,7 +401,8 @@
 	.filters button:focus-visible,
 	.filters select:focus-visible,
 	.open-target:focus-visible,
-	.inline-action:focus-visible {
+	.inline-action:focus-visible,
+	.status-actions button:focus-visible {
 		outline: var(--focus-ring-width) solid var(--color-focus);
 		outline-offset: var(--focus-ring-offset);
 	}
@@ -377,7 +413,10 @@
 		}
 
 		.report-list li {
-			grid-template-columns: minmax(10rem, 1.2fr) minmax(10rem, 1.4fr) minmax(7rem, 0.8fr) 7.5rem;
+			grid-template-columns: minmax(10rem, 1.2fr) minmax(10rem, 1.4fr) minmax(7rem, 0.8fr) minmax(
+					11rem,
+					1fr
+				);
 		}
 
 		.filed {
@@ -395,7 +434,7 @@
 		.report-identity,
 		.reason,
 		.filed,
-		.open-target {
+		.report-actions {
 			grid-column: 1 / -1;
 		}
 
@@ -405,6 +444,14 @@
 
 		.cell-label {
 			display: block;
+		}
+
+		.report-actions {
+			justify-items: start;
+		}
+
+		.status-actions {
+			justify-content: flex-start;
 		}
 
 		.open-target,
