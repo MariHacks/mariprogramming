@@ -328,19 +328,128 @@ async function filmClubReject(browser, cookie, seeded) {
 }
 
 /**
+ * Visible pointer + click ring for continuous pointer tapes.
+ * Re-call after full navigations (form POST reloads wipe the DOM).
+ * @param {import('@playwright/test').Page} page
+ */
+async function installPointer(page) {
+	await page.evaluate(() => {
+		if (document.getElementById('proof-cursor')) return;
+		const style = document.createElement('style');
+		style.id = 'proof-pointer-style';
+		style.textContent = `
+			#proof-cursor {
+				position: fixed; width: 20px; height: 20px; margin: 0;
+				border: 2px solid #ff3b30; border-radius: 50%;
+				background: rgba(255, 59, 48, 0.4); z-index: 2147483647;
+				pointer-events: none; transform: translate(-50%, -50%);
+				left: 40px; top: 40px;
+			}
+			#proof-click-ring {
+				position: fixed; width: 48px; height: 48px; margin: 0;
+				border: 3px solid #ff3b30; border-radius: 50%;
+				z-index: 2147483647; pointer-events: none;
+				transform: translate(-50%, -50%); opacity: 0;
+			}
+			#proof-click-ring.on { opacity: 1; }
+			#proof-target-box {
+				position: fixed; z-index: 2147483645; pointer-events: none;
+				border: 3px solid #ff3b30; border-radius: 4px;
+				box-shadow: 0 0 0 2px rgba(255,255,255,0.9);
+			}
+		`;
+		document.head.appendChild(style);
+		const cursor = document.createElement('div');
+		cursor.id = 'proof-cursor';
+		document.body.appendChild(cursor);
+		const ring = document.createElement('div');
+		ring.id = 'proof-click-ring';
+		document.body.appendChild(ring);
+		const box = document.createElement('div');
+		box.id = 'proof-target-box';
+		document.body.appendChild(box);
+		document.addEventListener(
+			'mousemove',
+			(e) => {
+				cursor.style.left = `${e.clientX}px`;
+				cursor.style.top = `${e.clientY}px`;
+			},
+			true
+		);
+		document.addEventListener(
+			'mousedown',
+			(e) => {
+				ring.style.left = `${e.clientX}px`;
+				ring.style.top = `${e.clientY}px`;
+				ring.classList.add('on');
+				setTimeout(() => ring.classList.remove('on'), 500);
+			},
+			true
+		);
+	});
+}
+
+/**
+ * Slow visible mouse move + click. Re-installs pointer after navigation.
+ * @param {import('@playwright/test').Page} page
+ * @param {import('@playwright/test').Locator} target
+ * @param {string} label
+ * @param {{ expectNavigation?: boolean }} [opts]
+ */
+async function pointerClick(page, target, label, opts = {}) {
+	await target.scrollIntoViewIfNeeded();
+	const box = await target.boundingBox();
+	if (!box) throw new Error(`no bounding box for ${label}`);
+	const x = box.x + box.width / 2;
+	const y = box.y + box.height / 2;
+	await page.evaluate(
+		({ x: cx, y: cy, w, h, px, py }) => {
+			const outline = document.getElementById('proof-target-box');
+			if (outline) {
+				outline.style.left = `${cx}px`;
+				outline.style.top = `${cy}px`;
+				outline.style.width = `${w}px`;
+				outline.style.height = `${h}px`;
+			}
+			const cursor = document.getElementById('proof-cursor');
+			if (cursor) {
+				cursor.style.left = `${px}px`;
+				cursor.style.top = `${py}px`;
+			}
+		},
+		{ x: box.x, y: box.y, w: box.width, h: box.height, px: x, py: y }
+	);
+	await sleep(700);
+	await page.mouse.move(x, y, { steps: 28 });
+	await sleep(400);
+	if (opts.expectNavigation) {
+		await Promise.all([
+			page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }),
+			page.mouse.click(x, y)
+		]);
+	} else {
+		await page.mouse.click(x, y);
+		await sleep(250);
+	}
+}
+
+/**
  * @param {import('@playwright/test').Page} page
  * @param {'open'|'resolved'|'dismissed'} status
  */
 async function filterReportsByStatus(page, status) {
+	await installPointer(page);
 	await page.locator('select[name="status"]').selectOption(status);
-	await Promise.all([
-		page.waitForURL(new RegExp(`[?&]status=${status}\\b`), { timeout: 20000 }),
-		page.getByRole('button', { name: 'Apply' }).click()
-	]);
-	await page.waitForLoadState('networkidle');
+	await sleep(400);
+	const apply = page.getByRole('button', { name: 'Apply' });
+	await pointerClick(page, apply, `Apply ${status}`, { expectNavigation: true });
+	await installPointer(page);
 }
 
 /**
+ * Continuous pointer tape: Open → Resolve click → row gone → Dismiss click →
+ * row gone → Dismissed filter shows the dismissed reason. No mid-flow tab hops
+ * that look like splices.
  * @param {import('@playwright/test').Browser} browser
  * @param {import('@playwright/test').Cookie} cookie
  */
@@ -363,38 +472,26 @@ async function filmReportActions(browser, cookie) {
 	 * @param {string} reason
 	 * @param {'Resolve'|'Dismiss'} action
 	 */
-	async function actOnOpenReport(reason, action) {
-		if (!/status=open/.test(page.url())) {
-			await filterReportsByStatus(page, 'open');
-		}
-		await mark(page, t0, log, `open queue · ${action} on “${reason}”`, 1400);
+	async function pointerActOnOpen(reason, action) {
+		await installPointer(page);
+		await mark(page, t0, log, `pointer → ${action} on “${reason}”`, 1200);
 		const row = page.locator(`li[data-report-reason="${reason}"]`);
 		if ((await row.count()) < 1) {
 			bugs.push(`open report missing: ${reason}`);
 			return;
 		}
 		await row.first().scrollIntoViewIfNeeded();
-		await mark(page, t0, log, `highlighting row before ${action}`, 1600);
-		const clickPromise = row.first().getByRole('button', { name: action }).click();
-		await clickPromise;
-		await page.waitForLoadState('networkidle');
-		await mark(page, t0, log, `${action} submitted for “${reason}”`, 1400);
+		await mark(page, t0, log, `row on camera before ${action}`, 1400);
+		const btn = row.first().getByRole('button', { name: action });
+		await pointerClick(page, btn, `${action} ${reason}`, { expectNavigation: true });
+		await installPointer(page);
+		await mark(page, t0, log, `${action} clicked — Open updated`, 1600);
 
 		const stillOpen = page.locator(`li[data-report-reason="${reason}"]`);
 		if ((await stillOpen.count()) > 0) {
 			bugs.push(`${action}: report still in Open filter (${reason})`);
 		} else {
-			await mark(page, t0, log, `${action}: “${reason}” left Open`, 1600);
-		}
-
-		const status = action === 'Resolve' ? 'resolved' : 'dismissed';
-		await filterReportsByStatus(page, status);
-		const inStatus = page.locator(`li[data-report-reason="${reason}"]`);
-		if ((await inStatus.count()) < 1) {
-			bugs.push(`${action}: report missing from ${status} filter`);
-		} else {
-			await inStatus.first().scrollIntoViewIfNeeded();
-			await mark(page, t0, log, `${action}: “${reason}” under ${status}`, 1800);
+			await mark(page, t0, log, `${action}: “${reason}” left Open`, 1800);
 		}
 	}
 
@@ -404,7 +501,8 @@ async function filmReportActions(browser, cookie) {
 			bugs.push(`staff session rejected on reports (${page.url()})`);
 			return { bugs, log, video: path.join(outDir, 'reports-resolve-dismiss.webm') };
 		}
-		await mark(page, t0, log, 'reports open queue (seeded pair only)', 1500);
+		await installPointer(page);
+		await mark(page, t0, log, 'Open queue — seeded pair only', 1800);
 		const body = await page.locator('body').innerText();
 		if (!body.includes(REPORTS.resolveReason)) bugs.push('resolve reason missing on open queue');
 		if (!body.includes(REPORTS.dismissReason)) bugs.push('dismiss reason missing on open queue');
@@ -415,11 +513,23 @@ async function filmReportActions(browser, cookie) {
 		if (openCount !== 2) bugs.push(`expected exactly 2 open reports, got ${openCount}`);
 		await page.screenshot({ path: path.join(outDir, 'reports-open.png'), fullPage: false });
 
-		await actOnOpenReport(REPORTS.resolveReason, 'Resolve');
+		await pointerActOnOpen(REPORTS.resolveReason, 'Resolve');
 		await page.screenshot({ path: path.join(outDir, 'reports-after-resolve.png'), fullPage: false });
-		await filterReportsByStatus(page, 'open');
-		await actOnOpenReport(REPORTS.dismissReason, 'Dismiss');
+
+		const afterResolve = await page.locator('li[data-report-reason]').count();
+		if (afterResolve !== 1) {
+			bugs.push(`expected 1 open report after Resolve, got ${afterResolve}`);
+		}
+		await mark(page, t0, log, 'still on Open — one row left for Dismiss', 1600);
+
+		await pointerActOnOpen(REPORTS.dismissReason, 'Dismiss');
 		await page.screenshot({ path: path.join(outDir, 'reports-after-dismiss.png'), fullPage: false });
+
+		const afterDismiss = await page.locator('li[data-report-reason]').count();
+		if (afterDismiss !== 0 && !(await page.getByText('No open reports.').count())) {
+			bugs.push(`expected empty Open after Dismiss, got ${afterDismiss} rows`);
+		}
+		await mark(page, t0, log, 'Open empty after Dismiss', 1600);
 
 		await filterReportsByStatus(page, 'dismissed');
 		const dismissedReasons = await page.locator('li[data-report-reason]').evaluateAll((nodes) =>
@@ -431,7 +541,17 @@ async function filmReportActions(browser, cookie) {
 		if (dismissedReasons.includes(REPORTS.resolveReason)) {
 			bugs.push('Dismissed tab incorrectly shows the resolve report');
 		}
-		await mark(page, t0, log, `Dismissed tab reasons: ${dismissedReasons.join(' | ') || '(none)'}`, 1600);
+		const dismissedRow = page.locator(`li[data-report-reason="${REPORTS.dismissReason}"]`);
+		if ((await dismissedRow.count()) > 0) {
+			await dismissedRow.first().scrollIntoViewIfNeeded();
+		}
+		await mark(
+			page,
+			t0,
+			log,
+			`Dismissed shows “${REPORTS.dismissReason}”`,
+			2000
+		);
 	} finally {
 		await context.close();
 	}
@@ -454,7 +574,11 @@ async function main() {
 	const seeded = await seedPendingClubAndReports(userId);
 	console.log('seeded', seeded);
 
-	const browser = await chromium.launch({ channel: 'chrome', headless: true });
+	const browser = await chromium.launch({
+		channel: 'chrome',
+		headless: false,
+		slowMo: 40
+	});
 	/** @type {{ bugs: string[], log: Array<{t:number,label:string}>, video: string }} */
 	let club = { bugs: [], log: [], video: path.join(outDir, 'club-reject.webm') };
 	let reports;
