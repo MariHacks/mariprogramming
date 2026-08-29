@@ -20,8 +20,8 @@ describe('buildStaffReportQueue', () => {
 						targetId: THREAD,
 						reporterUserId: USER,
 						reason: 'spam',
-						status: 'open',
-						resolvedAt: null,
+						status: 'resolved',
+						resolvedAt: '2026-08-28T19:00:00.000Z',
 						createdAt
 					}
 				],
@@ -35,8 +35,8 @@ describe('buildStaffReportQueue', () => {
 				threadId: THREAD,
 				reporterUserId: USER,
 				reason: 'spam',
-				status: 'open',
-				resolvedAt: null,
+				status: 'resolved',
+				resolvedAt: '2026-08-28T19:00:00.000Z',
 				createdAt: '2026-08-28T16:00:00.000Z',
 				href: `/tools/forum/${THREAD}`
 			}
@@ -84,7 +84,7 @@ describe('buildStaffReportQueue', () => {
 						reason: 'gone',
 						status: 'open',
 						resolvedAt: null,
-						createdAt: '2026-08-28T18:00:00.000Z'
+						createdAt: null
 					}
 				],
 				vi.fn(async () => null)
@@ -92,7 +92,8 @@ describe('buildStaffReportQueue', () => {
 		).resolves.toEqual([
 			expect.objectContaining({
 				threadId: null,
-				href: null
+				href: null,
+				createdAt: ''
 			})
 		]);
 	});

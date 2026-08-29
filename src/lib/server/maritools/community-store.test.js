@@ -402,6 +402,25 @@ describe('createCommunityStore', () => {
 			inner({ getStudentProfile: vi.fn(async () => ({ userId: USER, displayName: null })) })
 		);
 		await expect(nameless.getThread(THREAD)).resolves.toMatchObject({ authorDisplayName: null });
+		const anonymous = createCommunityStore(
+			inner({
+				getThread: vi.fn(async () => ({
+					id: THREAD,
+					title: 'Hi',
+					body: 'Hello',
+					category: 'courses',
+					authorUserId: null
+				})),
+				listReplies: vi.fn(async () => [null, { id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: 42 }])
+			})
+		);
+		await expect(anonymous.getThread(THREAD)).resolves.toMatchObject({
+			id: THREAD,
+			authorDisplayName: null
+		});
+		await expect(anonymous.listReplies(THREAD)).resolves.toEqual([
+			expect.objectContaining({ id: 'r1', authorDisplayName: null })
+		]);
 	});
 
 	it('reports manage rights and updates bodies without leaking authors', async () => {
@@ -506,6 +525,11 @@ describe('createCommunityStore', () => {
 		await expect(store.setReportStatus('rep-1', 'dismissed')).resolves.toMatchObject({
 			status: 'dismissed'
 		});
+	});
+
+	it('returns null when a reply is missing', async () => {
+		const store = createCommunityStore(inner({ getReply: vi.fn(async () => null) }));
+		await expect(store.getReply('missing')).resolves.toBeNull();
 	});
 
 	it('locks and removes forum records', async () => {
