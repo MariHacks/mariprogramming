@@ -52,4 +52,31 @@ describe('FreeTimePaintGrid', () => {
 		expect(screen.getByText('8 AM')).toBeInTheDocument();
 		expect(screen.getAllByText(':30').length).toBeGreaterThan(0);
 	});
+
+	it('grays college-closed days and ignores paint on them', () => {
+		let cells = new Set();
+		render(FreeTimePaintGrid, {
+			props: {
+				freeCells: cells,
+				commonCells: new Set(),
+				dayColumns: [
+					{ weekday: 'Mon', header: 'Mon 7', isNoClass: true, outOfTerm: false },
+					{ weekday: 'Tue', header: 'Tue 8', isNoClass: false, outOfTerm: false },
+					{ weekday: 'Wed', header: 'Wed 9', isNoClass: false, outOfTerm: false },
+					{ weekday: 'Thu', header: 'Thu 10', isNoClass: false, outOfTerm: false },
+					{ weekday: 'Fri', header: 'Fri 11', isNoClass: false, outOfTerm: false }
+				],
+				onChange: (next) => {
+					cells = next;
+				}
+			}
+		});
+		expect(screen.getByText('No class')).toBeInTheDocument();
+		const closed = screen.getByRole('button', { name: 'Mon 09:00' });
+		expect(closed.className).toContain('no-class');
+		expect(closed).toBeDisabled();
+		fireEvent.keyDown(closed, { key: 'Enter' });
+		expect(closed.getAttribute('aria-pressed')).toBe('false');
+		expect(cells.has(paintCellKey('Mon', '09:00'))).toBe(false);
+	});
 });

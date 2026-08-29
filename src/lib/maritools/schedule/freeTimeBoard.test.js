@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { mondayOfWeek } from './academicWeekView.js';
 import {
 	availabilityFromFreeCells,
 	availabilityWithWeek,
 	commonFreeCells,
+	filterPaintableCells,
 	freeCellsFromAvailability,
 	freeCellsFromCourses,
 	paintCellKey,
+	paintDayColumnsForTermWeek,
 	paintSlotLabel,
 	paintSlotTimes,
 	restoreEditorState,
@@ -176,5 +179,37 @@ describe('restoreEditorState', () => {
 		expect(restored.shareToken).toBe('tok-gone');
 		expect(restored.displayName).toBe('Nick');
 		expect(restored.freeCells.size).toBe(0);
+	});
+});
+
+describe('paintDayColumnsForTermWeek', () => {
+	it('marks Labour Day as a no-class paint column using academic calendar rules', () => {
+		const weekStart = mondayOfWeek('2026-09-07');
+		const columns = paintDayColumnsForTermWeek(weekStart, 'fall-2026');
+		expect(columns[0]).toMatchObject({
+			weekday: 'Mon',
+			date: '2026-09-07',
+			isNoClass: true,
+			outOfTerm: false,
+			header: 'Mon 7'
+		});
+		expect(columns[1].isNoClass).toBe(false);
+	});
+
+	it('marks days after classEndDate as out of term', () => {
+		const weekStart = mondayOfWeek('2026-12-07');
+		const columns = paintDayColumnsForTermWeek(weekStart, 'fall-2026');
+		expect(columns.every((column) => column.outOfTerm && column.isNoClass)).toBe(true);
+	});
+});
+
+describe('filterPaintableCells', () => {
+	it('drops cells on no-class weekdays', () => {
+		const columns = paintDayColumnsForTermWeek(mondayOfWeek('2026-09-07'), 'fall-2026');
+		const filtered = filterPaintableCells(
+			new Set([paintCellKey('Mon', '09:00'), paintCellKey('Tue', '09:00')]),
+			columns
+		);
+		expect(filtered).toEqual(new Set([paintCellKey('Tue', '09:00')]));
 	});
 });

@@ -15,6 +15,12 @@
 	/** @type {string[]} */
 	export let dayHeaders = [...PAINT_WEEKDAYS];
 
+	/**
+	 * Optional term-aware columns. When present, closed / out-of-term days are grayed and not paintable.
+	 * @type {{ weekday: string, header: string, isNoClass: boolean, outOfTerm: boolean }[] | null}
+	 */
+	export let dayColumns = null;
+
 	/** @type {(cells: Set<string>) => void} */
 	export let onChange = () => {};
 
@@ -25,8 +31,29 @@
 	/** @type {Set<string>} */
 	let paintedCells = new Set();
 
+	$: columns =
+		Array.isArray(dayColumns) && dayColumns.length === PAINT_WEEKDAYS.length
+			? dayColumns
+			: PAINT_WEEKDAYS.map((weekday, index) => ({
+					weekday,
+					header: dayHeaders[index] ?? weekday,
+					isNoClass: false,
+					outOfTerm: false
+				}));
+
+	$: closedWeekdays = new Set(
+		columns.filter((column) => column.isNoClass).map((column) => column.weekday)
+	);
+
+	/** @param {string} weekday */
+	function isClosed(weekday) {
+		return closedWeekdays.has(weekday);
+	}
+
 	/** @param {string} key @param {boolean} selected */
 	function setCell(key, selected) {
+		const weekday = key.slice(0, key.indexOf('-'));
+		if (isClosed(weekday)) return;
 		const next = new Set(freeCells);
 		if (selected) next.add(key);
 		else next.delete(key);
@@ -43,6 +70,7 @@
 	function paintCell(target) {
 		const cell = target instanceof Element ? target.closest('.paint-cell') : null;
 		if (!(cell instanceof HTMLElement)) return;
+		if (cell.disabled || cell.classList.contains('no-class')) return;
 		const key = cell.dataset.cell;
 		if (!key || paintedCells.has(key)) return;
 		paintedCells.add(key);
@@ -53,7 +81,7 @@
 	function onPointerDown(event) {
 		const cell = /** @type {HTMLElement | null} */ (event.currentTarget);
 		const key = cell?.dataset.cell;
-		if (!key) return;
+		if (!key || cell?.disabled) return;
 		event.preventDefault();
 		painting = true;
 		paintValue = !freeCells.has(key);
@@ -106,21 +134,26 @@
 	{/if}
 	<div class="paint-grid" aria-label="Interactive free-time grid">
 		<b>Time</b>
-		{#each dayHeaders as header (header)}
-			<b>{header}</b>
+		{#each columns as column (column.weekday)}
+			<b class:is-no-class={column.isNoClass}>
+				<span>{column.header}</span>
+				{#if column.isNoClass && !column.outOfTerm}<i class="muted">No class</i>{/if}
+			</b>
 		{/each}
 		{#each slotTimes as time (time)}
 			<span class="paint-time">{paintSlotLabel(time)}</span>
-			{#each PAINT_WEEKDAYS as weekday (weekday + time)}
-				{@const key = paintCellKey(weekday, time)}
+			{#each columns as column (column.weekday + time)}
+				{@const key = paintCellKey(/** @type {'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri'} */ (column.weekday), time)}
 				<button
 					type="button"
 					class="paint-cell"
-					class:selected={freeCells.has(key)}
-					class:common={commonCells.has(key)}
+					class:selected={freeCells.has(key) && !column.isNoClass}
+					class:common={commonCells.has(key) && !column.isNoClass}
+					class:no-class={column.isNoClass}
 					data-cell={key}
-					aria-label="{weekday} {time}"
-					aria-pressed={freeCells.has(key)}
+					aria-label="{column.weekday} {time}"
+					aria-pressed={freeCells.has(key) && !column.isNoClass}
+					disabled={column.isNoClass}
 					on:pointerdown={onPointerDown}
 					on:keydown={(event) => onCellKeydown(event, key)}
 				></button>

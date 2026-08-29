@@ -6,9 +6,10 @@
 	import FreeTimePaintGrid from '$lib/maritools/components/FreeTimePaintGrid.svelte';
 	import {
 		commonFreeCells,
+		filterPaintableCells,
 		freeCellsFromAvailability,
 		freeCellsFromCourses,
-		PAINT_WEEKDAYS,
+		paintDayColumnsForTermWeek,
 		restoreEditorState
 	} from '$lib/maritools/schedule/freeTimeBoard.js';
 	import { parseOmnivox } from '$lib/maritools/schedule/parseOmnivox.js';
@@ -16,7 +17,7 @@
 	import { calendarDate } from '$lib/maritools/term/calendar.js';
 	import '$lib/maritools/styles/preview.css';
 
-	/** @type {{ board: { id: string, title: string, members: Array<{ id: string, displayName: string, availability?: unknown, shareToken?: string | null }> }, shareUrl: string, signedInDisplayName?: string | null } | { board: null, notFound?: boolean, unavailable?: boolean, signedInDisplayName?: string | null }} */
+	/** @type {{ board: { id: string, title: string, termId?: string, members: Array<{ id: string, displayName: string, availability?: unknown, shareToken?: string | null }> }, shareUrl: string, signedInDisplayName?: string | null } | { board: null, notFound?: boolean, unavailable?: boolean, signedInDisplayName?: string | null }} */
 	export let data;
 
 	/** @type {{ member?: { shareToken?: string | null }, saveError?: string, saveSuccess?: boolean } | null} */
@@ -51,22 +52,28 @@
 	})();
 	$: commonCells =
 		board && !('notFound' in data && data.notFound)
-			? commonFreeCells(board.members ?? [], weekStartIso)
+			? filterPaintableCells(commonFreeCells(board.members ?? [], weekStartIso), dayColumns)
 			: new Set();
 	$: heading = weekTitle(weekStartIso);
-	$: dayHeaders = PAINT_WEEKDAYS.map(
-		(weekday, index) => `${weekday} ${Number(addDays(weekStartIso, index).slice(8))}`
+	$: dayColumns = paintDayColumnsForTermWeek(
+		weekStartIso,
+		board && 'termId' in board ? board.termId : null
 	);
+	$: dayHeaders = dayColumns.map((column) => column.header);
 
 	/**
 	 * @param {string} week
 	 * @param {unknown} [availability]
 	 */
 	function cellsForWeek(week, availability = myAvailability) {
+		const columns = paintDayColumnsForTermWeek(
+			week,
+			board && 'termId' in board ? board.termId : null
+		);
 		if (Object.prototype.hasOwnProperty.call(draftByWeek, week)) {
-			return new Set(draftByWeek[week]);
+			return filterPaintableCells(new Set(draftByWeek[week]), columns);
 		}
-		return freeCellsFromAvailability(availability, week);
+		return filterPaintableCells(freeCellsFromAvailability(availability, week), columns);
 	}
 
 	function stashCurrentWeek() {
@@ -104,7 +111,10 @@
 		shareToken = restored.shareToken;
 		displayName = restored.displayName;
 		draftByWeek = {};
-		freeCells = restored.freeCells;
+		freeCells = filterPaintableCells(
+			restored.freeCells,
+			paintDayColumnsForTermWeek(weekStartIso, board.termId)
+		);
 	}
 
 	onMount(() => {
@@ -125,7 +135,7 @@
 			importError = parsed.warnings[0] ?? 'We could not read that paste.';
 			return;
 		}
-		freeCells = freeCellsFromCourses(parsed.courses);
+		freeCells = filterPaintableCells(freeCellsFromCourses(parsed.courses), dayColumns);
 		draftByWeek = { ...draftByWeek, [weekStartIso]: new Set(freeCells) };
 		importError = '';
 		importOpen = false;
@@ -144,7 +154,10 @@
 		if (member.availability) {
 			const { [weekStartIso]: _drop, ...rest } = draftByWeek;
 			draftByWeek = rest;
-			freeCells = freeCellsFromAvailability(member.availability, weekStartIso);
+			freeCells = filterPaintableCells(
+				freeCellsFromAvailability(member.availability, weekStartIso),
+				dayColumns
+			);
 		}
 	}
 </script>
@@ -183,7 +196,7 @@
 			</div>
 
 			<div class="free-stage">
-				<FreeTimePaintGrid bind:freeCells {commonCells} {dayHeaders} />
+				<FreeTimePaintGrid bind:freeCells {commonCells} {dayHeaders} {dayColumns} />
 
 				<aside class="board-panel">
 					<div class="board-heading">
@@ -256,7 +269,9 @@
 						method="POST"
 						action="?/saveMember"
 						use:enhance={({ formData }) => {
-							formData.set('freeJson', JSON.stringify([...freeCells]));
+							const paintable = filterPaintableCells(freeCells, dayColumns);
+							freeCells = paintable;
+							formData.set('freeJson', JSON.stringify([...paintable]));
 							formData.set('shareToken', shareToken);
 							formData.set('displayName', displayName);
 							formData.set('weekStart', weekStartIso);
@@ -293,7 +308,7 @@
 						{/if}
 						<input type="hidden" name="shareToken" value={shareToken} />
 						<input type="hidden" name="weekStart" value={weekStartIso} />
-						<input type="hidden" name="freeJson" value={JSON.stringify([...freeCells])} />
+						<input type="hidden" name="freeJson" value={JSON.stringify([...filterPaintableCells(freeCells, dayColumns)])} />
 						<button type="submit" class="primary-button wide">Save availability</button>
 					</form>
 

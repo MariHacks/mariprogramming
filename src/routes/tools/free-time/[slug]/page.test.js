@@ -238,4 +238,30 @@ describe('free-time board page', () => {
 		render(BoardPage, { props: { data: { board: null, notFound: true } } });
 		expect(screen.getByText('That board is not available.')).toBeInTheDocument();
 	});
+
+	it('grays Labour Day on the Fall 2026 board week', () => {
+		render(BoardPage, {
+			props: {
+				data: {
+					board: BOARD,
+					shareUrl: 'https://example.com/tools/free-time/study-group',
+					signedInDisplayName: null
+				}
+			}
+		});
+		const labourWeek = mondayOfWeek('2026-09-07');
+		let cursor = THIS_WEEK;
+		while (cursor < labourWeek) {
+			fireEvent.click(screen.getByRole('button', { name: 'Next week' }));
+			cursor = addDays(cursor, 7);
+		}
+		while (cursor > labourWeek) {
+			fireEvent.click(screen.getByRole('button', { name: 'Previous week' }));
+			cursor = addDays(cursor, -7);
+		}
+		expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/September 7/i);
+		expect(screen.getByText('No class')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toBeDisabled();
+		expect(screen.getByRole('button', { name: 'Tue 09:00' })).not.toBeDisabled();
+	});
 });

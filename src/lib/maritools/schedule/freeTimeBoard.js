@@ -1,4 +1,9 @@
 /** @typedef {'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri'} PaintWeekday */
+/** @typedef {import('../term/calendar.js').AcademicTerm} AcademicTerm */
+/** @typedef {import('../term/calendar.js').AcademicCalendarRules} AcademicCalendarRules */
+
+import { ACADEMIC_TERMS, rulesForTerm } from '../term/calendar.js';
+import { addDays, weekGridForTermWeek } from './academicWeekView.js';
 
 export const PAINT_WEEKDAYS = /** @type {const} */ (['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
 
@@ -44,6 +49,66 @@ export function paintSlotLabel(time) {
  */
 export function paintCellKey(weekday, time) {
 	return `${weekday}-${time}`;
+}
+
+/**
+ * Weekday columns for the paint grid, reusing schedule term bounds + college-closed rules.
+ * @param {string} weekStartIso
+ * @param {string | null | undefined} termId
+ * @param {AcademicTerm[]} [terms]
+ * @param {Record<string, AcademicCalendarRules>} [rulesByTerm]
+ * @returns {{ weekday: PaintWeekday, date: string, dayNumber: number, isNoClass: boolean, outOfTerm: boolean, header: string }[]}
+ */
+export function paintDayColumnsForTermWeek(
+	weekStartIso,
+	termId,
+	terms = ACADEMIC_TERMS,
+	rulesByTerm
+) {
+	const id = typeof termId === 'string' ? termId.trim() : '';
+	const term = id ? (terms.find((entry) => entry.id === id) ?? null) : null;
+	const rules = id ? rulesForTerm(id, rulesByTerm) : null;
+	if (term && rules) {
+		return weekGridForTermWeek(weekStartIso, term, rules, []).map((column) => ({
+			weekday: /** @type {PaintWeekday} */ (column.weekday),
+			date: column.date,
+			dayNumber: column.dayNumber,
+			isNoClass: column.isNoClass,
+			outOfTerm: column.outOfTerm,
+			header: `${column.weekday} ${column.dayNumber}`
+		}));
+	}
+	return PAINT_WEEKDAYS.map((weekday, index) => {
+		const date = addDays(weekStartIso, index);
+		const dayNumber = Number(date.slice(-2));
+		return {
+			weekday,
+			date,
+			dayNumber,
+			isNoClass: false,
+			outOfTerm: false,
+			header: `${weekday} ${dayNumber}`
+		};
+	});
+}
+
+/**
+ * Drop painted cells that fall on college-closed or out-of-term columns.
+ * @param {Set<string>} cells
+ * @param {{ weekday: string, isNoClass: boolean }[]} dayColumns
+ * @returns {Set<string>}
+ */
+export function filterPaintableCells(cells, dayColumns) {
+	const closed = new Set(
+		dayColumns.filter((column) => column.isNoClass).map((column) => column.weekday)
+	);
+	if (closed.size === 0) return new Set(cells);
+	const next = new Set();
+	for (const key of cells) {
+		const weekday = key.slice(0, key.indexOf('-'));
+		if (!closed.has(weekday)) next.add(key);
+	}
+	return next;
 }
 
 /**

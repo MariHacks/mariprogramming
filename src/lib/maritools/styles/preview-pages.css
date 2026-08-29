@@ -607,13 +607,27 @@
 
 	.paint-grid > b {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+		gap: 1px;
 		border-right: 1px solid var(--line-dark);
 		border-bottom: 1px solid var(--line-dark);
 		background: #f3f6fa;
 		font-size: 10px;
 		font-weight: 650;
+	}
+
+	.paint-grid > b.is-no-class {
+		background: #e8ebf0;
+		color: #748397;
+	}
+
+	.paint-grid > b .muted {
+		font-size: 8px;
+		font-style: normal;
+		font-weight: 550;
+		color: #8a96a8;
 	}
 
 	.paint-time {
@@ -661,6 +675,14 @@
 	.paint-cell.common.selected {
 		background: #2f9d73;
 		box-shadow: inset 0 0 0 1px #177b59;
+	}
+
+	.paint-cell.no-class,
+	.paint-cell.no-class:hover {
+		background: #e8ebf0;
+		box-shadow: none;
+		cursor: not-allowed;
+		opacity: 0.72;
 	}
 
 	.no-login-caption {
@@ -1561,6 +1583,32 @@
 	.club-detail-header h1 {
 		margin: 0 0 4px;
 		font-size: clamp(32px, 4vw, 52px);
+	}
+
+	.club-detail-header input,
+	.club-detail-index input,
+	.club-detail-index textarea {
+		width: 100%;
+		max-width: 36rem;
+		margin: 0 0 0.5rem;
+		padding: 0.55rem 0.7rem;
+		border: 1px solid var(--line-dark);
+		border-radius: 0;
+		background: var(--paper, #fff);
+		color: var(--ink);
+		font: inherit;
+	}
+
+	.club-detail-header input[name='name'] {
+		font-size: clamp(1.5rem, 3vw, 2rem);
+		font-weight: 650;
+	}
+
+	.club-submission-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin: 0 clamp(1.25rem, 3vw, 3rem) 2rem;
 	}
 
 	.club-detail-header p,
