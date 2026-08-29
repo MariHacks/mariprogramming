@@ -708,6 +708,9 @@ describe('createMariToolsRepository', () => {
 			]).listPublishedCatalog({ termId: 'fall-2026' })
 		).resolves.toEqual([{ termId: 'fall-2026', slug: 'a' }]);
 		await expect(
+			queuedRepo([[{ status: 'conflict', courseCode: '420-NYA-05' }]]).listConflictCatalog()
+		).resolves.toEqual([{ status: 'conflict', courseCode: '420-NYA-05' }]);
+		await expect(
 			queuedRepo([uniqueError()]).createClub({ name: 'Chess', slug: 'chess' })
 		).rejects.toBeInstanceOf(MariToolsConflictError);
 		await expect(

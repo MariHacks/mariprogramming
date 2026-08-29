@@ -35,6 +35,10 @@ describe('protected staff shell', () => {
 			'/staff/book-work'
 		);
 		expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/staff/reports');
+		expect(screen.getByRole('link', { name: 'Catalog conflicts' })).toHaveAttribute(
+			'href',
+			'/staff/catalog-conflicts'
+		);
 		expect(screen.getByRole('link', { name: 'Orders' })).toHaveAttribute('aria-current', 'page');
 		expect(screen.getByRole('link', { name: 'Catalogue' })).not.toHaveAttribute(
 			'aria-current',
@@ -94,6 +98,20 @@ describe('protected staff shell', () => {
 			data: { staff: STAFF, pathname: '/staff/reports' }
 		});
 		expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page');
+		expect(screen.getByRole('link', { name: 'Orders' })).not.toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+	});
+
+	it('marks catalog conflicts active on the conflict queue', () => {
+		render(StaffLayout, {
+			data: { staff: STAFF, pathname: '/staff/catalog-conflicts' }
+		});
+		expect(screen.getByRole('link', { name: 'Catalog conflicts' })).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
 		expect(screen.getByRole('link', { name: 'Orders' })).not.toHaveAttribute(
 			'aria-current',
 			'page'

@@ -507,6 +507,11 @@ describe('createCommunityStore', () => {
 		await expect(store.listReports({ status: 'open' })).resolves.toEqual([
 			expect.objectContaining({ id: 'rep-1', status: 'open' })
 		]);
+		await expect(
+			createCommunityStore({
+				listConflictCatalog: vi.fn(async () => [{ status: 'conflict', courseCode: '420-NYA-05' }])
+			}).listConflictCatalog()
+		).resolves.toEqual([{ status: 'conflict', courseCode: '420-NYA-05' }]);
 		await expect(store.getReply('r1')).resolves.toMatchObject({
 			id: 'r1',
 			threadId: THREAD,

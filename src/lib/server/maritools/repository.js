@@ -1067,6 +1067,43 @@ export function createMariToolsRepository({
 		},
 
 		/**
+		 * Flat conflict rows with offering identity. Staff groups these side by side.
+		 * Student catalog never calls this.
+		 */
+		async listConflictCatalog() {
+			return redactUnexpected(async () =>
+				asRows(
+					await transact((transaction) =>
+						transaction
+							.select({
+								id: mtCatalogContributions.id,
+								offeringId: mtCatalogContributions.offeringId,
+								documentSha256: mtCatalogContributions.documentSha256,
+								structured: mtCatalogContributions.structured,
+								contributorUserId: mtCatalogContributions.contributorUserId,
+								status: mtCatalogContributions.status,
+								createdAt: mtCatalogContributions.createdAt,
+								updatedAt: mtCatalogContributions.updatedAt,
+								termId: mtCourseOfferings.termId,
+								courseCode: mtCourses.code,
+								title: mtCourses.canonicalTitle,
+								section: mtCourseOfferings.section,
+								teacherName: mtCourseOfferings.teacherName
+							})
+							.from(mtCatalogContributions)
+							.innerJoin(
+								mtCourseOfferings,
+								eq(mtCatalogContributions.offeringId, mtCourseOfferings.id)
+							)
+							.innerJoin(mtCourses, eq(mtCourseOfferings.courseId, mtCourses.id))
+							.where(eq(mtCatalogContributions.status, 'conflict'))
+							.orderBy(asc(mtCourses.code), asc(mtCatalogContributions.createdAt))
+					)
+				)
+			);
+		},
+
+		/**
 		 * @param {{
 		 *   name: unknown,
 		 *   slug: unknown,

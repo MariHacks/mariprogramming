@@ -8,10 +8,12 @@
 	$: catalogueActive = data.pathname.startsWith('/staff/catalogue');
 	$: bookWorkActive = data.pathname.startsWith('/staff/book-work');
 	$: reportsActive = data.pathname.startsWith('/staff/reports');
+	$: catalogConflictsActive = data.pathname.startsWith('/staff/catalog-conflicts');
 	$: ordersActive =
 		!catalogueActive &&
 		!bookWorkActive &&
 		!reportsActive &&
+		!catalogConflictsActive &&
 		data.pathname !== '/staff/sign-in';
 
 	let signingOut = false;
@@ -65,6 +67,11 @@
 					class:active={reportsActive}
 					aria-current={reportsActive ? 'page' : undefined}
 					href={resolve('/staff/reports', {})}>Reports</a
+				>
+				<a
+					class:active={catalogConflictsActive}
+					aria-current={catalogConflictsActive ? 'page' : undefined}
+					href={resolve('/staff/catalog-conflicts', {})}>Catalog conflicts</a
 				>
 			</nav>
 

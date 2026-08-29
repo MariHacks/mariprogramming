@@ -257,6 +257,10 @@ export function createCommunityStore(inner) {
 			});
 		},
 
+		listConflictCatalog() {
+			return wrap(() => inner.listConflictCatalog());
+		},
+
 		/** @param {{ category?: string, courseId?: string }} [filter] */
 		listThreads(filter = {}) {
 			return wrap(async () => {
