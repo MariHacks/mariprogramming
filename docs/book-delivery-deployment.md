@@ -140,6 +140,15 @@ https://<stable-protected-staging-domain>/api/auth/callback/google
 https://mariprogramming.vercel.app/api/auth/callback/google
 ```
 
+MariTools Calendar Connect reuses the same Web client and needs a second redirect path for
+each origin you use:
+
+```text
+http://127.0.0.1:<dev-port>/tools/schedule/google-calendar/callback
+https://<stable-protected-staging-domain>/tools/schedule/google-calendar/callback
+https://mariprogramming.vercel.app/tools/schedule/google-calendar/callback
+```
+
 `GOOGLE_CLIENT_ID` must be a real Google Cloud OAuth **Web application** client ID of the form
 `<digits>-<suffix>.apps.googleusercontent.com`. Placeholder values such as
 `local-dev.apps.googleusercontent.com` produce Google's `Error 401: invalid_client`. Set

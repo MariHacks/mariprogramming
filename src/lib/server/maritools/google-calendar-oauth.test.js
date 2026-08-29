@@ -37,6 +37,24 @@ describe('beginGoogleCalendarConnect', () => {
 		const url = new URL(authorizeUrl);
 		expect(url.hostname).toBe('accounts.google.com');
 		expect(url.searchParams.get('access_type')).toBe('offline');
+		expect(url.searchParams.get('redirect_uri')).toBe(
+			'https://example.com/tools/schedule/google-calendar/callback'
+		);
+	});
+
+	it('uses APP_ORIGIN host and port in the calendar redirect URI', () => {
+		const { authorizeUrl } = beginGoogleCalendarConnect({
+			clientId: '245259091681-example.apps.googleusercontent.com',
+			appOrigin: 'http://127.0.0.1:5174',
+			secret: 'test-secret-key-with-enough-length'
+		});
+		const url = new URL(authorizeUrl);
+		expect(url.searchParams.get('redirect_uri')).toBe(
+			'http://127.0.0.1:5174/tools/schedule/google-calendar/callback'
+		);
+		expect(url.searchParams.get('redirect_uri')).not.toBe(
+			'http://127.0.0.1:5174/api/auth/callback/google'
+		);
 	});
 });
 

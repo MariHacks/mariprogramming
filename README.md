@@ -28,18 +28,35 @@ npm run dev
 ```
 
 Copy `.env.example` to `.env.local` and fill server-only values. For Google sign-in on
-`/tools/account` or `/staff/sign-in`:
+`/tools/account` or `/staff/sign-in`, and for MariTools **Connect Google Calendar**:
 
 1. In Google Cloud Console, create (or reuse) an OAuth **Web application** client.
-2. Add the authorized redirect URI
-   `http://127.0.0.1:<dev-port>/api/auth/callback/google` (and `http://localhost:<dev-port>/...`
-   only if that is your `APP_ORIGIN`).
+2. Add both authorized redirect URIs for your exact `APP_ORIGIN` (`127.0.0.1` and
+   `localhost` differ to Google). For local `http://127.0.0.1:5174`:
+
+   ```text
+   http://127.0.0.1:5174/api/auth/callback/google
+   http://127.0.0.1:5174/tools/schedule/google-calendar/callback
+   ```
+
+   Sign-in alone is not enough. Calendar Connect uses the second URI and fails with
+   `redirect_uri_mismatch` when it is missing.
 3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env.local` to that client.
 4. Set `APP_ORIGIN` and `BETTER_AUTH_URL` to the same origin the browser uses, for example
-   `http://127.0.0.1:5173`.
+   `http://127.0.0.1:5174`.
 
 Placeholder client IDs are rejected at startup. Google itself returns `invalid_client` when a
 nonexistent client ID reaches the authorize endpoint.
+
+To verify Calendar Connect’s redirect is registered (without signing in):
+
+```sh
+node scripts/check-google-calendar-oauth-redirect.mjs
+```
+
+Exit `0` means Google accepted the calendar redirect (consent or account chooser). Exit `1`
+with `redirect_uri_mismatch` means add the calendar callback URI in Console, wait a minute,
+and rerun.
 
 The club routes are `/`, `/about-us`, `/our-workshops`, `/events`, and `/resources`. Book
 Delivery begins at `/books`; commerce controls belong only within that route area.
