@@ -216,7 +216,7 @@ async function driveClubsGuest(page, t0, log, bugs) {
 	const body = await page.locator('body').innerText();
 	const html = await page.content();
 	if (!/Robotics Club/i.test(body)) bugs.push('Robotics Club missing for guest');
-	if (/action="\?\/submit"/i.test(html) || /Send for review/i.test(body)) {
+	if (/action="\?\/submit"/i.test(html) || /Continue to listing/i.test(body)) {
 		bugs.push('privileged submit form exposed to guest');
 	}
 	if (!/Sign in with Google/i.test(body)) bugs.push('guest sign-in CTA missing on clubs');
@@ -261,7 +261,7 @@ async function driveClubsSignedIn(page, t0, log, bugs) {
 	const body = await page.locator('body').innerText();
 	if (!/Robotics Club/i.test(body)) bugs.push('Robotics Club missing when signed in');
 	if (/Sign in to submit one/i.test(body)) bugs.push('guest empty copy while signed in');
-	if (!/Send for review/i.test(body)) bugs.push('submission form locked while signed in');
+	if (!/Continue to listing/i.test(body)) bugs.push('submission form locked while signed in');
 	if (await page.locator('form[action="?/submit"]').count() < 1) {
 		bugs.push('submit form missing');
 	}
@@ -271,16 +271,21 @@ async function driveClubsSignedIn(page, t0, log, bugs) {
 	await mark(page, t0, log, 'Robotics Club still visible signed in');
 
 	const name = `Proof Club ${Date.now().toString(36)}`;
+	await page.locator('form[action="?/submit"] select[name="submitterRole"]').selectOption('member');
 	await page.locator('form[action="?/submit"] input[name="name"]').fill(name);
 	await page.locator('form[action="?/submit"] input[name="category"]').fill('STEM');
-	await page
-		.locator('form[action="?/submit"] textarea[name="description"]')
-		.fill('Signed-in auth-matrix club submission.');
-	await page.getByRole('button', { name: 'Send for review' }).click();
-	await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
-	await mark(page, t0, log, `submitted club "${name}"`);
+	await page.getByRole('button', { name: 'Continue to listing' }).click();
+	await page.waitForURL(/\/tools\/clubs\/submissions\/[0-9a-f-]+$/i, { timeout: 15000 }).catch(() => {
+		bugs.push('intake did not open /tools/clubs/submissions/[id]');
+	});
+	await mark(page, t0, log, `opened editable submission for "${name}"`);
 	const after = await page.locator('body').innerText();
-	if (!/Sent for review/i.test(after)) bugs.push('club submit success status missing');
+	if (!/Save changes/i.test(after)) bugs.push('editable club detail missing after intake');
+	await page.getByTestId('club-edit-description').fill('Signed-in auth-matrix club submission.');
+	await page.getByRole('button', { name: 'Save changes' }).click();
+	await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
+	const saved = await page.locator('body').innerText();
+	if (!/Saved/i.test(saved)) bugs.push('club submission save status missing');
 	await page.screenshot({
 		path: path.join(outRoot, 'clubs', 'signed-in-submit.png'),
 		fullPage: false

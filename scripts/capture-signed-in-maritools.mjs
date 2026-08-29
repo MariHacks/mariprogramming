@@ -327,18 +327,21 @@ async function main() {
 			await mark(page, t0, log, 'clubs signed-in');
 			const body = await page.locator('body').innerText();
 			if (/Sign in to submit one/i.test(body)) bugs.push('guest empty copy while signed in');
-			if (!/Send for review/i.test(body)) bugs.push('submission form locked');
+			if (!/Continue to listing/i.test(body)) bugs.push('submission form locked');
 			const name = `Proof Club ${Date.now().toString(36)}`;
+			await page.locator('form[action="?/submit"] select[name="submitterRole"]').selectOption('member');
 			await page.locator('form[action="?/submit"] input[name="name"]').fill(name);
 			await page.locator('form[action="?/submit"] input[name="category"]').fill('STEM');
-			await page
-				.locator('form[action="?/submit"] textarea[name="description"]')
-				.fill('Signed-in proof club submission.');
-			await page.getByRole('button', { name: 'Send for review' }).click();
-			await page.waitForLoadState('networkidle');
-			await mark(page, t0, log, `submitted club "${name}"`);
+			await page.getByRole('button', { name: 'Continue to listing' }).click();
+			await page.waitForURL(/\/tools\/clubs\/submissions\/[0-9a-f-]+$/i, { timeout: 15000 });
+			await mark(page, t0, log, `opened editable submission for "${name}"`);
 			const after = await page.locator('body').innerText();
-			if (!/Sent for review/i.test(after)) bugs.push('club submit success status missing');
+			if (!/Save changes/i.test(after)) bugs.push('editable club detail missing after intake');
+			await page.getByTestId('club-edit-description').fill('Signed-in proof club submission.');
+			await page.getByRole('button', { name: 'Save changes' }).click();
+			await page.waitForLoadState('networkidle');
+			const saved = await page.locator('body').innerText();
+			if (!/Saved/i.test(saved)) bugs.push('club submission save status missing');
 			await page.screenshot({ path: path.join(outDir, 'clubs-1280.png'), fullPage: false });
 			await sleep(900);
 		})

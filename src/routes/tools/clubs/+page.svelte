@@ -1,5 +1,6 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
+	import { CLUB_SUBMITTER_ROLES } from '$lib/maritools/club-listing.js';
 	import { initialsFromClubName } from '$lib/maritools/club-initials.js';
 
 	export let data;
@@ -46,9 +47,6 @@
 					<strong>Staff</strong>
 					<h2>Pending listings</h2>
 				</div>
-				{#if form?.published}
-					<p role="status">Published.</p>
-				{/if}
 				{#if data.pending.length === 0}
 					<p>No pending submissions.</p>
 				{:else}
@@ -62,10 +60,11 @@
 								{#if submission.description}
 									<p>{submission.description}</p>
 								{/if}
-								<form method="POST" action="?/publish">
-									<input type="hidden" name="submissionId" value={submission.id} />
-									<button type="submit" class="primary-button">Publish</button>
-								</form>
+								<a
+									class="primary-button"
+									href="/tools/clubs/submissions/{submission.id}"
+									data-testid="review-submission"
+								>Review listing</a>
 							</article>
 						{/each}
 					</div>
@@ -83,7 +82,7 @@
 					<a href="/tools/clubs">Reset filters</a>
 				{:else if data.signedIn}
 					<strong>No published clubs yet.</strong>
-					<p>Use the form below to send a listing for staff review.</p>
+					<p>Use the form below to start a listing for staff review.</p>
 				{:else}
 					<strong>No published clubs yet.</strong>
 					<p>Browse stays open while staff review listings. Sign in to submit one.</p>
@@ -115,13 +114,22 @@
 		<aside class="submit-club">
 			<div>
 				<strong>Missing a group?</strong>
-				<h2>Add or correct a club listing</h2>
+				<h2>Start a club listing</h2>
 			</div>
 			{#if data.unavailable}
 				<p>Club submissions are unavailable right now. Try again later.</p>
 			{:else if data.signedIn}
-				<p>Staff publish a listing after they check it.</p>
+				<p>Tell us your role and the club name. You will finish the listing on the next page.</p>
 				<form method="POST" action="?/submit">
+					<label>
+						<span>Your role in this club</span>
+						<select name="submitterRole" required data-testid="submitter-role">
+							<option value="">Choose one</option>
+							{#each CLUB_SUBMITTER_ROLES as role (role.value)}
+								<option value={role.value}>{role.label}</option>
+							{/each}
+						</select>
+					</label>
 					<label>
 						<span>Club name</span>
 						<input name="name" required maxlength="160" />
@@ -130,23 +138,8 @@
 						<span>Category</span>
 						<input name="category" maxlength="80" />
 					</label>
-					<label>
-						<span>Description</span>
-						<textarea name="description" rows="4" maxlength="4000"></textarea>
-					</label>
-					<label>
-						<span>Link label</span>
-						<input name="linkLabel" maxlength="80" />
-					</label>
-					<label>
-						<span>Website</span>
-						<input name="linkUrl" type="url" maxlength="500" />
-					</label>
-					<button type="submit" class="primary-button">Send for review</button>
+					<button type="submit" class="primary-button">Continue to listing</button>
 				</form>
-				{#if form?.submitted}
-					<p role="status">Sent for review.</p>
-				{/if}
 				{#if form?.error}
 					<p class="field-error" role="alert">{form.error}</p>
 				{/if}

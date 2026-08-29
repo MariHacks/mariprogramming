@@ -232,6 +232,13 @@ describe('createMariToolsRepository', () => {
 		await expect(repository.submitClub({ payload: [] })).rejects.toBeInstanceOf(
 			MariToolsValidationError
 		);
+		await expect(repository.getClubSubmission('bad')).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(repository.updateClubSubmissionPayload('bad', { name: 'Chess' })).rejects.toBeInstanceOf(
+			MariToolsValidationError
+		);
+		await expect(repository.updateClubSubmissionPayload(SUBMISSION, [])).rejects.toBeInstanceOf(
+			MariToolsValidationError
+		);
 		await expect(repository.listClubSubmissions({ status: 'nope' })).rejects.toBeInstanceOf(
 			MariToolsValidationError
 		);
@@ -706,6 +713,22 @@ describe('createMariToolsRepository', () => {
 		await expect(
 			queuedRepo([[]]).submitClub({ payload: { name: 'Chess' } })
 		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(queuedRepo([[]]).getClubSubmission(SUBMISSION)).resolves.toBeNull();
+		await expect(
+			queuedRepo([[]]).updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })
+		).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([[{ id: SUBMISSION }], []]).updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(
+			queuedRepo([[{ id: SUBMISSION, payload: { name: 'Chess' } }]]).getClubSubmission(SUBMISSION)
+		).resolves.toMatchObject({ id: SUBMISSION });
+		await expect(
+			queuedRepo([
+				[{ id: SUBMISSION, payload: { name: 'Old' } }],
+				[{ id: SUBMISSION, payload: { name: 'Chess' } }]
+			]).updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })
+		).resolves.toMatchObject({ payload: { name: 'Chess' } });
 		await expect(
 			queuedRepo([[]]).setClubSubmissionStatus(SUBMISSION, 'published')
 		).rejects.toBeInstanceOf(MariToolsNotFoundError);

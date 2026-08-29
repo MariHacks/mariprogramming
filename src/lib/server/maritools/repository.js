@@ -1160,6 +1160,47 @@ export function createMariToolsRepository({
 			});
 		},
 
+		/** @param {unknown} id */
+		async getClubSubmission(id) {
+			const submissionId = requiredUuid(id);
+			return redactUnexpected(async () =>
+				oneRow(
+					await transact((transaction) =>
+						transaction
+							.select()
+							.from(mtClubSubmissions)
+							.where(eq(mtClubSubmissions.id, submissionId))
+							.limit(1)
+					)
+				)
+			);
+		},
+
+		/** @param {unknown} id @param {unknown} payload */
+		async updateClubSubmissionPayload(id, payload) {
+			const submissionId = requiredUuid(id);
+			const nextPayload = requiredJsonObject(payload);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtClubSubmissions)
+							.where(eq(mtClubSubmissions.id, submissionId))
+					);
+					if (!existing) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtClubSubmissions)
+							.set({ payload: nextPayload, updatedAt: new Date() })
+							.where(eq(mtClubSubmissions.id, submissionId))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
 		/** @param {unknown} id @param {unknown} status */
 		async setClubSubmissionStatus(id, status) {
 			const submissionId = requiredUuid(id);

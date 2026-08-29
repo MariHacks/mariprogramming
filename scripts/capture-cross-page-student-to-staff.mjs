@@ -321,15 +321,16 @@ async function main() {
 	await mark(page, t0, log, 'student clubs');
 	const clubsBody = await page.locator('body').innerText();
 	if (/Sign in to submit/i.test(clubsBody)) bugs.push('student still gated on clubs');
+	await page.locator('form[action="?/submit"] select[name="submitterRole"]').selectOption('member');
 	await page.locator('form[action="?/submit"] input[name="name"]').fill(CLUB_NAME);
 	await page.locator('form[action="?/submit"] input[name="category"]').fill('STEM');
-	await page
-		.locator('form[action="?/submit"] textarea[name="description"]')
-		.fill('Cross-page student→staff visibility proof club.');
-	await page.getByRole('button', { name: 'Send for review' }).click();
+	await page.getByRole('button', { name: 'Continue to listing' }).click();
+	await page.waitForURL(/\/tools\/clubs\/submissions\/[0-9a-f-]+$/i, { timeout: 15000 });
+	await page.getByTestId('club-edit-description').fill('Cross-page student→staff visibility proof club.');
+	await page.getByRole('button', { name: 'Save changes' }).click();
 	await page.waitForLoadState('networkidle');
 	const afterClub = await page.locator('body').innerText();
-	if (!/Sent for review/i.test(afterClub)) bugs.push('club submit success missing');
+	if (!/Saved/i.test(afterClub)) bugs.push('club submit save status missing');
 	await mark(page, t0, log, `submitted club "${CLUB_NAME}"`);
 	await page.screenshot({ path: path.join(outDir, 'student-club-submitted.png'), fullPage: false });
 
@@ -459,9 +460,24 @@ async function main() {
 		if (!inViewport) {
 			bugs.push(`pending club "${CLUB_NAME}" not in viewport (Robotics-only false pass)`);
 		}
+		const reviewLink = pendingArticle.locator('[data-testid="review-submission"]');
+		if ((await reviewLink.count()) === 0) {
+			bugs.push('staff review link missing on pending row');
+		} else {
+			await reviewLink.click();
+			await staffPage.waitForURL(/\/tools\/clubs\/submissions\/[0-9a-f-]+$/i, { timeout: 15000 });
+			const reviewBody = await staffPage.locator('body').innerText();
+			if (!/Publish/i.test(reviewBody)) bugs.push('staff publish control missing on review page');
+			if (!CLUB_NAME.split(' ').every((part) => reviewBody.includes(part))) {
+				bugs.push(`review page missing club name "${CLUB_NAME}"`);
+			}
+			await mark(staffPage, t0, log, 'opened shared staff review surface');
+		}
 	}
 	const clubsStaff = await staffPage.locator('body').innerText();
-	if (!/Publish/i.test(clubsStaff)) bugs.push('staff publish controls missing');
+	if (!/Publish|Review listing|Pending listing/i.test(clubsStaff)) {
+		bugs.push('staff publish/review controls missing');
+	}
 	const viewportText = await staffPage.evaluate(() => {
 		const vh = window.innerHeight;
 		return [...document.querySelectorAll('h1, h2, strong, p, a.club-row, [data-pending-club]')]

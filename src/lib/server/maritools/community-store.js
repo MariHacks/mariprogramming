@@ -1,3 +1,4 @@
+import { clubListingFromPayload, clubSubmissionView } from '$lib/maritools/club-listing.js';
 import { readRuntimeEnvironment } from '../config/environment.js';
 import { isStaffAccount } from './community.js';
 import {
@@ -172,34 +173,51 @@ export function createCommunityStore(inner) {
 		listPendingClubSubmissions() {
 			return wrap(async () => {
 				const rows = await inner.listClubSubmissions({ status: 'pending' });
-				return rows.map((row) => ({
-					id: row.id,
-					name: row.payload?.name ?? '',
-					slug: row.payload?.slug ?? '',
-					category: row.payload?.category ?? '',
-					description: row.payload?.description ?? '',
-					links: Array.isArray(row.payload?.links) ? row.payload.links : []
-				}));
+				return rows.map((row) => clubSubmissionView(row));
+			});
+		},
+
+		/** @param {string} submissionId */
+		getClubSubmission(submissionId) {
+			return wrap(async () => {
+				const row = await inner.getClubSubmission(submissionId);
+				if (!row) return null;
+				return clubSubmissionView(row);
+			});
+		},
+
+		/**
+		 * @param {string} submissionId
+		 * @param {Record<string, unknown>} payload
+		 */
+		updateClubSubmissionPayload(submissionId, payload) {
+			return wrap(async () => {
+				const existing = await inner.getClubSubmission(submissionId);
+				if (!existing) throw new MaritoolsInputError('missing-submission');
+				if (existing.status !== 'pending') throw new MaritoolsInputError('not-pending');
+				const updated = await inner.updateClubSubmissionPayload(submissionId, payload);
+				return clubSubmissionView(updated);
 			});
 		},
 
 		/** @param {string} submissionId */
 		publishPendingClub(submissionId) {
 			return wrap(async () => {
-				const pending = await inner.listClubSubmissions({ status: 'pending' });
-				const submission = pending.find((row) => row.id === submissionId);
-				if (!submission) throw new MaritoolsInputError('missing-submission');
-				const payload = submission.payload ?? {};
-				const name = String(payload.name ?? '').trim();
-				const slug = String(payload.slug ?? '').trim() || slugFromName(name);
+				const submission = await inner.getClubSubmission(submissionId);
+				if (!submission || submission.status !== 'pending') {
+					throw new MaritoolsInputError('missing-submission');
+				}
+				const listing = clubListingFromPayload(submission.payload);
+				const name = listing.name;
+				const slug = listing.slug || slugFromName(name);
 				if (!name || !slug) throw new MaritoolsInputError('invalid-club');
 				try {
 					const club = await inner.createClub({
 						name,
 						slug,
-						category: payload.category ?? null,
-						description: payload.description ?? null,
-						links: payload.links ?? [],
+						category: listing.category || null,
+						description: listing.description || null,
+						links: listing.links,
 						published: true
 					});
 					await inner.setClubSubmissionStatus(submissionId, 'published');

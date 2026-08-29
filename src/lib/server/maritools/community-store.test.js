@@ -39,15 +39,41 @@ function inner(overrides = {}) {
 		listClubSubmissions: vi.fn(async () => [
 			{
 				id: SUBMISSION,
+				status: 'pending',
+				submitterUserId: USER,
 				payload: {
 					name: 'Chess',
 					slug: 'chess',
 					category: 'games',
 					description: 'Play',
-					links: [{ label: 'Site', url: 'https://example.com' }]
+					links: [{ label: 'Site', url: 'https://example.com' }],
+					submitterRole: 'officer'
 				}
 			}
 		]),
+		getClubSubmission: vi.fn(async (id) =>
+			id === SUBMISSION
+				? {
+						id: SUBMISSION,
+						status: 'pending',
+						submitterUserId: USER,
+						payload: {
+							name: 'Chess',
+							slug: 'chess',
+							category: 'games',
+							description: 'Play',
+							links: [{ label: 'Site', url: 'https://example.com' }],
+							submitterRole: 'officer'
+						}
+					}
+				: null
+		),
+		updateClubSubmissionPayload: vi.fn(async (id, payload) => ({
+			id,
+			status: 'pending',
+			submitterUserId: USER,
+			payload
+		})),
 		createClub: vi.fn(async () => ({
 			id: 'club-1',
 			name: 'Chess',
@@ -188,10 +214,53 @@ describe('createCommunityStore', () => {
 		const clubs = await store.listClubs();
 		expect(clubs[0].name).toBe('Robotics');
 		const pending = await store.listPendingClubSubmissions();
-		expect(pending[0]).toMatchObject({ id: SUBMISSION, name: 'Chess', slug: 'chess' });
+		expect(pending[0]).toMatchObject({
+			id: SUBMISSION,
+			name: 'Chess',
+			slug: 'chess',
+			submitterRole: 'officer',
+			submitterUserId: USER
+		});
+		expect(pending[0]).not.toHaveProperty('payload');
 		const courses = await store.listCatalogCourses();
 		expect(courses).toEqual([{ id: COURSE, code: '203-SN3-RE', title: 'Modern Physics' }]);
 		expect(JSON.stringify({ clubs, pending, courses })).not.toContain('2530622');
+	});
+
+	it('loads and updates a pending club submission', async () => {
+		const repo = inner();
+		const store = createCommunityStore(repo);
+		await expect(store.getClubSubmission(SUBMISSION)).resolves.toMatchObject({
+			id: SUBMISSION,
+			name: 'Chess',
+			submitterRole: 'officer'
+		});
+		await expect(store.getClubSubmission('missing')).resolves.toBeNull();
+		await expect(
+			store.updateClubSubmissionPayload(SUBMISSION, {
+				name: 'Chess Club',
+				slug: 'chess-club',
+				description: 'Play weekly',
+				submitterRole: 'officer'
+			})
+		).resolves.toMatchObject({ name: 'Chess Club', description: 'Play weekly' });
+		expect(repo.updateClubSubmissionPayload).toHaveBeenCalled();
+		const missing = createCommunityStore(inner({ getClubSubmission: vi.fn(async () => null) }));
+		await expect(missing.updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })).rejects.toMatchObject({
+			code: 'missing-submission'
+		});
+		const published = createCommunityStore(
+			inner({
+				getClubSubmission: vi.fn(async () => ({
+					id: SUBMISSION,
+					status: 'published',
+					payload: { name: 'Chess' }
+				}))
+			})
+		);
+		await expect(
+			published.updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })
+		).rejects.toMatchObject({ code: 'not-pending' });
 	});
 
 	it('publishes a pending club through the repository', async () => {
@@ -201,25 +270,36 @@ describe('createCommunityStore', () => {
 		expect(repo.createClub).toHaveBeenCalledWith(
 			expect.objectContaining({ name: 'Chess', slug: 'chess', published: true })
 		);
+		expect(repo.createClub.mock.calls[0][0]).not.toHaveProperty('submitterRole');
 		expect(repo.setClubSubmissionStatus).toHaveBeenCalledWith(SUBMISSION, 'published');
 	});
 
 	it('rejects a missing or nameless pending club', async () => {
-		const missing = createCommunityStore(inner({ listClubSubmissions: vi.fn(async () => []) }));
+		const missing = createCommunityStore(inner({ getClubSubmission: vi.fn(async () => null) }));
 		await expect(missing.publishPendingClub(SUBMISSION)).rejects.toMatchObject({
 			code: 'missing-submission'
 		});
 		const nameless = createCommunityStore(
-			inner({ listClubSubmissions: vi.fn(async () => [{ id: SUBMISSION, payload: { name: '   ' } }]) })
+			inner({
+				getClubSubmission: vi.fn(async () => ({
+					id: SUBMISSION,
+					status: 'pending',
+					payload: { name: '   ' }
+				}))
+			})
 		);
 		await expect(nameless.publishPendingClub(SUBMISSION)).rejects.toMatchObject({ code: 'invalid-club' });
 		const repo = inner({
-			listClubSubmissions: vi.fn(async () => [{ id: SUBMISSION, payload: { name: 'Chess Club' } }])
+			getClubSubmission: vi.fn(async () => ({
+				id: SUBMISSION,
+				status: 'pending',
+				payload: { name: 'Chess Club' }
+			}))
 		});
 		await createCommunityStore(repo).publishPendingClub(SUBMISSION);
 		expect(repo.createClub).toHaveBeenCalledWith(expect.objectContaining({ slug: 'chess-club' }));
 		const emptyPayload = inner({
-			listClubSubmissions: vi.fn(async () => [{ id: SUBMISSION }])
+			getClubSubmission: vi.fn(async () => ({ id: SUBMISSION, status: 'pending' }))
 		});
 		await expect(
 			createCommunityStore(emptyPayload).publishPendingClub(SUBMISSION)
@@ -467,7 +547,17 @@ describe('createCommunityStore', () => {
 			})
 		);
 		await expect(store.listPendingClubSubmissions()).resolves.toEqual([
-			{ id: SUBMISSION, name: '', slug: '', category: '', description: '', links: [] }
+			{
+				id: SUBMISSION,
+				status: 'pending',
+				submitterUserId: null,
+				submitterRole: null,
+				name: '',
+				slug: '',
+				category: '',
+				description: '',
+				links: []
+			}
 		]);
 	});
 });

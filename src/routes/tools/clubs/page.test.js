@@ -40,7 +40,7 @@ describe('clubs page', () => {
 		);
 	});
 
-	it('points signed-in students at the submit form when the directory is empty', () => {
+	it('points signed-in students at the short intake when the directory is empty', () => {
 		render(ClubsPage, {
 			props: {
 				data: {
@@ -56,10 +56,10 @@ describe('clubs page', () => {
 		});
 		expect(screen.getByText('No published clubs yet.')).toBeInTheDocument();
 		expect(
-			screen.getByText(/Use the form below to send a listing for staff review/)
+			screen.getByText(/Use the form below to start a listing for staff review/)
 		).toBeInTheDocument();
-		expect(screen.queryByText(/Sign in to submit one/)).not.toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Send for review' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Continue to listing' })).toBeInTheDocument();
+		expect(screen.getByTestId('submitter-role')).toBeInTheDocument();
 	});
 
 	it('explains when filters match nothing', () => {
@@ -83,7 +83,7 @@ describe('clubs page', () => {
 		);
 	});
 
-	it('lists published clubs and the submit form when signed in', () => {
+	it('lists published clubs and the short intake when signed in', () => {
 		render(ClubsPage, {
 			props: {
 				data: {
@@ -103,14 +103,11 @@ describe('clubs page', () => {
 			'href',
 			'/tools/clubs/robotics'
 		);
-		expect(screen.queryByText('See listing')).not.toBeInTheDocument();
-		expect(screen.queryByText('Meeting rhythm')).not.toBeInTheDocument();
-		expect(screen.queryByRole('link', { name: /Discord/ })).not.toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Send for review' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Continue to listing' })).toBeInTheDocument();
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
 	});
 
-	it('lets staff publish pending listings', () => {
+	it('links staff pending rows into the shared review surface', () => {
 		render(ClubsPage, {
 			props: {
 				data: {
@@ -128,13 +125,15 @@ describe('clubs page', () => {
 					categories: ['stem'],
 					signedIn: true,
 					staff: true
-				},
-				form: { published: true }
+				}
 			}
 		});
 		expect(screen.getByText('Chess')).toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Publish' })).toBeInTheDocument();
-		expect(screen.getByText('Published.')).toBeInTheDocument();
+		expect(screen.getByTestId('review-submission')).toHaveAttribute(
+			'href',
+			'/tools/clubs/submissions/sub-1'
+		);
+		expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
 		const pending = screen.getByTestId('staff-pending-clubs');
 		const robotics = screen.getByRole('heading', { name: 'Robotics' });
 		expect(
@@ -175,11 +174,10 @@ describe('clubs page', () => {
 					staff: true,
 					unavailable: true
 				},
-				form: { submitted: true, error: 'Check the club details and try again.' }
+				form: { error: 'Check the club details and try again.' }
 			}
 		});
 		expect(screen.getByText('Clubs are unavailable right now. Try again.')).toBeInTheDocument();
 		expect(screen.getByText('Club submissions are unavailable right now. Try again later.')).toBeInTheDocument();
-		expect(screen.queryByText('Sent for review.')).not.toBeInTheDocument();
 	});
 });
