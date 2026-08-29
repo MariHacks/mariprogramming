@@ -7,29 +7,10 @@ describe('schedule form action', () => {
 		expect(prerender).toBe(false);
 	});
 
-	it('parses the canonical paste', async () => {
+	it('exposes only named actions so pushGoogleCalendar can run', () => {
 		const { actions } = _createHandlers();
-		const result = await actions.default({
-			request: {
-				formData: async () => {
-					const data = new FormData();
-					data.set('paste', CANONICAL_OMNIVOX_SCHEDULE);
-					return data;
-				}
-			}
-		});
-		expect(result.result.ok).toBe(true);
-		expect(result.result.courses).toHaveLength(7);
-	});
-
-	it('parses empty paste as not ok', async () => {
-		const { actions } = _createHandlers();
-		const result = await actions.default({
-			request: {
-				formData: async () => new FormData()
-			}
-		});
-		expect(result.result.ok).toBe(false);
+		expect(actions.default).toBeUndefined();
+		expect(typeof actions.pushGoogleCalendar).toBe('function');
 	});
 
 	it('loads calendar connection state for signed-in users', async () => {

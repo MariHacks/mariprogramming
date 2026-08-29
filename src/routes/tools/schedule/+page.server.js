@@ -32,28 +32,22 @@ export function _createHandlers(dependencies = {}) {
 	}
 
 	const actions = {
-		default: async ({ request }) => {
-			const data = await request.formData();
-			const paste = String(data.get('paste') ?? '');
-			return { result: parseOmnivox(paste) };
-		},
-
 		pushGoogleCalendar: async ({ request, locals }) => {
-			const session = locals.maritools;
-			if (!session?.userId) {
-				return fail(401, { pushError: 'Sign in to push events to Google Calendar.' });
-			}
-
-			const data = await request.formData();
-			const paste = String(data.get('paste') ?? '');
-			const termId = String(data.get('termId') ?? '');
-			const parsed = parseOmnivox(paste);
-			if (!parsed.ok) {
-				return fail(400, { pushError: 'Paste a valid Omnivox schedule first.' });
-			}
-
-			const environment = readEnvironment();
 			try {
+				const session = locals.maritools;
+				if (!session?.userId) {
+					return fail(401, { pushError: 'Sign in to push events to Google Calendar.' });
+				}
+
+				const data = await request.formData();
+				const paste = String(data.get('paste') ?? '');
+				const termId = String(data.get('termId') ?? '');
+				const parsed = parseOmnivox(paste);
+				if (!parsed.ok) {
+					return fail(400, { pushError: 'Paste a valid Omnivox schedule first.' });
+				}
+
+				const environment = readEnvironment();
 				const { ACADEMIC_TERMS } = await import('$lib/maritools/term/calendar.js');
 				const term = ACADEMIC_TERMS.find((entry) => entry.id === termId) ?? null;
 				if (!term) {
