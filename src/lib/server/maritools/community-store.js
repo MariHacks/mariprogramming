@@ -232,6 +232,18 @@ export function createCommunityStore(inner) {
 			});
 		},
 
+		/** @param {string} submissionId */
+		rejectPendingClub(submissionId) {
+			return wrap(async () => {
+				const submission = await inner.getClubSubmission(submissionId);
+				if (!submission || submission.status !== 'pending') {
+					throw new MaritoolsInputError('missing-submission');
+				}
+				const updated = await inner.setClubSubmissionStatus(submissionId, 'rejected');
+				return clubSubmissionView(updated);
+			});
+		},
+
 		listCatalogCourses() {
 			return wrap(async () => {
 				const rows = await inner.listPublishedCatalog();
@@ -354,6 +366,7 @@ export function createCommunityStore(inner) {
 		listReports(input = {}) {
 			return wrap(() => inner.listReports(input));
 		},
+
 
 		/** @param {string} id */
 		getReply(id) {

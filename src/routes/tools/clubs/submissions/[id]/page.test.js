@@ -31,6 +31,7 @@ describe('club submission page', () => {
 		expect(screen.getByTestId('club-edit-name')).toHaveValue('Chess');
 		expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Reject' })).not.toBeInTheDocument();
 	});
 
 	it('lets staff publish from the same surface', () => {
@@ -48,7 +49,29 @@ describe('club submission page', () => {
 		});
 		expect(screen.getByText('Staff review')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Publish' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Reject' })).toHaveAttribute(
+			'formaction',
+			'?/reject'
+		);
 		expect(screen.getByText('Saved.')).toBeInTheDocument();
+	});
+
+	it('lets staff reject from the read-only review surface', () => {
+		render(SubmissionPage, {
+			props: {
+				data: {
+					submission: SUBMISSION,
+					canEdit: false,
+					canPublish: true,
+					staff: true,
+					isOwner: false
+				}
+			}
+		});
+		expect(screen.getByRole('button', { name: 'Reject' })).toHaveAttribute(
+			'formaction',
+			'?/reject'
+		);
 	});
 
 	it('shows a missing submission', () => {

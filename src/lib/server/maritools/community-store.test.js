@@ -274,6 +274,48 @@ describe('createCommunityStore', () => {
 		expect(repo.setClubSubmissionStatus).toHaveBeenCalledWith(SUBMISSION, 'published');
 	});
 
+	it('rejects a pending club without publishing it', async () => {
+		const repo = inner({
+			setClubSubmissionStatus: vi.fn(async () => ({
+				id: SUBMISSION,
+				status: 'rejected',
+				submitterUserId: USER,
+				payload: {
+					name: 'Chess',
+					slug: 'chess',
+					category: 'games',
+					description: 'Play',
+					links: [],
+					submitterRole: 'officer'
+				}
+			}))
+		});
+		const store = createCommunityStore(repo);
+		await expect(store.rejectPendingClub(SUBMISSION)).resolves.toMatchObject({
+			id: SUBMISSION,
+			status: 'rejected',
+			name: 'Chess'
+		});
+		expect(repo.setClubSubmissionStatus).toHaveBeenCalledWith(SUBMISSION, 'rejected');
+		expect(repo.createClub).not.toHaveBeenCalled();
+		const missing = createCommunityStore(inner({ getClubSubmission: vi.fn(async () => null) }));
+		await expect(missing.rejectPendingClub(SUBMISSION)).rejects.toMatchObject({
+			code: 'missing-submission'
+		});
+		const published = createCommunityStore(
+			inner({
+				getClubSubmission: vi.fn(async () => ({
+					id: SUBMISSION,
+					status: 'published',
+					payload: { name: 'Chess' }
+				}))
+			})
+		);
+		await expect(published.rejectPendingClub(SUBMISSION)).rejects.toMatchObject({
+			code: 'missing-submission'
+		});
+	});
+
 	it('rejects a missing or nameless pending club', async () => {
 		const missing = createCommunityStore(inner({ getClubSubmission: vi.fn(async () => null) }));
 		await expect(missing.publishPendingClub(SUBMISSION)).rejects.toMatchObject({
@@ -447,6 +489,7 @@ describe('createCommunityStore', () => {
 			authorDisplayName: 'Ada'
 		});
 	});
+
 
 	it('locks and removes forum records', async () => {
 		const store = createCommunityStore(inner());

@@ -137,7 +137,27 @@ export function _createHandlers(dependencies = {}) {
 		}
 	}
 
-	return { load, actions: { save, publish } };
+	/** @param {any} event */
+	async function reject(event) {
+		try {
+			const store = createStore();
+			const identity = await staffContext(event, store);
+			if (!identity.staff) return fail(403, { error: 'Rejecting is limited to staff.' });
+			const submissionId = event.params.id;
+			await store.rejectPendingClub(submissionId);
+			redirect(303, '/tools/clubs');
+		} catch (error) {
+			if (error instanceof MaritoolsInputError) {
+				return fail(400, { error: 'That listing could not be rejected.' });
+			}
+			if (error instanceof MaritoolsUnavailableError) {
+				return fail(503, { error: 'Rejecting is unavailable. Try again.' });
+			}
+			throw error;
+		}
+	}
+
+	return { load, actions: { save, publish, reject } };
 }
 
 const handlers = _createHandlers();

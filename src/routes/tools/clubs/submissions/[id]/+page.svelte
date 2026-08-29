@@ -50,14 +50,16 @@
 						<button type="submit" class="primary-button">Save changes</button>
 						{#if data.canPublish}
 							<button type="submit" class="dark-button" formaction="?/publish">Publish</button>
+							<button type="submit" class="quiet-button" formaction="?/reject">Reject</button>
 						{/if}
 					</div>
 				</form>
 			{:else}
 				<ClubListingDetail mode="view" club={data.submission} />
 				{#if data.canPublish}
-					<form method="POST" action="?/publish" class="club-submission-actions">
-						<button type="submit" class="primary-button">Publish</button>
+					<form method="POST" class="club-submission-actions">
+						<button type="submit" class="primary-button" formaction="?/publish">Publish</button>
+						<button type="submit" class="quiet-button" formaction="?/reject">Reject</button>
 					</form>
 				{/if}
 			{/if}
