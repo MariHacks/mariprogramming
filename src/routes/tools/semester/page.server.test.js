@@ -432,85 +432,76 @@ describe('semester page server', () => {
 	});
 
 	it('uses default NVIDIA helpers when extract succeeds without cache', async () => {
-		const previousKey = process.env.NVIDIA_NIM_API_KEY;
-		const previousModel = process.env.NVIDIA_NIM_MODEL;
-		delete process.env.NVIDIA_NIM_API_KEY;
-		delete process.env.NVIDIA_NIM_MODEL;
-		try {
-			const current = handlers({
-				getNimKey: undefined,
-				getNimModel: undefined,
-				createProvider: undefined
-			});
-			const result = await current.actions.extract(
-				event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
-			);
-			expect(result.extraction.ok).toBe(false);
-			expect(result.extraction.reason).toBe('missing-key');
-			process.env.NVIDIA_NIM_MODEL = 'nvidia/custom';
-			const withModel = handlers({
-				getNimKey: undefined,
-				getNimModel: undefined,
-				createProvider: vi.fn(() => ({
-					extract: vi.fn(async () => ({
-						ok: true,
-						reason: null,
-						proposals: { assessments: [], books: [] },
-						inferenceCount: 1
-					}))
+		const current = handlers({
+			privateEnv: {},
+			getNimKey: undefined,
+			getNimModel: undefined,
+			createProvider: undefined
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.extraction.ok).toBe(false);
+		expect(result.extraction.reason).toBe('missing-key');
+		const withModel = handlers({
+			privateEnv: { NVIDIA_NIM_MODEL: 'nvidia/custom' },
+			getNimKey: undefined,
+			getNimModel: undefined,
+			createProvider: vi.fn(() => ({
+				extract: vi.fn(async () => ({
+					ok: true,
+					reason: null,
+					proposals: { assessments: [], books: [] },
+					inferenceCount: 1
 				}))
-			});
-			const saved = await withModel.actions.extract(
-				event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
-			);
-			expect(saved.extraction.ok).toBe(true);
-			expect(withModel.repository.saveExtraction).toHaveBeenCalledWith(
-				expect.objectContaining({ model: 'nvidia/custom' })
-			);
-			delete process.env.NVIDIA_NIM_MODEL;
-			const defaultModel = handlers({
-				getNimKey: undefined,
-				getNimModel: undefined,
-				createProvider: vi.fn(() => ({
-					extract: vi.fn(async () => ({
-						ok: true,
-						reason: null,
-						proposals: { assessments: [], books: [] },
-						inferenceCount: 1
-					}))
+			}))
+		});
+		const saved = await withModel.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(saved.extraction.ok).toBe(true);
+		expect(withModel.repository.saveExtraction).toHaveBeenCalledWith(
+			expect.objectContaining({ model: 'nvidia/custom' })
+		);
+		const defaultModel = handlers({
+			privateEnv: {},
+			getNimKey: undefined,
+			getNimModel: undefined,
+			createProvider: vi.fn(() => ({
+				extract: vi.fn(async () => ({
+					ok: true,
+					reason: null,
+					proposals: { assessments: [], books: [] },
+					inferenceCount: 1
 				}))
-			});
-			await defaultModel.actions.extract(
-				event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
-			);
-			expect(defaultModel.repository.saveExtraction).toHaveBeenCalledWith(
-				expect.objectContaining({
-					model: 'nvidia/nemotron-3.5-lightning-30b-a3b'
-				})
-			);
-			const fallbackModel = handlers({
-				getNimKey: undefined,
-				getNimModel: undefined,
-				createProvider: vi.fn(() => ({
-					extract: vi.fn(async () => ({
-						ok: true,
-						reason: null,
-						proposals: null,
-						inferenceCount: 1
-					}))
+			}))
+		});
+		await defaultModel.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(defaultModel.repository.saveExtraction).toHaveBeenCalledWith(
+			expect.objectContaining({
+				model: 'nvidia/nemotron-3.5-lightning-30b-a3b'
+			})
+		);
+		const fallbackModel = handlers({
+			privateEnv: {},
+			getNimKey: undefined,
+			getNimModel: undefined,
+			createProvider: vi.fn(() => ({
+				extract: vi.fn(async () => ({
+					ok: true,
+					reason: null,
+					proposals: null,
+					inferenceCount: 1
 				}))
-			});
-			const skipped = await fallbackModel.actions.extract(
-				event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
-			);
-			expect(skipped.extraction.ok).toBe(true);
-			expect(fallbackModel.repository.saveExtraction).not.toHaveBeenCalled();
-		} finally {
-			if (previousKey === undefined) delete process.env.NVIDIA_NIM_API_KEY;
-			else process.env.NVIDIA_NIM_API_KEY = previousKey;
-			if (previousModel === undefined) delete process.env.NVIDIA_NIM_MODEL;
-			else process.env.NVIDIA_NIM_MODEL = previousModel;
-		}
+			}))
+		});
+		const skipped = await fallbackModel.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(skipped.extraction.ok).toBe(true);
+		expect(fallbackModel.repository.saveExtraction).not.toHaveBeenCalled();
 	});
 
 	it('maps unavailable errors on contribute', async () => {

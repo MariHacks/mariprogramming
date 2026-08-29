@@ -1,3 +1,4 @@
+import { env } from '$env/dynamic/private';
 import { fail } from '@sveltejs/kit';
 import { createOutlineExtractionProvider, needsTextPdf } from '$lib/maritools/extract/provider.js';
 import { semesterPageView } from '$lib/server/maritools/community.js';
@@ -17,10 +18,12 @@ export function _createHandlers(dependencies = {}) {
 	const createRepository = dependencies.createRepository ?? openStudentStore;
 	const extractPdf = dependencies.extractPdf ?? extractPdfText;
 	const isPdf = dependencies.isPdf ?? isPdfHeader;
-	const getNimKey = dependencies.getNimKey ?? (() => String(process.env.NVIDIA_NIM_API_KEY ?? '').trim());
+	const privateEnv = dependencies.privateEnv ?? env;
+	const getNimKey =
+		dependencies.getNimKey ?? (() => String(privateEnv.NVIDIA_NIM_API_KEY ?? '').trim());
 	const getNimModel =
 		dependencies.getNimModel ??
-		(() => process.env.NVIDIA_NIM_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b');
+		(() => privateEnv.NVIDIA_NIM_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b');
 	const createProvider =
 		dependencies.createProvider ??
 		(() => createOutlineExtractionProvider({ getKey: getNimKey, getModel: getNimModel }));
