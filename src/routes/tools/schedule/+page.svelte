@@ -1,5 +1,4 @@
 <script>
-	import { get } from 'svelte/store';
 	import { browser } from '$app/environment';
 	import { enhance } from '$app/forms';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
@@ -54,7 +53,7 @@
 		exportOpen = false;
 	}
 
-	$: resolution = get(termResolution);
+	$: resolution = $termResolution;
 	$: rules = resolution.selected ? rulesForTerm(resolution.selected.id) : null;
 	$: grid =
 		result.ok && resolution.selected && rules
@@ -108,17 +107,18 @@
 	}
 
 	function downloadIcs() {
-		const resolution = get(termResolution);
 		if (!resolution.selected) {
 			exportError = 'Choose a term before downloading a calendar.';
 			return false;
 		}
-		const rules = rulesForTerm(resolution.selected.id);
-		if (!rules) {
+		const termRules = rulesForTerm(resolution.selected.id);
+		if (!termRules) {
 			exportError = 'This term does not have calendar rules yet.';
 			return false;
 		}
-		const ics = occurrencesToIcs(generateOccurrences(resolution.selected, rules, result.courses));
+		const ics = occurrencesToIcs(
+			generateOccurrences(resolution.selected, termRules, result.courses)
+		);
 		const blob = new Blob([ics], { type: 'text/calendar' });
 		const url = URL.createObjectURL(blob);
 		const link = document.createElement('a');
