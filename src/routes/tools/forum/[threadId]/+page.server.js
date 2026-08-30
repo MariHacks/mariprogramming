@@ -226,14 +226,19 @@ export function _createHandlers(dependencies = {}) {
 			const action = String(data.get('moderation') ?? '').trim();
 			const threadId = event.params.threadId;
 			if (action === 'lock') await store.lockThread(threadId);
-			else if (action === 'remove-thread') await store.removeThread(threadId);
-			else if (action === 'remove-reply') {
+			else if (action === 'remove-thread') {
+				await store.removeThread(threadId);
+				throw redirect(303, '/tools/forum');
+			} else if (action === 'remove-reply') {
 				const replyId = String(data.get('replyId') ?? '').trim();
 				if (!replyId) return fail(400, { error: 'Pick a reply to remove.' });
 				await store.removeReply(replyId);
 			} else return fail(400, { error: 'Unknown moderation action.' });
 			return { moderated: true };
 		} catch (error) {
+			if (error && typeof error === 'object' && 'status' in error && error.status === 303) {
+				throw error;
+			}
 			if (error instanceof MaritoolsUnavailableError) {
 				return fail(503, { error: 'Moderation is unavailable. Try again.' });
 			}

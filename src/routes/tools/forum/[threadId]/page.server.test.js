@@ -529,9 +529,11 @@ describe('forum thread page server', () => {
 		await expect(
 			current.actions.moderate(event({ locals: { maritools: STAFF }, form: { moderation: 'lock' } }))
 		).resolves.toEqual({ moderated: true });
-		await current.actions.moderate(
-			event({ locals: { maritools: STAFF }, form: { moderation: 'remove-thread' } })
-		);
+		await expect(
+			current.actions.moderate(
+				event({ locals: { maritools: STAFF }, form: { moderation: 'remove-thread' } })
+			)
+		).rejects.toMatchObject({ status: 303, location: '/tools/forum' });
 		await current.actions.moderate(
 			event({
 				locals: { maritools: STAFF },

@@ -1083,13 +1083,8 @@ export function createMariToolsRepository({
 						return { contribution: updated ?? unavailable(), conflict: true };
 					}
 
-					for (const row of liveOthers.filter((entry) => entry.status === 'published')) {
-						await transaction
-							.update(mtCatalogContributions)
-							.set({ status: 'conflict', updatedAt: new Date() })
-							.where(eq(mtCatalogContributions.id, row.id));
-					}
-
+					// Keep any already-published offering facts live for students.
+					// Later disagreeing uploads enter the staff conflict queue only.
 					const created = await insertOrRecover(
 						transaction,
 						mtCatalogContributions,
@@ -1178,12 +1173,12 @@ export function createMariToolsRepository({
 		},
 
 		/**
-		 * Flat conflict rows with offering identity. Staff groups these side by side.
-		 * Student catalog never calls this.
+		 * Offerings with at least one conflict: return every live peer (published + conflict)
+		 * so staff can compare the catalog incumbent with later disagreeing uploads.
 		 */
 		async listConflictCatalog() {
-			return redactUnexpected(async () =>
-				asRows(
+			return redactUnexpected(async () => {
+				const rows = asRows(
 					await transact((transaction) =>
 						transaction
 							.select({
@@ -1207,15 +1202,19 @@ export function createMariToolsRepository({
 								eq(mtCatalogContributions.offeringId, mtCourseOfferings.id)
 							)
 							.innerJoin(mtCourses, eq(mtCourseOfferings.courseId, mtCourses.id))
-							.where(eq(mtCatalogContributions.status, 'conflict'))
+							.where(inArray(mtCatalogContributions.status, ['conflict', 'published']))
 							.orderBy(asc(mtCourses.code), asc(mtCatalogContributions.createdAt))
 					)
-				)
-			);
+				);
+				const conflictOfferingIds = new Set(
+					rows.filter((row) => row.status === 'conflict').map((row) => row.offeringId)
+				);
+				return rows.filter((row) => conflictOfferingIds.has(row.offeringId));
+			});
 		},
 
 		/**
-		 * Staff picks one conflict peer as published; other live peers for that offering
+		 * Staff picks one peer as published; other live peers for that offering
 		 * become withdrawn so the public catalog can show a single fact set.
 		 * @param {unknown} contributionId
 		 */
@@ -1230,16 +1229,22 @@ export function createMariToolsRepository({
 							.where(eq(mtCatalogContributions.id, id))
 					);
 					if (!existing) return notFound();
-					if (existing.status !== 'conflict') return invalid();
+					if (existing.status !== 'conflict' && existing.status !== 'published') {
+						return invalid();
+					}
 
-					const published = oneRow(
-						await transaction
-							.update(mtCatalogContributions)
-							.set({ status: 'published', updatedAt: new Date() })
-							.where(eq(mtCatalogContributions.id, id))
-							.returning()
-					);
-					if (!published) return unavailable();
+					/** @type {any} */
+					let published = existing;
+					if (existing.status === 'conflict') {
+						published = oneRow(
+							await transaction
+								.update(mtCatalogContributions)
+								.set({ status: 'published', updatedAt: new Date() })
+								.where(eq(mtCatalogContributions.id, id))
+								.returning()
+						);
+						if (!published) return unavailable();
+					}
 
 					await transaction
 						.update(mtCatalogContributions)

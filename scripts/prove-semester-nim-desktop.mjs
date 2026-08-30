@@ -197,6 +197,20 @@ async function main() {
 			if (outcome.httpStatus === 500) bugs.push('extract returned HTTP 500');
 			if (missingKey) bugs.push('SSR missing NIM key');
 
+			const courseCode = page.locator('input[name="courseCode"]');
+			const titleInput = page.locator('input[name="title"]');
+			const sectionInput = page.locator('input[name="section"]');
+			const teacherInput = page.locator('input[name="teacherName"]');
+			const identity = {
+				courseCode: String((await courseCode.inputValue().catch(() => '')) ?? '').trim(),
+				title: String((await titleInput.inputValue().catch(() => '')) ?? '').trim(),
+				section: String((await sectionInput.inputValue().catch(() => '')) ?? '').trim(),
+				teacher: String((await teacherInput.inputValue().catch(() => '')) ?? '').trim()
+			};
+			outcome.identity = identity;
+			const identityFilled = Object.values(identity).filter(Boolean).length;
+			outcome.identityFilled = identityFilled;
+
 			const titles = page.locator('.review-row input[aria-label="Assessment"]');
 			const weights = page.locator('.review-row input[aria-label="Weight"]');
 			const dates = page.locator('.review-row input[aria-label="Date"]');
@@ -219,12 +233,18 @@ async function main() {
 			if (filled < 1 && outcome.extractionOk) {
 				bugs.push('extraction ok but assessment title fields empty');
 			}
+			if (identityFilled < 1 && outcome.extractionOk) {
+				bugs.push('extraction ok but course identity fields empty');
+			}
 			if (failedClosed) {
 				await mark(page, t0, log, 'graceful failure (no 500) — manual fields shown');
-			} else if (filled > 0) {
-				await mark(page, t0, log, `assessments filled: ${filled} of ${rowCount}`);
 			} else {
-				await mark(page, t0, log, `review ready; filled=${filled} rows=${rowCount}`);
+				await mark(
+					page,
+					t0,
+					log,
+					`identity ${identityFilled}/4 · assessments ${filled} of ${rowCount}`
+				);
 			}
 
 			await page.screenshot({ path: path.join(outDir, 'nim-desktop-extract.png'), fullPage: false });
@@ -255,6 +275,7 @@ async function main() {
 		bugs.length === 0 &&
 		outcome.extractionOk === true &&
 		Number(outcome.assessmentsFilled) > 0 &&
+		Number(outcome.identityFilled) > 0 &&
 		outcome.httpStatus !== 500;
 
 	const report = {

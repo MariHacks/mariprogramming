@@ -146,8 +146,11 @@ describe('forum thread page', () => {
 				form: { moderated: true }
 			}
 		});
-		expect(screen.getByText('Thread locked.')).toBeInTheDocument();
+		expect(screen.getByText(/This thread is locked/i)).toBeInTheDocument();
+		expect(screen.getByText(/Existing posts stay visible/i)).toBeInTheDocument();
 		expect(screen.getByText('No replies yet.')).toBeInTheDocument();
+		expect(screen.queryByText(/unavailable/i)).not.toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Midterm tips' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Lock thread' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();

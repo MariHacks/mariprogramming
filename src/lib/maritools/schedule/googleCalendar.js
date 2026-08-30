@@ -25,6 +25,12 @@ export function buildGoogleCalendarAuthorizeUrl(clientId, redirectUri, state) {
  * @returns {object}
  */
 export function googleCalendarEventBody(occurrence) {
+	const occurrenceKey = [
+		occurrence.courseCode,
+		occurrence.section,
+		occurrence.date,
+		occurrence.startTime
+	].join('|');
 	return {
 		summary: occurrence.title,
 		location: occurrence.classroom,
@@ -36,17 +42,69 @@ export function googleCalendarEventBody(occurrence) {
 		end: {
 			dateTime: `${occurrence.date}T${occurrence.endTime}:00`,
 			timeZone: GOOGLE_CALENDAR_TIMEZONE
+		},
+		extendedProperties: {
+			private: {
+				maritools: '1',
+				occurrenceKey
+			}
 		}
 	};
 }
 
 /**
  * @param {import('./occurrences.js').ClassOccurrence[]} occurrences
+ * @returns {{ timeMin: string, timeMax: string } | null}
+ */
+export function occurrenceWindow(occurrences) {
+	if (!occurrences.length) return null;
+	const dates = occurrences.map((row) => row.date).sort();
+	return {
+		timeMin: `${dates[0]}T00:00:00-04:00`,
+		timeMax: `${dates[dates.length - 1]}T23:59:59-04:00`
+	};
+}
+
+/**
+ * Replace prior MariTools pushes in the same window, then insert once.
+ * @param {import('./occurrences.js').ClassOccurrence[]} occurrences
  * @param {(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>} fetchImpl
  * @param {string} accessToken
- * @returns {Promise<{ inserted: number }>}
+ * @returns {Promise<{ inserted: number, deleted: number }>}
  */
 export async function insertOccurrencesIntoGoogleCalendar(occurrences, fetchImpl, accessToken) {
+	let deleted = 0;
+	const window = occurrenceWindow(occurrences);
+	if (window) {
+		const listUrl = new URL(
+			'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+		);
+		listUrl.searchParams.set('privateExtendedProperty', 'maritools=1');
+		listUrl.searchParams.set('singleEvents', 'true');
+		listUrl.searchParams.set('timeMin', window.timeMin);
+		listUrl.searchParams.set('timeMax', window.timeMax);
+		listUrl.searchParams.set('maxResults', '2500');
+		const listed = await fetchImpl(listUrl.toString(), {
+			headers: { authorization: `Bearer ${accessToken}` }
+		});
+		if (listed.ok) {
+			const payload = await listed.json();
+			const items = Array.isArray(payload?.items) ? payload.items : [];
+			for (const item of items) {
+				const eventId = String(item?.id ?? '');
+				if (!eventId) continue;
+				const del = await fetchImpl(
+					`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`,
+					{
+						method: 'DELETE',
+						headers: { authorization: `Bearer ${accessToken}` }
+					}
+				);
+				if (del.ok || del.status === 410) deleted += 1;
+			}
+		}
+	}
+
 	let inserted = 0;
 	for (const occurrence of occurrences) {
 		const response = await fetchImpl(
@@ -66,7 +124,7 @@ export async function insertOccurrencesIntoGoogleCalendar(occurrences, fetchImpl
 		}
 		inserted += 1;
 	}
-	return { inserted };
+	return { inserted, deleted };
 }
 
 /**

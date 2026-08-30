@@ -20,20 +20,6 @@
 	function termLabel(termId) {
 		return ACADEMIC_TERMS.find((term) => term.id === termId)?.name ?? termId;
 	}
-
-	/** @param {unknown} structured */
-	function factsJson(structured) {
-		try {
-			return JSON.stringify(structured ?? {}, null, 2);
-		} catch {
-			return String(structured);
-		}
-	}
-
-	/** @param {string} sha */
-	function shortSha(sha) {
-		return sha.length > 12 ? `${sha.slice(0, 8)}…${sha.slice(-4)}` : sha;
-	}
 </script>
 
 <svelte:head>
@@ -46,8 +32,8 @@
 			<p class="eyebrow">MariTools catalog</p>
 			<h1>Catalog conflicts</h1>
 			<p class="heading-note">
-				Conflicting course facts stay side by side until you pick one. The public catalog lists
-				published rows only.
+				The first share for a course publishes immediately. Later disagreeing uploads wait here until
+				you pick which facts stay public.
 			</p>
 		</div>
 	</header>
@@ -64,7 +50,7 @@
 	{:else}
 		<p class="queue-count">
 			{data.groups.length}
-			{data.groups.length === 1 ? 'offering' : 'offerings'} with conflicting facts
+			{data.groups.length === 1 ? 'offering' : 'offerings'} need a staff decision
 		</p>
 		<ol class="conflict-list">
 			{#each data.groups as group (group.offeringId)}
@@ -78,7 +64,7 @@
 							</p>
 						</div>
 						<span class="peer-count"
-							>{group.contributions.length} peer{group.contributions.length === 1
+							>{group.contributions.length} version{group.contributions.length === 1
 								? ''
 								: 's'}</span
 						>
@@ -90,16 +76,50 @@
 						{#each group.contributions as contribution (contribution.id)}
 							<article class="peer-card" data-conflict-peer={contribution.id}>
 								<header>
-									<span class="status">conflict</span>
-									<span class="mono" title={contribution.documentSha256}
-										>{shortSha(contribution.documentSha256)}</span
-									>
-								</header>
-								<pre class="facts">{factsJson(contribution.structured)}</pre>
-								<footer>
-									<span class="mono">{contribution.contributorUserId ?? 'anonymous'}</span>
+									<span class="status status-{contribution.status}">{contribution.status}</span>
+									<span class="contributor">{contribution.contributorDisplayName}</span>
 									<time datetime={contribution.createdAt}>{localDate(contribution.createdAt)}</time>
-								</footer>
+								</header>
+
+								<section class="fact-block" aria-label="Assessments">
+									<h3>Assessments</h3>
+									{#if contribution.assessments.length === 0}
+										<p class="empty-facts">None listed</p>
+									{:else}
+										<ul>
+											{#each contribution.assessments as row, index (`a-${index}`)}
+												<li>
+													<strong>{row.title || 'Untitled'}</strong>
+													<span
+														>{row.weight ? `${row.weight}%` : 'Weight unknown'} · {row.date ||
+															'Date missing'}</span
+													>
+												</li>
+											{/each}
+										</ul>
+									{/if}
+								</section>
+
+								<section class="fact-block" aria-label="Books">
+									<h3>Books</h3>
+									{#if contribution.books.length === 0}
+										<p class="empty-facts">None listed</p>
+									{:else}
+										<ul>
+											{#each contribution.books as row, index (`b-${index}`)}
+												<li>
+													<strong>{row.title || 'Untitled'}</strong>
+													<span
+														>{row.author || 'Author unknown'}{row.isbn
+															? ` · ${row.isbn}`
+															: ''}{row.required ? ' · required' : ''}</span
+													>
+												</li>
+											{/each}
+										</ul>
+									{/if}
+								</section>
+
 								<form method="post" action="?/resolve" class="resolve-form">
 									<input type="hidden" name="contributionId" value={contribution.id} />
 									<button type="submit" data-testid="resolve-conflict">Use these facts</button>
@@ -141,6 +161,7 @@
 		margin: 0.5rem 0 0;
 		color: var(--color-muted);
 		font-size: 0.9375rem;
+		max-width: 42rem;
 	}
 
 	.message,
@@ -184,7 +205,7 @@
 	}
 
 	.course-code {
-		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-family: var(--font-mono);
 		font-size: 0.9375rem;
 	}
 
@@ -202,74 +223,102 @@
 
 	.peer-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-		gap: 0.75rem;
+		grid-template-columns: repeat(var(--peer-count), minmax(14rem, 1fr));
+		gap: 0.85rem;
 	}
 
 	.peer-card {
 		display: grid;
-		gap: 0.55rem;
-		padding: 0.75rem;
+		gap: 0.75rem;
+		padding: 0.85rem;
 		border: var(--rule);
-		background: var(--paper, #f7f8fa);
-		min-width: 0;
+		background: #fafbfc;
 	}
 
-	.peer-card header,
-	.peer-card footer {
+	.peer-card header {
 		display: flex;
 		flex-wrap: wrap;
-		justify-content: space-between;
-		gap: 0.4rem 0.75rem;
-		font-size: 0.75rem;
+		gap: 0.45rem 0.75rem;
+		align-items: baseline;
 	}
 
 	.status {
+		padding: 0.15rem 0.4rem;
+		border: 1px solid currentColor;
+		font-size: 0.6875rem;
 		font-weight: 700;
-		text-transform: lowercase;
-		color: #8d1b1b;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 	}
 
-	.mono {
-		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-		overflow-wrap: anywhere;
+	.status-published {
+		color: #075e41;
 	}
 
-	.facts {
+	.status-conflict {
+		color: #8a4b08;
+	}
+
+	.contributor {
+		font-size: 0.875rem;
+		font-weight: 650;
+	}
+
+	.peer-card time {
+		margin-left: auto;
+		color: var(--color-muted);
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+	}
+
+	.fact-block h3 {
+		margin: 0 0 0.35rem;
+		color: var(--color-muted);
+		font-size: 0.6875rem;
+		font-weight: 700;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+	}
+
+	.fact-block ul {
 		margin: 0;
-		padding: 0.65rem 0.7rem;
-		overflow: auto;
-		border: var(--rule);
-		background: #fff;
-		color: inherit;
-		font: 0.75rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-		white-space: pre-wrap;
-		overflow-wrap: anywhere;
+		padding: 0;
+		list-style: none;
+		display: grid;
+		gap: 0.4rem;
 	}
 
-	.resolve-form {
-		margin: 0;
+	.fact-block li {
+		display: grid;
+		gap: 0.1rem;
+	}
+
+	.fact-block strong {
+		font-size: 0.875rem;
+	}
+
+	.fact-block span,
+	.empty-facts {
+		color: var(--color-muted);
+		font-size: 0.8125rem;
 	}
 
 	.resolve-form button {
+		min-height: 2.75rem;
 		width: 100%;
-		min-height: 2.5rem;
-		padding: 0.45rem 0.7rem;
 		border: var(--rule-strong);
-		background: #fff;
-		color: var(--midnight, #0b1220);
+		background: white;
 		font: inherit;
-		font-size: 0.8125rem;
+		font-size: 0.875rem;
 		font-weight: 650;
 		cursor: pointer;
 	}
 
-	.resolve-form button:focus-visible {
-		outline: var(--focus-ring-width) solid var(--color-focus);
-		outline-offset: var(--focus-ring-offset);
-	}
+	@media (max-width: 56rem) {
+		.peer-grid {
+			grid-template-columns: 1fr;
+		}
 
-	@media (max-width: 40rem) {
 		.group-heading {
 			grid-template-columns: 1fr;
 		}

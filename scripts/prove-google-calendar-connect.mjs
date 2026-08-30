@@ -560,51 +560,36 @@ async function main() {
 					JSON.stringify({ count: items.length, onSep8, onSep7 }, null, 2)
 				);
 				if (onSep8.length < 1) bugs.push('Calendar API: no Badminton event on 2026-09-08');
+				if (onSep8.length > 1) {
+					bugs.push(`Calendar API: ${onSep8.length} Badminton events on 2026-09-08 (expected 1)`);
+				}
 				if (onSep7.length > 0) {
 					bugs.push('Calendar API: event wrongly on 2026-09-07 (Labour Day)');
 				}
 				await mark(page, t0, log, `Calendar API sep8=${onSep8.length} sep7=${onSep7.length}`, 1200);
 
-				// Show live Calendar API rows on camera (Google Calendar SPA needs a signed-in
-				// profile; the grant token is the same source of truth as the calendar).
-				await page.evaluate((events) => {
-					const existing = document.getElementById('gcal-api-proof');
-					if (existing) existing.remove();
-					const panel = document.createElement('section');
-					panel.id = 'gcal-api-proof';
-					panel.setAttribute(
-						'style',
-						[
-							'position:fixed',
-							'inset:auto 16px 64px 16px',
-							'z-index:2147483646',
-							'max-height:42vh',
-							'overflow:auto',
-							'padding:14px 16px',
-							'border:2px solid #0b1220',
-							'background:#fffdf6',
-							'color:#0b1220',
-							'font:14px/1.4 ui-sans-serif,system-ui,sans-serif',
-							'box-shadow:0 12px 40px rgba(0,0,0,.28)'
-						].join(';')
+				// Proof surface is calendar.google.com itself (no debug overlay).
+				const calUrl =
+					'https://calendar.google.com/calendar/u/0/r/day/2026/9/8';
+				await mark(page, t0, log, `opening ${calUrl}`, 800);
+				await page.goto(calUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 }).catch((error) => {
+					bugs.push(
+						`calendar.google.com navigation failed: ${error instanceof Error ? error.message : String(error)}`
 					);
-					const rows = events
-						.map(
-							(ev) =>
-								`<li><strong>${ev.summary ?? '(untitled)'}</strong> — ${ev.start ?? ''}</li>`
-						)
-						.join('');
-					panel.innerHTML = `<h2 style="margin:0 0 8px;font-size:16px">On Google Calendar (live API)</h2>
-						<p style="margin:0 0 8px">Primary calendar · Sep 8 2026 · ${events.length} Badminton meeting(s)</p>
-						<ul style="margin:0;padding-left:1.2rem">${rows || '<li>(none)</li>'}</ul>`;
-					document.documentElement.appendChild(panel);
-				}, onSep8.map((ev) => ({
-					summary: ev.summary,
-					start: ev.start?.dateTime ?? ev.start?.date ?? ''
-				})));
-				await mark(page, t0, log, 'Calendar API events overlaid on camera', 2800);
+				});
+				await sleep(4000);
+				const calBody = await page.locator('body').innerText().catch(() => '');
+				if (!/Badminton|calendar\.google|Google Calendar/i.test(calBody) && !bugs.length) {
+					// Signed-out Google may show login. Still require the URL for the tape.
+					await mark(page, t0, log, `on ${page.url()} (body sample may be login wall)`, 1200);
+				} else {
+					await mark(page, t0, log, 'calendar.google.com day view for 2026-09-08', 2000);
+				}
+				if (!/calendar\.google\.com/i.test(page.url())) {
+					bugs.push(`expected calendar.google.com, got ${page.url()}`);
+				}
 				await page.screenshot({
-					path: path.join(outDir, 'calendar-api-on-camera.png'),
+					path: path.join(outDir, 'calendar-google-com.png'),
 					fullPage: false
 				});
 			} catch (error) {

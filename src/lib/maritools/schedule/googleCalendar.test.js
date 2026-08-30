@@ -38,71 +38,60 @@ describe('googleCalendarEventBody', () => {
 });
 
 describe('insertOccurrencesIntoGoogleCalendar', () => {
+	const occurrence = {
+		title: 'Calculus II',
+		courseCode: '201-NYB-05',
+		section: '00001',
+		teacher: 'Teacher',
+		classroom: 'A-301',
+		date: '2026-09-08',
+		startTime: '09:00',
+		endTime: '10:30'
+	};
+
 	it('throws when Google rejects an insert', async () => {
-		const fetchImpl = vi.fn().mockResolvedValue(new Response('quota', { status: 403 }));
+		const fetchImpl = vi
+			.fn()
+			.mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }))
+			.mockResolvedValueOnce(new Response('quota', { status: 403 }));
 		await expect(
-			insertOccurrencesIntoGoogleCalendar(
-				[
-					{
-						title: 'Calculus II',
-						courseCode: '201-NYB-05',
-						section: '00001',
-						teacher: 'Teacher',
-						classroom: 'A-301',
-						date: '2026-09-08',
-						startTime: '09:00',
-						endTime: '10:30'
-					}
-				],
-				fetchImpl,
-				'access-token'
-			)
+			insertOccurrencesIntoGoogleCalendar([occurrence], fetchImpl, 'access-token')
 		).rejects.toThrow(/Google Calendar insert failed/);
 	});
 
-	it('inserts each occurrence through the Calendar API', async () => {
+	it('clears prior MariTools events then inserts once', async () => {
 		const fetchImpl = vi
 			.fn()
-			.mockResolvedValue(new Response('{}', { status: 200 }));
+			.mockResolvedValueOnce(
+				new Response(JSON.stringify({ items: [{ id: 'old-1' }, { id: 'old-2' }] }), {
+					status: 200
+				})
+			)
+			.mockResolvedValueOnce(new Response(null, { status: 204 }))
+			.mockResolvedValueOnce(new Response(null, { status: 204 }))
+			.mockResolvedValueOnce(new Response('{}', { status: 200 }));
 		const result = await insertOccurrencesIntoGoogleCalendar(
-			[
-				{
-					title: 'Calculus II',
-					courseCode: '201-NYB-05',
-					section: '00001',
-					teacher: 'Teacher',
-					classroom: 'A-301',
-					date: '2026-09-08',
-					startTime: '09:00',
-					endTime: '10:30'
-				}
-			],
+			[occurrence],
 			fetchImpl,
 			'access-token'
 		);
-		expect(result.inserted).toBe(1);
-		expect(fetchImpl).toHaveBeenCalledOnce();
+		expect(result).toEqual({ inserted: 1, deleted: 2 });
+		expect(fetchImpl).toHaveBeenCalledTimes(4);
+		expect(String(fetchImpl.mock.calls[0][0])).toContain('privateExtendedProperty=maritools%3D1');
+		expect(String(fetchImpl.mock.calls[3][0])).toContain('/calendars/primary/events');
+		expect(JSON.parse(String(fetchImpl.mock.calls[3][1].body)).extendedProperties.private).toEqual({
+			maritools: '1',
+			occurrenceKey: '201-NYB-05|00001|2026-09-08|09:00'
+		});
 	});
 
 	it('throws when Google Calendar insert fails', async () => {
-		const fetchImpl = vi.fn().mockResolvedValue(new Response('nope', { status: 500 }));
+		const fetchImpl = vi
+			.fn()
+			.mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }))
+			.mockResolvedValueOnce(new Response('nope', { status: 500 }));
 		await expect(
-			insertOccurrencesIntoGoogleCalendar(
-				[
-					{
-						title: 'Calculus II',
-						courseCode: '201-NYB-05',
-						section: '00001',
-						teacher: 'Teacher',
-						classroom: 'A-301',
-						date: '2026-09-08',
-						startTime: '09:00',
-						endTime: '10:30'
-					}
-				],
-				fetchImpl,
-				'access-token'
-			)
+			insertOccurrencesIntoGoogleCalendar([occurrence], fetchImpl, 'access-token')
 		).rejects.toThrow(/Google Calendar insert failed/);
 	});
 });

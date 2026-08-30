@@ -34,9 +34,10 @@ describe('semester page', () => {
 	it('accepts a PDF upload when the account is ready', () => {
 		render(SemesterPage, { props: { data: { view: { kind: 'ready' } } } });
 		expect(screen.getByLabelText('Course outline PDF')).toBeInTheDocument();
-		expect(screen.getByText('Add course outline')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Extract outline' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Upload an outline' })).toBeInTheDocument();
 		expect(screen.getByText(/Scanned image PDFs will not work/)).toBeInTheDocument();
+		expect(screen.getByText('No file selected')).toBeInTheDocument();
 	});
 
 	it('sends incomplete accounts back to finish setup', () => {
@@ -70,6 +71,10 @@ describe('semester page', () => {
 						ok: true,
 						sha256: 'ab'.repeat(32),
 						proposals: {
+							courseCode: '420-SNT-MS',
+							title: 'Web Programming',
+							section: '00001',
+							teacherName: 'Ada',
 							assessments: [{ title: 'Midterm', weight: 30, date: '2026-10-20' }],
 							books: [{ title: 'University Physics', author: 'Young', required: true }]
 						}
@@ -78,6 +83,10 @@ describe('semester page', () => {
 			}
 		});
 		expect(screen.getByDisplayValue('Midterm')).toBeInTheDocument();
+		expect(screen.getByDisplayValue('420-SNT-MS')).toBeInTheDocument();
+		expect(screen.getByDisplayValue('Web Programming')).toBeInTheDocument();
+		expect(screen.getByDisplayValue('00001')).toBeInTheDocument();
+		expect(screen.getByDisplayValue('Ada')).toBeInTheDocument();
 		expect(screen.getByText('Private unless you share.')).toBeInTheDocument();
 		expect(screen.getByText('Share course facts with the catalog')).toBeInTheDocument();
 		expect(
@@ -85,8 +94,8 @@ describe('semester page', () => {
 				'Only the course code, instructor, assessments, and book references are shared.'
 			)
 		).toBeInTheDocument();
-		const selected = screen.getByRole('button', { name: /Untitled outline/ });
-		expect(selected).toHaveTextContent('Ready to save');
+		const selected = screen.getByRole('button', { name: /Web Programming/ });
+		expect(selected).toHaveTextContent('4/4 identity');
 		expect(selected).not.toHaveClass('needs-dates');
 	});
 
@@ -173,8 +182,8 @@ describe('semester page', () => {
 				}
 			}
 		});
-		expect(screen.getByText(/date missing/)).toBeInTheDocument();
-		expect(screen.getByText(/field needs attention/)).toBeInTheDocument();
+		expect(screen.getAllByText(/date missing/i).length).toBeGreaterThan(0);
+		expect(screen.getByText('1 assessment date missing')).toBeInTheDocument();
 		fireEvent.click(screen.getByRole('button', { name: '+ Add assessment' }));
 		expect(screen.getAllByLabelText('Assessment')).toHaveLength(2);
 		fireEvent.click(screen.getAllByRole('button', { name: 'Remove assessment' })[0]);
@@ -183,38 +192,29 @@ describe('semester page', () => {
 		expect(screen.getByRole('button', { name: 'Share to catalog' })).toBeInTheDocument();
 	});
 
-	it('associates the outline file input only with the add-outline control', () => {
+	it('keeps a visible outline file control in the course stack', () => {
 		render(SemesterPage, { props: { data: { view: { kind: 'ready' } } } });
 		const input = screen.getByLabelText('Course outline PDF');
 		expect(input).toHaveAttribute('type', 'file');
 		const label = input.closest('label');
-		expect(label).toHaveClass('add-outline');
-		expect(label?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Add course outline');
+		expect(label).toHaveClass('outline-picker');
+		expect(label?.textContent).toMatch(/Course outline PDF/i);
 		expect(label?.closest('.review-sheet')).toBeNull();
 		expect(document.querySelectorAll('input[type="file"][name="outline"]')).toHaveLength(1);
-		expect(document.querySelector('.page-semester > input[type="file"]')).toBeNull();
-		expect(document.querySelector('.semester-layout > input[type="file"]')).toBeNull();
 		expect(document.querySelector('.review-sheet input[type="file"]')).toBeNull();
+		expect(screen.getByRole('button', { name: 'Extract outline' })).toBeInTheDocument();
 	});
 
-	it('keeps the add-outline label as the file input containing block', () => {
+	it('keeps the course-stack extract button styled as primary', () => {
 		const extras = readFileSync(path.join(stylesDir, 'preview-extras.css'), 'utf8');
 		const pages = readFileSync(path.join(stylesDir, 'preview-pages.css'), 'utf8');
 		const merged = readFileSync(path.join(stylesDir, 'merged-pages.css'), 'utf8');
 		const cascade = `${pages}\n${extras}\n${merged}`;
 
-		expect(extras).toMatch(
-			/\.mt-preview\s+\.add-outline\s+input\[type=['"]file['"]\]\s*\{[^}]*\binset:\s*0\b/s
-		);
+		expect(pages).toMatch(/\.course-stack\s+\.outline-picker\s*\{/);
 		expect(pages).toMatch(
 			/\.course-stack\s+\.stack-head\s+\.add-outline\s*\{[^}]*\bposition:\s*static\b/s
 		);
-
-		const relativeOverrides = [
-			...cascade.matchAll(
-				/\.mt-preview(?:\s+\.page-semester)?\s+\.course-stack\s+\.stack-head\s+\.add-outline\s*\{([^}]*)\}/g
-			)
-		].map((match) => match[1]);
-		expect(relativeOverrides.some((block) => /\bposition:\s*relative\b/.test(block))).toBe(true);
+		expect(cascade).toMatch(/\.outline-picker/);
 	});
 });

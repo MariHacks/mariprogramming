@@ -1013,6 +1013,46 @@
 		text-align: center;
 	}
 
+	.course-stack .outline-picker {
+		display: grid;
+		gap: 0.35rem;
+		width: 100%;
+		margin-top: 0.35rem;
+		color: var(--steel);
+		font-size: 0.6875rem;
+		font-weight: 650;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.course-stack .outline-picker input[type='file'] {
+		display: block;
+		width: 100%;
+		padding: 0.35rem 0;
+		border: 0;
+		background: transparent;
+		color: var(--ink);
+		font: inherit;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		letter-spacing: 0;
+		text-transform: none;
+		cursor: pointer;
+	}
+
+	.course-stack .outline-file-name {
+		color: var(--steel);
+		font-size: 0.75rem;
+		font-weight: 500;
+		letter-spacing: 0;
+		text-transform: none;
+		overflow-wrap: anywhere;
+	}
+
+	.course-stack button.is-extracting small {
+		color: var(--blue);
+	}
+
 	.stack-head span {
 		color: var(--steel);
 	}

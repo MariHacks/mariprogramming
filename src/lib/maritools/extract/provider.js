@@ -79,7 +79,7 @@ export function createOutlineExtractionProvider(options = {}) {
 						{
 							role: 'user',
 							content:
-								'Extract assessments and books as JSON with shape {"assessments":[{"title":string,"weight":number|null,"date":"YYYY-MM-DD"|null}],"books":[{"title":string,"author":string|null,"isbn":string|null,"required":boolean}]}. Use null for unknown fields. Never invent dates. Text:\n' +
+								'Extract course identity, assessments, and books as JSON with shape {"courseCode":string|null,"title":string|null,"section":string|null,"teacherName":string|null,"assessments":[{"title":string,"weight":number|null,"date":"YYYY-MM-DD"|null}],"books":[{"title":string,"author":string|null,"isbn":string|null,"required":boolean}]}. Use null for unknown fields. Never invent dates. Text:\n' +
 								input.text
 						}
 					]

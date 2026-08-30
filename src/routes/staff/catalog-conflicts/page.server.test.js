@@ -31,7 +31,7 @@ function setup(overrides = {}) {
 				documentSha256: 'a'.repeat(64),
 				structured: { books: [{ title: 'Left' }] },
 				contributorUserId: 'user-a',
-				status: 'conflict',
+				status: 'published',
 				createdAt: '2026-08-28T10:00:00.000Z',
 				updatedAt: '2026-08-28T10:00:00.000Z'
 			},
@@ -51,6 +51,9 @@ function setup(overrides = {}) {
 				updatedAt: '2026-08-28T11:00:00.000Z'
 			}
 		]),
+		getProfile: vi.fn(async (id) =>
+			id === 'user-a' ? { displayName: 'Ada' } : { displayName: 'Blake' }
+		),
 		resolveCatalogConflict: vi.fn(async (id) => ({
 			id,
 			status: 'published',
@@ -84,10 +87,15 @@ describe('staff catalog conflicts load', () => {
 		expect(result.groups).toHaveLength(1);
 		expect(result.groups[0].offeringId).toBe(OFFERING);
 		expect(result.groups[0].contributions).toHaveLength(2);
-		expect(result.groups[0].contributions.map((row) => row.structured)).toEqual([
-			{ books: [{ title: 'Left' }] },
-			{ books: [{ title: 'Right' }] }
+		expect(result.groups[0].contributions.map((row) => row.contributorDisplayName)).toEqual([
+			'Ada',
+			'Blake'
 		]);
+		expect(result.groups[0].contributions.map((row) => row.books[0].title)).toEqual([
+			'Left',
+			'Right'
+		]);
+		expect(store.getProfile).toHaveBeenCalled();
 	});
 
 	it('returns an empty unavailable queue when the store is down', async () => {

@@ -1,4 +1,5 @@
 <script>
+	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { ACADEMIC_TERMS } from '$lib/maritools/term/calendar.js';
@@ -16,16 +17,41 @@
 	let section = '';
 	let teacherName = '';
 	let contributeCatalog = false;
+	let extracting = false;
+	let selectedFileName = '';
 
 	let lastExtractionKey = '';
+
+	/** @param {unknown} value */
+	function textField(value) {
+		return typeof value === 'string' ? value.trim() : value == null ? '' : String(value).trim();
+	}
+
+	/**
+	 * @param {Record<string, unknown> | null | undefined} source
+	 */
+	function applyIdentityFromProposals(source) {
+		if (!source || typeof source !== 'object') return;
+		const nextCode = textField(source.courseCode);
+		const nextTitle = textField(source.title);
+		const nextSection = textField(source.section);
+		const nextTeacher = textField(source.teacherName ?? source.teacher);
+		if (nextCode) courseCode = nextCode;
+		if (nextTitle) title = nextTitle;
+		if (nextSection) section = nextSection;
+		if (nextTeacher) teacherName = nextTeacher;
+	}
 
 	$: extractionKey = String(form?.extraction?.sha256 ?? '');
 	$: if (form?.extraction?.proposals && extractionKey !== lastExtractionKey) {
 		lastExtractionKey = extractionKey;
+		extracting = false;
 		proposals = form.extraction.proposals;
 		if (!proposals.assessments) proposals.assessments = [];
 		if (!proposals.books) proposals.books = [];
+		applyIdentityFromProposals(/** @type {Record<string, unknown>} */ (proposals));
 	}
+	$: if (form?.error) extracting = false;
 
 	$: structuredJson = JSON.stringify({
 		assessments: proposals.assessments ?? [],
@@ -36,6 +62,16 @@
 	$: termName = ACADEMIC_TERMS.find((term) => term.id === selectedTerm)?.name ?? selectedTerm;
 	$: missingDates = (proposals.assessments ?? []).filter(
 		(row) => String(row.title ?? '').trim() && !String(row.date ?? '').trim()
+	).length;
+	$: identityFields = [
+		{ label: 'Course code', value: courseCode },
+		{ label: 'Title', value: title },
+		{ label: 'Section', value: section },
+		{ label: 'Teacher', value: teacherName }
+	];
+	$: identityFilled = identityFields.filter((field) => textField(field.value)).length;
+	$: assessmentFilled = (proposals.assessments ?? []).filter((row) =>
+		textField(row.title)
 	).length;
 	$: isReady = data.view.kind === 'ready';
 	$: gateKind = data.view.kind;
@@ -63,6 +99,26 @@
 			assessments: (proposals.assessments ?? []).filter((_, rowIndex) => rowIndex !== index)
 		};
 	}
+
+	/** @param {Event} event */
+	function onOutlineChosen(event) {
+		const input = /** @type {HTMLInputElement} */ (event.currentTarget);
+		const file = input.files?.[0] ?? null;
+		selectedFileName = file?.name ?? '';
+		if (!file) return;
+		extracting = true;
+		input.form?.requestSubmit();
+	}
+
+	function enhanceExtract() {
+		return async ({ result, update }) => {
+			extracting = false;
+			await update({ reset: false });
+			if (result.type === 'failure' || result.type === 'error') {
+				selectedFileName = '';
+			}
+		};
+	}
 </script>
 
 <svelte:head>
@@ -78,22 +134,37 @@
 		<div class="semester-layout">
 			<aside class="course-stack">
 				{#if isReady}
-					<form method="POST" action="?/extract" enctype="multipart/form-data" class="stack-head">
+					<form
+						method="POST"
+						action="?/extract"
+						enctype="multipart/form-data"
+						class="stack-head"
+						use:enhance={enhanceExtract}
+					>
 						<div>
 							<strong>{termName}</strong>
 							<span>{form?.extraction ? '1 course in review' : 'No outlines yet'}</span>
 						</div>
-						<label class="primary-button add-outline">
-							Add course outline
+						<label class="outline-picker">
+							<span class="outline-picker-label">Course outline PDF</span>
 							<input
 								type="file"
 								name="outline"
 								accept="application/pdf"
 								required
 								aria-label="Course outline PDF"
-								on:change={(event) => event.currentTarget.form?.requestSubmit()}
+								disabled={extracting}
+								on:change={onOutlineChosen}
 							/>
+							{#if selectedFileName}
+								<small class="outline-file-name">{selectedFileName}</small>
+							{:else}
+								<small class="outline-file-name">No file selected</small>
+							{/if}
 						</label>
+						<button type="submit" class="primary-button add-outline" disabled={extracting}>
+							{extracting ? 'Extracting…' : 'Extract outline'}
+						</button>
 					</form>
 				{:else}
 					<div class="stack-head">
@@ -107,11 +178,23 @@
 					</div>
 				{/if}
 
-				{#if form?.extraction}
+				{#if extracting}
+					<button type="button" class="is-selected is-extracting" disabled>
+						<span>Working</span>
+						<strong>Reading outline</strong>
+						<small>Extracting course identity and assessments…</small>
+					</button>
+				{:else if form?.extraction}
 					<button type="button" class="is-selected" class:needs-dates={missingDates > 0}>
 						<span>{courseCode || 'Course'}</span>
 						<strong>{title || 'Untitled outline'}</strong>
-						<small>{missingDates ? `${missingDates} date missing` : 'Ready to save'}</small>
+						<small
+							>{identityFilled}/4 identity · {missingDates
+								? `${missingDates} date missing`
+								: assessmentFilled
+									? `${assessmentFilled} assessment${assessmentFilled === 1 ? '' : 's'}`
+									: 'Ready to edit'}</small
+						>
 					</button>
 				{:else if !isReady}
 					<div class="stack-placeholder" aria-hidden="true">
@@ -164,6 +247,20 @@
 						</div>
 						<a class="primary-button" href={resolve('/tools/account', {})}>Open account</a>
 					</div>
+				{:else if extracting}
+					<div class="sheet-empty" role="status" aria-live="polite">
+						<div class="sheet-head">
+							<div>
+								<span>Semester</span>
+								<h2>Extracting outline</h2>
+								<p>
+									Reading {selectedFileName || 'your PDF'} and filling course identity plus
+									assessments. Stay on this page.
+								</p>
+							</div>
+						</div>
+						<p class="sheet-hint">This can take up to a minute for a long outline.</p>
+					</div>
 				{:else if !form?.extraction}
 					<div class="sheet-empty">
 						<div class="sheet-head">
@@ -176,7 +273,9 @@
 								</p>
 							</div>
 						</div>
-						<p class="sheet-hint">Use the upload control in the course list to choose a PDF.</p>
+						<p class="sheet-hint">
+							Use the course outline file control, then Extract outline.
+						</p>
 					</div>
 				{/if}
 
@@ -279,10 +378,12 @@
 							</span>
 						</label>
 						<div class="sheet-actions">
-							<span class:needs-attention={missingDates > 0}
+							<span class:needs-attention={missingDates > 0 || identityFilled < 4}
 								>{missingDates
-									? `${missingDates} field needs attention`
-									: 'Private unless you share.'}</span
+									? `${missingDates} assessment date${missingDates === 1 ? '' : 's'} missing`
+									: identityFilled < 4
+										? `${identityFilled}/4 identity fields filled`
+										: 'Private unless you share.'}</span
 							>
 							{#if contributeCatalog}
 								<button type="submit" class="primary-button">Share to catalog</button>

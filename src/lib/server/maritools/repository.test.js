@@ -698,7 +698,6 @@ describe('createMariToolsRepository', () => {
 				[{ id: OFFERING }],
 				[],
 				[{ ...published, documentSha256: OTHER_SHA, status: 'published' }],
-				undefined,
 				[{ id: REPORT, status: 'conflict' }]
 			]).publishCatalogContribution({
 				offeringId: OFFERING,
@@ -740,7 +739,13 @@ describe('createMariToolsRepository', () => {
 			MariToolsNotFoundError
 		);
 		await expect(
-			queuedRepo([[{ id: CONTRIB, offeringId: OFFERING, status: 'published' }]]).resolveCatalogConflict(
+			queuedRepo([
+				[{ id: CONTRIB, offeringId: OFFERING, status: 'published' }],
+				[]
+			]).resolveCatalogConflict(CONTRIB)
+		).resolves.toMatchObject({ id: CONTRIB, status: 'published' });
+		await expect(
+			queuedRepo([[{ id: CONTRIB, offeringId: OFFERING, status: 'withdrawn' }]]).resolveCatalogConflict(
 				CONTRIB
 			)
 		).rejects.toBeInstanceOf(MariToolsValidationError);

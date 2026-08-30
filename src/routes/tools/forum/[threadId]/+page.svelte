@@ -114,7 +114,9 @@
 					<p>{startedLine(data.thread.createdAt)}</p>
 				{/if}
 				{#if data.thread.lockedAt}
-					<p>Thread locked.</p>
+					<p class="lock-banner" role="status">
+						This thread is locked. Existing posts stay visible. New replies are closed.
+					</p>
 				{/if}
 			</header>
 

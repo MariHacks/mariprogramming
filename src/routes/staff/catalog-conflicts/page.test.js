@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 describe('staff catalog conflicts page', () => {
-	it('renders peer facts side by side for one offering', () => {
+	it('renders comparable peer facts without raw JSON or SHA', () => {
 		render(CatalogConflictsPage, {
 			data: {
 				unavailable: false,
@@ -28,21 +28,21 @@ describe('staff catalog conflicts page', () => {
 						contributions: [
 							{
 								id: CONTRIB_A,
-								documentSha256: 'a'.repeat(64),
-								structured: { books: [{ title: 'Left book' }] },
-								contributorUserId: 'user-a',
-								status: 'conflict',
+								status: 'published',
+								contributorDisplayName: 'Ada',
 								createdAt: '2026-08-28T10:00:00.000Z',
-								updatedAt: '2026-08-28T10:00:00.000Z'
+								updatedAt: '2026-08-28T10:00:00.000Z',
+								assessments: [],
+								books: [{ title: 'Left book', author: 'Author', isbn: '', required: false }]
 							},
 							{
 								id: CONTRIB_B,
-								documentSha256: 'b'.repeat(64),
-								structured: { books: [{ title: 'Right book' }] },
-								contributorUserId: 'user-b',
 								status: 'conflict',
+								contributorDisplayName: 'Blake',
 								createdAt: '2026-08-28T11:00:00.000Z',
-								updatedAt: '2026-08-28T11:00:00.000Z'
+								updatedAt: '2026-08-28T11:00:00.000Z',
+								assessments: [],
+								books: [{ title: 'Right book', author: 'Author', isbn: '', required: false }]
 							}
 						]
 					}
@@ -52,10 +52,14 @@ describe('staff catalog conflicts page', () => {
 		expect(screen.getByRole('heading', { name: 'Catalog conflicts' })).toBeInTheDocument();
 		expect(screen.getByText('420-NYA-05')).toBeInTheDocument();
 		expect(screen.getByText('Programming')).toBeInTheDocument();
-		expect(screen.getByText(/Left book/)).toBeInTheDocument();
-		expect(screen.getByText(/Right book/)).toBeInTheDocument();
-		expect(screen.getByText('2 peers')).toBeInTheDocument();
-		expect(screen.getByText(/published rows only/i)).toBeInTheDocument();
+		expect(screen.getByText('Left book')).toBeInTheDocument();
+		expect(screen.getByText('Right book')).toBeInTheDocument();
+		expect(screen.getByText('Ada')).toBeInTheDocument();
+		expect(screen.getByText('Blake')).toBeInTheDocument();
+		expect(screen.getByText('2 versions')).toBeInTheDocument();
+		expect(screen.getByText(/first share for a course publishes/i)).toBeInTheDocument();
+		expect(screen.queryByText(/aaaaaaaa/i)).not.toBeInTheDocument();
+		expect(screen.queryByText('user-a')).not.toBeInTheDocument();
 		expect(screen.getAllByRole('button', { name: 'Use these facts' })).toHaveLength(2);
 	});
 

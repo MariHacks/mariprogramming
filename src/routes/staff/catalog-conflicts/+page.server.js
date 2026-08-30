@@ -19,9 +19,31 @@ export function _createStaffCatalogConflictsHandlers(dependencies = {}) {
 		async load(event) {
 			authorize(event.locals);
 			try {
-				const rows = await createStore().listConflictCatalog();
+				const store = createStore();
+				const rows = await store.listConflictCatalog();
+				/** @type {Map<string, string | null>} */
+				const names = new Map();
+				const ids = [
+					...new Set(
+						rows
+							.map((row) =>
+								typeof row.contributorUserId === 'string' ? row.contributorUserId : null
+							)
+							.filter(Boolean)
+					)
+				];
+				await Promise.all(
+					ids.map(async (id) => {
+						try {
+							const profile = await store.getProfile(id);
+							names.set(id, profile?.displayName ?? null);
+						} catch {
+							names.set(id, null);
+						}
+					})
+				);
 				return {
-					groups: buildCatalogConflictGroups(rows),
+					groups: buildCatalogConflictGroups(rows, names),
 					unavailable: false
 				};
 			} catch (error) {
