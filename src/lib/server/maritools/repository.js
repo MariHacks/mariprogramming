@@ -1264,6 +1264,7 @@ export function createMariToolsRepository({
 						transaction
 							.select({
 								id: mtCatalogContributions.id,
+								offeringId: mtCatalogContributions.offeringId,
 								courseId: mtCourses.id,
 								termId: mtCourseOfferings.termId,
 								courseCode: mtCourses.code,
@@ -1284,6 +1285,48 @@ export function createMariToolsRepository({
 					)
 				);
 				return termId ? rows.filter((row) => row.termId === termId) : rows;
+			});
+		},
+
+		/**
+		 * Published + conflict contributions for one course (public course page).
+		 * @param {unknown} courseId
+		 */
+		async listCatalogForCourse(courseId) {
+			const id = requiredUuid(courseId);
+			return redactUnexpected(async () => {
+				const rows = asRows(
+					await transact((transaction) =>
+						transaction
+							.select({
+								id: mtCatalogContributions.id,
+								offeringId: mtCatalogContributions.offeringId,
+								courseId: mtCourses.id,
+								termId: mtCourseOfferings.termId,
+								courseCode: mtCourses.code,
+								title: mtCourses.canonicalTitle,
+								section: mtCourseOfferings.section,
+								teacherName: mtCourseOfferings.teacherName,
+								structured: mtCatalogContributions.structured,
+								status: mtCatalogContributions.status,
+								createdAt: mtCatalogContributions.createdAt
+							})
+							.from(mtCatalogContributions)
+							.innerJoin(
+								mtCourseOfferings,
+								eq(mtCatalogContributions.offeringId, mtCourseOfferings.id)
+							)
+							.innerJoin(mtCourses, eq(mtCourseOfferings.courseId, mtCourses.id))
+							.where(
+								and(
+									eq(mtCourses.id, id),
+									inArray(mtCatalogContributions.status, ['published', 'conflict'])
+								)
+							)
+							.orderBy(asc(mtCourseOfferings.section), asc(mtCatalogContributions.createdAt))
+					)
+				);
+				return rows;
 			});
 		},
 

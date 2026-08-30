@@ -106,6 +106,7 @@ export function createStudentStore(inner) {
 					})
 					.map((row) => ({
 						id: row.id,
+						offeringId: row.offeringId ?? null,
 						courseId: row.courseId ?? null,
 						termId: row.termId,
 						courseCode: row.courseCode,
@@ -115,6 +116,26 @@ export function createStudentStore(inner) {
 						structured: row.structured,
 						status: row.status
 					}));
+			});
+		},
+
+		/** @param {string} courseId */
+		listCatalogForCourse(courseId) {
+			return wrap(async () => {
+				const rows = await inner.listCatalogForCourse(courseId);
+				return rows.map((row) => ({
+					id: row.id,
+					offeringId: row.offeringId ?? null,
+					courseId: row.courseId ?? null,
+					termId: row.termId,
+					courseCode: row.courseCode,
+					title: row.title,
+					section: row.section,
+					teacherName: row.teacherName,
+					structured: row.structured,
+					status: row.status,
+					createdAt: row.createdAt ?? null
+				}));
 			});
 		},
 

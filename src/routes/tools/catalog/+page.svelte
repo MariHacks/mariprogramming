@@ -137,9 +137,25 @@
 				</div>
 				{#each sortedEntries as entry (entry.id)}
 					<article class="catalog-row" class:catalog-row--open={openEntryId === entry.id}>
-						<strong class="course-code">{entry.courseCode}</strong>
+						<strong class="course-code">
+							{#if entry.courseId}
+								<a href={resolve('/tools/catalog/[courseId]', { courseId: entry.courseId })}
+									>{entry.courseCode}</a
+								>
+							{:else}
+								{entry.courseCode}
+							{/if}
+						</strong>
 						<div>
-							<h2>{entry.title}</h2>
+							<h2>
+								{#if entry.courseId}
+									<a href={resolve('/tools/catalog/[courseId]', { courseId: entry.courseId })}
+										>{entry.title}</a
+									>
+								{:else}
+									{entry.title}
+								{/if}
+							</h2>
 							<p>{entrySummary(entry)}</p>
 						</div>
 						<span>{disciplineFromCourseCode(entry.courseCode)}</span>
