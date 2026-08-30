@@ -7,6 +7,7 @@ import {
 	MariToolsUnavailableError as RepoUnavailableError,
 	MariToolsValidationError,
 	createMariToolsRepository,
+	publicProfileCard,
 	publicStudentView
 } from './repository.js';
 import { MaritoolsInputError, MaritoolsUnavailableError } from './student-store.js';
@@ -70,9 +71,15 @@ async function withAuthorDisplayNames(inner, rows) {
 	});
 }
 
+/** @param {unknown} authorUserId */
+function authorProfileHref(authorUserId) {
+	return typeof authorUserId === 'string' && authorUserId ? `/tools/people/${authorUserId}` : null;
+}
+
 /** @param {any} thread */
 export function publicThreadView(thread) {
 	if (!thread || typeof thread !== 'object') return null;
+	const authorUserId = typeof thread.authorUserId === 'string' ? thread.authorUserId : null;
 	return {
 		id: thread.id,
 		title: thread.title,
@@ -84,6 +91,8 @@ export function publicThreadView(thread) {
 		createdAt: thread.createdAt,
 		lockedAt: thread.lockedAt ?? null,
 		removedAt: thread.removedAt ?? null,
+		authorUserId,
+		authorProfileHref: authorProfileHref(authorUserId),
 		authorDisplayName: normalizeAuthorDisplayName(thread.authorDisplayName)
 	};
 }
@@ -91,12 +100,15 @@ export function publicThreadView(thread) {
 /** @param {any} reply */
 export function publicReplyView(reply) {
 	if (!reply || typeof reply !== 'object') return null;
+	const authorUserId = typeof reply.authorUserId === 'string' ? reply.authorUserId : null;
 	return {
 		id: reply.id,
 		threadId: reply.threadId,
 		body: reply.body,
 		createdAt: reply.createdAt,
 		removedAt: reply.removedAt ?? null,
+		authorUserId,
+		authorProfileHref: authorProfileHref(authorUserId),
 		authorDisplayName: normalizeAuthorDisplayName(reply.authorDisplayName)
 	};
 }
@@ -403,11 +415,44 @@ export function createCommunityStore(inner) {
 			return wrap(async () => publicReplyView(await inner.removeReply(id)));
 		},
 
+		/**
+		 * @param {string} userId
+		 * @param {{ days?: number }} [opts]
+		 */
+		muteUser(userId, opts = {}) {
+			const days = Math.min(Math.max(Number(opts.days) || 7, 1), 365);
+			const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+			return wrap(async () => publicStudentView(await inner.muteUser(userId, until)));
+		},
+
+		/** @param {string} userId */
+		banUser(userId) {
+			return wrap(async () => publicStudentView(await inner.banUser(userId)));
+		},
+
+		/** @param {string} userId */
+		listThreadsByAuthor(userId) {
+			return wrap(async () => {
+				const rows = await inner.listThreadsByAuthor(userId);
+				const enriched = await withAuthorDisplayNames(inner, rows);
+				return enriched.map((row) => publicThreadView(row)).filter(Boolean);
+			});
+		},
+
 		/** @param {string} userId */
 		getProfile(userId) {
 			return wrap(async () => {
 				const row = await inner.getStudentProfile(userId);
 				return row ? publicStudentView(row) : null;
+			});
+		},
+
+		/** Public card for /tools/people/[userId] (no student number). */
+		/** @param {string} userId */
+		getPublicProfile(userId) {
+			return wrap(async () => {
+				const row = await inner.getStudentProfile(userId);
+				return row ? publicProfileCard(row) : null;
 			});
 		},
 

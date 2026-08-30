@@ -13,6 +13,7 @@ import {
 	fall2026TermSeed,
 	isUniqueViolation,
 	publicOutlineView,
+	publicProfileCard,
 	publicStudentView,
 	resolveCatalogContributionStatus,
 	sha256Hex,
@@ -115,6 +116,30 @@ describe('maritools repository helpers', () => {
 		expect(JSON.stringify(view)).not.toContain('2530622');
 		expect(publicStudentView({ userId: 'u1', role: 'staff' }).displayName).toBe(null);
 		expect(() => publicStudentView(null)).toThrow(MariToolsValidationError);
+		expect(
+			publicProfileCard({
+				userId: 'u1',
+				displayName: 'Ada',
+				role: 'student',
+				studentId: '2530622',
+				bannedAt: new Date()
+			})
+		).toMatchObject({
+			userId: 'u1',
+			displayName: 'Ada',
+			role: 'student',
+			isRestricted: true
+		});
+		expect(
+			JSON.stringify(
+				publicProfileCard({
+					userId: 'u1',
+					displayName: 'Ada',
+					role: 'student',
+					studentId: '2530622'
+				})
+			)
+		).not.toContain('2530622');
 		const outline = publicOutlineView({
 			id: 'd1',
 			userId: 'u1',
@@ -763,24 +788,24 @@ describe('createMariToolsRepository', () => {
 			})
 		).rejects.toBeInstanceOf(MariToolsUnavailableError);
 		await expect(
-			queuedRepo([[]]).createReply({ threadId: THREAD, authorUserId: USER, body: 'hi' })
+			queuedRepo([[], []]).createReply({ threadId: THREAD, authorUserId: USER, body: 'hi' })
 		).rejects.toBeInstanceOf(MariToolsNotFoundError);
 		await expect(
-			queuedRepo([[{ id: THREAD, removedAt: new Date() }]]).createReply({
+			queuedRepo([[], [{ id: THREAD, removedAt: new Date() }]]).createReply({
 				threadId: THREAD,
 				authorUserId: USER,
 				body: 'hi'
 			})
 		).rejects.toBeInstanceOf(MariToolsNotFoundError);
 		await expect(
-			queuedRepo([[{ id: THREAD, lockedAt: new Date(), removedAt: null }]]).createReply({
+			queuedRepo([[], [{ id: THREAD, lockedAt: new Date(), removedAt: null }]]).createReply({
 				threadId: THREAD,
 				authorUserId: USER,
 				body: 'hi'
 			})
 		).rejects.toBeInstanceOf(MariToolsConflictError);
 		await expect(
-			queuedRepo([[{ id: THREAD, lockedAt: null, removedAt: null }], []]).createReply({
+			queuedRepo([[], [{ id: THREAD, lockedAt: null, removedAt: null }], []]).createReply({
 				threadId: THREAD,
 				authorUserId: USER,
 				body: 'hi'
@@ -795,6 +820,24 @@ describe('createMariToolsRepository', () => {
 		await expect(
 			queuedRepo([[{ id: THREAD, lockedAt: null }], []]).lockThread(THREAD)
 		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		const until = new Date(Date.now() + 86400000);
+		await expect(queuedRepo([[]]).muteUser(USER, until)).rejects.toBeInstanceOf(
+			MariToolsNotFoundError
+		);
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student', studentId: '2530622' }],
+				[{ userId: USER, role: 'student', mutedUntil: until }]
+			]).muteUser(USER, until)
+		).resolves.toMatchObject({ userId: USER, mutedUntil: until });
+		await expect(queuedRepo([[]]).banUser(USER)).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student', studentId: '2530622' }],
+				[{ userId: USER, role: 'student', bannedAt: new Date() }]
+			]).banUser(USER)
+		).resolves.toMatchObject({ userId: USER });
+		await expect(queuedRepo([[]]).listThreadsByAuthor(USER)).resolves.toEqual([]);
 		await expect(queuedRepo([[]]).removeThread(THREAD)).rejects.toBeInstanceOf(
 			MariToolsNotFoundError
 		);

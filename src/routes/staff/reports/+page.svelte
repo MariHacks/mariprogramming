@@ -29,12 +29,21 @@
 	}
 
 	/** @param {string} kind */
-	function targetLabel(kind) {
+	function targetKindLabel(kind) {
 		return kind === 'reply' ? 'Reply' : 'Thread';
 	}
 
-	/** Soft-submit so Resolve/Dismiss remove the row without a full document reload. */
-	function enhanceStatus() {
+	/** @param {string} filter */
+	function queueTitle(filter) {
+		if (filter === 'all') return 'All reports';
+		if (filter === 'open') return 'Open reports';
+		if (filter === 'resolved') return 'Resolved reports';
+		if (filter === 'dismissed') return 'Dismissed reports';
+		return 'Reports';
+	}
+
+	/** Soft-submit so queue actions remove the row without a full document reload. */
+	function enhanceQueue() {
 		return async (
 			/** @type {{ formData: FormData, result: import('@sveltejs/kit').ActionResult }} */ {
 				formData,
@@ -51,7 +60,7 @@
 			try {
 				await applyAction(result);
 			} catch {
-				// Local queue already reflects the committed status change.
+				// Local queue already reflects the committed change.
 			}
 			if (result.type === 'success') {
 				try {
@@ -73,7 +82,10 @@
 		<div>
 			<p class="eyebrow">Forum moderation</p>
 			<h1>Reports</h1>
-			<p class="heading-note">Queued forum reports filed by signed-in students.</p>
+			<p class="heading-note">
+				Open reports can lock the thread, mute or ban the author, or resolve or dismiss the stamp
+				alone.
+			</p>
 		</div>
 	</header>
 
@@ -98,9 +110,7 @@
 		<section class="queue" aria-labelledby="queue-title">
 			<header class="queue-heading">
 				<div>
-					<h2 id="queue-title">
-						{data.statusFilter === 'all' ? 'All reports' : `${data.statusFilter} reports`}
-					</h2>
+					<h2 id="queue-title">{queueTitle(data.statusFilter)}</h2>
 					<p>
 						{reports.length}
 						{reports.length === 1 ? 'report' : 'reports'}
@@ -117,59 +127,96 @@
 					{/if}
 				</div>
 			{:else}
-				<div class="report-columns" aria-hidden="true">
-					<span>Target</span>
-					<span>Reason</span>
-					<span>Reporter</span>
-					<span>Status</span>
-					<span>Filed</span>
-					<span>Actions</span>
+				<div class="table-scroll">
+					<table class="report-table">
+						<thead>
+							<tr>
+								<th scope="col">Target</th>
+								<th scope="col">Reason</th>
+								<th scope="col">Reporter</th>
+								<th scope="col">Status</th>
+								<th scope="col">Filed</th>
+								<th scope="col">Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each reports as report (report.id)}
+								<tr data-report-reason={report.reason} data-report-id={report.id}>
+									<td>
+										<div class="target-cell">
+											<span class="kind">{targetKindLabel(report.targetKind)}</span>
+											{#if report.href && report.threadId}
+												<a
+													class="target-title"
+													href={resolve('/tools/forum/[threadId]', {
+														threadId: report.threadId
+													})}>{report.targetTitle}</a
+												>
+											{:else}
+												<span class="target-title">{report.targetTitle}</span>
+											{/if}
+											{#if report.subjectProfileHref}
+												<a class="subject" href={report.subjectProfileHref}
+													>by {report.subjectDisplayName || 'Student'}</a
+												>
+											{:else if report.subjectDisplayName}
+												<span class="subject">by {report.subjectDisplayName}</span>
+											{/if}
+										</div>
+									</td>
+									<td>{report.reason}</td>
+									<td>
+										<a class="person-link" href={report.reporterProfileHref}
+											>{report.reporterDisplayName}</a
+										>
+									</td>
+									<td>
+										<span class="status status-{report.status}">{report.status}</span>
+									</td>
+									<td>
+										<time datetime={report.createdAt}>{localDate(report.createdAt)}</time>
+									</td>
+									<td>
+										<div class="report-actions">
+											{#if report.href && report.threadId}
+												<a
+													class="text-action"
+													href={resolve('/tools/forum/[threadId]', {
+														threadId: report.threadId
+													})}
+													aria-label={`Open ${targetKindLabel(report.targetKind).toLowerCase()}`}
+													>Open</a
+												>
+											{:else}
+												<span class="text-action unavailable">Missing</span>
+											{/if}
+											{#if report.status === 'open'}
+												<form method="post" class="action-row" use:enhance={enhanceQueue}>
+													<input type="hidden" name="reportId" value={report.id} />
+													<input type="hidden" name="threadId" value={report.threadId ?? ''} />
+													<input
+														type="hidden"
+														name="subjectUserId"
+														value={report.subjectUserId ?? ''}
+													/>
+													{#if report.threadId}
+														<button type="submit" formaction="?/lockThread">Lock</button>
+													{/if}
+													{#if report.subjectUserId}
+														<button type="submit" formaction="?/muteAuthor">Mute</button>
+														<button type="submit" formaction="?/banAuthor">Ban</button>
+													{/if}
+													<button type="submit" formaction="?/resolve">Resolve</button>
+													<button type="submit" formaction="?/dismiss">Dismiss</button>
+												</form>
+											{/if}
+										</div>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
 				</div>
-				<ol class="report-list">
-					{#each reports as report (report.id)}
-						<li data-report-reason={report.reason} data-report-id={report.id}>
-							<div class="report-identity">
-								<strong>{targetLabel(report.targetKind)}</strong>
-								<span class="mono">{report.targetId}</span>
-							</div>
-							<div class="report-cell reason">
-								<span class="cell-label">Reason</span>
-								<span>{report.reason}</span>
-							</div>
-							<div class="report-cell">
-								<span class="cell-label">Reporter</span>
-								<span class="mono">{report.reporterUserId}</span>
-							</div>
-							<div class="report-cell">
-								<span class="cell-label">Status</span>
-								<span class="status status-{report.status}">{report.status}</span>
-							</div>
-							<div class="report-cell filed">
-								<span class="cell-label">Filed</span>
-								<time datetime={report.createdAt}>{localDate(report.createdAt)}</time>
-							</div>
-							<div class="report-actions">
-								{#if report.href}
-									<a
-										class="open-target"
-										href={resolve('/tools/forum/[threadId]', { threadId: report.threadId })}
-										aria-label={`Open ${targetLabel(report.targetKind).toLowerCase()}`}
-										>Open {targetLabel(report.targetKind).toLowerCase()}</a
-									>
-								{:else}
-									<span class="open-target unavailable">Target missing</span>
-								{/if}
-								{#if report.status === 'open'}
-									<form method="post" class="status-actions" use:enhance={enhanceStatus}>
-										<input type="hidden" name="reportId" value={report.id} />
-										<button type="submit" formaction="?/resolve">Resolve</button>
-										<button type="submit" formaction="?/dismiss">Dismiss</button>
-									</form>
-								{/if}
-							</div>
-						</li>
-					{/each}
-				</ol>
 			{/if}
 		</section>
 	{/if}
@@ -206,6 +253,7 @@
 		margin-top: 0.45rem;
 		color: var(--color-muted);
 		font-size: 0.875rem;
+		max-width: 40rem;
 	}
 
 	.filters {
@@ -283,46 +331,38 @@
 		font-size: 0.875rem;
 	}
 
-	.report-columns,
-	.report-list li {
-		display: grid;
-		grid-template-columns:
-			minmax(10rem, 1.1fr) minmax(12rem, 1.6fr) minmax(8rem, 0.9fr) minmax(5.5rem, 0.55fr)
-			minmax(9rem, 0.9fr) minmax(11rem, 1.1fr);
-		gap: 1rem;
-		align-items: center;
-	}
-
-	.report-actions {
-		display: grid;
-		gap: 0.45rem;
-		justify-items: end;
-	}
-
-	.status-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		justify-content: flex-end;
-	}
-
-	.status-actions button {
-		min-height: 2.75rem;
-		padding: 0.45rem 0.75rem;
-		border: var(--rule-strong);
-		border-radius: 0;
-		background: white;
-		color: var(--midnight);
-		font: inherit;
-		font-size: 0.8125rem;
-		font-weight: 650;
-		cursor: pointer;
-	}
-
-	.report-columns {
-		padding: 0.65rem 0;
+	.table-scroll {
+		width: 100%;
+		overflow-x: auto;
 		border-top: var(--rule-strong);
+	}
+
+	.report-table {
+		width: 100%;
+		min-width: 56rem;
+		border-collapse: collapse;
+		table-layout: fixed;
+	}
+
+	.report-table th,
+	.report-table td {
+		padding: 0.85rem 0.75rem;
 		border-bottom: var(--rule);
+		text-align: left;
+		vertical-align: middle;
+	}
+
+	.report-table th:first-child,
+	.report-table td:first-child {
+		padding-left: 0;
+	}
+
+	.report-table th:last-child,
+	.report-table td:last-child {
+		padding-right: 0;
+	}
+
+	.report-table th {
 		color: var(--color-muted);
 		font-size: 0.6875rem;
 		font-weight: 700;
@@ -330,48 +370,83 @@
 		text-transform: uppercase;
 	}
 
-	.report-list {
-		margin: 0;
-		padding: 0;
-		list-style: none;
+	.report-table th:nth-child(1),
+	.report-table td:nth-child(1) {
+		width: 22%;
 	}
 
-	.report-list li {
-		min-height: 4.25rem;
-		padding-block: 0.7rem;
-		border-bottom: var(--rule);
+	.report-table th:nth-child(2),
+	.report-table td:nth-child(2) {
+		width: 20%;
 	}
 
-	.report-identity,
-	.report-cell {
+	.report-table th:nth-child(3),
+	.report-table td:nth-child(3) {
+		width: 12%;
+	}
+
+	.report-table th:nth-child(4),
+	.report-table td:nth-child(4) {
+		width: 9%;
+	}
+
+	.report-table th:nth-child(5),
+	.report-table td:nth-child(5) {
+		width: 14%;
+	}
+
+	.report-table th:nth-child(6),
+	.report-table td:nth-child(6) {
+		width: 23%;
+	}
+
+	.target-cell {
 		display: grid;
-		gap: 0.18rem;
+		gap: 0.15rem;
 		min-width: 0;
 	}
 
-	.report-identity strong {
-		font-size: 0.875rem;
-	}
-
-	.mono,
-	.filed time {
-		color: var(--color-muted);
-		font-family: var(--font-mono);
-		font-size: 0.75rem;
-		overflow-wrap: anywhere;
-	}
-
-	.reason span:last-child {
-		font-size: 0.875rem;
-	}
-
-	.cell-label {
-		display: none;
+	.kind {
 		color: var(--color-muted);
 		font-size: 0.6875rem;
 		font-weight: 700;
-		letter-spacing: 0.07em;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
+	}
+
+	.target-title {
+		color: inherit;
+		font-size: 0.875rem;
+		font-weight: 650;
+		text-decoration: none;
+		overflow-wrap: anywhere;
+	}
+
+	a.target-title {
+		color: var(--club-blue);
+	}
+
+	.subject {
+		color: var(--color-muted);
+		font-size: 0.75rem;
+		text-decoration: none;
+	}
+
+	a.subject {
+		color: var(--club-blue);
+	}
+
+	.person-link {
+		color: var(--club-blue);
+		font-size: 0.875rem;
+		font-weight: 650;
+		text-decoration: none;
+	}
+
+	.report-table time {
+		color: var(--color-muted);
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
 	}
 
 	.status {
@@ -397,21 +472,49 @@
 		color: #8d1b32;
 	}
 
-	.open-target {
-		display: inline-flex;
+	.report-actions {
+		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		justify-content: flex-end;
-		min-height: 2.25rem;
-		color: var(--club-blue);
-		font-size: 0.875rem;
-		font-weight: 650;
-		text-decoration: none;
+		gap: 0.35rem;
 	}
 
-	.open-target.unavailable {
+	.action-row {
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.35rem;
+	}
+
+	.action-row button,
+	.text-action {
+		min-height: 2.25rem;
+		padding: 0.35rem 0.55rem;
+		border: var(--rule-strong);
+		border-radius: 0;
+		background: white;
+		color: var(--midnight);
+		font: inherit;
+		font-size: 0.75rem;
+		font-weight: 650;
+		cursor: pointer;
+		text-decoration: none;
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.text-action {
+		border-color: transparent;
+		color: var(--club-blue);
+		padding-inline: 0.35rem;
+	}
+
+	.text-action.unavailable {
 		color: var(--color-muted);
 		font-weight: 500;
-		justify-content: flex-end;
+		cursor: default;
 	}
 
 	.empty-state {
@@ -436,64 +539,19 @@
 
 	.filters button:focus-visible,
 	.filters select:focus-visible,
-	.open-target:focus-visible,
+	.person-link:focus-visible,
+	.target-title:focus-visible,
+	.subject:focus-visible,
+	.text-action:focus-visible,
 	.inline-action:focus-visible,
-	.status-actions button:focus-visible {
+	.action-row button:focus-visible {
 		outline: var(--focus-ring-width) solid var(--color-focus);
 		outline-offset: var(--focus-ring-offset);
 	}
 
-	@media (max-width: 72rem) {
-		.report-columns {
-			display: none;
-		}
-
-		.report-list li {
-			grid-template-columns: minmax(10rem, 1.2fr) minmax(10rem, 1.4fr) minmax(7rem, 0.8fr) minmax(
-					11rem,
-					1fr
-				);
-		}
-
-		.filed {
-			grid-column: 1 / -1;
-			grid-row: 2;
-		}
-	}
-
 	@media (max-width: 48rem) {
-		.report-list li {
-			grid-template-columns: 1fr 1fr;
-			gap: 1rem;
-		}
-
-		.report-identity,
-		.reason,
-		.filed,
-		.report-actions {
-			grid-column: 1 / -1;
-		}
-
-		.filed {
-			grid-row: auto;
-		}
-
-		.cell-label {
-			display: block;
-		}
-
-		.report-actions {
-			justify-items: start;
-		}
-
-		.status-actions {
-			justify-content: flex-start;
-		}
-
-		.open-target,
-		.open-target.unavailable {
-			justify-content: flex-start;
-			width: fit-content;
+		.report-table {
+			min-width: 40rem;
 		}
 	}
 </style>

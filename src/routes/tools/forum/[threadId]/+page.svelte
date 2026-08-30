@@ -122,7 +122,13 @@
 				<article class="post origin">
 					<aside>
 						<span class="post-avatar">{authorInitials(data.thread.authorDisplayName)}</span>
-						<strong>{authorLabel(data.thread.authorDisplayName)}</strong>
+						{#if data.thread.authorProfileHref}
+							<a class="author-link" href={data.thread.authorProfileHref}
+								><strong>{authorLabel(data.thread.authorDisplayName)}</strong></a
+							>
+						{:else}
+							<strong>{authorLabel(data.thread.authorDisplayName)}</strong>
+						{/if}
 						<small>Original poster</small>
 					</aside>
 					<div class="post-body">
@@ -206,7 +212,13 @@
 								<span class="post-avatar post-avatar--blue"
 									>{authorInitials(reply.authorDisplayName)}</span
 								>
-								<strong>{authorLabel(reply.authorDisplayName)}</strong>
+								{#if reply.authorProfileHref}
+									<a class="author-link" href={reply.authorProfileHref}
+										><strong>{authorLabel(reply.authorDisplayName)}</strong></a
+									>
+								{:else}
+									<strong>{authorLabel(reply.authorDisplayName)}</strong>
+								{/if}
 								<small>Reply</small>
 							</aside>
 							<div class="post-body">

@@ -3,6 +3,7 @@ import pg from 'pg';
 import migrationSql0008 from '../../../../drizzle/0008_maritools_persistence.sql?raw';
 import migrationSql0009 from '../../../../drizzle/0009_google_calendar_grants.sql?raw';
 import migrationSql0010 from '../../../../drizzle/0010_free_time_boards.sql?raw';
+import migrationSql0011 from '../../../../drizzle/0011_moderation_mutes_bans.sql?raw';
 import { readRuntimeEnvironment } from '../config/environment.js';
 import { createMariToolsRepository } from './repository.js';
 
@@ -45,7 +46,16 @@ function grantRuntimeTablesSql(tables) {
 	`;
 }
 
-/** @type {Array<{ sentinel: string, sql: string, grantTables: string[] }>} */
+/**
+ * @typedef {{
+ *   sentinel: string,
+ *   column?: string,
+ *   sql: string,
+ *   grantTables: string[]
+ * }} IncrementalMigration
+ */
+
+/** @type {IncrementalMigration[]} */
 const INCREMENTAL_MIGRATIONS = [
 	{
 		sentinel: 'mt_academic_terms',
@@ -61,6 +71,12 @@ const INCREMENTAL_MIGRATIONS = [
 		sentinel: 'mt_free_time_boards',
 		sql: migrationSql0010,
 		grantTables: ['mt_free_time_boards', 'mt_free_time_members']
+	},
+	{
+		sentinel: 'mt_student_profiles',
+		column: 'muted_until',
+		sql: migrationSql0011,
+		grantTables: []
 	}
 ];
 
@@ -78,6 +94,29 @@ export function createDefaultMariToolsPool(databaseUrl) {
 	return new pg.Pool({ connectionString: databaseUrl, max: 1 });
 }
 
+/**
+ * @param {pg.PoolClient} client
+ * @param {IncrementalMigration} migration
+ */
+async function migrationAlreadyApplied(client, migration) {
+	if (migration.column) {
+		const existing = await client.query(
+			`SELECT 1 AS ok
+			 FROM information_schema.columns
+			 WHERE table_schema = 'public'
+			   AND table_name = $1
+			   AND column_name = $2
+			 LIMIT 1`,
+			[migration.sentinel, migration.column]
+		);
+		return Boolean(existing.rows[0]);
+	}
+	const existing = await client.query(
+		`SELECT to_regclass('public.${migration.sentinel}')::text AS table_name`
+	);
+	return Boolean(existing.rows[0] && existing.rows[0].table_name);
+}
+
 export async function ensureMariToolsSchema(databaseUrl, dependencies = {}) {
 	const createPool = dependencies.createPool ?? createDefaultMariToolsPool;
 	const pool = createPool(databaseUrl);
@@ -86,11 +125,7 @@ export async function ensureMariToolsSchema(databaseUrl, dependencies = {}) {
 	try {
 		client = await pool.connect();
 		for (const migration of INCREMENTAL_MIGRATIONS) {
-			const existing = await client.query(
-				`SELECT to_regclass('public.${migration.sentinel}')::text AS table_name`
-			);
-			const tableName = existing.rows[0] && existing.rows[0].table_name;
-			if (tableName) continue;
+			if (await migrationAlreadyApplied(client, migration)) continue;
 
 			const statements = splitMigrationStatements(migration.sql);
 			if (statements.length === 0) {
@@ -101,7 +136,9 @@ export async function ensureMariToolsSchema(databaseUrl, dependencies = {}) {
 				for (const statement of statements) {
 					await client.query(statement);
 				}
-				await client.query(grantRuntimeTablesSql(migration.grantTables));
+				if (migration.grantTables.length > 0) {
+					await client.query(grantRuntimeTablesSql(migration.grantTables));
+				}
 				await client.query('COMMIT');
 			} catch (error) {
 				try {

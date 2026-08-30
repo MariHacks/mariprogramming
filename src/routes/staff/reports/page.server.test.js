@@ -16,6 +16,7 @@ const STAFF = Object.freeze({
 const THREAD = '20000000-0000-4000-8000-000000000001';
 const REPLY = '30000000-0000-4000-8000-000000000001';
 const REPORT = '40000000-0000-4000-8000-000000000001';
+const AUTHOR = 'author-1';
 
 function setup(overrides = {}) {
 	const store = {
@@ -31,12 +32,27 @@ function setup(overrides = {}) {
 				createdAt: new Date('2026-08-28T16:00:00.000Z')
 			}
 		]),
-		getReply: vi.fn(async () => ({ id: REPLY, threadId: THREAD })),
+		getReply: vi.fn(async () => ({
+			id: REPLY,
+			threadId: THREAD,
+			authorUserId: AUTHOR,
+			authorDisplayName: 'Ada'
+		})),
+		getThread: vi.fn(async () => ({
+			id: THREAD,
+			title: 'Quiet study hall',
+			authorUserId: AUTHOR,
+			authorDisplayName: 'Ada'
+		})),
+		getProfile: vi.fn(async () => ({ displayName: 'Blake' })),
 		setReportStatus: vi.fn(async (id, status) => ({
 			id,
 			status,
 			resolvedAt: new Date('2026-08-28T19:00:00.000Z')
 		})),
+		lockThread: vi.fn(async (id) => ({ id, lockedAt: new Date() })),
+		muteUser: vi.fn(async (id) => ({ userId: id, isMuted: true })),
+		banUser: vi.fn(async (id) => ({ userId: id, isBanned: true })),
 		...overrides.store
 	};
 	const handlers = _createStaffReportsHandlers({
@@ -59,25 +75,22 @@ function actionEvent({ locals = { staff: STAFF }, form = {} } = {}) {
 describe('staff reports load', () => {
 	it('authorizes staff and lists open reports by default', async () => {
 		const { handlers, store } = setup();
-		await expect(
-			handlers.load({ locals: { staff: STAFF }, url: new URL('https://club.example.com/staff/reports') })
-		).resolves.toEqual({
-			reports: [
-				{
-					id: REPORT,
-					targetKind: 'thread',
-					targetId: THREAD,
-					threadId: THREAD,
-					reporterUserId: 'reporter-1',
-					reason: 'spam',
-					status: 'open',
-					resolvedAt: null,
-					createdAt: '2026-08-28T16:00:00.000Z',
-					href: `/tools/forum/${THREAD}`
-				}
-			],
+		const result = await handlers.load({
+			locals: { staff: STAFF },
+			url: new URL('https://club.example.com/staff/reports')
+		});
+		expect(result).toMatchObject({
 			statusFilter: 'open',
 			unavailable: false
+		});
+		expect(result.reports[0]).toMatchObject({
+			id: REPORT,
+			targetTitle: 'Quiet study hall',
+			reporterDisplayName: 'Blake',
+			subjectDisplayName: 'Ada',
+			subjectUserId: AUTHOR,
+			href: `/tools/forum/${THREAD}`,
+			subjectProfileHref: `/tools/people/${AUTHOR}`
 		});
 		expect(store.listReports).toHaveBeenCalledWith({ status: 'open' });
 	});
@@ -124,8 +137,7 @@ describe('staff reports load', () => {
 						resolvedAt: null,
 						createdAt: new Date('2026-08-28T17:00:00.000Z')
 					}
-				]),
-				getReply: vi.fn(async () => ({ id: REPLY, threadId: THREAD }))
+				])
 			}
 		});
 		const result = await handlers.load({
@@ -135,7 +147,8 @@ describe('staff reports load', () => {
 		expect(result.reports[0]).toMatchObject({
 			targetKind: 'reply',
 			threadId: THREAD,
-			href: `/tools/forum/${THREAD}`
+			href: `/tools/forum/${THREAD}`,
+			subjectUserId: AUTHOR
 		});
 		expect(store.getReply).toHaveBeenCalledWith(REPLY);
 	});
@@ -197,6 +210,39 @@ describe('staff reports actions', () => {
 			handlers.actions.dismiss(actionEvent({ form: { reportId: REPORT } }))
 		).resolves.toEqual({ updated: true, status: 'dismissed' });
 		expect(store.setReportStatus).toHaveBeenCalledWith(REPORT, 'dismissed');
+	});
+
+	it('locks the thread then resolves the report', async () => {
+		const { handlers, store } = setup();
+		await expect(
+			handlers.actions.lockThread(
+				actionEvent({ form: { reportId: REPORT, threadId: THREAD, subjectUserId: AUTHOR } })
+			)
+		).resolves.toEqual({ updated: true, status: 'resolved', moderation: 'lock' });
+		expect(store.lockThread).toHaveBeenCalledWith(THREAD);
+		expect(store.setReportStatus).toHaveBeenCalledWith(REPORT, 'resolved');
+	});
+
+	it('mutes the author then resolves the report', async () => {
+		const { handlers, store } = setup();
+		await expect(
+			handlers.actions.muteAuthor(
+				actionEvent({ form: { reportId: REPORT, threadId: THREAD, subjectUserId: AUTHOR } })
+			)
+		).resolves.toEqual({ updated: true, status: 'resolved', moderation: 'mute' });
+		expect(store.muteUser).toHaveBeenCalledWith(AUTHOR, { days: 7 });
+		expect(store.setReportStatus).toHaveBeenCalledWith(REPORT, 'resolved');
+	});
+
+	it('bans the author then resolves the report', async () => {
+		const { handlers, store } = setup();
+		await expect(
+			handlers.actions.banAuthor(
+				actionEvent({ form: { reportId: REPORT, threadId: THREAD, subjectUserId: AUTHOR } })
+			)
+		).resolves.toEqual({ updated: true, status: 'resolved', moderation: 'ban' });
+		expect(store.banUser).toHaveBeenCalledWith(AUTHOR);
+		expect(store.setReportStatus).toHaveBeenCalledWith(REPORT, 'resolved');
 	});
 
 	it('rejects a missing report id', async () => {

@@ -81,6 +81,21 @@ function unavailable() {
 	throw new MariToolsUnavailableError();
 }
 
+/**
+ * @param {any} transaction
+ * @param {string} userId
+ */
+async function assertPosterAllowed(transaction, userId) {
+	const profile = oneRow(
+		await transaction.select().from(mtStudentProfiles).where(eq(mtStudentProfiles.userId, userId))
+	);
+	if (!profile) return;
+	if (profile.bannedAt) return conflict();
+	if (profile.mutedUntil instanceof Date && profile.mutedUntil.getTime() > Date.now()) {
+		return conflict();
+	}
+}
+
 /** @param {Buffer | Uint8Array | string} input */
 export function sha256Hex(input) {
 	const buffer = typeof input === 'string' ? Buffer.from(input) : Buffer.from(input);
@@ -140,11 +155,33 @@ export function resolveCatalogContributionStatus(
 /** @param {any} profile */
 export function publicStudentView(profile) {
 	if (profile === null || typeof profile !== 'object') return invalid();
+	const mutedUntil = profile.mutedUntil ?? null;
+	const bannedAt = profile.bannedAt ?? null;
+	const mutedActive =
+		mutedUntil instanceof Date
+			? mutedUntil.getTime() > Date.now()
+			: typeof mutedUntil === 'string' && new Date(mutedUntil).getTime() > Date.now();
 	return {
 		userId: profile.userId,
 		displayName: profile.displayName ?? null,
 		role: profile.role,
-		nimDisclosureAcceptedAt: profile.nimDisclosureAcceptedAt ?? null
+		nimDisclosureAcceptedAt: profile.nimDisclosureAcceptedAt ?? null,
+		mutedUntil,
+		bannedAt,
+		isMuted: Boolean(mutedActive),
+		isBanned: Boolean(bannedAt)
+	};
+}
+
+/** Public profile card: no student number, no staff-only internals beyond restriction flags. */
+/** @param {any} profile */
+export function publicProfileCard(profile) {
+	const view = publicStudentView(profile);
+	return {
+		userId: view.userId,
+		displayName: view.displayName,
+		role: view.role === 'staff' || view.role === 'moderator' ? view.role : 'student',
+		isRestricted: view.isMuted || view.isBanned
 	};
 }
 
@@ -680,6 +717,80 @@ export function createMariToolsRepository({
 					)
 				)
 			);
+		},
+
+		/**
+		 * Mute posting until `until` (Date).
+		 * @param {unknown} userId
+		 * @param {Date} until
+		 */
+		async muteUser(userId, until) {
+			const id = requiredUserId(userId);
+			if (!(until instanceof Date) || Number.isNaN(until.getTime())) return invalid();
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, id))
+					);
+					if (!existing) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({ mutedUntil: until, updatedAt: new Date() })
+							.where(eq(mtStudentProfiles.userId, id))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} userId */
+		async banUser(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, id))
+					);
+					if (!existing) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({ bannedAt: new Date(), updatedAt: new Date() })
+							.where(eq(mtStudentProfiles.userId, id))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} authorUserId @param {number} [limit] */
+		async listThreadsByAuthor(authorUserId, limit = 20) {
+			const id = requiredUserId(authorUserId);
+			const take = Math.min(Math.max(Number(limit) || 20, 1), 50);
+			return redactUnexpected(async () => {
+				const rows = asRows(
+					await transact((transaction) =>
+						transaction
+							.select()
+							.from(mtForumThreads)
+							.where(
+								and(eq(mtForumThreads.authorUserId, id), isNull(mtForumThreads.removedAt))
+							)
+							.orderBy(desc(mtForumThreads.createdAt))
+							.limit(take)
+					)
+				);
+				return rows;
+			});
 		},
 
 		/** @param {unknown} userId */
@@ -1329,12 +1440,13 @@ export function createMariToolsRepository({
 			const termId = optionalText(input.termId, 64);
 			return redactUnexpected(async () => {
 				const created = oneRow(
-					await transact((transaction) =>
-						transaction
+					await transact(async (transaction) => {
+						await assertPosterAllowed(transaction, authorUserId);
+						return transaction
 							.insert(mtForumThreads)
 							.values({ authorUserId, title, body, category, courseId, offeringId, termId })
-							.returning()
-					)
+							.returning();
+					})
 				);
 				return created ?? unavailable();
 			});
@@ -1385,6 +1497,7 @@ export function createMariToolsRepository({
 			const body = requiredText(input.body, 20_000);
 			return redactUnexpected(() =>
 				transact(async (transaction) => {
+					await assertPosterAllowed(transaction, authorUserId);
 					const thread = oneRow(
 						await transaction.select().from(mtForumThreads).where(eq(mtForumThreads.id, threadId))
 					);

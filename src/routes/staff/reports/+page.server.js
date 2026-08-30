@@ -42,6 +42,43 @@ async function setStatus(event, status, deps) {
 	}
 }
 
+/**
+ * @param {any} event
+ * @param {'lock' | 'mute' | 'ban'} kind
+ * @param {{ authorize: Function, createStore: Function }} deps
+ */
+async function moderateFromReport(event, kind, deps) {
+	deps.authorize(event.locals);
+	const data = await event.request.formData();
+	const reportId = String(data.get('reportId') ?? '').trim();
+	const threadId = String(data.get('threadId') ?? '').trim();
+	const subjectUserId = String(data.get('subjectUserId') ?? '').trim();
+	if (!reportId) return fail(400, { error: 'Pick a report first.' });
+	try {
+		const store = deps.createStore();
+		if (kind === 'lock') {
+			if (!threadId) return fail(400, { error: 'That report has no thread to lock.' });
+			await store.lockThread(threadId);
+		} else if (kind === 'mute') {
+			if (!subjectUserId) return fail(400, { error: 'That report has no author to mute.' });
+			await store.muteUser(subjectUserId, { days: 7 });
+		} else {
+			if (!subjectUserId) return fail(400, { error: 'That report has no author to ban.' });
+			await store.banUser(subjectUserId);
+		}
+		await store.setReportStatus(reportId, 'resolved');
+		return { updated: true, status: 'resolved', moderation: kind };
+	} catch (error) {
+		if (error instanceof MaritoolsInputError) {
+			return fail(400, { error: `Could not ${kind} from that report.` });
+		}
+		if (error instanceof MaritoolsUnavailableError) {
+			return fail(503, { error: 'Moderation is unavailable. Try again.' });
+		}
+		throw error;
+	}
+}
+
 /** @param {Record<string, any>} [dependencies] */
 export function _createStaffReportsHandlers(dependencies = {}) {
 	const authorize = dependencies.authorize ?? requireStaff;
@@ -58,7 +95,11 @@ export function _createStaffReportsHandlers(dependencies = {}) {
 				const rows = await store.listReports(
 					statusFilter === 'all' ? {} : { status: statusFilter }
 				);
-				const reports = await buildStaffReportQueue(rows, (id) => store.getReply(id));
+				const reports = await buildStaffReportQueue(rows, {
+					getReply: (id) => store.getReply(id),
+					getThread: (id) => store.getThread(id),
+					getProfile: (id) => store.getProfile(id)
+				});
 				return { reports, statusFilter, unavailable: false };
 			} catch (error) {
 				if (error instanceof MaritoolsUnavailableError) {
@@ -71,7 +112,13 @@ export function _createStaffReportsHandlers(dependencies = {}) {
 			/** @param {any} event */
 			resolve: (event) => setStatus(event, 'resolved', deps),
 			/** @param {any} event */
-			dismiss: (event) => setStatus(event, 'dismissed', deps)
+			dismiss: (event) => setStatus(event, 'dismissed', deps),
+			/** @param {any} event */
+			lockThread: (event) => moderateFromReport(event, 'lock', deps),
+			/** @param {any} event */
+			muteAuthor: (event) => moderateFromReport(event, 'mute', deps),
+			/** @param {any} event */
+			banAuthor: (event) => moderateFromReport(event, 'ban', deps)
 		})
 	});
 }

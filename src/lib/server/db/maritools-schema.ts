@@ -111,6 +111,8 @@ export const mtStudentProfiles = pgTable(
 		displayName: varchar('display_name', { length: 120 }),
 		role: varchar('role', { length: 16 }).default('student').notNull(),
 		nimDisclosureAcceptedAt: timestamp('nim_disclosure_accepted_at', { withTimezone: true }),
+		mutedUntil: timestamp('muted_until', { withTimezone: true }),
+		bannedAt: timestamp('banned_at', { withTimezone: true }),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()

@@ -27,6 +27,9 @@ describe('ensureMariToolsSchema', () => {
 		vi.doMock('../../../../drizzle/0010_free_time_boards.sql?raw', () => ({
 			default: 'CREATE TABLE "mt_free_time_boards" ();'
 		}));
+		vi.doMock('../../../../drizzle/0011_moderation_mutes_bans.sql?raw', () => ({
+			default: 'ALTER TABLE "mt_student_profiles" ADD COLUMN IF NOT EXISTS "muted_until" timestamp with time zone;'
+		}));
 
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
@@ -52,6 +55,9 @@ describe('ensureMariToolsSchema', () => {
 			if (text.includes("to_regclass('public.mt_free_time_boards')")) {
 				return { rows: [{ table_name: 'mt_free_time_boards' }] };
 			}
+			if (text.includes('information_schema.columns')) {
+				return { rows: [{ ok: 1 }] };
+			}
 			return { rows: [] };
 		});
 		const client = { query, release: vi.fn() };
@@ -65,6 +71,9 @@ describe('ensureMariToolsSchema', () => {
 		}));
 		vi.doMock('../../../../drizzle/0010_free_time_boards.sql?raw', () => ({
 			default: 'CREATE TABLE "mt_free_time_boards" ();'
+		}));
+		vi.doMock('../../../../drizzle/0011_moderation_mutes_bans.sql?raw', () => ({
+			default: 'ALTER TABLE "mt_student_profiles" ADD COLUMN IF NOT EXISTS "muted_until" timestamp with time zone;'
 		}));
 
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
@@ -88,12 +97,13 @@ describe('ensureMariToolsSchema', () => {
 			.fn()
 			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_academic_terms' }] })
 			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_google_calendar_grants' }] })
-			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_free_time_boards' }] });
+			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_free_time_boards' }] })
+			.mockResolvedValueOnce({ rows: [{ ok: 1 }] });
 		const client = { query, release: vi.fn() };
 		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
-		expect(query).toHaveBeenCalledTimes(3);
+		expect(query).toHaveBeenCalledTimes(4);
 	});
 
 	it('builds a default pg pool', async () => {
@@ -123,6 +133,9 @@ describe('ensureMariToolsSchema', () => {
 		}));
 		vi.doMock('../../../../drizzle/0010_free_time_boards.sql?raw', () => ({
 			default: 'CREATE TABLE "mt_free_time_boards" ();'
+		}));
+		vi.doMock('../../../../drizzle/0011_moderation_mutes_bans.sql?raw', () => ({
+			default: 'ALTER TABLE "mt_student_profiles" ADD COLUMN IF NOT EXISTS "muted_until" timestamp with time zone;'
 		}));
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await expect(
@@ -162,6 +175,9 @@ describe('ensureMariToolsSchema', () => {
 		vi.doMock('../../../../drizzle/0010_free_time_boards.sql?raw', () => ({
 			default: 'CREATE TABLE "mt_free_time_boards" ();'
 		}));
+		vi.doMock('../../../../drizzle/0011_moderation_mutes_bans.sql?raw', () => ({
+			default: 'ALTER TABLE "mt_student_profiles" ADD COLUMN IF NOT EXISTS "muted_until" timestamp with time zone;'
+		}));
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await expect(
 			ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) })
@@ -180,6 +196,9 @@ describe('ensureMariToolsSchema', () => {
 		}));
 		vi.doMock('../../../../drizzle/0010_free_time_boards.sql?raw', () => ({
 			default: 'CREATE TABLE "mt_free_time_boards" ();'
+		}));
+		vi.doMock('../../../../drizzle/0011_moderation_mutes_bans.sql?raw', () => ({
+			default: 'ALTER TABLE "mt_student_profiles" ADD COLUMN IF NOT EXISTS "muted_until" timestamp with time zone;'
 		}));
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await expect(
@@ -302,6 +321,9 @@ describe('ensureMariToolsBootstrap', () => {
 		}));
 		vi.doMock('../../../../drizzle/0010_free_time_boards.sql?raw', () => ({
 			default: 'CREATE TABLE "mt_free_time_boards" ();'
+		}));
+		vi.doMock('../../../../drizzle/0011_moderation_mutes_bans.sql?raw', () => ({
+			default: 'ALTER TABLE "mt_student_profiles" ADD COLUMN IF NOT EXISTS "muted_until" timestamp with time zone;'
 		}));
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });

@@ -33,8 +33,22 @@ describe('forum thread page', () => {
 		render(ThreadPage, {
 			props: {
 				data: {
-					thread: { ...THREAD, authorDisplayName: 'Zhich' },
-					replies: [{ id: 'r1', body: 'Thanks', canManage: false, authorDisplayName: 'nick' }],
+					thread: {
+						...THREAD,
+						authorDisplayName: 'Zhich',
+						authorUserId: 'author-1',
+						authorProfileHref: '/tools/people/author-1'
+					},
+					replies: [
+						{
+							id: 'r1',
+							body: 'Thanks',
+							canManage: false,
+							authorDisplayName: 'nick',
+							authorUserId: 'author-2',
+							authorProfileHref: '/tools/people/author-2'
+						}
+					],
 					signedIn: true,
 					canReply: true,
 					staff: false
@@ -42,6 +56,14 @@ describe('forum thread page', () => {
 				form: { replied: true, reported: true, error: 'Could not post that reply.' }
 			}
 		});
+		expect(screen.getByRole('link', { name: 'Zhich' })).toHaveAttribute(
+			'href',
+			'/tools/people/author-1'
+		);
+		expect(screen.getByRole('link', { name: 'nick' })).toHaveAttribute(
+			'href',
+			'/tools/people/author-2'
+		);
 		expect(screen.getByRole('heading', { name: 'Midterm tips' })).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: '← All discussions' })).toHaveAttribute(
 			'href',

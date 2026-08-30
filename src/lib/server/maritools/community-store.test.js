@@ -89,7 +89,7 @@ function inner(overrides = {}) {
 			{ courseCode: 'NO-ID', title: 'Skipped' }
 		]),
 		listThreads: vi.fn(async () => [
-			{ id: THREAD, title: 'Hi', body: 'Hello', category: 'courses', courseId: COURSE }
+			{ id: THREAD, title: 'Hi', body: 'Hello', category: 'courses', courseId: COURSE, authorUserId: USER }
 		]),
 		getThread: vi.fn(async () => ({
 			id: THREAD,
@@ -132,6 +132,25 @@ function inner(overrides = {}) {
 		lockThread: vi.fn(async () => ({ id: THREAD, lockedAt: new Date() })),
 		removeThread: vi.fn(async () => ({ id: THREAD, removedAt: new Date() })),
 		removeReply: vi.fn(async () => ({ id: 'r1', removedAt: new Date() })),
+		muteUser: vi.fn(async (userId, until) => ({
+			userId,
+			studentId: '2530622',
+			displayName: 'Ada',
+			role: 'student',
+			mutedUntil: until,
+			bannedAt: null
+		})),
+		banUser: vi.fn(async (userId) => ({
+			userId,
+			studentId: '2530622',
+			displayName: 'Ada',
+			role: 'student',
+			mutedUntil: null,
+			bannedAt: new Date()
+		})),
+		listThreadsByAuthor: vi.fn(async () => [
+			{ id: THREAD, title: 'Hi', body: 'Hello', category: 'courses', authorUserId: USER }
+		]),
 		getStudentProfile: vi.fn(async () => ({
 			userId: USER,
 			studentId: '2530622',
@@ -163,16 +182,23 @@ describe('community views', () => {
 				authorDisplayName: '  Zhich  ',
 				studentId: '2530622'
 			})
-		).toMatchObject({ authorDisplayName: 'Zhich' });
+		).toMatchObject({
+			authorDisplayName: 'Zhich',
+			authorUserId: USER,
+			authorProfileHref: `/tools/people/${USER}`
+		});
 		expect(
-			publicThreadView({
-				id: THREAD,
-				title: 'Hi',
-				body: 'Hello',
-				category: 'courses',
-				authorUserId: USER
-			})
-		).not.toHaveProperty('authorUserId');
+			JSON.stringify(
+				publicThreadView({
+					id: THREAD,
+					title: 'Hi',
+					body: 'Hello',
+					category: 'courses',
+					authorUserId: USER,
+					studentId: '2530622'
+				})
+			)
+		).not.toContain('2530622');
 		expect(
 			publicThreadView({
 				id: THREAD,
@@ -190,16 +216,22 @@ describe('community views', () => {
 				authorUserId: USER,
 				authorDisplayName: 'nick'
 			})
-		).toMatchObject({ authorDisplayName: 'nick' });
+		).toMatchObject({
+			authorDisplayName: 'nick',
+			authorUserId: USER,
+			authorProfileHref: `/tools/people/${USER}`
+		});
 		expect(
-			publicReplyView({
-				id: 'r1',
-				threadId: THREAD,
-				body: 'Thanks',
-				authorUserId: USER,
-				studentId: '2530622'
-			})
-		).not.toHaveProperty('authorUserId');
+			JSON.stringify(
+				publicReplyView({
+					id: 'r1',
+					threadId: THREAD,
+					body: 'Thanks',
+					authorUserId: USER,
+					studentId: '2530622'
+				})
+			)
+		).not.toContain('2530622');
 	});
 });
 
@@ -380,23 +412,22 @@ describe('createCommunityStore', () => {
 			payload: { name: 'Chess' }
 		});
 		const threads = await store.listThreads({ category: 'courses', courseId: COURSE });
-		expect(threads[0]).not.toHaveProperty('authorUserId');
+		expect(threads[0]).toMatchObject({ authorUserId: USER, authorProfileHref: `/tools/people/${USER}` });
 		await store.listThreads();
 		expect(await store.getThread(THREAD)).toMatchObject({
 			id: THREAD,
 			title: 'Hi',
 			canManage: false,
-			authorDisplayName: 'Ada'
+			authorDisplayName: 'Ada',
+			authorUserId: USER
 		});
 		const owned = await store.getThread(THREAD, { userId: USER, staff: false });
-		expect(owned).toMatchObject({ canManage: true, authorDisplayName: 'Ada' });
-		expect(owned).not.toHaveProperty('authorUserId');
+		expect(owned).toMatchObject({ canManage: true, authorDisplayName: 'Ada', authorUserId: USER });
 		expect(JSON.stringify(owned)).not.toContain('2530622');
 		const empty = createCommunityStore(inner({ getThread: vi.fn(async () => null) }));
 		await expect(empty.getThread(THREAD)).resolves.toBeNull();
 		const replies = await store.listReplies(THREAD);
-		expect(replies[0]).toMatchObject({ authorDisplayName: 'Ada' });
-		expect(replies[0]).not.toHaveProperty('authorUserId');
+		expect(replies[0]).toMatchObject({ authorDisplayName: 'Ada', authorUserId: USER });
 		expect((await store.listReplies(THREAD, { userId: USER }))[0].canManage).toBe(true);
 		const nameless = createCommunityStore(
 			inner({ getStudentProfile: vi.fn(async () => ({ userId: USER, displayName: null })) })
@@ -483,8 +514,11 @@ describe('createCommunityStore', () => {
 		await expect(store.updateReply({ id: 'r1', body: 'Edited reply' })).resolves.toMatchObject({
 			body: 'Edited reply'
 		});
-		expect(await store.updateThread({ id: THREAD, body: 'Edited' })).not.toHaveProperty(
-			'authorUserId'
+		expect(await store.updateThread({ id: THREAD, body: 'Edited' })).toMatchObject({
+			authorUserId: USER
+		});
+		expect(JSON.stringify(await store.updateThread({ id: THREAD, body: 'Edited' }))).not.toContain(
+			'2530622'
 		);
 	});
 
@@ -547,6 +581,26 @@ describe('createCommunityStore', () => {
 		await expect(store.lockThread(THREAD)).resolves.toMatchObject({ id: THREAD });
 		await expect(store.removeThread(THREAD)).resolves.toMatchObject({ id: THREAD });
 		await expect(store.removeReply('r1')).resolves.toMatchObject({ id: 'r1' });
+	});
+
+	it('mutes, bans, and loads public profiles', async () => {
+		const repo = inner();
+		const store = createCommunityStore(repo);
+		await expect(store.muteUser(USER, { days: 7 })).resolves.toMatchObject({
+			userId: USER,
+			isMuted: true
+		});
+		expect(repo.muteUser).toHaveBeenCalled();
+		await expect(store.banUser(USER)).resolves.toMatchObject({ userId: USER, isBanned: true });
+		await expect(store.getPublicProfile(USER)).resolves.toMatchObject({
+			userId: USER,
+			displayName: 'Ada',
+			role: 'student',
+			isRestricted: false
+		});
+		await expect(store.listThreadsByAuthor(USER)).resolves.toEqual([
+			expect.objectContaining({ id: THREAD, authorUserId: USER })
+		]);
 	});
 
 	it('redacts profiles and reports staff', async () => {

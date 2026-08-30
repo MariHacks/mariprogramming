@@ -54,7 +54,7 @@ describe('forum page server', () => {
 		const data = await current.load(event());
 		expect(data.threads[0].courseCode).toBe('203-SN3-RE');
 		expect(data.signedIn).toBe(false);
-		expect(JSON.stringify(data)).not.toMatch(/2530622|authorUserId/);
+		expect(JSON.stringify(data)).not.toMatch(/2530622/);
 		const signed = await current.load(event({ locals: { maritools: SESSION } }));
 		expect(signed.signedIn).toBe(true);
 		const untagged = handlers({
