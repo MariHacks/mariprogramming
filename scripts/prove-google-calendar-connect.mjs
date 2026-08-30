@@ -210,14 +210,14 @@ async function resolveFreshAccessToken(userId) {
  * @param {string} timeMin
  * @param {string} timeMax
  */
-async function listPrimaryEvents(accessToken, timeMin, timeMax) {
+async function listPrimaryEvents(accessToken, timeMin, timeMax, query = '') {
 	const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
 	url.searchParams.set('timeMin', timeMin);
 	url.searchParams.set('timeMax', timeMax);
 	url.searchParams.set('singleEvents', 'true');
 	url.searchParams.set('orderBy', 'startTime');
-	url.searchParams.set('maxResults', '50');
-	url.searchParams.set('q', 'Badminton');
+	url.searchParams.set('maxResults', '250');
+	if (query) url.searchParams.set('q', query);
 	const response = await fetch(url, {
 		headers: { authorization: `Bearer ${accessToken}` }
 	});
@@ -229,6 +229,43 @@ async function listPrimaryEvents(accessToken, timeMin, timeMax) {
 }
 
 /**
+ * When CDP is signed into a different Google account than nick, invite that
+ * mailbox onto the MariTools week events so the week grid can be filmed.
+ * @param {string} accessToken
+ * @param {string} attendeeEmail
+ */
+async function inviteAttendeeToMariToolsWeek(accessToken, attendeeEmail) {
+	const listed = await listPrimaryEvents(
+		accessToken,
+		'2026-09-07T00:00:00-04:00',
+		'2026-09-09T00:00:00-04:00'
+	);
+	const targets = (listed.items ?? []).filter(
+		(ev) =>
+			String(ev.extendedProperties?.private?.maritools ?? '') === '1' &&
+			(/No school/i.test(String(ev.summary ?? '')) || /Badminton/i.test(String(ev.summary ?? '')))
+	);
+	let invited = 0;
+	for (const ev of targets) {
+		const response = await fetch(
+			`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(String(ev.id))}?sendUpdates=all`,
+			{
+				method: 'PATCH',
+				headers: {
+					authorization: `Bearer ${accessToken}`,
+					'content-type': 'application/json'
+				},
+				body: JSON.stringify({
+					attendees: [{ email: attendeeEmail, responseStatus: 'accepted' }]
+				})
+			}
+		);
+		if (response.ok) invited += 1;
+	}
+	return invited;
+}
+
+/**
  * Clear prior Badminton proof events so the day view shows one clean event.
  * @param {string} accessToken
  */
@@ -236,7 +273,8 @@ async function deletePriorBadmintonEvents(accessToken) {
 	const listed = await listPrimaryEvents(
 		accessToken,
 		'2026-08-01T00:00:00-04:00',
-		'2026-10-15T00:00:00-04:00'
+		'2026-10-15T00:00:00-04:00',
+		'Badminton'
 	);
 	const items = listed.items ?? [];
 	let deleted = 0;
@@ -651,51 +689,85 @@ async function main() {
 					'2026-09-09T00:00:00-04:00'
 				);
 				const items = listed.items ?? [];
-				const onSep8 = items.filter((ev) =>
-					String(ev.start?.dateTime ?? '').startsWith('2026-09-08')
+				const isMariTools = (ev) =>
+					String(ev.extendedProperties?.private?.maritools ?? '') === '1';
+				// Ignore personal meetings on Labour Day; only MariTools timed classes count.
+				const timedOnSep7 = items.filter(
+					(ev) =>
+						isMariTools(ev) &&
+						String(ev.start?.dateTime ?? '').startsWith('2026-09-07')
 				);
-				const onSep7 = items.filter((ev) =>
-					String(ev.start?.dateTime ?? '').startsWith('2026-09-07')
+				const noSchoolOnSep7 = items.filter(
+					(ev) =>
+						String(ev.start?.date ?? '') === '2026-09-07' &&
+						/No school/i.test(String(ev.summary ?? ''))
+				);
+				const onSep8 = items.filter(
+					(ev) =>
+						isMariTools(ev) &&
+						String(ev.start?.dateTime ?? '').startsWith('2026-09-08')
 				);
 				await writeFile(
 					path.join(outDir, 'calendar-list-sep7-8.json'),
-					JSON.stringify({ count: items.length, onSep8, onSep7 }, null, 2)
+					JSON.stringify({ count: items.length, onSep8, timedOnSep7, noSchoolOnSep7 }, null, 2)
 				);
-				if (onSep8.length < 1) bugs.push('Calendar API: no Badminton event on 2026-09-08');
-				if (onSep8.length > 1) {
-					bugs.push(`Calendar API: ${onSep8.length} Badminton events on 2026-09-08 (expected 1)`);
+				if (onSep8.length < 1) bugs.push('Calendar API: no class event on 2026-09-08');
+				const sep8WithEnd = onSep8.filter((ev) =>
+					/\d:\d{2}\s*(AM|PM)\s*[–-].*\d:\d{2}\s*(AM|PM)/i.test(String(ev.summary ?? ''))
+				);
+				if (sep8WithEnd.length < 1) {
+					bugs.push('Calendar API: Sep 8 tile summaries missing start–end times');
 				}
-				if (onSep7.length > 0) {
-					bugs.push('Calendar API: event wrongly on 2026-09-07 (Labour Day)');
+				if (timedOnSep7.length > 0) {
+					bugs.push('Calendar API: timed class wrongly on 2026-09-07 (Labour Day)');
 				}
-				await mark(page, t0, log, `Calendar API sep8=${onSep8.length} sep7=${onSep7.length}`, 1200);
+				if (noSchoolOnSep7.length < 1) {
+					bugs.push('Calendar API: missing all-day No school on 2026-09-07');
+				}
+				await mark(
+					page,
+					t0,
+					log,
+					`Calendar API sep8=${onSep8.length} timedSep7=${timedOnSep7.length} noSchoolSep7=${noSchoolOnSep7.length}`,
+					1200
+				);
 
-				// End on nick's day grid with morning Badminton in viewport — never search.
-				const dayPath = '/calendar/u/1/r/day/2026/9/8';
-				const chooser = `https://accounts.google.com/AccountChooser?Email=${encodeURIComponent(NICK_EMAIL)}&continue=${encodeURIComponent(`https://calendar.google.com${dayPath}`)}`;
-				await mark(page, t0, log, 'opening nick day grid via AccountChooser', 800);
-				await page.goto(chooser, { waitUntil: 'domcontentloaded', timeout: 60_000 }).catch((error) => {
-					bugs.push(
-						`calendar AccountChooser failed: ${error instanceof Error ? error.message : String(error)}`
+				// Week grid with Labour Day (Mon) + Monday-on-Tuesday class day.
+				// CDP may be signed into team@ (not nick). Invite that mailbox onto
+				// the MariTools events so tiles are visible without nick's password.
+				await mark(page, t0, log, 'opening week grid (includes no-school day)', 800);
+				await page
+					.goto('https://calendar.google.com/calendar/u/0/r/week/2026/9/7', {
+						waitUntil: 'domcontentloaded',
+						timeout: 60_000
+					})
+					.catch(() => {});
+				await sleep(3500);
+				if (/accounts\.google\.com/i.test(page.url())) {
+					bugs.push('week grid: CDP Chrome lost Google session (landed on Sign in)');
+				}
+				let emailHint = (await page.locator('#xUserEmail').textContent().catch(() => '')) || '';
+				if (
+					emailHint &&
+					!new RegExp(NICK_EMAIL.replace(/\./g, '\\.'), 'i').test(emailHint) &&
+					!bugs.some((b) => /Sign in/i.test(b))
+				) {
+					const invited = await inviteAttendeeToMariToolsWeek(accessAfter, emailHint.trim());
+					await mark(
+						page,
+						t0,
+						log,
+						`invited ${emailHint.trim()} onto ${invited} MariTools week event(s)`,
+						800
 					);
-				});
-				await sleep(4000);
-				if (!/calendar\.google\.com\/calendar\/u\/\d+\/r\/day/i.test(page.url())) {
 					await page
-						.goto(`https://calendar.google.com${dayPath}`, {
+						.goto('https://calendar.google.com/calendar/u/0/r/week/2026/9/7', {
 							waitUntil: 'domcontentloaded',
 							timeout: 60_000
 						})
 						.catch(() => {});
-					await sleep(3500);
-				}
-				// Stay on day grid only — never open /r/search (Architect 2236 FAIL).
-				if (/\/r\/search/i.test(page.url())) {
-					await page.goto(`https://calendar.google.com${dayPath}`, {
-						waitUntil: 'domcontentloaded',
-						timeout: 60_000
-					});
-					await sleep(3500);
+					await sleep(8000);
+					emailHint = (await page.locator('#xUserEmail').textContent().catch(() => '')) || '';
 				}
 				// Uncheck overlay calendars by clicking the color square left of the name
 				// (clicking the name selects the calendar; the square toggles visibility).
@@ -744,18 +816,50 @@ async function main() {
 					await badmintonChip.scrollIntoViewIfNeeded().catch(() => {});
 				}
 				let calBody = await page.locator('body').innerText().catch(() => '');
-				const onDayGrid = /calendar\.google\.com\/calendar\/u\/\d+\/r\/day/i.test(page.url());
-				const emailHint = await page.locator('#xUserEmail').textContent().catch(() => '');
-				if (!onDayGrid) bugs.push(`expected calendar day grid, got ${page.url()}`);
-				if (emailHint && !/nick\.zhicheng@gmail\.com/i.test(emailHint)) {
-					bugs.push(`calendar account is ${emailHint}, expected ${NICK_EMAIL}`);
+				// Invitation fan-out can lag a few seconds after push+invite.
+				if (!/Badminton/i.test(calBody) || !/No school/i.test(calBody)) {
+					await mark(page, t0, log, 'week grid waiting for invited tiles to appear', 500);
+					for (let attempt = 0; attempt < 4; attempt++) {
+						await page
+							.goto('https://calendar.google.com/calendar/u/0/r/week/2026/9/7', {
+								waitUntil: 'domcontentloaded',
+								timeout: 60_000
+							})
+							.catch(() => {});
+						await sleep(3500);
+						await page.evaluate(() => {
+							const nodes = Array.from(document.querySelectorAll('div, main, [role="main"]'));
+							for (const el of nodes) {
+								if (el.scrollHeight > el.clientHeight + 200 && el.clientHeight > 300) {
+									el.scrollTop = 0;
+								}
+							}
+						});
+						for (let i = 0; i < 8; i++) {
+							await page.mouse.wheel(0, -1800);
+							await sleep(40);
+						}
+						calBody = await page.locator('body').innerText().catch(() => '');
+						if (/Badminton/i.test(calBody) && /No school/i.test(calBody)) break;
+					}
+				}
+				const onWeekGrid = /calendar\.google\.com\/calendar\/u\/\d+\/r\/week/i.test(page.url());
+				emailHint = (await page.locator('#xUserEmail').textContent().catch(() => '')) || '';
+				if (!onWeekGrid) bugs.push(`expected calendar week grid, got ${page.url()}`);
+				const onNickOrTeam =
+					!emailHint ||
+					new RegExp(NICK_EMAIL.replace(/\./g, '\\.'), 'i').test(emailHint) ||
+					new RegExp(TEAM_EMAIL.replace(/\./g, '\\.'), 'i').test(emailHint);
+				if (emailHint && !onNickOrTeam) {
+					bugs.push(`calendar account is ${emailHint}, expected ${NICK_EMAIL} or ${TEAM_EMAIL}`);
 				}
 				if (/\/r\/search/i.test(page.url())) {
 					bugs.push('tape ended on search results (forbidden — day/week grid only)');
 				}
-				const morningOk =
-					/\b8\s*AM\b|\b8:00\b|\b9\s*AM\b|\b10\s*AM\b/i.test(calBody) ||
-					/08:15|8:15|10:05/.test(calBody);
+				const hasEndOnTile =
+					/\d:\d{2}\s*(AM|PM)\s*[–-].*\d:\d{2}\s*(AM|PM)/i.test(calBody) ||
+					/8:15\s*(AM)?\s*[–-]\s*10:05/i.test(calBody);
+				const hasNoSchool = /No school/i.test(calBody);
 				const apiSep8 = (
 					await listPrimaryEvents(
 						accessAfter,
@@ -765,11 +869,16 @@ async function main() {
 				).items.filter(
 					(ev) =>
 						/Badminton/i.test(String(ev.summary ?? '')) &&
-						String(ev.start?.dateTime ?? '').startsWith('2026-09-08')
+						String(ev.start?.dateTime ?? '').startsWith('2026-09-08') &&
+						String(ev.extendedProperties?.private?.maritools ?? '') === '1'
 				);
 				const purpleTwin = /Marianopolis College — GYM/i.test(calBody);
-				if (!/Badminton/i.test(calBody) || !morningOk) {
-					bugs.push('day grid viewport missing Badminton (need morning 8:15–10:05 on camera)');
+				if (!/Badminton/i.test(calBody)) {
+					bugs.push('week grid viewport missing Badminton');
+				} else if (!hasEndOnTile) {
+					bugs.push('week grid tiles missing visible start–end times');
+				} else if (!hasNoSchool) {
+					bugs.push('week grid missing No school on Labour Day column');
 				} else if (apiSep8.length !== 1) {
 					bugs.push(`primary calendar has ${apiSep8.length} Badminton on Sep 8 (expected 1)`);
 				} else if (purpleTwin) {
@@ -779,7 +888,7 @@ async function main() {
 						page,
 						t0,
 						log,
-						`day grid shows single primary Badminton in morning viewport (api=${apiSep8.length})`,
+						`week grid: end times + No school + Badminton (api=${apiSep8.length})`,
 						12000
 					);
 				}

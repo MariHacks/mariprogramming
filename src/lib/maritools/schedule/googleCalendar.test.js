@@ -17,7 +17,7 @@ describe('buildGoogleCalendarAuthorizeUrl', () => {
 });
 
 describe('googleCalendarEventBody', () => {
-	it('maps a class occurrence into a Google event payload', () => {
+	it('maps a class occurrence with visible start–end on the tile summary', () => {
 		expect(
 			googleCalendarEventBody({
 				title: 'Calculus II',
@@ -30,9 +30,22 @@ describe('googleCalendarEventBody', () => {
 				endTime: '10:30'
 			})
 		).toMatchObject({
-			summary: 'Calculus II',
+			summary: '9:00 AM–10:30 AM Calculus II',
 			location: 'A-301',
-			start: { dateTime: '2026-09-08T09:00:00', timeZone: 'America/Toronto' }
+			start: { dateTime: '2026-09-08T09:00:00', timeZone: 'America/Toronto' },
+			end: { dateTime: '2026-09-08T10:30:00', timeZone: 'America/Toronto' }
+		});
+	});
+});
+
+describe('googleCalendarNoSchoolEventBody', () => {
+	it('builds an all-day no-school marker with exclusive end date', async () => {
+		const { googleCalendarNoSchoolEventBody } = await import('./googleCalendar.js');
+		expect(googleCalendarNoSchoolEventBody('2026-09-07')).toMatchObject({
+			summary: 'No school',
+			start: { date: '2026-09-07' },
+			end: { date: '2026-09-08' },
+			extendedProperties: { private: { maritools: '1', occurrenceKey: 'noshool|2026-09-07' } }
 		});
 	});
 });
@@ -59,7 +72,7 @@ describe('insertOccurrencesIntoGoogleCalendar', () => {
 		).rejects.toThrow(/Google Calendar insert failed/);
 	});
 
-	it('clears prior MariTools events then inserts once', async () => {
+	it('clears prior MariTools events then inserts class blocks and no-school days', async () => {
 		const fetchImpl = vi
 			.fn()
 			.mockResolvedValueOnce(
@@ -69,19 +82,23 @@ describe('insertOccurrencesIntoGoogleCalendar', () => {
 			)
 			.mockResolvedValueOnce(new Response(null, { status: 204 }))
 			.mockResolvedValueOnce(new Response(null, { status: 204 }))
+			.mockResolvedValueOnce(new Response('{}', { status: 200 }))
 			.mockResolvedValueOnce(new Response('{}', { status: 200 }));
 		const result = await insertOccurrencesIntoGoogleCalendar(
 			[occurrence],
 			fetchImpl,
-			'access-token'
+			'access-token',
+			{ noSchoolDates: ['2026-09-07'] }
 		);
-		expect(result).toEqual({ inserted: 1, deleted: 2 });
-		expect(fetchImpl).toHaveBeenCalledTimes(4);
+		expect(result).toEqual({ inserted: 2, deleted: 2, noSchool: 1 });
+		expect(fetchImpl).toHaveBeenCalledTimes(5);
 		expect(String(fetchImpl.mock.calls[0][0])).toContain('privateExtendedProperty=maritools%3D1');
-		expect(String(fetchImpl.mock.calls[3][0])).toContain('/calendars/primary/events');
-		expect(JSON.parse(String(fetchImpl.mock.calls[3][1].body)).extendedProperties.private).toEqual({
-			maritools: '1',
-			occurrenceKey: '201-NYB-05|00001|2026-09-08|09:00'
+		expect(JSON.parse(String(fetchImpl.mock.calls[3][1].body)).summary).toBe(
+			'9:00 AM–10:30 AM Calculus II'
+		);
+		expect(JSON.parse(String(fetchImpl.mock.calls[4][1].body))).toMatchObject({
+			summary: 'No school',
+			start: { date: '2026-09-07' }
 		});
 	});
 

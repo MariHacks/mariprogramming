@@ -74,7 +74,9 @@ export async function pushScheduleToGoogleCalendar(input) {
 		fetchImpl
 	);
 	const occurrences = generateOccurrences(input.term, rules, input.courses);
-	return insertOccurrencesIntoGoogleCalendar(occurrences, fetchImpl, accessToken);
+	return insertOccurrencesIntoGoogleCalendar(occurrences, fetchImpl, accessToken, {
+		noSchoolDates: rules.noClassDates
+	});
 }
 
 /**
