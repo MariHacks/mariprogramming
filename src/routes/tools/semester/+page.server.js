@@ -1,6 +1,10 @@
 import { env } from '$env/dynamic/private';
 import { fail } from '@sveltejs/kit';
 import { createOutlineExtractionProvider, needsTextPdf } from '$lib/maritools/extract/provider.js';
+import {
+	proposalsNeedIdentity,
+	withGuessedIdentity
+} from '$lib/maritools/extract/identity.js';
 import { semesterPageView } from '$lib/server/maritools/community.js';
 import { extractPdfText, isPdfHeader } from '$lib/server/maritools/pdf-text.js';
 import {
@@ -79,6 +83,7 @@ export function _createHandlers(dependencies = {}) {
 		if (!(file instanceof File) || file.size === 0) {
 			return fail(400, { error: 'Choose a PDF to upload.' });
 		}
+		const outlineFileName = file.name;
 		if (file.size > MAX_PDF_BYTES) {
 			return fail(400, { error: 'That PDF is too large. Try one under 8 MB.' });
 		}
@@ -102,8 +107,9 @@ export function _createHandlers(dependencies = {}) {
 				extractedText: text
 			});
 			const cached = await repository.getExtraction(extracted.sha256);
-			if (cached) {
+			if (cached && !proposalsNeedIdentity(cached.proposals)) {
 				return {
+					outlineFileName,
 					extraction: {
 						ok: true,
 						reason: null,
@@ -120,18 +126,26 @@ export function _createHandlers(dependencies = {}) {
 				sha256: extracted.sha256,
 				byteLength: extracted.byteLength
 			});
+			const proposals = result.ok
+				? withGuessedIdentity(
+						/** @type {Record<string, unknown> | null} */ (result.proposals),
+						text
+					)
+				: null;
 			if (result.ok && result.proposals) {
 				await repository.saveExtraction({
 					documentSha256: extracted.sha256,
 					offeringId: null,
-					proposals: result.proposals,
+					proposals,
 					model: getNimModel(),
 					inferenceCount: result.inferenceCount
 				});
 			}
 			return {
+				outlineFileName,
 				extraction: {
 					...result,
+					proposals,
 					sha256: extracted.sha256
 				}
 			};

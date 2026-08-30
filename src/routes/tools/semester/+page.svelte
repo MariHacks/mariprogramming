@@ -42,6 +42,7 @@
 		if (nextTeacher) teacherName = nextTeacher;
 	}
 
+	$: if (form?.outlineFileName) selectedFileName = String(form.outlineFileName);
 	$: extractionKey = String(form?.extraction?.sha256 ?? '');
 	$: if (form?.extraction?.proposals && extractionKey !== lastExtractionKey) {
 		lastExtractionKey = extractionKey;

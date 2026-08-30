@@ -117,7 +117,12 @@ describe('semester page server', () => {
 			repository: {
 				getProfile: vi.fn(async () => PROFILE),
 				getExtraction: vi.fn(async () => ({
-					proposals: { assessments: [{ title: 'Cached' }], books: [] },
+					proposals: {
+						courseCode: '203-SN3-RE',
+						title: 'Modern Physics',
+						assessments: [{ title: 'Cached' }],
+						books: []
+					},
 					inferenceCount: 4
 				}))
 			}
@@ -127,6 +132,23 @@ describe('semester page server', () => {
 		);
 		expect(result.extraction.cacheHit).toBe(true);
 		expect(current.provider.extract).not.toHaveBeenCalled();
+	});
+
+	it('re-extracts when a cached row is missing course identity', async () => {
+		const current = handlers({
+			repository: {
+				getProfile: vi.fn(async () => PROFILE),
+				getExtraction: vi.fn(async () => ({
+					proposals: { assessments: [{ title: 'Cached' }], books: [] },
+					inferenceCount: 4
+				}))
+			}
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.extraction.cacheHit).not.toBe(true);
+		expect(current.provider.extract).toHaveBeenCalled();
 	});
 
 	it('refuses a scanned PDF before NVIDIA', async () => {

@@ -988,7 +988,32 @@ export function createMariToolsRepository({
 										)
 									);
 					const existing = oneRow(await lookup());
-					if (existing) return { extraction: existing, cacheHit: true };
+					if (existing) {
+						const existingNeeds = (() => {
+							const raw = existing.proposals;
+							if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return true;
+							const row = /** @type {Record<string, unknown>} */ (raw);
+							const courseCode = typeof row.courseCode === 'string' ? row.courseCode.trim() : '';
+							const title = typeof row.title === 'string' ? row.title.trim() : '';
+							return !courseCode && !title;
+						})();
+						const incomingHas =
+							typeof proposals.courseCode === 'string' &&
+							proposals.courseCode.trim() &&
+							typeof proposals.title === 'string' &&
+							proposals.title.trim();
+						if (existingNeeds && incomingHas) {
+							const updated = oneRow(
+								await transaction
+									.update(mtOutlineExtractions)
+									.set({ proposals, model, updatedAt: new Date() })
+									.where(eq(mtOutlineExtractions.id, existing.id))
+									.returning()
+							);
+							return { extraction: updated ?? existing, cacheHit: false };
+						}
+						return { extraction: existing, cacheHit: true };
+					}
 					try {
 						const created = oneRow(
 							await transaction
