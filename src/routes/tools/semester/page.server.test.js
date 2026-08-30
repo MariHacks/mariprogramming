@@ -120,7 +120,7 @@ describe('semester page server', () => {
 					proposals: {
 						courseCode: '203-SN3-RE',
 						title: 'Modern Physics',
-						assessments: [{ title: 'Cached' }],
+						assessments: [{ title: 'Cached', date: '2026-10-01' }],
 						books: []
 					},
 					inferenceCount: 4
@@ -141,6 +141,28 @@ describe('semester page server', () => {
 				getExtraction: vi.fn(async () => ({
 					proposals: { assessments: [{ title: 'Cached' }], books: [] },
 					inferenceCount: 4
+				}))
+			}
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.extraction.cacheHit).not.toBe(true);
+		expect(current.provider.extract).toHaveBeenCalled();
+	});
+
+	it('re-extracts when cached assessments are missing dates', async () => {
+		const current = handlers({
+			repository: {
+				getProfile: vi.fn(async () => PROFILE),
+				getExtraction: vi.fn(async () => ({
+					proposals: {
+						courseCode: '203-SN3-RE',
+						title: 'Modern Physics',
+						assessments: [{ title: 'Midterm', date: '' }],
+						books: []
+					},
+					inferenceCount: 2
 				}))
 			}
 		});

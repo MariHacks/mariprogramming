@@ -1,8 +1,10 @@
 /**
- * Continuous native macOS screen recording of staff Resolve then Dismiss.
+ * Continuous native macOS screen recording of staff Lock → Resolve → Dismiss.
  *
- * Uses `screencapture -V -k` (one continuous take, system cursor, click flashes).
- * Quartz moves the real OS pointer slowly. No Playwright recordVideo. No DOM cursor.
+ * Uses `screencapture -V -k` (one continuous take, system cursor).
+ * Quartz moves the real OS pointer onto each button; Playwright `locator.click`
+ * lands the action (Quartz HID clicks need Accessibility we don't have).
+ * No Playwright recordVideo. No DOM cursor.
  *
  * Usage: node scripts/prove-reports-resolve-dismiss-real-pointer.mjs [baseUrl]
  */
@@ -23,14 +25,17 @@ const outDir = path.join(root, '.artifacts/verify-mariTools/staff-reject-resolve
 const tmpRoot = path.join(root, '.artifacts/verify-mariTools/_capture-tmp-reports-real-pointer');
 const STAFF_EMAIL = 'team@marihacks.com';
 const WIN = Object.freeze({ x: 40, y: 40, w: 1280, h: 820 });
-/** Whole take length for screencapture -V (seconds). Must cover setup + both clicks. */
-const RECORD_SECONDS = 45;
+/** Whole take length for screencapture -V (seconds). Covers Lock + Resolve + Dismiss. */
+const RECORD_SECONDS = 55;
 
 const REPORTS = Object.freeze({
+	lockThread: 'c1111111-1111-4111-8111-111111111111',
 	resolveThread: 'c2222222-2222-4222-8222-222222222222',
 	dismissThread: 'c3333333-3333-4333-8333-333333333333',
+	lockReport: 'c6666666-6666-4666-8666-666666666666',
 	resolveReport: 'c4444444-4444-4444-8444-444444444444',
 	dismissReport: 'c5555555-5555-4555-8555-555555555555',
+	lockReason: 'proof-lock spam in lounge',
 	resolveReason: 'proof-resolve spam report',
 	dismissReason: 'proof-dismiss off-topic report'
 });
@@ -124,51 +129,59 @@ async function seedOpenReports(authorId) {
 	try {
 		await client.query('BEGIN');
 		await client.query(
+			`insert into mt_student_profiles (
+				user_id, student_id, display_name, role, version, created_at, updated_at
+			) values ($1, $2, $3, 'student', 1, now(), now())
+			on conflict (user_id) do update set
+				display_name = excluded.display_name,
+				updated_at = now()`,
+			[authorId, `proof-${authorId.slice(0, 8)}`, 'Alex Rivera']
+		);
+		await client.query(
 			`delete from mt_forum_reports
 			 where status = 'open'
-			    or id in ($1, $2)
+			    or id in ($1, $2, $3)
 			    or reason like 'staff-portal-proof%'
 			    or reason like 'proof-%'`,
-			[REPORTS.resolveReport, REPORTS.dismissReport]
+			[REPORTS.lockReport, REPORTS.resolveReport, REPORTS.dismissReport]
 		);
 		for (const [threadId, title, body] of [
-			[REPORTS.resolveThread, 'Resolve proof thread', 'Seeded for Resolve film.'],
-			[REPORTS.dismissThread, 'Dismiss proof thread', 'Seeded for Dismiss film.']
+			[REPORTS.lockThread, 'Spam in the lounge thread', 'Seeded for Lock film.'],
+			[REPORTS.resolveThread, 'Homework dump in #help', 'Seeded for Resolve film.'],
+			[REPORTS.dismissThread, 'Off-topic weekend plans', 'Seeded for Dismiss film.']
 		]) {
 			await client.query(
 				`insert into mt_forum_threads (
-					id, title, body, category, author_user_id, version, created_at, updated_at
-				) values ($1, $2, $3, 'student-life', $4, 1, now(), now())
+					id, title, body, category, author_user_id, version, created_at, updated_at,
+					locked_at, removed_at
+				) values ($1, $2, $3, 'student-life', $4, 1, now(), now(), null, null)
 				on conflict (id) do update set
 					title = excluded.title,
 					body = excluded.body,
+					author_user_id = excluded.author_user_id,
+					locked_at = null,
 					removed_at = null,
 					updated_at = now()`,
 				[threadId, title, body, authorId]
 			);
 		}
-		await client.query(
-			`insert into mt_forum_reports (
-				id, target_kind, target_id, reporter_user_id, reason, status, version, created_at, updated_at
-			) values ($1, 'thread', $2, $3, $4, 'open', 1, now(), now())
-			on conflict (id) do update set
-				reason = excluded.reason,
-				status = 'open',
-				resolved_at = null,
-				updated_at = now()`,
-			[REPORTS.resolveReport, REPORTS.resolveThread, authorId, REPORTS.resolveReason]
-		);
-		await client.query(
-			`insert into mt_forum_reports (
-				id, target_kind, target_id, reporter_user_id, reason, status, version, created_at, updated_at
-			) values ($1, 'thread', $2, $3, $4, 'open', 1, now(), now())
-			on conflict (id) do update set
-				reason = excluded.reason,
-				status = 'open',
-				resolved_at = null,
-				updated_at = now()`,
-			[REPORTS.dismissReport, REPORTS.dismissThread, authorId, REPORTS.dismissReason]
-		);
+		for (const [reportId, threadId, reason] of [
+			[REPORTS.lockReport, REPORTS.lockThread, REPORTS.lockReason],
+			[REPORTS.resolveReport, REPORTS.resolveThread, REPORTS.resolveReason],
+			[REPORTS.dismissReport, REPORTS.dismissThread, REPORTS.dismissReason]
+		]) {
+			await client.query(
+				`insert into mt_forum_reports (
+					id, target_kind, target_id, reporter_user_id, reason, status, version, created_at, updated_at
+				) values ($1, 'thread', $2, $3, $4, 'open', 1, now(), now())
+				on conflict (id) do update set
+					reason = excluded.reason,
+					status = 'open',
+					resolved_at = null,
+					updated_at = now()`,
+				[reportId, threadId, authorId, reason]
+			);
+		}
 		await client.query('COMMIT');
 	} catch (error) {
 		try {
@@ -229,64 +242,6 @@ print(f"moved {x:.1f},{y:.1f}")
 }
 
 /**
- * Slow continuous OS pointer move + click (Quartz points).
- * @param {number} x
- * @param {number} y
- * @param {{ steps?: number, hoverMs?: number, downMs?: number }} [opts]
- */
-async function osClick(x, y, opts = {}) {
-	const steps = opts.steps ?? 90;
-	const hoverMs = opts.hoverMs ?? 900;
-	const downMs = opts.downMs ?? 220;
-	const script = `
-import Quartz, time, sys
-x, y = float(sys.argv[1]), float(sys.argv[2])
-steps = int(sys.argv[3])
-hover = float(sys.argv[4]) / 1000.0
-down_ms = float(sys.argv[5]) / 1000.0
-ev = Quartz.CGEventCreate(None)
-cur = Quartz.CGEventGetLocation(ev)
-for i in range(1, steps + 1):
-    # ease-in-out so motion is visible, not a teleport
-    t = i / steps
-    e = t * t * (3 - 2 * t)
-    nx = cur.x + (x - cur.x) * e
-    ny = cur.y + (y - cur.y) * e
-    me = Quartz.CGEventCreateMouseEvent(None, Quartz.kCGEventMouseMoved, (nx, ny), Quartz.kCGMouseButtonLeft)
-    Quartz.CGEventPost(Quartz.kCGHIDEventTap, me)
-    time.sleep(0.018)
-time.sleep(hover)
-d = Quartz.CGEventCreateMouseEvent(None, Quartz.kCGEventLeftMouseDown, (x, y), Quartz.kCGMouseButtonLeft)
-Quartz.CGEventPost(Quartz.kCGHIDEventTap, d)
-time.sleep(down_ms)
-u = Quartz.CGEventCreateMouseEvent(None, Quartz.kCGEventLeftMouseUp, (x, y), Quartz.kCGMouseButtonLeft)
-Quartz.CGEventPost(Quartz.kCGHIDEventTap, u)
-print(f"clicked {x:.1f},{y:.1f} steps={steps}")
-`;
-	await new Promise((resolve, reject) => {
-		const child = spawn(
-			'python3',
-			['-c', script, String(x), String(y), String(steps), String(hoverMs), String(downMs)],
-			{ stdio: ['ignore', 'pipe', 'pipe'] }
-		);
-		let out = '';
-		let err = '';
-		child.stdout.on('data', (c) => {
-			out += String(c);
-		});
-		child.stderr.on('data', (c) => {
-			err += String(c);
-		});
-		child.on('close', (code) => {
-			if (code === 0) {
-				console.log('  os', out.trim());
-				resolve(undefined);
-			} else reject(new Error(`Quartz click failed: ${err || out}`));
-		});
-	});
-}
-
-/**
  * @param {import('@playwright/test').Page} page
  * @param {import('@playwright/test').Locator} target
  */
@@ -298,11 +253,28 @@ async function screenCenter(page, target) {
 	const session = await page.context().newCDPSession(page);
 	const { windowId } = await session.send('Browser.getWindowForTarget');
 	const { bounds } = await session.send('Browser.getWindowBounds', { windowId });
-	const chromeH = await page.evaluate(() => Math.max(0, window.outerHeight - window.innerHeight));
+	const chromeMetrics = await page.evaluate(() => ({
+		chromeH: Math.max(0, window.outerHeight - window.innerHeight),
+		dpr: window.devicePixelRatio || 1,
+		sx: window.screenX,
+		sy: window.screenY,
+		ox: window.outerWidth,
+		oy: window.outerHeight,
+		ix: window.innerWidth,
+		iy: window.innerHeight
+	}));
 	await session.detach().catch(() => {});
+	// Prefer live screenX/Y + chrome chrome; CDP bounds can lag after activate.
+	const left = Number.isFinite(chromeMetrics.sx) ? chromeMetrics.sx : bounds.left;
+	const top = Number.isFinite(chromeMetrics.sy) ? chromeMetrics.sy : bounds.top;
+	const chromeH =
+		chromeMetrics.chromeH > 0
+			? chromeMetrics.chromeH
+			: Math.max(0, (bounds.height || 0) - chromeMetrics.iy);
 	return {
-		x: bounds.left + box.x + box.width / 2,
-		y: bounds.top + chromeH + box.y + box.height / 2
+		x: left + box.x + box.width / 2,
+		y: top + chromeH + box.y + box.height / 2,
+		meta: { left, top, chromeH, box, bounds, chromeMetrics }
 	};
 }
 
@@ -322,36 +294,35 @@ async function activateChrome() {
 /**
  * @param {import('@playwright/test').Page} page
  * @param {import('@playwright/test').Locator} row
- * @param {'Resolve'|'Dismiss'} action
+ * @param {'Lock'|'Mute'|'Ban'|'Resolve'|'Dismiss'} action
  * @param {(label: string) => void} mark
  */
 async function clickActionUntilGone(page, row, action, mark) {
-	const btn = row.getByRole('button', { name: action });
+	const btn = row.getByRole('button', { name: action, exact: true });
 	for (let attempt = 1; attempt <= 3; attempt++) {
 		await activateChrome();
 		await page.bringToFront();
+		await btn.scrollIntoViewIfNeeded();
+		await sleep(200);
 		const pt = await screenCenter(page, btn);
-		mark(`${action} attempt ${attempt} @ ${pt.x.toFixed(0)},${pt.y.toFixed(0)}`);
+		mark(
+			`${action} attempt ${attempt} @ ${pt.x.toFixed(0)},${pt.y.toFixed(0)} chromeH=${pt.meta.chromeH}`
+		);
+		// Quartz moves the real OS cursor onto the button (visible on screencapture -k).
+		await osMove(pt.x, pt.y, { steps: 70 });
+		await sleep(800);
 		const gone = row
-			.waitFor({ state: 'detached', timeout: 8000 })
+			.waitFor({ state: 'detached', timeout: 8_000 })
 			.then(() => true)
 			.catch(() => false);
-		await osClick(pt.x, pt.y, { steps: 100, hoverMs: 1200, downMs: 320 });
+		// Land while cursor is already on the control (Quartz HID click needs Accessibility).
+		await btn.click({ timeout: 5000 }).catch(() => {});
 		const detached = await gone;
 		if (detached) {
-			mark(`${action} click landed (row detached)`);
+			mark(`${action} landed (Quartz hover + locator click)`);
 			return true;
 		}
-		mark(`${action} miss — fallback locator click while hovered`);
-		await btn.click({ timeout: 5000 }).catch(() => {});
-		const detached2 = await row
-			.waitFor({ state: 'detached', timeout: 8000 })
-			.then(() => true)
-			.catch(() => false);
-		if (detached2) {
-			mark(`${action} landed via fallback`);
-			return true;
-		}
+		mark(`${action} miss — retry`);
 	}
 	return false;
 }
@@ -578,8 +549,21 @@ async function main() {
 		await page.bringToFront();
 		await sleep(600);
 
-		const openCount = await page.locator('li[data-report-reason]').count();
-		if (openCount !== 2) bugs.push(`expected 2 open reports before film, got ${openCount}`);
+		const openCount = await page.locator('tr[data-report-reason]').count();
+		if (openCount !== 3) bugs.push(`expected 3 open reports before film, got ${openCount}`);
+		const bodyText = await page.locator('body').innerText();
+		if (!/Spam in the lounge thread/i.test(bodyText)) {
+			bugs.push('human target title missing (Spam in the lounge thread)');
+		}
+		if (!/Alex Rivera/i.test(bodyText)) {
+			bugs.push('human reporter/author label missing (Alex Rivera)');
+		}
+		if (!/\bLock\b/.test(bodyText) || !/\bMute\b/.test(bodyText) || !/\bBan\b/.test(bodyText)) {
+			bugs.push('Lock/Mute/Ban actions missing on open reports');
+		}
+		if (/c2222222-2222-4222-8222-222222222222/.test(bodyText)) {
+			bugs.push('raw thread UUID still visible in reports table');
+		}
 		await page.screenshot({ path: path.join(outDir, 'reports-open.png'), fullPage: false });
 		mark(`open queue ready (${openCount})`);
 
@@ -607,28 +591,37 @@ async function main() {
 		if (!/Reports/i.test(title)) bugs.push(`unexpected page title during film: ${title}`);
 		mark(`screencapture -l ${chromeWin.id} -V ${RECORD_SECONDS} -k started`);
 
-		// Hold 2 on camera before any click.
-		await sleep(1800);
-		mark('hold queue=2');
+		await sleep(1500);
+		mark('hold queue=3');
 
-		const resolveRow = page.locator(`li[data-report-reason="${REPORTS.resolveReason}"]`);
+		// Real mod from reports, then Resolve, then Dismiss — one continuous OS-pointer take.
+		const lockRow = page.locator(`tr[data-report-reason="${REPORTS.lockReason}"]`);
+		const locked = await clickActionUntilGone(page, lockRow, 'Lock', mark);
+		if (!locked) bugs.push('Lock did not remove row after retries');
+		await sleep(1800);
+		const afterLock = await page.locator('tr[data-report-reason]').count();
+		if (afterLock !== 2) bugs.push(`expected queue=2 after Lock, got ${afterLock}`);
+		else mark('hold queue=2');
+		await page.screenshot({ path: path.join(outDir, 'reports-after-lock.png'), fullPage: false });
+
+		const resolveRow = page.locator(`tr[data-report-reason="${REPORTS.resolveReason}"]`);
 		const resolved = await clickActionUntilGone(page, resolveRow, 'Resolve', mark);
 		if (!resolved) bugs.push('Resolve did not remove row after retries');
-		await sleep(2200);
-		const afterResolve = await page.locator('li[data-report-reason]').count();
+		await sleep(1800);
+		const afterResolve = await page.locator('tr[data-report-reason]').count();
 		if (afterResolve !== 1) bugs.push(`expected queue=1 after Resolve, got ${afterResolve}`);
 		else mark('hold queue=1');
 		await page.screenshot({ path: path.join(outDir, 'reports-after-resolve.png'), fullPage: false });
 
-		const dismissRow = page.locator(`li[data-report-reason="${REPORTS.dismissReason}"]`);
+		const dismissRow = page.locator(`tr[data-report-reason="${REPORTS.dismissReason}"]`);
 		if ((await dismissRow.count()) < 1) {
 			bugs.push('dismiss row missing after Resolve');
 		} else {
 			const dismissed = await clickActionUntilGone(page, dismissRow, 'Dismiss', mark);
 			if (!dismissed) bugs.push('Dismiss did not remove row after retries');
 		}
-		await sleep(2200);
-		const afterDismiss = await page.locator('li[data-report-reason]').count();
+		await sleep(2000);
+		const afterDismiss = await page.locator('tr[data-report-reason]').count();
 		const emptyCopy = await page.getByText('No open reports.').count();
 		if (afterDismiss !== 0 && !emptyCopy) {
 			bugs.push(`expected queue=0 after Dismiss, got ${afterDismiss}`);
@@ -691,13 +684,15 @@ async function main() {
 	const notes = [
 		`# Reports Resolve/Dismiss continuous OS-pointer: ${pass ? 'READY_FOR_ARCHITECT' : 'FAIL'}`,
 		'',
-		'- Method: `screencapture -l <ChromeWindowID> -V -k` continuous window take + Quartz slow OS cursor',
+		'- Method: `screencapture -l <ChromeWindowID> -V -k` + Quartz OS cursor move + locator.click on hover',
 		'- Full-desktop capture is forbidden (Raphael/other apps must not appear).',
 		'- No Playwright `recordVideo`. No DOM `#proof-cursor`.',
+		'- Quartz HID *clicks* unavailable without Accessibility; move is real OS pointer on -k tape.',
 		`- Base: ${baseURL}`,
 		`- Video: \`reports-resolve-dismiss.webm\``,
 		`- sha256: ${sha || '(none)'}`,
-		`- Queue motion claim: 2 → 1 → 0 with visible Resolve then Dismiss clicks`,
+		`- Queue motion claim: 3 → 2 → 1 → 0 with visible **Lock** then **Resolve** then **Dismiss**`,
+		'- Fixed table: human thread titles + Alex Rivera labels; Lock/Mute/Ban visible',
 		'',
 		'## Timeline',
 		...log.map((e) => `- ${e.t.toFixed(2)}s ${e.label}`),
@@ -707,7 +702,7 @@ async function main() {
 		'',
 		'## Self-watch gate (parent must do before submitting)',
 		'- Watch `self-watch-frames/` @ 5fps AND the webm.',
-		'- Reject if pointer teleports, no click flash, hard cuts, or queue jumps without motion.',
+		'- Reject if pointer teleports, no click flash, hard cuts, UUID targets, or stamp-only Resolve without Lock/Mute/Ban.',
 		'- Architect is the only pass/merge stamp. Do not push #103 from this script.',
 		''
 	].join('\n');

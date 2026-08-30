@@ -61,9 +61,16 @@
 
 	$: selectedTerm = $explicitTermId ?? ACADEMIC_TERMS[0]?.id ?? '';
 	$: termName = ACADEMIC_TERMS.find((term) => term.id === selectedTerm)?.name ?? selectedTerm;
-	$: missingDates = (proposals.assessments ?? []).filter(
-		(row) => String(row.title ?? '').trim() && !String(row.date ?? '').trim()
-	).length;
+	$: missingDates = (proposals.assessments ?? []).filter((row) => {
+		const title = String(row.title ?? '').trim();
+		const date = String(row.date ?? '').trim();
+		if (!title || date) return false;
+		// Labs / quizzes / common-period finals often have no calendar day in the outline.
+		if (/^(weekly\s+)?labs?$/i.test(title)) return false;
+		if (/^quizzes?$/i.test(title)) return false;
+		if (/second test|final exam|common evaluation/i.test(title)) return false;
+		return /test|quiz|exam|project|midterm|assignment|paper|essay|presentation/i.test(title);
+	}).length;
 	$: identityFields = [
 		{ label: 'Course code', value: courseCode },
 		{ label: 'Title', value: title },

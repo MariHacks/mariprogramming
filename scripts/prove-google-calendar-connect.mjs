@@ -145,7 +145,9 @@ async function readGrant(userId) {
 		const g = await pool.query(
 			`select refresh_token is not null as has_refresh,
 			        access_token is not null as has_access,
-			        access_token
+			        access_token,
+			        refresh_token,
+			        access_token_expires_at
 			 from mt_google_calendar_grants where user_id = $1`,
 			[userId]
 		);
@@ -153,6 +155,54 @@ async function readGrant(userId) {
 	} finally {
 		await pool.end();
 	}
+}
+
+/**
+ * Refresh a usable access token and persist it (expired tokens cause 401 cleanup/list).
+ * @param {string} userId
+ */
+async function resolveFreshAccessToken(userId) {
+	await loadEnvLocal(path.join(root, '.env.local'));
+	const clientId = process.env.GOOGLE_CLIENT_ID;
+	const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+	const grant = await readGrant(userId);
+	if (!grant?.refresh_token) throw new Error('no refresh_token on grant');
+	const expiresAt = grant.access_token_expires_at
+		? new Date(grant.access_token_expires_at).getTime()
+		: 0;
+	if (grant.access_token && expiresAt > Date.now() + 60_000) {
+		return String(grant.access_token);
+	}
+	const response = await fetch('https://oauth2.googleapis.com/token', {
+		method: 'POST',
+		headers: { 'content-type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({
+			client_id: String(clientId),
+			client_secret: String(clientSecret),
+			refresh_token: String(grant.refresh_token),
+			grant_type: 'refresh_token'
+		})
+	});
+	const body = await response.text();
+	if (!response.ok) throw new Error(`token refresh failed (${response.status}): ${body.slice(0, 200)}`);
+	const json = JSON.parse(body);
+	const accessToken = String(json.access_token ?? '');
+	if (!accessToken) throw new Error('token refresh returned no access_token');
+	const expiresIn = Number(json.expires_in ?? 3600);
+	const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+	try {
+		await pool.query(
+			`update mt_google_calendar_grants
+			 set access_token = $2,
+			     access_token_expires_at = now() + ($3 || ' seconds')::interval,
+			     updated_at = now()
+			 where user_id = $1`,
+			[userId, accessToken, String(expiresIn)]
+		);
+	} finally {
+		await pool.end();
+	}
+	return accessToken;
 }
 
 /**
@@ -176,6 +226,32 @@ async function listPrimaryEvents(accessToken, timeMin, timeMax) {
 		throw new Error(`Calendar list failed (${response.status}): ${body.slice(0, 200)}`);
 	}
 	return JSON.parse(body);
+}
+
+/**
+ * Clear prior Badminton proof events so the day view shows one clean event.
+ * @param {string} accessToken
+ */
+async function deletePriorBadmintonEvents(accessToken) {
+	const listed = await listPrimaryEvents(
+		accessToken,
+		'2026-08-01T00:00:00-04:00',
+		'2026-10-15T00:00:00-04:00'
+	);
+	const items = listed.items ?? [];
+	let deleted = 0;
+	for (const ev of items) {
+		const summary = String(ev.summary ?? '');
+		if (!/Badminton/i.test(summary)) continue;
+		const id = ev.id;
+		if (!id) continue;
+		const res = await fetch(
+			`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(id)}`,
+			{ method: 'DELETE', headers: { authorization: `Bearer ${accessToken}` } }
+		);
+		if (res.ok || res.status === 410) deleted += 1;
+	}
+	return deleted;
 }
 
 /**
@@ -378,11 +454,15 @@ async function main() {
 			if (!context) throw new Error('CDP browser has no context');
 			useCdp = true;
 		} catch (error) {
-			console.warn(
-				`CDP connect failed (${error instanceof Error ? error.message : String(error)}); falling back to profile copy`
-			);
+			const msg = error instanceof Error ? error.message : String(error);
+			if (process.env.GCAL_REQUIRE_CDP === '1') {
+				throw new Error(`CDP required but connect failed: ${msg}`);
+			}
+			console.warn(`CDP connect failed (${msg}); falling back to profile copy`);
 			browser = null;
 		}
+	} else if (process.env.GCAL_REQUIRE_CDP === '1') {
+		throw new Error(`CDP required at ${CDP_URL} but /json/version is down`);
 	}
 
 	if (!useCdp) {
@@ -424,13 +504,13 @@ async function main() {
 	try {
 		await page.goto(`${baseURL}/tools/schedule`, { waitUntil: 'domcontentloaded' });
 		await page.evaluate(() => localStorage.setItem('maritools.omnivox-tutorial.dismissed', '1'));
-		await page.reload({ waitUntil: 'networkidle' });
+		await page.reload({ waitUntil: 'domcontentloaded' });
 		await mark(page, t0, log, `signed-in schedule via ${launchMode}`);
 
 		await page.getByRole('button', { name: 'Import Omnivox' }).first().click();
 		await page.getByLabel('Omnivox course list').fill(MONDAY_PROOF_SCHEDULE);
-		await page.getByRole('button', { name: 'Read schedule' }).click();
-		await page.getByLabel('Weekly course schedule').waitFor({ state: 'visible' });
+		await page.getByRole('button', { name: 'Read schedule' }).click({ noWaitAfter: true });
+		await page.getByLabel('Weekly course schedule').waitFor({ state: 'visible', timeout: 20000 });
 		await mark(page, t0, log, 'parsed Monday-only Fall schedule');
 
 		await page.getByRole('button', { name: 'Add to Google Calendar' }).click();
@@ -468,12 +548,24 @@ async function main() {
 			await mark(page, t0, log, 'grant persisted (refresh token present)');
 		}
 
-		await page.goto(`${baseURL}/tools/schedule`, { waitUntil: 'networkidle' });
+		if (grant?.has_refresh) {
+			try {
+				const accessToken = await resolveFreshAccessToken(userId);
+				const deleted = await deletePriorBadmintonEvents(accessToken);
+				await mark(page, t0, log, `cleared ${deleted} prior Badminton event(s)`, 800);
+			} catch (error) {
+				bugs.push(
+					`pre-push Badminton cleanup failed: ${error instanceof Error ? error.message : String(error)}`
+				);
+			}
+		}
+
+		await page.goto(`${baseURL}/tools/schedule`, { waitUntil: 'domcontentloaded' });
 		await page.evaluate(() => localStorage.setItem('maritools.omnivox-tutorial.dismissed', '1'));
 		await page.getByRole('button', { name: 'Import Omnivox' }).first().click();
 		await page.getByLabel('Omnivox course list').fill(MONDAY_PROOF_SCHEDULE);
-		await page.getByRole('button', { name: 'Read schedule' }).click();
-		await page.getByLabel('Weekly course schedule').waitFor({ state: 'visible' });
+		await page.getByRole('button', { name: 'Read schedule' }).click({ noWaitAfter: true });
+		await page.getByLabel('Weekly course schedule').waitFor({ state: 'visible', timeout: 20000 });
 		await page.getByRole('button', { name: 'Add to Google Calendar' }).click();
 		await page.locator('.calendar-modal').waitFor({ state: 'visible' });
 		const modalAfter = await page.locator('.calendar-modal').innerText();
@@ -541,10 +633,20 @@ async function main() {
 		}
 
 		const grantAfter = await readGrant(userId);
-		if (grantAfter?.access_token) {
+		let accessAfter = null;
+		if (grantAfter?.has_refresh) {
+			try {
+				accessAfter = await resolveFreshAccessToken(userId);
+			} catch (error) {
+				bugs.push(
+					`post-push token refresh failed: ${error instanceof Error ? error.message : String(error)}`
+				);
+			}
+		}
+		if (accessAfter) {
 			try {
 				const listed = await listPrimaryEvents(
-					grantAfter.access_token,
+					accessAfter,
 					'2026-09-07T00:00:00-04:00',
 					'2026-09-09T00:00:00-04:00'
 				);
@@ -568,37 +670,131 @@ async function main() {
 				}
 				await mark(page, t0, log, `Calendar API sep8=${onSep8.length} sep7=${onSep7.length}`, 1200);
 
-				// Proof surface is calendar.google.com itself (no debug overlay).
-				const calUrl =
-					'https://calendar.google.com/calendar/u/0/r/day/2026/9/8';
-				await mark(page, t0, log, `opening ${calUrl}`, 800);
-				await page.goto(calUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 }).catch((error) => {
+				// End on nick's day grid with morning Badminton in viewport — never search.
+				const dayPath = '/calendar/u/1/r/day/2026/9/8';
+				const chooser = `https://accounts.google.com/AccountChooser?Email=${encodeURIComponent(NICK_EMAIL)}&continue=${encodeURIComponent(`https://calendar.google.com${dayPath}`)}`;
+				await mark(page, t0, log, 'opening nick day grid via AccountChooser', 800);
+				await page.goto(chooser, { waitUntil: 'domcontentloaded', timeout: 60_000 }).catch((error) => {
 					bugs.push(
-						`calendar.google.com navigation failed: ${error instanceof Error ? error.message : String(error)}`
+						`calendar AccountChooser failed: ${error instanceof Error ? error.message : String(error)}`
 					);
 				});
 				await sleep(4000);
-				const calBody = await page.locator('body').innerText().catch(() => '');
-				if (!/Badminton|calendar\.google|Google Calendar/i.test(calBody) && !bugs.length) {
-					// Signed-out Google may show login. Still require the URL for the tape.
-					await mark(page, t0, log, `on ${page.url()} (body sample may be login wall)`, 1200);
-				} else {
-					await mark(page, t0, log, 'calendar.google.com day view for 2026-09-08', 2000);
+				if (!/calendar\.google\.com\/calendar\/u\/\d+\/r\/day/i.test(page.url())) {
+					await page
+						.goto(`https://calendar.google.com${dayPath}`, {
+							waitUntil: 'domcontentloaded',
+							timeout: 60_000
+						})
+						.catch(() => {});
+					await sleep(3500);
 				}
-				if (!/calendar\.google\.com/i.test(page.url())) {
-					bugs.push(`expected calendar.google.com, got ${page.url()}`);
+				// Stay on day grid only — never open /r/search (Architect 2236 FAIL).
+				if (/\/r\/search/i.test(page.url())) {
+					await page.goto(`https://calendar.google.com${dayPath}`, {
+						waitUntil: 'domcontentloaded',
+						timeout: 60_000
+					});
+					await sleep(3500);
+				}
+				// Uncheck overlay calendars by clicking the color square left of the name
+				// (clicking the name selects the calendar; the square toggles visibility).
+				const hideCalendars = ['Marianopolis', 'Mari Programming Club', 'Raphael', 'Reality Calendar'];
+				for (let attempt = 0; attempt < 3; attempt++) {
+					for (const name of hideCalendars) {
+						const box = await page.evaluate((calendarName) => {
+							for (const el of document.querySelectorAll('span, div')) {
+								if ((el.textContent || '').trim() !== calendarName) continue;
+								const r = el.getBoundingClientRect();
+								if (r.width > 20 && r.height > 8 && r.width < 220 && r.y > 180 && r.x < 420) {
+									return { x: r.x, y: r.y + r.height / 2 };
+								}
+							}
+							return null;
+						}, name);
+						if (box) {
+							await page.mouse.click(Math.max(8, box.x - 16), box.y);
+							await sleep(350);
+						}
+					}
+					await sleep(600);
+					const stillPurple = /Marianopolis College — GYM/i.test(
+						(await page.locator('body').innerText().catch(() => '')) || ''
+					);
+					if (!stillPurple) break;
+				}
+				// Scroll to morning immediately and stay there for the rest of the tape.
+				await page.evaluate(() => {
+					const nodes = Array.from(document.querySelectorAll('div, main, [role="main"]'));
+					for (const el of nodes) {
+						if (el.scrollHeight > el.clientHeight + 200 && el.clientHeight > 300) {
+							el.scrollTop = 0;
+						}
+					}
+					window.scrollTo(0, 0);
+				});
+				for (let i = 0; i < 10; i++) {
+					await page.mouse.wheel(0, -1800);
+					await sleep(60);
+				}
+				await page.keyboard.press('Home').catch(() => {});
+				await sleep(600);
+				const badmintonChip = page.getByText(/Badminton and Conditioning/i).first();
+				if ((await badmintonChip.count()) > 0) {
+					await badmintonChip.scrollIntoViewIfNeeded().catch(() => {});
+				}
+				let calBody = await page.locator('body').innerText().catch(() => '');
+				const onDayGrid = /calendar\.google\.com\/calendar\/u\/\d+\/r\/day/i.test(page.url());
+				const emailHint = await page.locator('#xUserEmail').textContent().catch(() => '');
+				if (!onDayGrid) bugs.push(`expected calendar day grid, got ${page.url()}`);
+				if (emailHint && !/nick\.zhicheng@gmail\.com/i.test(emailHint)) {
+					bugs.push(`calendar account is ${emailHint}, expected ${NICK_EMAIL}`);
+				}
+				if (/\/r\/search/i.test(page.url())) {
+					bugs.push('tape ended on search results (forbidden — day/week grid only)');
+				}
+				const morningOk =
+					/\b8\s*AM\b|\b8:00\b|\b9\s*AM\b|\b10\s*AM\b/i.test(calBody) ||
+					/08:15|8:15|10:05/.test(calBody);
+				const apiSep8 = (
+					await listPrimaryEvents(
+						accessAfter,
+						'2026-09-07T00:00:00-04:00',
+						'2026-09-09T00:00:00-04:00'
+					).catch(() => ({ items: [] }))
+				).items.filter(
+					(ev) =>
+						/Badminton/i.test(String(ev.summary ?? '')) &&
+						String(ev.start?.dateTime ?? '').startsWith('2026-09-08')
+				);
+				const purpleTwin = /Marianopolis College — GYM/i.test(calBody);
+				if (!/Badminton/i.test(calBody) || !morningOk) {
+					bugs.push('day grid viewport missing Badminton (need morning 8:15–10:05 on camera)');
+				} else if (apiSep8.length !== 1) {
+					bugs.push(`primary calendar has ${apiSep8.length} Badminton on Sep 8 (expected 1)`);
+				} else if (purpleTwin) {
+					bugs.push('Marianopolis purple Badminton twin still visible — overlay calendar not hidden');
+				} else {
+					await mark(
+						page,
+						t0,
+						log,
+						`day grid shows single primary Badminton in morning viewport (api=${apiSep8.length})`,
+						12000
+					);
 				}
 				await page.screenshot({
 					path: path.join(outDir, 'calendar-google-com.png'),
 					fullPage: false
 				});
+				await sleep(2500);
 			} catch (error) {
 				bugs.push(
 					`Calendar API verify failed: ${error instanceof Error ? error.message : String(error)}`
 				);
 			}
 		} else if (grantAfter?.has_refresh) {
-			bugs.push('grant has refresh but no access token for Calendar API verify');
+			bugs.push('could not obtain access token after push');
 		}
 
 		await page.screenshot({ path: path.join(outDir, 'final.png'), fullPage: false });
@@ -607,7 +803,8 @@ async function main() {
 		if (screencast) await screencast.stop();
 		await page.close().catch(() => {});
 		if (!useCdp) await context.close().catch(() => {});
-		if (browser) await browser.close().catch(() => {});
+		// Never browser.close() on CDP — that kills the signed-in Google Chrome we need.
+		if (!useCdp && browser) await browser.close().catch(() => {});
 	}
 
 	const dest = path.join(outDir, 'google-calendar-connect.webm');

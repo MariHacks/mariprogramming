@@ -79,7 +79,7 @@ export function createOutlineExtractionProvider(options = {}) {
 						{
 							role: 'user',
 							content:
-								'Extract course identity, assessments, and books as JSON with shape {"courseCode":string|null,"title":string|null,"section":string|null,"teacherName":string|null,"assessments":[{"title":string,"weight":number|null,"date":"YYYY-MM-DD"|null}],"books":[{"title":string,"author":string|null,"isbn":string|null,"required":boolean}]}. Use null for unknown fields. Never invent dates. Text:\n' +
+								'Extract course identity, assessments, and books as JSON with shape {"courseCode":string|null,"title":string|null,"section":string|null,"teacherName":string|null,"assessments":[{"title":string,"weight":number|null,"date":"YYYY-MM-DD"|null}],"books":[{"title":string,"author":string|null,"isbn":string|null,"required":boolean}]}. Read the EVALUATION table carefully: each row is Due Date/Due Week, then Type (Labs, Quizzes, First test, Project, Second test). Put the calendar due on the matching Type only (e.g. "Friday, October 2" → First test, not Quizzes). Use null for date when the due cell is Weekly, As announced, or In common evaluation period. Never invent dates. Use null for section when the outline does not state a section number. Text:\n' +
 								input.text
 						}
 					]

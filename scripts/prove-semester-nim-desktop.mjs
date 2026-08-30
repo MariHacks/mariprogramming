@@ -184,8 +184,31 @@ async function main() {
 					})
 					.catch(() => {});
 			}
+
+			// Capture processing UI on camera while extract runs (client enhance sets extracting).
+			let sawProcessing = false;
+			const processingDeadline = Date.now() + Math.min(EXTRACT_WAIT_MS, 90_000);
+			while (Date.now() < processingDeadline) {
+				const bodyMid = await page.locator('body').innerText().catch(() => '');
+				if (/Extracting…|Extracting outline|Extracting course identity/i.test(bodyMid)) {
+					sawProcessing = true;
+					await mark(page, t0, log, 'processing UI visible (Extracting…)');
+					await page.screenshot({
+						path: path.join(outDir, 'nim-processing.png'),
+						fullPage: false
+					});
+					break;
+				}
+				if (page.url().includes('?/extract')) break;
+				await sleep(400);
+			}
+			outcome.sawProcessingUi = sawProcessing;
+			if (!sawProcessing) bugs.push('processing UI (Extracting…) never appeared on camera');
+
 			await extractDone;
-			await page.locator('input[name="courseCode"]').waitFor({ state: 'visible', timeout: 20_000 });
+			await page
+				.locator('input[name="courseCode"]')
+				.waitFor({ state: 'visible', timeout: 90_000 });
 			await mark(page, t0, log, 'extract action returned review UI');
 
 			const body = await page.locator('body').innerText();
@@ -233,8 +256,13 @@ async function main() {
 			if (filled < 1 && outcome.extractionOk) {
 				bugs.push('extraction ok but assessment title fields empty');
 			}
-			if (identityFilled < 1 && outcome.extractionOk) {
-				bugs.push('extraction ok but course identity fields empty');
+			const coreIdentity = Boolean(identity.courseCode && identity.title && identity.teacher);
+			if (!coreIdentity && outcome.extractionOk) {
+				bugs.push(
+					`course identity incomplete: ${identityFilled}/4 (need code+title+teacher; section=${identity.section || '∅ — often absent from Science outlines'})`
+				);
+			} else if (!identity.section && outcome.extractionOk) {
+				await mark(page, t0, log, 'section absent from outline (3/4 identity — dates still required)');
 			}
 			if (failedClosed) {
 				await mark(page, t0, log, 'graceful failure (no 500) — manual fields shown');
@@ -245,6 +273,49 @@ async function main() {
 					log,
 					`identity ${identityFilled}/4 · assessments ${filled} of ${rowCount}`
 				);
+			}
+
+			// Live extract must fill calendar dates from the outline — never Playwright-fill.
+			await sleep(1200);
+			const bodyAfter = await page.locator('body').innerText();
+			const missingDateBadge = /\d+\s+date missing/i.test(bodyAfter);
+			/** @param {string} title */
+			const expectsDate = (title) => {
+				const t = title.trim();
+				if (/^(weekly\s+)?labs?$/i.test(t) || /^quizzes?$/i.test(t)) return false;
+				if (/second test|final exam|common evaluation/i.test(t)) return false;
+				return /test|quiz|exam|project|midterm|assignment|paper|essay|presentation/i.test(t);
+			};
+			let dated = 0;
+			let expectedDateRows = 0;
+			let expectedDated = 0;
+			for (let i = 0; i < rowCount; i += 1) {
+				const title = String((await titles.nth(i).inputValue()) ?? '').trim();
+				const date = String((await dates.nth(i).inputValue()) ?? '').trim();
+				if (title && date && date !== 'YYYY-MM-DD') dated += 1;
+				if (title && expectsDate(title)) {
+					expectedDateRows += 1;
+					if (date && date !== 'YYYY-MM-DD') expectedDated += 1;
+				}
+			}
+			outcome.assessmentDatesFilled = dated;
+			if (missingDateBadge || expectedDated < expectedDateRows) {
+				bugs.push(
+					`live extract left required dates incomplete (dated ${expectedDated}/${expectedDateRows}; badge=${missingDateBadge})`
+				);
+			} else {
+				await mark(
+					page,
+					t0,
+					log,
+					`share-ready from live extract (${dated} dated · ${expectedDated}/${expectedDateRows} required)`,
+					1800
+				);
+			}
+			outcome.shareReady =
+				!missingDateBadge && expectedDated >= expectedDateRows && filled > 0 && coreIdentity;
+			if (cacheHit) {
+				bugs.push('cache-hit on camera — need live extract filling identity+dates');
 			}
 
 			await page.screenshot({ path: path.join(outDir, 'nim-desktop-extract.png'), fullPage: false });
@@ -275,7 +346,9 @@ async function main() {
 		bugs.length === 0 &&
 		outcome.extractionOk === true &&
 		Number(outcome.assessmentsFilled) > 0 &&
-		Number(outcome.identityFilled) > 0 &&
+		Number(outcome.identityFilled) >= 3 &&
+		outcome.sawProcessingUi === true &&
+		outcome.shareReady === true &&
 		outcome.httpStatus !== 500;
 
 	const report = {

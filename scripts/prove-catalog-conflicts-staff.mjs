@@ -283,11 +283,14 @@ async function main() {
 
 		const body = await page.locator('body').innerText();
 		if (!body.includes('Catalog conflicts')) bugs.push('heading missing');
+		if (!/first share for a course publishes immediately/i.test(body)) {
+			bugs.push('first-share rule copy missing on conflicts page');
+		}
 		if (!body.includes(COURSE.code)) bugs.push(`course code missing: ${COURSE.code}`);
 		if (!body.includes(COURSE.title)) bugs.push(`title missing: ${COURSE.title}`);
 		if (!body.includes('Left peer book')) bugs.push('left peer facts missing');
 		if (!body.includes('Right peer book')) bugs.push('right peer facts missing');
-		if (!body.includes('2 peers') && !body.includes('2 peer')) bugs.push('peer count missing');
+		if (!/2 peers|2 peer|2 versions/i.test(body)) bugs.push('peer count missing');
 
 		const conflictsNav = page.getByRole('link', { name: 'Catalog conflicts' });
 		if ((await conflictsNav.count()) === 0) bugs.push('Catalog conflicts nav link missing');

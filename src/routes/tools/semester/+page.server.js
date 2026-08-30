@@ -2,7 +2,9 @@ import { env } from '$env/dynamic/private';
 import { fail } from '@sveltejs/kit';
 import { createOutlineExtractionProvider, needsTextPdf } from '$lib/maritools/extract/provider.js';
 import {
+	proposalsNeedAssessmentDates,
 	proposalsNeedIdentity,
+	withGuessedAssessmentDates,
 	withGuessedIdentity
 } from '$lib/maritools/extract/identity.js';
 import { semesterPageView } from '$lib/server/maritools/community.js';
@@ -107,7 +109,11 @@ export function _createHandlers(dependencies = {}) {
 				extractedText: text
 			});
 			const cached = await repository.getExtraction(extracted.sha256);
-			if (cached && !proposalsNeedIdentity(cached.proposals)) {
+			if (
+				cached &&
+				!proposalsNeedIdentity(cached.proposals) &&
+				!proposalsNeedAssessmentDates(cached.proposals)
+			) {
 				return {
 					outlineFileName,
 					extraction: {
@@ -127,8 +133,11 @@ export function _createHandlers(dependencies = {}) {
 				byteLength: extracted.byteLength
 			});
 			const proposals = result.ok
-				? withGuessedIdentity(
-						/** @type {Record<string, unknown> | null} */ (result.proposals),
+				? withGuessedAssessmentDates(
+						withGuessedIdentity(
+							/** @type {Record<string, unknown> | null} */ (result.proposals),
+							text
+						),
 						text
 					)
 				: null;
