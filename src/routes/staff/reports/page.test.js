@@ -48,7 +48,7 @@ const openReport = {
 };
 
 describe('staff reports page', () => {
-	it('renders human labels and one action row with lock/mute/ban', () => {
+	it('renders human labels and separates dangerous actions from ticket actions', () => {
 		render(ReportsPage, {
 			data: {
 				statusFilter: 'open',
@@ -73,19 +73,15 @@ describe('staff reports page', () => {
 		);
 		expect(screen.queryByText(THREAD)).not.toBeInTheDocument();
 		expect(screen.queryByText(REPORTER)).not.toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Lock' })).toHaveAttribute(
-			'formaction',
-			'?/lockThread'
-		);
-		expect(screen.getByRole('button', { name: 'Mute' })).toHaveAttribute(
-			'formaction',
-			'?/muteAuthor'
-		);
-		expect(screen.getByLabelText('Mute for')).toBeInTheDocument();
-		expect(screen.getByDisplayValue('7 days')).toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Ban' })).toHaveAttribute('formaction', '?/banAuthor');
-		expect(screen.getByLabelText('Ban for')).toBeInTheDocument();
-		expect(screen.getByDisplayValue('Permanent')).toBeInTheDocument();
+		const lock = screen.getByRole('button', { name: 'Lock' });
+		expect(lock).toHaveAttribute('formaction', '?/lockThread');
+		expect(lock).toHaveClass('danger-button');
+		expect(screen.getByRole('button', { name: 'Mute' })).toHaveClass('danger-button');
+		expect(screen.getByRole('button', { name: 'Ban' })).toHaveClass('danger-button');
+		expect(document.querySelector('.danger-actions')).toBeTruthy();
+		expect(document.querySelector('.ticket-actions')).toBeTruthy();
+		expect(screen.queryByLabelText('Mute for')).not.toBeInTheDocument();
+		expect(screen.queryByLabelText('Ban for')).not.toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Resolve' })).toHaveAttribute(
 			'formaction',
 			'?/resolve'
@@ -94,7 +90,23 @@ describe('staff reports page', () => {
 			'formaction',
 			'?/dismiss'
 		);
+		expect(screen.getByRole('button', { name: 'Resolve' })).not.toHaveClass('danger-button');
 		expect(formMocks.enhance).toHaveBeenCalled();
+	});
+
+	it('opens a mute duration popup after pressing Mute', async () => {
+		const { fireEvent } = await import('@testing-library/svelte');
+		render(ReportsPage, {
+			data: { statusFilter: 'open', unavailable: false, reports: [openReport] }
+		});
+		await fireEvent.click(screen.getByRole('button', { name: 'Mute' }));
+		expect(screen.getByRole('dialog', { name: 'Mute duration' })).toBeInTheDocument();
+		expect(screen.getByLabelText('Mute for')).toBeInTheDocument();
+		expect(screen.getByDisplayValue('7 days')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Confirm mute' })).toHaveAttribute(
+			'formaction',
+			'?/muteAuthor'
+		);
 	});
 
 	it('hides moderation actions for closed reports', () => {

@@ -1,7 +1,7 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { initialsFromDisplayName } from '$lib/maritools/header-account.js';
-	import ModerationDurationFields from '$lib/maritools/ModerationDurationFields.svelte';
+	import ModerationDurationDialog from '$lib/maritools/ModerationDurationDialog.svelte';
 
 	export let data;
 	export let form;
@@ -10,6 +10,8 @@
 	let openReportId = null;
 	/** @type {string | null} */
 	let editingId = null;
+	/** @type {'mute' | 'ban' | null} */
+	let durationPrompt = null;
 
 	/** @param {string | null | undefined} name */
 	function authorLabel(name) {
@@ -327,26 +329,19 @@
 					<section class="reply-editor">
 						<strong>Staff moderation</strong>
 						<form method="POST" action="?/moderate" class="staff-mod-form">
-							<button type="submit" name="moderation" value="lock" class="quiet-button"
+							<button type="submit" name="moderation" value="lock" class="danger-button"
 								>Lock thread</button
 							>
-							<button type="submit" name="moderation" value="remove-thread" class="quiet-button"
+							<button type="submit" name="moderation" value="remove-thread" class="danger-button"
 								>Remove thread</button
 							>
 							{#if data.thread?.authorUserId}
-								<input type="hidden" name="authorUserId" value={data.thread.authorUserId} />
-								<div class="staff-duration-row">
-									<ModerationDurationFields kind="mute" idPrefix="thread-mute" />
-									<button type="submit" name="moderation" value="mute-author" class="quiet-button"
-										>Mute author</button
-									>
-								</div>
-								<div class="staff-duration-row">
-									<ModerationDurationFields kind="ban" idPrefix="thread-ban" />
-									<button type="submit" name="moderation" value="ban-author" class="quiet-button"
-										>Ban author</button
-									>
-								</div>
+								<button type="button" class="danger-button" on:click={() => (durationPrompt = 'mute')}
+									>Mute author</button
+								>
+								<button type="button" class="danger-button" on:click={() => (durationPrompt = 'ban')}
+									>Ban author</button
+								>
 							{/if}
 						</form>
 					</section>
@@ -374,3 +369,18 @@
 		{/if}
 	</section>
 </div>
+
+{#if durationPrompt && data.thread?.authorUserId}
+	<ModerationDurationDialog
+		kind={durationPrompt}
+		idPrefix={`thread-${durationPrompt}`}
+		formaction="?/moderate"
+		title={durationPrompt === 'mute' ? 'Mute duration' : 'Ban duration'}
+		confirmLabel={durationPrompt === 'mute' ? 'Confirm mute' : 'Confirm ban'}
+		hiddenFields={{
+			moderation: durationPrompt === 'mute' ? 'mute-author' : 'ban-author',
+			authorUserId: data.thread.authorUserId
+		}}
+		onCancel={() => (durationPrompt = null)}
+	/>
+{/if}

@@ -212,18 +212,18 @@ describe('staff reports actions', () => {
 		expect(store.setReportStatus).toHaveBeenCalledWith(REPORT, 'dismissed');
 	});
 
-	it('locks the thread then resolves the report', async () => {
+	it('locks the thread and leaves the report open', async () => {
 		const { handlers, store } = setup();
 		await expect(
 			handlers.actions.lockThread(
 				actionEvent({ form: { reportId: REPORT, threadId: THREAD, subjectUserId: AUTHOR } })
 			)
-		).resolves.toEqual({ updated: true, status: 'resolved', moderation: 'lock' });
+		).resolves.toEqual({ updated: true, moderation: 'lock', reportOpen: true });
 		expect(store.lockThread).toHaveBeenCalledWith(THREAD);
-		expect(store.setReportStatus).toHaveBeenCalledWith(REPORT, 'resolved');
+		expect(store.setReportStatus).not.toHaveBeenCalled();
 	});
 
-	it('mutes the author then resolves the report', async () => {
+	it('mutes the author and leaves the report open', async () => {
 		const { handlers, store } = setup();
 		await expect(
 			handlers.actions.muteAuthor(
@@ -231,15 +231,15 @@ describe('staff reports actions', () => {
 					form: { reportId: REPORT, threadId: THREAD, subjectUserId: AUTHOR, mutePreset: '1h' }
 				})
 			)
-		).resolves.toEqual({ updated: true, status: 'resolved', moderation: 'mute' });
+		).resolves.toEqual({ updated: true, moderation: 'mute', reportOpen: true });
 		expect(store.muteUser).toHaveBeenCalledWith(
 			AUTHOR,
 			expect.objectContaining({ until: expect.any(Date) })
 		);
-		expect(store.setReportStatus).toHaveBeenCalledWith(REPORT, 'resolved');
+		expect(store.setReportStatus).not.toHaveBeenCalled();
 	});
 
-	it('bans the author for a timed window then resolves the report', async () => {
+	it('bans the author for a timed window and leaves the report open', async () => {
 		const { handlers, store } = setup();
 		await expect(
 			handlers.actions.banAuthor(
@@ -247,22 +247,23 @@ describe('staff reports actions', () => {
 					form: { reportId: REPORT, threadId: THREAD, subjectUserId: AUTHOR, banPreset: '30d' }
 				})
 			)
-		).resolves.toEqual({ updated: true, status: 'resolved', moderation: 'ban' });
+		).resolves.toEqual({ updated: true, moderation: 'ban', reportOpen: true });
 		expect(store.banUser).toHaveBeenCalledWith(
 			AUTHOR,
 			expect.objectContaining({ until: expect.any(Date) })
 		);
-		expect(store.setReportStatus).toHaveBeenCalledWith(REPORT, 'resolved');
+		expect(store.setReportStatus).not.toHaveBeenCalled();
 	});
 
-	it('bans permanently by default', async () => {
+	it('bans permanently by default without closing the report', async () => {
 		const { handlers, store } = setup();
 		await expect(
 			handlers.actions.banAuthor(
 				actionEvent({ form: { reportId: REPORT, threadId: THREAD, subjectUserId: AUTHOR } })
 			)
-		).resolves.toEqual({ updated: true, status: 'resolved', moderation: 'ban' });
+		).resolves.toEqual({ updated: true, moderation: 'ban', reportOpen: true });
 		expect(store.banUser).toHaveBeenCalledWith(AUTHOR, { permanent: true });
+		expect(store.setReportStatus).not.toHaveBeenCalled();
 	});
 
 	it('rejects a missing report id', async () => {

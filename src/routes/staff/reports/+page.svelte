@@ -2,7 +2,7 @@
 	import { applyAction, enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import ModerationDurationFields from '$lib/maritools/ModerationDurationFields.svelte';
+	import ModerationDurationDialog from '$lib/maritools/ModerationDurationDialog.svelte';
 
 	/** @type {any} */
 	export let data;
@@ -10,6 +10,9 @@
 	/** @type {any[]} */
 	let reports = data.reports ?? [];
 	$: reports = data.reports ?? [];
+
+	/** @type {{ kind: 'mute' | 'ban', report: any } | null} */
+	let durationPrompt = null;
 
 	const torontoDate = new Intl.DateTimeFormat('en-CA', {
 		dateStyle: 'medium',
@@ -43,18 +46,36 @@
 		return 'Reports';
 	}
 
-	/** Soft-submit so queue actions remove the row without a full document reload. */
+	/** @param {'mute' | 'ban'} kind @param {any} report */
+	function openDurationPrompt(kind, report) {
+		durationPrompt = { kind, report };
+	}
+
+	function closeDurationPrompt() {
+		durationPrompt = null;
+	}
+
+	/** Soft-submit: Resolve/Dismiss leave the open queue; moderation keeps the row. */
 	function enhanceQueue() {
 		return async (
-			/** @type {{ formData: FormData, result: import('@sveltejs/kit').ActionResult }} */ {
+			/** @type {{ formData: FormData, result: import('@sveltejs/kit').ActionResult, action: URL }} */ {
 				formData,
-				result
+				result,
+				action
 			}
 		) => {
 			if (result.type !== 'success' && result.type !== 'failure') return;
 			if (result.type === 'success') {
+				durationPrompt = null;
 				const reportId = String(formData.get('reportId') ?? '');
-				if (reportId) {
+				const actionPath = String(action?.search ?? action ?? '');
+				const closesTicket =
+					actionPath.includes('resolve') ||
+					actionPath.includes('dismiss') ||
+					(result.data &&
+						typeof result.data === 'object' &&
+						(result.data.status === 'resolved' || result.data.status === 'dismissed'));
+				if (reportId && closesTicket) {
 					reports = reports.filter((row) => row.id !== reportId);
 				}
 			}
@@ -67,7 +88,7 @@
 				try {
 					await invalidateAll();
 				} catch {
-					// Soft update already removed the row from the open queue.
+					// Soft update already applied when the ticket closed.
 				}
 			}
 		};
@@ -84,8 +105,7 @@
 			<p class="eyebrow">Forum moderation</p>
 			<h1>Reports</h1>
 			<p class="heading-note">
-				Open reports can lock the thread, mute or ban the author, or resolve or dismiss the stamp
-				alone.
+				Open reports stay open after Lock, Mute, or Ban. Resolve or Dismiss closes the ticket.
 			</p>
 		</div>
 	</header>
@@ -192,36 +212,41 @@
 												<span class="text-action unavailable">Missing</span>
 											{/if}
 											{#if report.status === 'open'}
-												<form method="post" class="action-row" use:enhance={enhanceQueue}>
-													<input type="hidden" name="reportId" value={report.id} />
-													<input type="hidden" name="threadId" value={report.threadId ?? ''} />
-													<input
-														type="hidden"
-														name="subjectUserId"
-														value={report.subjectUserId ?? ''}
-													/>
-													{#if report.threadId}
-														<button type="submit" formaction="?/lockThread">Lock</button>
-													{/if}
-													{#if report.subjectUserId}
-														<div class="duration-block">
-															<ModerationDurationFields
-																kind="mute"
-																idPrefix={`mute-${report.id}`}
-															/>
-															<button type="submit" formaction="?/muteAuthor">Mute</button>
-														</div>
-														<div class="duration-block">
-															<ModerationDurationFields
-																kind="ban"
-																idPrefix={`ban-${report.id}`}
-															/>
-															<button type="submit" formaction="?/banAuthor">Ban</button>
-														</div>
-													{/if}
-													<button type="submit" formaction="?/resolve">Resolve</button>
-													<button type="submit" formaction="?/dismiss">Dismiss</button>
-												</form>
+												<div class="action-groups">
+													<form method="post" class="danger-actions" use:enhance={enhanceQueue}>
+														<input type="hidden" name="reportId" value={report.id} />
+														<input type="hidden" name="threadId" value={report.threadId ?? ''} />
+														<input
+															type="hidden"
+															name="subjectUserId"
+															value={report.subjectUserId ?? ''}
+														/>
+														{#if report.threadId}
+															<button type="submit" class="danger-button" formaction="?/lockThread"
+																>Lock</button
+															>
+														{/if}
+														{#if report.subjectUserId}
+															<button
+																type="button"
+																class="danger-button"
+																on:click={() => openDurationPrompt('mute', report)}
+																>Mute</button
+															>
+															<button
+																type="button"
+																class="danger-button"
+																on:click={() => openDurationPrompt('ban', report)}
+																>Ban</button
+															>
+														{/if}
+													</form>
+													<form method="post" class="ticket-actions" use:enhance={enhanceQueue}>
+														<input type="hidden" name="reportId" value={report.id} />
+														<button type="submit" formaction="?/resolve">Resolve</button>
+														<button type="submit" formaction="?/dismiss">Dismiss</button>
+													</form>
+												</div>
 											{/if}
 										</div>
 									</td>
@@ -234,6 +259,23 @@
 		</section>
 	{/if}
 </section>
+
+{#if durationPrompt}
+	<ModerationDurationDialog
+		kind={durationPrompt.kind}
+		idPrefix={`${durationPrompt.kind}-${durationPrompt.report.id}`}
+		formaction={durationPrompt.kind === 'mute' ? '?/muteAuthor' : '?/banAuthor'}
+		title={durationPrompt.kind === 'mute' ? 'Mute duration' : 'Ban duration'}
+		confirmLabel={durationPrompt.kind === 'mute' ? 'Confirm mute' : 'Confirm ban'}
+		hiddenFields={{
+			reportId: durationPrompt.report.id,
+			threadId: durationPrompt.report.threadId ?? '',
+			subjectUserId: durationPrompt.report.subjectUserId ?? ''
+		}}
+		enhance={enhanceQueue}
+		onCancel={closeDurationPrompt}
+	/>
+{/if}
 
 <style>
 	.reports-workspace {
@@ -493,12 +535,31 @@
 		gap: 0.35rem;
 	}
 
-	.action-row {
+	.action-groups {
+		display: grid;
+		gap: 0.55rem;
+		justify-items: end;
+		min-width: min(100%, 22rem);
+	}
+
+	.danger-actions,
+	.ticket-actions {
 		display: inline-flex;
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: flex-end;
 		gap: 0.35rem;
+	}
+
+	.danger-actions {
+		padding: 0.4rem 0.45rem;
+		border: 1px solid #c73b4a;
+		background: #fff5f6;
+	}
+
+	.ticket-actions {
+		padding-top: 0.35rem;
+		border-top: var(--rule-strong);
 	}
 
 	.duration-block {
@@ -511,7 +572,13 @@
 		background: #f7f9fb;
 	}
 
-	.action-row button,
+	.duration-block-danger {
+		border-color: #e8b0b7;
+		background: #fff;
+	}
+
+	.danger-button,
+	.ticket-actions button,
 	.text-action {
 		min-height: 2.25rem;
 		padding: 0.35rem 0.55rem;
@@ -526,6 +593,17 @@
 		text-decoration: none;
 		display: inline-flex;
 		align-items: center;
+	}
+
+	.danger-button {
+		border-color: #c73b4a;
+		background: #c73b4a;
+		color: white;
+	}
+
+	.danger-button:hover {
+		background: #a82f3c;
+		border-color: #a82f3c;
 	}
 
 	.text-action {
@@ -567,7 +645,8 @@
 	.subject:focus-visible,
 	.text-action:focus-visible,
 	.inline-action:focus-visible,
-	.action-row button:focus-visible {
+	.danger-button:focus-visible,
+	.ticket-actions button:focus-visible {
 		outline: var(--focus-ring-width) solid var(--color-focus);
 		outline-offset: var(--focus-ring-offset);
 	}

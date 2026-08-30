@@ -72,8 +72,7 @@ async function moderateFromReport(event, kind, deps) {
 				duration.permanent ? { permanent: true } : { until: duration.until }
 			);
 		}
-		await store.setReportStatus(reportId, 'resolved');
-		return { updated: true, status: 'resolved', moderation: kind };
+		return { updated: true, moderation: kind, reportOpen: true };
 	} catch (error) {
 		if (error instanceof MaritoolsInputError) {
 			return fail(400, { error: `Could not ${kind} from that report.` });

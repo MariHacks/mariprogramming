@@ -42,7 +42,7 @@ describe('public profile page', () => {
 		expect(screen.queryByRole('heading', { name: 'Staff moderation' })).not.toBeInTheDocument();
 	});
 
-	it('shows remaining mute time and staff duration controls', () => {
+	it('shows remaining mute time and staff mute/ban buttons', () => {
 		const mutedUntil = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
 		render(ProfilePage, {
 			data: {
@@ -64,7 +64,8 @@ describe('public profile page', () => {
 		expect(screen.getByText(/Muted ·/)).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Staff moderation' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Unmute' })).toBeInTheDocument();
-		expect(screen.getByLabelText('Ban for')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Ban' })).toBeInTheDocument();
+		expect(screen.queryByLabelText('Ban for')).not.toBeInTheDocument();
 	});
 
 	it('shows an unavailable alert', () => {

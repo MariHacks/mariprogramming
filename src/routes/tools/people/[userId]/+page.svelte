@@ -2,12 +2,15 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { formatRemaining } from '$lib/maritools/moderation-duration.js';
-	import ModerationDurationFields from '$lib/maritools/ModerationDurationFields.svelte';
+	import ModerationDurationDialog from '$lib/maritools/ModerationDurationDialog.svelte';
 
 	/** @type {any} */
 	export let data;
 	/** @type {any} */
 	export let form = null;
+
+	/** @type {'mute' | 'ban' | null} */
+	let durationPrompt = null;
 
 	const torontoDate = new Intl.DateTimeFormat('en-CA', {
 		dateStyle: 'medium',
@@ -50,6 +53,7 @@
 	}
 
 	$: note = restrictionNote(data.profile);
+	$: if (form?.moderated) durationPrompt = null;
 </script>
 
 <svelte:head>
@@ -98,23 +102,21 @@
 				<div class="staff-actions">
 					{#if data.profile.isMuted}
 						<form method="POST" action="?/unmute" use:enhance>
-							<button type="submit">Unmute</button>
+							<button type="submit" class="danger-button">Unmute</button>
 						</form>
 					{:else}
-						<form method="POST" action="?/mute" class="duration-form" use:enhance>
-							<ModerationDurationFields kind="mute" idPrefix="profile-mute" />
-							<button type="submit">Mute</button>
-						</form>
+						<button type="button" class="danger-button" on:click={() => (durationPrompt = 'mute')}
+							>Mute</button
+						>
 					{/if}
 					{#if data.profile.isBanned}
 						<form method="POST" action="?/unban" use:enhance>
-							<button type="submit">Unban</button>
+							<button type="submit" class="danger-button">Unban</button>
 						</form>
 					{:else}
-						<form method="POST" action="?/ban" class="duration-form" use:enhance>
-							<ModerationDurationFields kind="ban" idPrefix="profile-ban" />
-							<button type="submit">Ban</button>
-						</form>
+						<button type="button" class="danger-button" on:click={() => (durationPrompt = 'ban')}
+							>Ban</button
+						>
 					{/if}
 				</div>
 			</section>
@@ -148,6 +150,22 @@
 		</section>
 	{/if}
 </section>
+
+{#if durationPrompt}
+	<ModerationDurationDialog
+		kind={durationPrompt}
+		idPrefix={`profile-${durationPrompt}`}
+		formaction={durationPrompt === 'mute' ? '?/mute' : '?/ban'}
+		title={durationPrompt === 'mute' ? 'Mute duration' : 'Ban duration'}
+		confirmLabel={durationPrompt === 'mute' ? 'Confirm mute' : 'Confirm ban'}
+		enhance={() =>
+			async ({ result, update }) => {
+				await update();
+				if (result.type === 'success') durationPrompt = null;
+			}}
+		onCancel={() => (durationPrompt = null)}
+	/>
+{/if}
 
 <style>
 	.profile-page {
@@ -223,22 +241,16 @@
 		gap: 0.75rem;
 	}
 
-	.duration-form,
 	.staff-actions form {
 		display: inline-flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.4rem;
-		padding: 0.45rem 0.55rem;
-		border: var(--rule);
-		background: #f7f9fb;
 	}
 
-	.staff-actions button {
+	.danger-button {
 		min-height: 2.25rem;
 		padding: 0.35rem 0.65rem;
-		border: var(--rule-strong);
-		background: white;
+		border: 1px solid #c73b4a;
+		background: #c73b4a;
+		color: white;
 		font: inherit;
 		font-size: 0.8125rem;
 		font-weight: 650;
@@ -301,7 +313,7 @@
 
 	.thread-list a:focus-visible,
 	.inline-action:focus-visible,
-	.staff-actions button:focus-visible {
+	.danger-button:focus-visible {
 		outline: var(--focus-ring-width) solid var(--color-focus);
 		outline-offset: var(--focus-ring-offset);
 	}
