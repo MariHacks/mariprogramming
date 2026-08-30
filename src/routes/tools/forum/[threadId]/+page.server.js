@@ -1,4 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { parseModerationDuration } from '$lib/maritools/moderation-duration.js';
 import {
 	MaritoolsInputError,
 	MaritoolsUnavailableError,
@@ -233,6 +234,19 @@ export function _createHandlers(dependencies = {}) {
 				const replyId = String(data.get('replyId') ?? '').trim();
 				if (!replyId) return fail(400, { error: 'Pick a reply to remove.' });
 				await store.removeReply(replyId);
+			} else if (action === 'mute-author') {
+				const authorUserId = String(data.get('authorUserId') ?? '').trim();
+				if (!authorUserId) return fail(400, { error: 'Missing author to mute.' });
+				const duration = parseModerationDuration(data, 'mute');
+				await store.muteUser(authorUserId, { until: duration.until });
+			} else if (action === 'ban-author') {
+				const authorUserId = String(data.get('authorUserId') ?? '').trim();
+				if (!authorUserId) return fail(400, { error: 'Missing author to ban.' });
+				const duration = parseModerationDuration(data, 'ban');
+				await store.banUser(
+					authorUserId,
+					duration.permanent ? { permanent: true } : { until: duration.until }
+				);
 			} else return fail(400, { error: 'Unknown moderation action.' });
 			return { moderated: true };
 		} catch (error) {

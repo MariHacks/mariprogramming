@@ -28,16 +28,17 @@ describe('semester page', () => {
 					link.classList.contains('primary-button') && link.getAttribute('href') === '/tools/account'
 			);
 		expect(primaryAccountLinks).toHaveLength(1);
-		expect(screen.queryByLabelText('Course outline PDF')).not.toBeInTheDocument();
+		expect(screen.queryByLabelText('Add outline PDF')).not.toBeInTheDocument();
 	});
 
 	it('accepts a PDF upload when the account is ready', () => {
 		render(SemesterPage, { props: { data: { view: { kind: 'ready' } } } });
-		expect(screen.getByLabelText('Course outline PDF')).toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Extract outline' })).toBeInTheDocument();
+		expect(screen.getByLabelText('Add outline PDF')).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Extract outline' })).not.toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Upload an outline' })).toBeInTheDocument();
 		expect(screen.getByText(/Scanned image PDFs will not work/)).toBeInTheDocument();
-		expect(screen.getByText('No file selected')).toBeInTheDocument();
+		expect(screen.queryByText('No file selected')).not.toBeInTheDocument();
+		expect(screen.getByText(/Extraction starts as soon as you pick the file/)).toBeInTheDocument();
 	});
 
 	it('sends incomplete accounts back to finish setup', () => {
@@ -49,7 +50,7 @@ describe('semester page', () => {
 			'href',
 			'/tools/account'
 		);
-		expect(screen.queryByLabelText('Course outline PDF')).not.toBeInTheDocument();
+		expect(screen.queryByLabelText('Add outline PDF')).not.toBeInTheDocument();
 		cleanup();
 		render(SemesterPage, { props: { data: { view: { kind: 'need-disclosure' } } } });
 		expect(screen.getByRole('heading', { name: 'Confirm the NVIDIA disclosure' })).toBeInTheDocument();
@@ -59,7 +60,7 @@ describe('semester page', () => {
 			'href',
 			'/tools/account'
 		);
-		expect(screen.queryByLabelText('Course outline PDF')).not.toBeInTheDocument();
+		expect(screen.queryByLabelText('Add outline PDF')).not.toBeInTheDocument();
 	});
 
 	it('lets a student review extracted assessments privately', () => {
@@ -192,29 +193,33 @@ describe('semester page', () => {
 		expect(screen.getByRole('button', { name: 'Share to catalog' })).toBeInTheDocument();
 	});
 
-	it('keeps a visible outline file control in the course stack', () => {
+	it('uses one invisible PDF control that auto-submits on choose', () => {
 		render(SemesterPage, { props: { data: { view: { kind: 'ready' } } } });
-		const input = screen.getByLabelText('Course outline PDF');
+		const input = screen.getByLabelText('Add outline PDF');
 		expect(input).toHaveAttribute('type', 'file');
 		const label = input.closest('label');
-		expect(label).toHaveClass('outline-picker');
-		expect(label?.textContent).toMatch(/Course outline PDF/i);
+		expect(label).toHaveClass('add-outline');
+		expect(label).toHaveClass('primary-button');
 		expect(label?.closest('.review-sheet')).toBeNull();
 		expect(document.querySelectorAll('input[type="file"][name="outline"]')).toHaveLength(1);
 		expect(document.querySelector('.review-sheet input[type="file"]')).toBeNull();
-		expect(screen.getByRole('button', { name: 'Extract outline' })).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Extract outline' })).not.toBeInTheDocument();
+		expect(screen.queryByText('No file selected')).not.toBeInTheDocument();
 	});
 
-	it('keeps the course-stack extract button styled as primary', () => {
+	it('keeps the course-stack add-outline control styled as a single primary action', () => {
 		const extras = readFileSync(path.join(stylesDir, 'preview-extras.css'), 'utf8');
 		const pages = readFileSync(path.join(stylesDir, 'preview-pages.css'), 'utf8');
 		const merged = readFileSync(path.join(stylesDir, 'merged-pages.css'), 'utf8');
 		const cascade = `${pages}\n${extras}\n${merged}`;
 
-		expect(pages).toMatch(/\.course-stack\s+\.outline-picker\s*\{/);
 		expect(pages).toMatch(
-			/\.course-stack\s+\.stack-head\s+\.add-outline\s*\{[^}]*\bposition:\s*static\b/s
+			/\.course-stack\s+\.stack-head\s+\.add-outline\s+input\[type=['"]file['"]\]\s*\{[^}]*\bopacity:\s*0\b/s
 		);
-		expect(cascade).toMatch(/\.outline-picker/);
+		expect(pages).toMatch(
+			/\.course-stack\s+\.stack-head\s+\.add-outline\s*\{[^}]*\bposition:\s*relative\b/s
+		);
+		expect(cascade).toMatch(/\.add-outline/);
+		expect(pages).not.toMatch(/\.course-stack\s+\.outline-picker\s*\{/);
 	});
 });

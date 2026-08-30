@@ -128,7 +128,21 @@ describe('maritools repository helpers', () => {
 			userId: 'u1',
 			displayName: 'Ada',
 			role: 'student',
-			isRestricted: true
+			isRestricted: true,
+			isBanned: true,
+			bannedPermanent: true
+		});
+		expect(
+			publicProfileCard({
+				userId: 'u1',
+				displayName: 'Ada',
+				role: 'student',
+				bannedAt: new Date(),
+				bannedUntil: new Date(Date.now() + 86400000)
+			})
+		).toMatchObject({
+			isBanned: true,
+			bannedPermanent: false
 		});
 		expect(
 			JSON.stringify(
@@ -839,9 +853,29 @@ describe('createMariToolsRepository', () => {
 		await expect(
 			queuedRepo([
 				[{ userId: USER, role: 'student', studentId: '2530622' }],
-				[{ userId: USER, role: 'student', bannedAt: new Date() }]
+				[{ userId: USER, role: 'student', bannedAt: new Date(), bannedUntil: null }]
 			]).banUser(USER)
-		).resolves.toMatchObject({ userId: USER });
+		).resolves.toMatchObject({ userId: USER, bannedUntil: null });
+		const banUntil = new Date(Date.now() + 86400000);
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student', studentId: '2530622' }],
+				[{ userId: USER, role: 'student', bannedAt: new Date(), bannedUntil: banUntil }]
+			]).banUser(USER, { until: banUntil })
+		).resolves.toMatchObject({ userId: USER, bannedUntil: banUntil });
+		await expect(queuedRepo([[]]).unmuteUser(USER)).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student', mutedUntil: until }],
+				[{ userId: USER, role: 'student', mutedUntil: null }]
+			]).unmuteUser(USER)
+		).resolves.toMatchObject({ userId: USER, mutedUntil: null });
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student', bannedAt: new Date() }],
+				[{ userId: USER, role: 'student', bannedAt: null, bannedUntil: null }]
+			]).unbanUser(USER)
+		).resolves.toMatchObject({ userId: USER, bannedAt: null });
 		await expect(queuedRepo([[]]).listThreadsByAuthor(USER)).resolves.toEqual([]);
 		await expect(queuedRepo([[]]).removeThread(THREAD)).rejects.toBeInstanceOf(
 			MariToolsNotFoundError

@@ -4,6 +4,7 @@ import migrationSql0008 from '../../../../drizzle/0008_maritools_persistence.sql
 import migrationSql0009 from '../../../../drizzle/0009_google_calendar_grants.sql?raw';
 import migrationSql0010 from '../../../../drizzle/0010_free_time_boards.sql?raw';
 import migrationSql0011 from '../../../../drizzle/0011_moderation_mutes_bans.sql?raw';
+import migrationSql0012 from '../../../../drizzle/0012_moderation_ban_until.sql?raw';
 import { readRuntimeEnvironment } from '../config/environment.js';
 import { createMariToolsRepository } from './repository.js';
 
@@ -76,6 +77,12 @@ const INCREMENTAL_MIGRATIONS = [
 		sentinel: 'mt_student_profiles',
 		column: 'muted_until',
 		sql: migrationSql0011,
+		grantTables: []
+	},
+	{
+		sentinel: 'mt_student_profiles',
+		column: 'banned_until',
+		sql: migrationSql0012,
 		grantTables: []
 	}
 ];

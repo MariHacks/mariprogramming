@@ -1,6 +1,7 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { initialsFromDisplayName } from '$lib/maritools/header-account.js';
+	import ModerationDurationFields from '$lib/maritools/ModerationDurationFields.svelte';
 
 	export let data;
 	export let form;
@@ -325,11 +326,28 @@
 				{#if data.staff}
 					<section class="reply-editor">
 						<strong>Staff moderation</strong>
-						<form method="POST" action="?/moderate">
-							<button type="submit" name="moderation" value="lock" class="quiet-button">Lock thread</button>
+						<form method="POST" action="?/moderate" class="staff-mod-form">
+							<button type="submit" name="moderation" value="lock" class="quiet-button"
+								>Lock thread</button
+							>
 							<button type="submit" name="moderation" value="remove-thread" class="quiet-button"
 								>Remove thread</button
 							>
+							{#if data.thread?.authorUserId}
+								<input type="hidden" name="authorUserId" value={data.thread.authorUserId} />
+								<div class="staff-duration-row">
+									<ModerationDurationFields kind="mute" idPrefix="thread-mute" />
+									<button type="submit" name="moderation" value="mute-author" class="quiet-button"
+										>Mute author</button
+									>
+								</div>
+								<div class="staff-duration-row">
+									<ModerationDurationFields kind="ban" idPrefix="thread-ban" />
+									<button type="submit" name="moderation" value="ban-author" class="quiet-button"
+										>Ban author</button
+									>
+								</div>
+							{/if}
 						</form>
 					</section>
 				{/if}

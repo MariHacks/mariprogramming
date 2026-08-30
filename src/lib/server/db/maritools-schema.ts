@@ -113,6 +113,7 @@ export const mtStudentProfiles = pgTable(
 		nimDisclosureAcceptedAt: timestamp('nim_disclosure_accepted_at', { withTimezone: true }),
 		mutedUntil: timestamp('muted_until', { withTimezone: true }),
 		bannedAt: timestamp('banned_at', { withTimezone: true }),
+		bannedUntil: timestamp('banned_until', { withTimezone: true }),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()

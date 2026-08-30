@@ -1001,52 +1001,36 @@
 	}
 
 	.course-stack .stack-head .add-outline {
-		position: static;
+		position: relative;
 		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 		width: auto;
+		max-width: 100%;
 		min-height: 32px;
 		padding: 0 9px;
+		overflow: hidden;
 		border: 1px solid var(--blue);
 		background: var(--blue);
 		color: white;
 		font-size: 9px;
 		text-align: center;
-	}
-
-	.course-stack .outline-picker {
-		display: grid;
-		gap: 0.35rem;
-		width: 100%;
-		margin-top: 0.35rem;
-		color: var(--steel);
-		font-size: 0.6875rem;
-		font-weight: 650;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-	}
-
-	.course-stack .outline-picker input[type='file'] {
-		display: block;
-		width: 100%;
-		padding: 0.35rem 0;
-		border: 0;
-		background: transparent;
-		color: var(--ink);
-		font: inherit;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		letter-spacing: 0;
-		text-transform: none;
 		cursor: pointer;
 	}
 
-	.course-stack .outline-file-name {
-		color: var(--steel);
-		font-size: 0.75rem;
-		font-weight: 500;
-		letter-spacing: 0;
-		text-transform: none;
-		overflow-wrap: anywhere;
+	.course-stack .stack-head .add-outline.is-busy {
+		opacity: 0.72;
+		cursor: wait;
+	}
+
+	.course-stack .stack-head .add-outline input[type='file'] {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
+		cursor: pointer;
+		font-size: 0;
 	}
 
 	.course-stack button.is-extracting small {

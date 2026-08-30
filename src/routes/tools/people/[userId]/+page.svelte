@@ -1,8 +1,13 @@
 <script>
+	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { formatRemaining } from '$lib/maritools/moderation-duration.js';
+	import ModerationDurationFields from '$lib/maritools/ModerationDurationFields.svelte';
 
 	/** @type {any} */
 	export let data;
+	/** @type {any} */
+	export let form = null;
 
 	const torontoDate = new Intl.DateTimeFormat('en-CA', {
 		dateStyle: 'medium',
@@ -28,6 +33,23 @@
 		if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 		return label.slice(0, 2).toUpperCase();
 	}
+
+	/** @param {any} profile */
+	function restrictionNote(profile) {
+		if (!profile) return '';
+		if (profile.isBanned) {
+			if (profile.bannedPermanent) return 'Banned permanently';
+			const left = formatRemaining(profile.bannedUntil);
+			return left && left !== 'expired' ? `Banned · ${left}` : 'Banned';
+		}
+		if (profile.isMuted) {
+			const left = formatRemaining(profile.mutedUntil);
+			return left && left !== 'expired' ? `Muted · ${left}` : 'Muted';
+		}
+		return '';
+	}
+
+	$: note = restrictionNote(data.profile);
 </script>
 
 <svelte:head>
@@ -53,12 +75,50 @@
 					{data.profile.role === 'staff' || data.profile.role === 'moderator'
 						? 'Club staff'
 						: 'MariTools student'}
-					{#if data.profile.isRestricted}
+					{#if note}
+						· {note}
+					{:else if data.profile.isRestricted}
 						· Restricted from posting
 					{/if}
 				</p>
 			</div>
 		</header>
+
+		{#if data.viewerIsStaff}
+			<section class="staff-mod" aria-labelledby="staff-mod-title">
+				<header class="section-heading">
+					<h2 id="staff-mod-title">Staff moderation</h2>
+				</header>
+				{#if form?.error}
+					<p class="message message-error" role="alert">{form.error}</p>
+				{/if}
+				{#if form?.moderated}
+					<p class="message" role="status">Moderation applied.</p>
+				{/if}
+				<div class="staff-actions">
+					{#if data.profile.isMuted}
+						<form method="POST" action="?/unmute" use:enhance>
+							<button type="submit">Unmute</button>
+						</form>
+					{:else}
+						<form method="POST" action="?/mute" class="duration-form" use:enhance>
+							<ModerationDurationFields kind="mute" idPrefix="profile-mute" />
+							<button type="submit">Mute</button>
+						</form>
+					{/if}
+					{#if data.profile.isBanned}
+						<form method="POST" action="?/unban" use:enhance>
+							<button type="submit">Unban</button>
+						</form>
+					{:else}
+						<form method="POST" action="?/ban" class="duration-form" use:enhance>
+							<ModerationDurationFields kind="ban" idPrefix="profile-ban" />
+							<button type="submit">Ban</button>
+						</form>
+					{/if}
+				</div>
+			</section>
+		{/if}
 
 		<section class="threads" aria-labelledby="threads-title">
 			<header class="section-heading">
@@ -157,6 +217,34 @@
 		font-size: 0.875rem;
 	}
 
+	.staff-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.duration-form,
+	.staff-actions form {
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.45rem 0.55rem;
+		border: var(--rule);
+		background: #f7f9fb;
+	}
+
+	.staff-actions button {
+		min-height: 2.25rem;
+		padding: 0.35rem 0.65rem;
+		border: var(--rule-strong);
+		background: white;
+		font: inherit;
+		font-size: 0.8125rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+
 	.thread-list {
 		margin: 0;
 		padding: 0;
@@ -212,7 +300,8 @@
 	}
 
 	.thread-list a:focus-visible,
-	.inline-action:focus-visible {
+	.inline-action:focus-visible,
+	.staff-actions button:focus-visible {
 		outline: var(--focus-ring-width) solid var(--color-focus);
 		outline-offset: var(--focus-ring-offset);
 	}

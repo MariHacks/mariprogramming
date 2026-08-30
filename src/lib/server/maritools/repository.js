@@ -85,15 +85,40 @@ function unavailable() {
  * @param {any} transaction
  * @param {string} userId
  */
+/**
+ * @param {any} profile
+ * @param {number} [now]
+ */
+export function isBanActive(profile, now = Date.now()) {
+	if (!profile?.bannedAt) return false;
+	const until = profile.bannedUntil ?? null;
+	if (!until) return true;
+	const end = until instanceof Date ? until.getTime() : new Date(until).getTime();
+	return Number.isFinite(end) && end > now;
+}
+
+/**
+ * @param {any} profile
+ * @param {number} [now]
+ */
+export function isMuteActive(profile, now = Date.now()) {
+	const until = profile?.mutedUntil ?? null;
+	if (!until) return false;
+	const end = until instanceof Date ? until.getTime() : new Date(until).getTime();
+	return Number.isFinite(end) && end > now;
+}
+
+/**
+ * @param {any} transaction
+ * @param {string} userId
+ */
 async function assertPosterAllowed(transaction, userId) {
 	const profile = oneRow(
 		await transaction.select().from(mtStudentProfiles).where(eq(mtStudentProfiles.userId, userId))
 	);
 	if (!profile) return;
-	if (profile.bannedAt) return conflict();
-	if (profile.mutedUntil instanceof Date && profile.mutedUntil.getTime() > Date.now()) {
-		return conflict();
-	}
+	if (isBanActive(profile)) return conflict();
+	if (isMuteActive(profile)) return conflict();
 }
 
 /** @param {Buffer | Uint8Array | string} input */
@@ -157,10 +182,9 @@ export function publicStudentView(profile) {
 	if (profile === null || typeof profile !== 'object') return invalid();
 	const mutedUntil = profile.mutedUntil ?? null;
 	const bannedAt = profile.bannedAt ?? null;
-	const mutedActive =
-		mutedUntil instanceof Date
-			? mutedUntil.getTime() > Date.now()
-			: typeof mutedUntil === 'string' && new Date(mutedUntil).getTime() > Date.now();
+	const bannedUntil = profile.bannedUntil ?? null;
+	const mutedActive = isMuteActive(profile);
+	const bannedActive = isBanActive(profile);
 	return {
 		userId: profile.userId,
 		displayName: profile.displayName ?? null,
@@ -168,8 +192,9 @@ export function publicStudentView(profile) {
 		nimDisclosureAcceptedAt: profile.nimDisclosureAcceptedAt ?? null,
 		mutedUntil,
 		bannedAt,
+		bannedUntil,
 		isMuted: Boolean(mutedActive),
-		isBanned: Boolean(bannedAt)
+		isBanned: Boolean(bannedActive)
 	};
 }
 
@@ -181,7 +206,12 @@ export function publicProfileCard(profile) {
 		userId: view.userId,
 		displayName: view.displayName,
 		role: view.role === 'staff' || view.role === 'moderator' ? view.role : 'student',
-		isRestricted: view.isMuted || view.isBanned
+		isRestricted: view.isMuted || view.isBanned,
+		isMuted: view.isMuted,
+		isBanned: view.isBanned,
+		mutedUntil: view.mutedUntil,
+		bannedUntil: view.bannedUntil,
+		bannedPermanent: Boolean(view.isBanned && view.bannedAt && !view.bannedUntil)
 	};
 }
 
@@ -748,8 +778,44 @@ export function createMariToolsRepository({
 			);
 		},
 
+		/**
+		 * Ban a user. Permanent when `until` is null; timed when `until` is a Date.
+		 * @param {unknown} userId
+		 * @param {{ until?: Date | null }} [opts]
+		 */
+		async banUser(userId, opts = {}) {
+			const id = requiredUserId(userId);
+			const until = Object.prototype.hasOwnProperty.call(opts, 'until') ? opts.until : null;
+			if (until !== null && (!(until instanceof Date) || Number.isNaN(until.getTime()))) {
+				return invalid();
+			}
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, id))
+					);
+					if (!existing) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({
+								bannedAt: new Date(),
+								bannedUntil: until,
+								updatedAt: new Date()
+							})
+							.where(eq(mtStudentProfiles.userId, id))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
 		/** @param {unknown} userId */
-		async banUser(userId) {
+		async unmuteUser(userId) {
 			const id = requiredUserId(userId);
 			return redactUnexpected(() =>
 				transact(async (transaction) => {
@@ -763,7 +829,31 @@ export function createMariToolsRepository({
 					const updated = oneRow(
 						await transaction
 							.update(mtStudentProfiles)
-							.set({ bannedAt: new Date(), updatedAt: new Date() })
+							.set({ mutedUntil: null, updatedAt: new Date() })
+							.where(eq(mtStudentProfiles.userId, id))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} userId */
+		async unbanUser(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, id))
+					);
+					if (!existing) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({ bannedAt: null, bannedUntil: null, updatedAt: new Date() })
 							.where(eq(mtStudentProfiles.userId, id))
 							.returning()
 					);

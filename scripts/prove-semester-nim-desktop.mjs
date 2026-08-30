@@ -166,44 +166,50 @@ async function main() {
 	try {
 		await page.goto('/tools/semester', { waitUntil: 'networkidle' });
 		await mark(page, t0, log, 'nick session on /tools/semester');
-		const upload = page.getByLabel('Course outline PDF');
+		const upload = page.getByLabel('Add outline PDF');
 		if ((await upload.count()) < 1) {
 			bugs.push('upload control missing for nick');
 			await page.screenshot({ path: path.join(outDir, 'nim-fail-gated.png'), fullPage: false });
 		} else {
-			await mark(page, t0, log, `uploading ${path.basename(pdfPath)}`);
+			const extractButton = page.getByRole('button', { name: 'Extract outline' });
+			if ((await extractButton.count()) > 0) {
+				bugs.push('legacy Extract outline button still present (must be one-control auto-submit)');
+			}
+			if ((await page.getByText('No file selected').count()) > 0) {
+				bugs.push('visible No file selected chrome still present');
+			}
+			await mark(page, t0, log, `choosing ${path.basename(pdfPath)} (auto-submit)`);
 			const extractDone = page
 				.waitForURL(/\/tools\/semester\?\/extract/, { timeout: EXTRACT_WAIT_MS })
 				.catch(() => null);
 			await upload.setInputFiles(pdfPath);
-			if (!page.url().includes('?/extract')) {
-				await page
-					.locator('form[action="?/extract"]')
-					.evaluate((form) => {
-						if (form instanceof HTMLFormElement) form.requestSubmit();
-					})
-					.catch(() => {});
-			}
 
-			// Capture processing UI on camera while extract runs (client enhance sets extracting).
+			// Capture real product processing chrome (not only the proof HUD).
 			let sawProcessing = false;
+			let sawStaleEmpty = false;
 			const processingDeadline = Date.now() + Math.min(EXTRACT_WAIT_MS, 90_000);
 			while (Date.now() < processingDeadline) {
 				const bodyMid = await page.locator('body').innerText().catch(() => '');
-				if (/Extracting…|Extracting outline|Extracting course identity/i.test(bodyMid)) {
+				if (/Extracting outline|Reading outline|Extracting course identity/i.test(bodyMid)) {
 					sawProcessing = true;
-					await mark(page, t0, log, 'processing UI visible (Extracting…)');
+					if (/No file selected|Choose a PDF to upload/i.test(bodyMid)) {
+						sawStaleEmpty = true;
+					}
+					await mark(page, t0, log, 'product processing view visible');
 					await page.screenshot({
 						path: path.join(outDir, 'nim-processing.png'),
 						fullPage: false
 					});
 					break;
 				}
-				if (page.url().includes('?/extract')) break;
+				if (page.url().includes('?/extract') && (await page.locator('input[name="courseCode"]').count()) > 0) {
+					break;
+				}
 				await sleep(400);
 			}
 			outcome.sawProcessingUi = sawProcessing;
-			if (!sawProcessing) bugs.push('processing UI (Extracting…) never appeared on camera');
+			if (!sawProcessing) bugs.push('product processing view never appeared on camera');
+			if (sawStaleEmpty) bugs.push('stale empty upload chrome still visible during extract');
 
 			await extractDone;
 			await page

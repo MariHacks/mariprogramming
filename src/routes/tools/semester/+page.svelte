@@ -120,8 +120,9 @@
 
 	function enhanceExtract() {
 		return async ({ result, update }) => {
-			extracting = false;
+			extracting = true;
 			await update({ reset: false });
+			extracting = false;
 			if (result.type === 'failure' || result.type === 'error') {
 				selectedFileName = '';
 			}
@@ -153,26 +154,22 @@
 							<strong>{termName}</strong>
 							<span>{form?.extraction ? '1 course in review' : 'No outlines yet'}</span>
 						</div>
-						<label class="outline-picker">
-							<span class="outline-picker-label">Course outline PDF</span>
+						<label class="primary-button add-outline" class:is-busy={extracting}>
+							{extracting
+								? 'Extracting…'
+								: selectedFileName
+									? selectedFileName
+									: 'Add outline PDF'}
 							<input
 								type="file"
 								name="outline"
 								accept="application/pdf"
 								required
-								aria-label="Course outline PDF"
+								aria-label="Add outline PDF"
 								disabled={extracting}
 								on:change={onOutlineChosen}
 							/>
-							{#if selectedFileName}
-								<small class="outline-file-name">{selectedFileName}</small>
-							{:else}
-								<small class="outline-file-name">No file selected</small>
-							{/if}
 						</label>
-						<button type="submit" class="primary-button add-outline" disabled={extracting}>
-							{extracting ? 'Extracting…' : 'Extract outline'}
-						</button>
 					</form>
 				{:else}
 					<div class="stack-head">
@@ -282,7 +279,7 @@
 							</div>
 						</div>
 						<p class="sheet-hint">
-							Use the course outline file control, then Extract outline.
+							Choose a course outline PDF. Extraction starts as soon as you pick the file.
 						</p>
 					</div>
 				{/if}

@@ -81,7 +81,11 @@ describe('staff reports page', () => {
 			'formaction',
 			'?/muteAuthor'
 		);
+		expect(screen.getByLabelText('Mute for')).toBeInTheDocument();
+		expect(screen.getByDisplayValue('7 days')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Ban' })).toHaveAttribute('formaction', '?/banAuthor');
+		expect(screen.getByLabelText('Ban for')).toBeInTheDocument();
+		expect(screen.getByDisplayValue('Permanent')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Resolve' })).toHaveAttribute(
 			'formaction',
 			'?/resolve'

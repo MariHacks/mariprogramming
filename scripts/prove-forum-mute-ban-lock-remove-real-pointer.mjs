@@ -127,12 +127,13 @@ async function seedTargets(staffUserId) {
 		await client.query(
 			`insert into mt_student_profiles (
 				user_id, student_id, display_name, role, version, created_at, updated_at,
-				muted_until, banned_at
-			) values ($1, $2, 'Alex Rivera', 'student', 1, now(), now(), null, null)
+				muted_until, banned_at, banned_until
+			) values ($1, $2, 'Alex Rivera', 'student', 1, now(), now(), null, null, null)
 			on conflict (user_id) do update set
 				display_name = 'Alex Rivera',
 				muted_until = null,
 				banned_at = null,
+				banned_until = null,
 				updated_at = now()`,
 			[authorId, `mbl-${authorId.slice(0, 8)}`]
 		);
@@ -390,7 +391,7 @@ async function main() {
 	await mkdir(outDir, { recursive: true });
 
 	const { userId, cookie } = await mintStaffCookie();
-	await seedTargets(userId);
+	const authorId = await seedTargets(userId);
 	mark('seeded lock/remove threads + mute/ban reports');
 
 	const browser = await chromium.launch({
@@ -456,6 +457,12 @@ async function main() {
 		if ((await muteRow.count()) < 1) bugs.push('mute report row missing');
 		if ((await banRow.count()) < 1) bugs.push('ban report row missing');
 
+		// Non-default mute preset (not 7 days) must be visible on tape before Mute.
+		const mutePreset = muteRow.getByLabel('Mute for');
+		await mutePreset.selectOption({ label: '1 hour' });
+		mark('Mute preset set to 1 hour (non-default)');
+		await sleep(1200);
+
 		await pointerClick(
 			page,
 			muteRow.getByRole('button', { name: 'Mute', exact: true }),
@@ -472,6 +479,12 @@ async function main() {
 		const banRowAfter = page.locator(`tr[data-report-reason="${IDS.banReason}"]`);
 		if ((await banRowAfter.count()) < 1) bugs.push('ban report row missing after Mute');
 
+		// Timed ban (not Permanent default) must be visible on tape before Ban.
+		const banPreset = banRowAfter.getByLabel('Ban for');
+		await banPreset.selectOption({ label: '30 days' });
+		mark('Ban preset set to 30 days (timed, not Permanent)');
+		await sleep(1200);
+
 		await pointerClick(
 			page,
 			banRowAfter.getByRole('button', { name: 'Ban', exact: true }),
@@ -482,6 +495,39 @@ async function main() {
 		const afterBan = await page.locator('tr[data-report-reason]').count();
 		if (afterBan !== 0) bugs.push(`Ban did not clear queue (open=${afterBan})`);
 		mark(`Ban row reacted — open now ${afterBan}`);
+
+		// Prove timed durations landed in DB (1h mute + 30d ban), not hardcoded 7d / permanent.
+		await loadEnvLocal(path.join(root, '.env.local'));
+		const verifyPool = new pg.Pool({
+			connectionString: process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL,
+			max: 1
+		});
+		try {
+			const row = await verifyPool.query(
+				`select muted_until, banned_at, banned_until
+				 from mt_student_profiles where user_id = $1`,
+				[authorId]
+			);
+			const profile = row.rows[0];
+			if (!profile?.muted_until) bugs.push('mute did not set muted_until');
+			else {
+				const muteMs = new Date(profile.muted_until).getTime() - Date.now();
+				if (muteMs < 30 * 60 * 1000 || muteMs > 2 * 60 * 60 * 1000) {
+					bugs.push(`mute duration not ~1h (remainingMs=${muteMs})`);
+				} else mark('DB muted_until ≈ 1 hour');
+			}
+			if (!profile?.banned_at) bugs.push('ban did not set banned_at');
+			if (!profile?.banned_until) bugs.push('timed ban missing banned_until (looks permanent)');
+			else {
+				const banMs = new Date(profile.banned_until).getTime() - Date.now();
+				if (banMs < 20 * 24 * 60 * 60 * 1000 || banMs > 40 * 24 * 60 * 60 * 1000) {
+					bugs.push(`ban duration not ~30d (remainingMs=${banMs})`);
+				} else mark('DB banned_until ≈ 30 days');
+			}
+		} finally {
+			await verifyPool.end();
+		}
+
 		await page.screenshot({ path: path.join(outDir, 'reports-after-mute-ban.png'), fullPage: false });
 		// Architect samples mid-tape (t22): Ban→0 must still be on Reports frames.
 		await page.getByText(/No open reports/i).waitFor({ state: 'visible', timeout: 8000 });
@@ -623,7 +669,8 @@ async function main() {
 		`- Video: \`mute-ban-lock-remove.webm\``,
 		`- sha256: \`${sha}\``,
 		'- Method: screencapture -l -V -k + Quartz OS cursor move + locator.click on hover (reports-PASS pattern)',
-		'- Sequence on tape: Mute→Ban (rows react) → Lock stays → Remove hides → revisit lock',
+		'- Sequence on tape: Mute 1h preset → Ban 30d preset (rows react) → Lock stays → Remove hides → revisit lock',
+		'- Durations: mute preset 1 hour (not 7d default); ban preset 30 days (not Permanent)',
 		'',
 		'## Timeline',
 		...log.map((e) => `- ${e.t.toFixed(2)}s ${e.label}`),

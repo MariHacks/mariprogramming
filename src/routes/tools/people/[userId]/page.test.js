@@ -15,11 +15,14 @@ describe('public profile page', () => {
 			data: {
 				unavailable: false,
 				viewerSignedIn: false,
+				viewerIsStaff: false,
 				profile: {
 					userId: USER,
 					displayName: 'Ada Lovelace',
 					role: 'student',
-					isRestricted: false
+					isRestricted: false,
+					isMuted: false,
+					isBanned: false
 				},
 				threads: [
 					{
@@ -36,11 +39,43 @@ describe('public profile page', () => {
 			`/tools/forum/${THREAD}`
 		);
 		expect(screen.queryByText(USER)).not.toBeInTheDocument();
+		expect(screen.queryByRole('heading', { name: 'Staff moderation' })).not.toBeInTheDocument();
+	});
+
+	it('shows remaining mute time and staff duration controls', () => {
+		const mutedUntil = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+		render(ProfilePage, {
+			data: {
+				unavailable: false,
+				viewerSignedIn: true,
+				viewerIsStaff: true,
+				profile: {
+					userId: USER,
+					displayName: 'Ada Lovelace',
+					role: 'student',
+					isRestricted: true,
+					isMuted: true,
+					isBanned: false,
+					mutedUntil
+				},
+				threads: []
+			}
+		});
+		expect(screen.getByText(/Muted ·/)).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Staff moderation' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Unmute' })).toBeInTheDocument();
+		expect(screen.getByLabelText('Ban for')).toBeInTheDocument();
 	});
 
 	it('shows an unavailable alert', () => {
 		render(ProfilePage, {
-			data: { unavailable: true, profile: null, threads: [], viewerSignedIn: false }
+			data: {
+				unavailable: true,
+				profile: null,
+				threads: [],
+				viewerSignedIn: false,
+				viewerIsStaff: false
+			}
 		});
 		expect(screen.getByRole('alert')).toHaveTextContent(/unavailable/i);
 	});

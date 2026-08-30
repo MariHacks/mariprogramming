@@ -1,4 +1,5 @@
 import { clubListingFromPayload, clubSubmissionView } from '$lib/maritools/club-listing.js';
+import { untilFromDuration } from '$lib/maritools/moderation-duration.js';
 import { readRuntimeEnvironment } from '../config/environment.js';
 import { isStaffAccount } from './community.js';
 import {
@@ -417,17 +418,44 @@ export function createCommunityStore(inner) {
 
 		/**
 		 * @param {string} userId
-		 * @param {{ days?: number }} [opts]
+		 * @param {{ days?: number, hours?: number, until?: Date }} [opts]
 		 */
 		muteUser(userId, opts = {}) {
-			const days = Math.min(Math.max(Number(opts.days) || 7, 1), 365);
-			const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+			const until =
+				opts.until instanceof Date
+					? opts.until
+					: untilFromDuration({ hours: opts.hours, days: opts.days });
 			return wrap(async () => publicStudentView(await inner.muteUser(userId, until)));
 		},
 
+		/**
+		 * @param {string} userId
+		 * @param {{ permanent?: boolean, days?: number, hours?: number, until?: Date | null }} [opts]
+		 */
+		banUser(userId, opts = {}) {
+			let until = null;
+			if (opts.permanent === true) {
+				until = null;
+			} else if (opts.until instanceof Date) {
+				until = opts.until;
+			} else if (opts.until === null) {
+				until = null;
+			} else if (opts.hours != null || opts.days != null) {
+				until = untilFromDuration({ hours: opts.hours, days: opts.days });
+			} else {
+				until = null;
+			}
+			return wrap(async () => publicStudentView(await inner.banUser(userId, { until })));
+		},
+
 		/** @param {string} userId */
-		banUser(userId) {
-			return wrap(async () => publicStudentView(await inner.banUser(userId)));
+		unmuteUser(userId) {
+			return wrap(async () => publicStudentView(await inner.unmuteUser(userId)));
+		},
+
+		/** @param {string} userId */
+		unbanUser(userId) {
+			return wrap(async () => publicStudentView(await inner.unbanUser(userId)));
 		},
 
 		/** @param {string} userId */

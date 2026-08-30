@@ -2,6 +2,7 @@
 	import { applyAction, enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import ModerationDurationFields from '$lib/maritools/ModerationDurationFields.svelte';
 
 	/** @type {any} */
 	export let data;
@@ -203,8 +204,20 @@
 														<button type="submit" formaction="?/lockThread">Lock</button>
 													{/if}
 													{#if report.subjectUserId}
-														<button type="submit" formaction="?/muteAuthor">Mute</button>
-														<button type="submit" formaction="?/banAuthor">Ban</button>
+														<div class="duration-block">
+															<ModerationDurationFields
+																kind="mute"
+																idPrefix={`mute-${report.id}`}
+															/>
+															<button type="submit" formaction="?/muteAuthor">Mute</button>
+														</div>
+														<div class="duration-block">
+															<ModerationDurationFields
+																kind="ban"
+																idPrefix={`ban-${report.id}`}
+															/>
+															<button type="submit" formaction="?/banAuthor">Ban</button>
+														</div>
 													{/if}
 													<button type="submit" formaction="?/resolve">Resolve</button>
 													<button type="submit" formaction="?/dismiss">Dismiss</button>
@@ -486,6 +499,16 @@
 		align-items: center;
 		justify-content: flex-end;
 		gap: 0.35rem;
+	}
+
+	.duration-block {
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.2rem 0.35rem;
+		border: var(--rule);
+		background: #f7f9fb;
 	}
 
 	.action-row button,

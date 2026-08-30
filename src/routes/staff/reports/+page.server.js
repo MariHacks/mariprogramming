@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { requireStaff } from '$lib/server/auth/authorization.js';
+import { parseModerationDuration } from '$lib/maritools/moderation-duration.js';
 import {
 	MaritoolsInputError,
 	MaritoolsUnavailableError,
@@ -61,10 +62,15 @@ async function moderateFromReport(event, kind, deps) {
 			await store.lockThread(threadId);
 		} else if (kind === 'mute') {
 			if (!subjectUserId) return fail(400, { error: 'That report has no author to mute.' });
-			await store.muteUser(subjectUserId, { days: 7 });
+			const duration = parseModerationDuration(data, 'mute');
+			await store.muteUser(subjectUserId, { until: duration.until });
 		} else {
 			if (!subjectUserId) return fail(400, { error: 'That report has no author to ban.' });
-			await store.banUser(subjectUserId);
+			const duration = parseModerationDuration(data, 'ban');
+			await store.banUser(
+				subjectUserId,
+				duration.permanent ? { permanent: true } : { until: duration.until }
+			);
 		}
 		await store.setReportStatus(reportId, 'resolved');
 		return { updated: true, status: 'resolved', moderation: kind };

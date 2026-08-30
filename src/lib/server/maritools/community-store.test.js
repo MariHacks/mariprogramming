@@ -138,15 +138,35 @@ function inner(overrides = {}) {
 			displayName: 'Ada',
 			role: 'student',
 			mutedUntil: until,
-			bannedAt: null
+			bannedAt: null,
+			bannedUntil: null
 		})),
-		banUser: vi.fn(async (userId) => ({
+		banUser: vi.fn(async (userId, opts = {}) => ({
 			userId,
 			studentId: '2530622',
 			displayName: 'Ada',
 			role: 'student',
 			mutedUntil: null,
-			bannedAt: new Date()
+			bannedAt: new Date(),
+			bannedUntil: opts.until ?? null
+		})),
+		unmuteUser: vi.fn(async (userId) => ({
+			userId,
+			studentId: '2530622',
+			displayName: 'Ada',
+			role: 'student',
+			mutedUntil: null,
+			bannedAt: null,
+			bannedUntil: null
+		})),
+		unbanUser: vi.fn(async (userId) => ({
+			userId,
+			studentId: '2530622',
+			displayName: 'Ada',
+			role: 'student',
+			mutedUntil: null,
+			bannedAt: null,
+			bannedUntil: null
 		})),
 		listThreadsByAuthor: vi.fn(async () => [
 			{ id: THREAD, title: 'Hi', body: 'Hello', category: 'courses', authorUserId: USER }
@@ -586,12 +606,22 @@ describe('createCommunityStore', () => {
 	it('mutes, bans, and loads public profiles', async () => {
 		const repo = inner();
 		const store = createCommunityStore(repo);
-		await expect(store.muteUser(USER, { days: 7 })).resolves.toMatchObject({
+		await expect(store.muteUser(USER, { hours: 1 })).resolves.toMatchObject({
 			userId: USER,
 			isMuted: true
 		});
 		expect(repo.muteUser).toHaveBeenCalled();
-		await expect(store.banUser(USER)).resolves.toMatchObject({ userId: USER, isBanned: true });
+		await expect(store.banUser(USER, { days: 30 })).resolves.toMatchObject({
+			userId: USER,
+			isBanned: true
+		});
+		expect(repo.banUser).toHaveBeenCalledWith(USER, expect.objectContaining({ until: expect.any(Date) }));
+		await expect(store.banUser(USER, { permanent: true })).resolves.toMatchObject({
+			userId: USER,
+			isBanned: true
+		});
+		await expect(store.unmuteUser(USER)).resolves.toMatchObject({ userId: USER, isMuted: false });
+		await expect(store.unbanUser(USER)).resolves.toMatchObject({ userId: USER, isBanned: false });
 		await expect(store.getPublicProfile(USER)).resolves.toMatchObject({
 			userId: USER,
 			displayName: 'Ada',
