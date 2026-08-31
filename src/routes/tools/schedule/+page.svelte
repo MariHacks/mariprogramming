@@ -1,6 +1,7 @@
 <script>
 	import { browser } from '$app/environment';
 	import { enhance } from '$app/forms';
+	import { onMount } from 'svelte';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import CalendarExportModal from '$lib/maritools/components/CalendarExportModal.svelte';
 	import OmnivoxTutorialOverlay from '$lib/maritools/components/OmnivoxTutorialOverlay.svelte';
@@ -15,6 +16,7 @@
 	import { occurrencesToIcs } from '$lib/maritools/schedule/ics.js';
 	import { generateOccurrences } from '$lib/maritools/schedule/occurrences.js';
 	import { parseOmnivox } from '$lib/maritools/schedule/parseOmnivox.js';
+	import { loadSchedulePaste, saveSchedulePaste } from '$lib/maritools/schedule/persistPaste.js';
 	import { calendarDate, rulesForTerm } from '$lib/maritools/term/calendar.js';
 	import { termResolution } from '$lib/maritools/term/session.js';
 
@@ -41,6 +43,29 @@
 		result = form.result;
 		parsed = true;
 		drawerOpen = true;
+		persistPaste();
+	}
+
+	onMount(() => {
+		if (!browser) return;
+		const stored = loadSchedulePaste(localStorage);
+		if (!stored.trim()) return;
+		paste = stored;
+		result = parseOmnivox(stored);
+		parsed = true;
+		if (result.ok) drawerOpen = true;
+	});
+
+	function persistPaste() {
+		if (browser) saveSchedulePaste(localStorage, paste);
+	}
+
+	function runParse() {
+		result = parseOmnivox(paste);
+		parsed = true;
+		exportError = '';
+		drawerOpen = true;
+		persistPaste();
 	}
 
 	$: if (form?.pushError) {
@@ -61,13 +86,6 @@
 			: [];
 	$: heading = weekTitle(weekStartIso);
 	$: conflictDays = grid.filter((column) => column.overlap).length;
-
-	function runParse() {
-		result = parseOmnivox(paste);
-		parsed = true;
-		exportError = '';
-		drawerOpen = true;
-	}
 
 	function goToToday() {
 		weekStartIso = mondayOfWeek(calendarDate());

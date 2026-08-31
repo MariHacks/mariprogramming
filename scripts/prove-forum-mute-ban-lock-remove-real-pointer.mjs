@@ -307,6 +307,25 @@ async function pointerClick(page, locator, label, mark, opts = {}) {
 /** Filled in main so pointerClick can record soft failures. */
 let bugsPushLater = (/** @type {string} */ _b) => {};
 
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {'mute' | 'ban'} kind
+ * @param {string} presetId
+ * @param {(s: string) => void} mark
+ */
+async function confirmDurationInDialog(page, kind, presetId, mark) {
+	const dialog = page.getByRole('dialog');
+	await dialog.waitFor({ state: 'visible', timeout: 8000 });
+	await dialog.locator(`select[name="${kind}Preset"]`).selectOption(presetId);
+	mark(`${kind} dialog preset ${presetId}`);
+	await sleep(900);
+	const confirm = kind === 'mute' ? 'Confirm mute' : 'Confirm ban';
+	await pointerClick(page, dialog.getByRole('button', { name: confirm }), confirm, mark, {
+		holdMs: 1400
+	});
+	await dialog.waitFor({ state: 'hidden', timeout: 12_000 }).catch(() => {});
+}
+
 async function findChromeWindowId() {
 	const script = `
 import Quartz, json
@@ -457,44 +476,39 @@ async function main() {
 		if ((await muteRow.count()) < 1) bugs.push('mute report row missing');
 		if ((await banRow.count()) < 1) bugs.push('ban report row missing');
 
-		// Non-default mute preset (not 7 days) must be visible on tape before Mute.
-		const mutePreset = muteRow.getByLabel('Mute for');
-		await mutePreset.selectOption({ label: '1 hour' });
-		mark('Mute preset set to 1 hour (non-default)');
-		await sleep(1200);
-
+		// Non-default mute preset (not 7 days) must be visible on tape in the popup.
 		await pointerClick(
 			page,
 			muteRow.getByRole('button', { name: 'Mute', exact: true }),
 			'Mute',
 			mark,
-			{ holdMs: 1600, awaitGone: muteRow }
+			{ holdMs: 1600 }
 		);
+		await confirmDurationInDialog(page, 'mute', '1h', mark);
 		const afterMute = await page.locator('tr[data-report-reason]').count();
-		if (afterMute !== 1) bugs.push(`Mute should leave 1 open report, got ${afterMute}`);
-		mark(`Mute row reacted — open now ${afterMute}`);
+		if (afterMute !== openBefore) {
+			bugs.push(`Mute should keep queue at ${openBefore}, got ${afterMute}`);
+		}
+		mark(`Mute confirmed — open still ${afterMute}`);
 		await page.waitForLoadState('networkidle').catch(() => {});
-		await sleep(2800);
-		// Re-resolve Ban row after Mute navigation/re-render.
+		await sleep(2200);
 		const banRowAfter = page.locator(`tr[data-report-reason="${IDS.banReason}"]`);
 		if ((await banRowAfter.count()) < 1) bugs.push('ban report row missing after Mute');
 
-		// Timed ban (not Permanent default) must be visible on tape before Ban.
-		const banPreset = banRowAfter.getByLabel('Ban for');
-		await banPreset.selectOption({ label: '30 days' });
-		mark('Ban preset set to 30 days (timed, not Permanent)');
-		await sleep(1200);
-
+		// Timed ban (not Permanent default) must be visible on tape in the popup.
 		await pointerClick(
 			page,
 			banRowAfter.getByRole('button', { name: 'Ban', exact: true }),
 			'Ban',
 			mark,
-			{ holdMs: 1800, awaitGone: banRowAfter }
+			{ holdMs: 1800 }
 		);
+		await confirmDurationInDialog(page, 'ban', '30d', mark);
 		const afterBan = await page.locator('tr[data-report-reason]').count();
-		if (afterBan !== 0) bugs.push(`Ban did not clear queue (open=${afterBan})`);
-		mark(`Ban row reacted — open now ${afterBan}`);
+		if (afterBan !== openBefore) {
+			bugs.push(`Ban should keep queue at ${openBefore}, got ${afterBan}`);
+		}
+		mark(`Ban confirmed — open still ${afterBan} (no auto-resolve)`);
 
 		// Prove timed durations landed in DB (1h mute + 30d ban), not hardcoded 7d / permanent.
 		await loadEnvLocal(path.join(root, '.env.local'));
@@ -529,10 +543,8 @@ async function main() {
 		}
 
 		await page.screenshot({ path: path.join(outDir, 'reports-after-mute-ban.png'), fullPage: false });
-		// Architect samples mid-tape (t22): Ban→0 must still be on Reports frames.
-		await page.getByText(/No open reports/i).waitFor({ state: 'visible', timeout: 8000 });
-		mark('hold empty Reports (Ban→0) on camera — long hold for Architect samples');
-		await sleep(9000);
+		mark(`hold queue=${afterBan} after Mute+Ban (reports stay open)`);
+		await sleep(6000);
 
 		await page.goto(`${baseURL}/tools/forum/${IDS.lockThread}`, {
 			waitUntil: 'domcontentloaded',
