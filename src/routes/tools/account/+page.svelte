@@ -633,7 +633,10 @@
 									</select>
 								</label>
 								<div class="profile-field--wide">
-									<ProfileImageCropper id="profile-image" />
+									<ProfileImageCropper
+										id="profile-image"
+										existingSrc={data.view.profileImageDataUrl ?? ''}
+									/>
 								</div>
 							</div>
 							<div class="profile-form-action profile-form-action--split">

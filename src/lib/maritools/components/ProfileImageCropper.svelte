@@ -300,13 +300,19 @@
 	{:else}
 		<div class="field-heading">
 			<span>{label} <small class="optional-badge">Optional</small></span>
-			{#if confirmedUrl}<img src={confirmedUrl} alt="Selected avatar" />{/if}
+			{#if confirmedUrl || existingSrc}<img
+					src={confirmedUrl || existingSrc}
+					alt="Selected avatar"
+				/>{/if}
 		</div>
 		<div class="field-picker">
 			<button bind:this={chooseButton} type="button" on:click={() => sourceInput?.click()}
 				>Choose image</button
 			>
-			<span class:selected={confirmedFile}>{confirmedFile?.name || 'No image selected'}</span>
+			<span class:selected={confirmedFile}
+				>{confirmedFile?.name ||
+					(existingSrc ? 'Current profile picture' : 'No image selected')}</span
+			>
 		</div>
 		<small>Shown on your account and forum posts. We crop it to a square under 512 KB.</small>
 	{/if}

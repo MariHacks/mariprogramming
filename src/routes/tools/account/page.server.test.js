@@ -61,6 +61,63 @@ function event({ locals = {}, form = {} } = {}) {
 }
 
 describe('account page server', () => {
+	it.each(['join', 'finishOnboarding'])(
+		'%s reports a bounded error when the saved avatar cannot be read',
+		async (action) => {
+			const joinProgrammingClub = vi.fn();
+			const current = handlers({
+				repository: {
+					getProfile: vi.fn(async () => {
+						throw new MaritoolsUnavailableError();
+					})
+				},
+				createClubRepository: vi.fn(() => ({ joinProgrammingClub }))
+			});
+			const result = await current.actions[action](
+				event({ locals: { maritools: SESSION }, form: { studentId: '2530622' } })
+			);
+			expect(result.status).toBe(503);
+			expect(result.data.error).toBe(
+				action === 'join'
+					? 'Joining the club is unavailable. Try again.'
+					: 'Finishing signup is unavailable. Try again.'
+			);
+			expect(joinProgrammingClub).not.toHaveBeenCalled();
+		}
+	);
+
+	it.each(['join', 'finishOnboarding'])(
+		'%s saves the Google avatar by default and preserves custom avatars',
+		async (action) => {
+			const googleImage = 'https://lh3.googleusercontent.com/a/avatar=s96-c';
+			for (const [savedImage, upload, expected] of [
+				[null, false, googleImage],
+				['data:image/png;base64,YQ==', false, 'data:image/png;base64,YQ=='],
+				['data:image/png;base64,YQ==', true, 'data:image/png;base64,YXZhdGFy']
+			]) {
+				const joinProgrammingClub = vi.fn(async () => ({}));
+				const current = handlers({
+					repository: { getProfile: vi.fn(async () => ({ profileImageDataUrl: savedImage })) },
+					createClubRepository: vi.fn(() => ({
+						joinProgrammingClub,
+						completeRequiredForm: vi.fn()
+					}))
+				});
+				const requestEvent = event({
+					locals: { maritools: { ...SESSION, profileImageUrl: googleImage } },
+					form: { studentId: '2530622' }
+				});
+				const data = await requestEvent.request.formData();
+				if (upload)
+					data.set('profileImage', new File(['avatar'], 'avatar.png', { type: 'image/png' }));
+				await current.actions[action](requestEvent);
+				expect(joinProgrammingClub).toHaveBeenCalledWith(
+					expect.objectContaining({ profileImageDataUrl: expected })
+				);
+			}
+		}
+	);
+
 	it('is not prerendered', () => {
 		expect(prerender).toBe(false);
 	});

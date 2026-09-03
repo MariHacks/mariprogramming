@@ -20,6 +20,15 @@ const approved = Object.freeze({
 });
 
 describe('staff authorization', () => {
+	it('retains a Google profile photo for the default avatar', () => {
+		const profileImageUrl = 'https://lh3.googleusercontent.com/a/avatar=s96-c';
+		expect(
+			isMaritoolsSession(
+				{ ...approved, user: { ...approved.user, image: profileImageUrl } },
+				new Date('2029-12-31')
+			)
+		).toMatchObject({ profileImageUrl });
+	});
 	it('accepts the exact verified address and persisted Google subject', () => {
 		expect(isStaffSession(approved, new Date('2029-12-31T23:59:59.000Z'))).toEqual({
 			userId: 'better-auth-user-123',
@@ -112,10 +121,12 @@ describe('staff authorization', () => {
 			expect.objectContaining({ status: 303, location: '/staff/sign-in?state=reauthenticate' })
 		);
 		expect(() =>
-			requireStaff(/** @type {any} */ ({
-				staff: null,
-				maritools: { userId: 'executive-1', email: 'executive@example.com', role: 'moderator' }
-			}))
+			requireStaff(
+				/** @type {any} */ ({
+					staff: null,
+					maritools: { userId: 'executive-1', email: 'executive@example.com', role: 'moderator' }
+				})
+			)
 		).toThrowError(
 			expect.objectContaining({ status: 303, location: '/staff/sign-in?state=reauthenticate' })
 		);

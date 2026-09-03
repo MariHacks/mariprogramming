@@ -44,7 +44,7 @@ export function isCompleteStudentId(studentId) {
 }
 
 /**
- * @param {{ email: string, displayName?: string | null } | null | undefined} session
+ * @param {{ email: string, displayName?: string | null, profileImageUrl?: string } | null | undefined} session
  * @param {{ displayName?: string | null, username?: string | null, firstName?: string | null, lastName?: string | null, profileImageDataUrl?: string | null } | null | undefined} profile
  */
 export function accountPageView(session, profile) {
@@ -53,7 +53,8 @@ export function accountPageView(session, profile) {
 		return {
 			kind: 'incomplete',
 			email: session.email,
-			...(session.displayName ? { displayName: session.displayName } : {})
+			...(session.displayName ? { displayName: session.displayName } : {}),
+			...(session.profileImageUrl ? { profileImageDataUrl: session.profileImageUrl } : {})
 		};
 	}
 	return {
@@ -63,7 +64,7 @@ export function accountPageView(session, profile) {
 		username: profile.username ?? null,
 		firstName: profile.firstName ?? null,
 		lastName: profile.lastName ?? null,
-		profileImageDataUrl: profile.profileImageDataUrl ?? null
+		profileImageDataUrl: profile.profileImageDataUrl || session.profileImageUrl || null
 	};
 }
 

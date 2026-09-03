@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { Buffer } from 'node:buffer';
 import { parseOmnivox } from '$lib/maritools/schedule/parseOmnivox.js';
+import { googleProfileImageUrl } from '$lib/maritools/google-profile-image.js';
 import {
 	ServerConfigurationError,
 	isGoogleOAuthConfigured,
@@ -66,6 +67,14 @@ export function _createHandlers(dependencies = {}) {
 	const createCommunityRepository = dependencies.createCommunityRepository ?? openCommunityStore;
 	const googleSignInConfigured =
 		dependencies.isGoogleSignInConfigured ?? (() => isGoogleOAuthConfigured());
+
+	/** @param {FormData} data @param {{ userId: string, profileImageUrl?: string }} session */
+	async function signupProfileImage(data, session) {
+		const uploaded = await readProfileImage(data.get('profileImage'));
+		if (uploaded) return uploaded;
+		const profile = await createRepository().getProfile(session.userId);
+		return profile?.profileImageDataUrl || googleProfileImageUrl(session.profileImageUrl);
+	}
 
 	/** @param {any} event */
 	async function load(event) {
@@ -222,7 +231,7 @@ export function _createHandlers(dependencies = {}) {
 				username: String(data.get('username') ?? ''),
 				firstName: String(data.get('firstName') ?? ''),
 				lastName: String(data.get('lastName') ?? ''),
-				profileImageDataUrl: await readProfileImage(data.get('profileImage')),
+				profileImageDataUrl: await signupProfileImage(data, session),
 				program: String(data.get('program') ?? ''),
 				yearLevel: String(data.get('yearLevel') ?? ''),
 				experienceLevel: String(data.get('experienceLevel') ?? ''),
@@ -237,7 +246,7 @@ export function _createHandlers(dependencies = {}) {
 				}
 				return fail(400, { error: 'Check each required signup field.' });
 			}
-			if (error instanceof ClubUnavailableError)
+			if (error instanceof ClubUnavailableError || error instanceof MaritoolsUnavailableError)
 				return fail(503, { error: 'Joining the club is unavailable. Try again.' });
 			throw error;
 		}
@@ -336,7 +345,7 @@ export function _createHandlers(dependencies = {}) {
 						username: String(data.get('username') ?? ''),
 						firstName: String(data.get('firstName') ?? ''),
 						lastName: String(data.get('lastName') ?? ''),
-						profileImageDataUrl: await readProfileImage(data.get('profileImage')),
+						profileImageDataUrl: await signupProfileImage(data, session),
 						program: String(data.get('program') ?? ''),
 						yearLevel: String(data.get('yearLevel') ?? ''),
 						experienceLevel: String(data.get('experienceLevel') ?? ''),

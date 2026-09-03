@@ -1,4 +1,5 @@
 import { parseOmnivox } from '$lib/maritools/schedule/parseOmnivox.js';
+import { googleProfileImageUrl } from '$lib/maritools/google-profile-image.js';
 import { freeCellsFromCourses } from '$lib/maritools/schedule/freeTimeBoard.js';
 import { isCompleteStudentId, isMariHacksTeamAccount, isStaffAccount } from './community.js';
 import { readRuntimeEnvironment } from '../config/environment.js';
@@ -89,6 +90,8 @@ function username(value) {
 /** @param {unknown} value */
 function profileImage(value) {
 	if (value === null || value === undefined || value === '') return null;
+	const googleImage = googleProfileImageUrl(value);
+	if (googleImage) return googleImage;
 	if (typeof value !== 'string' || value.length > 750_000) {
 		throw new ClubInputError('invalid-profile-image');
 	}

@@ -18,7 +18,7 @@ export function initialsFromDisplayName(name) {
 }
 
 /**
- * @param {{ email: string } | null | undefined} session
+ * @param {{ email: string, profileImageUrl?: string } | null | undefined} session
  * @param {{ displayName?: string | null, profileImageDataUrl?: string | null } | null | undefined} profile
  */
 export function headerAccountView(session, profile) {
@@ -27,7 +27,7 @@ export function headerAccountView(session, profile) {
 	const profileImageDataUrl =
 		typeof profile?.profileImageDataUrl === 'string' && profile.profileImageDataUrl.trim()
 			? profile.profileImageDataUrl
-			: null;
+			: session.profileImageUrl ?? null;
 	return {
 		kind: 'signed-in',
 		displayName,

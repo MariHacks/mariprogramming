@@ -181,7 +181,7 @@ describe('account page', () => {
 		expect(screen.queryByText('2530622')).not.toBeInTheDocument();
 	});
 
-	it('prefills username from the profile display name when none was saved', () => {
+	it('prefills username and photo from Google when none was saved', () => {
 		render(AccountPage, {
 			props: {
 				data: {
@@ -189,12 +189,17 @@ describe('account page', () => {
 					view: {
 						kind: 'incomplete',
 						email: 'ada@gmail.com',
-						displayName: 'Ada Lovelace'
+						displayName: 'Ada Lovelace',
+						profileImageDataUrl: 'https://lh3.googleusercontent.com/a/photo'
 					}
 				}
 			}
 		});
 		expect(screen.getByLabelText('Username')).toHaveValue('Ada_Lovelace');
+		expect(screen.getByAltText('Selected avatar')).toHaveAttribute(
+			'src',
+			'https://lh3.googleusercontent.com/a/photo'
+		);
 	});
 
 	it('keeps schedule import out of signup and clearly labels optional fields', async () => {

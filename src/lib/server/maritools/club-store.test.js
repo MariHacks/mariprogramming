@@ -62,6 +62,31 @@ const joinInput = Object.freeze({
 });
 
 describe('programming club store', () => {
+	it('accepts Google account avatars without accepting arbitrary remote image URLs', async () => {
+		const store = createClubStore(repository());
+		await expect(
+			store.joinProgrammingClub({
+				...joinInput,
+				profileImageDataUrl: 'https://lh3.googleusercontent.com/a/avatar=s96-c'
+			})
+		).resolves.toMatchObject({
+			profileImageDataUrl: 'https://lh3.googleusercontent.com/a/avatar=s96-c'
+		});
+		for (const profileImageDataUrl of [
+			'https://example.com/avatar.png',
+			'http://lh3.googleusercontent.com/avatar',
+			'https://lh3.googleusercontent.com.evil.test/avatar',
+			'https://user@lh3.googleusercontent.com/avatar',
+			'https://lh3.googleusercontent.com:8443/avatar',
+			'https://googleusercontent.com/avatar',
+			`https://lh3.googleusercontent.com/${'a'.repeat(2048)}`
+		]) {
+			await expect(
+				store.joinProgrammingClub({ ...joinInput, profileImageDataUrl })
+			).rejects.toBeInstanceOf(ClubInputError);
+		}
+	});
+
 	it('provisions only the exact MariHacks team account with official profile defaults', async () => {
 		const inner = repository();
 		const store = createClubStore(inner);

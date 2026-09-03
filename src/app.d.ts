@@ -6,6 +6,7 @@ declare global {
 				sessionId: string;
 				email: 'team@marihacks.com';
 				displayName?: string;
+				profileImageUrl?: string;
 				googleSubject: string;
 				expiresAt: Date;
 			}> | null;
@@ -14,6 +15,7 @@ declare global {
 				sessionId: string;
 				email: string;
 				displayName?: string;
+				profileImageUrl?: string;
 				googleSubject: string;
 				expiresAt: Date;
 			}> | null;

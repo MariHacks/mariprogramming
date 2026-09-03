@@ -13,6 +13,17 @@ describe('initialsFromDisplayName', () => {
 });
 
 describe('headerAccountView', () => {
+	it('uses the Google photo unless a custom photo is saved', () => {
+		const session = {
+			email: 'ada@gmail.com',
+			profileImageUrl: 'https://lh3.googleusercontent.com/a/photo'
+		};
+		expect(headerAccountView(session, null).profileImageDataUrl).toBe(session.profileImageUrl);
+		expect(
+			headerAccountView(session, { profileImageDataUrl: 'data:image/png;base64,YQ==' })
+				.profileImageDataUrl
+		).toBe('data:image/png;base64,YQ==');
+	});
 	it('returns signed-out when there is no session', () => {
 		expect(headerAccountView(null, null)).toEqual({ kind: 'signed-out' });
 	});

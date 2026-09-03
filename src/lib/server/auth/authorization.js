@@ -1,4 +1,5 @@
 import { redirect } from '@sveltejs/kit';
+import { googleProfileImageUrl } from '$lib/maritools/google-profile-image.js';
 
 export const STAFF_EMAIL = 'team@marihacks.com';
 
@@ -20,6 +21,7 @@ export function isMaritoolsSession(candidate, now = new Date()) {
 	if (!isRecord(user) || !isRecord(session) || !isRecord(account)) return null;
 
 	const email = typeof user.email === 'string' ? user.email.trim().toLowerCase() : '';
+	const profileImageUrl = googleProfileImageUrl(user.image);
 	const displayName =
 		typeof user.name === 'string' && user.name.trim().length > 0
 			? user.name.trim().slice(0, 120)
@@ -55,7 +57,8 @@ export function isMaritoolsSession(candidate, now = new Date()) {
 		email,
 		googleSubject: account.accountId,
 		expiresAt,
-		...(displayName ? { displayName } : {})
+		...(displayName ? { displayName } : {}),
+		...(profileImageUrl ? { profileImageUrl } : {})
 	});
 }
 

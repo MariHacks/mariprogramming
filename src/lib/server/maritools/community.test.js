@@ -8,6 +8,18 @@ import {
 } from './community.js';
 
 describe('community identity', () => {
+	it('defaults to the Google photo without replacing an uploaded photo', () => {
+		const session = {
+			email: 'ada@gmail.com',
+			profileImageUrl: 'https://lh3.googleusercontent.com/a/photo'
+		};
+		expect(accountPageView(session, null).profileImageDataUrl).toBe(session.profileImageUrl);
+		expect(accountPageView(session, {}).profileImageDataUrl).toBe(session.profileImageUrl);
+		expect(
+			accountPageView(session, { profileImageDataUrl: 'data:image/png;base64,YQ==' })
+				.profileImageDataUrl
+		).toBe('data:image/png;base64,YQ==');
+	});
 	it('treats the MariHacks team mailbox as staff', () => {
 		expect(isStaffAccount('team@marihacks.com')).toBe(true);
 		expect(isStaffAccount('someone@gmail.com')).toBe(false);
