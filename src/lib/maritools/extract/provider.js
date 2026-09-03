@@ -73,13 +73,13 @@ export function createOutlineExtractionProvider(options = {}) {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
-					model: options.getModel?.() ?? 'nvidia/nemotron-3.5-lightning-30b-a3b',
+					model: options.getModel?.() ?? 'qwen/qwen3.5-122b-a10b',
 					temperature: 0,
 					messages: [
 						{
 							role: 'user',
 							content:
-								'Extract course identity, assessments, and books as JSON with shape {"courseCode":string|null,"title":string|null,"section":string|null,"teacherName":string|null,"assessments":[{"title":string,"weight":number|null,"date":"YYYY-MM-DD"|null}],"books":[{"title":string,"author":string|null,"isbn":string|null,"required":boolean}]}. Read the EVALUATION table carefully: each row is Due Date/Due Week, then Type (Labs, Quizzes, First test, Project, Second test). Put the calendar due on the matching Type only (e.g. "Friday, October 2" → First test, not Quizzes). Use null for date when the due cell is Weekly, As announced, or In common evaluation period. Never invent dates. Use null for section when the outline does not state a section number. Text:\n' +
+								'Extract course identity, assessments, and books as JSON with shape {"courseCode":string|null,"title":string|null,"section":string|null,"teacherName":string|null,"assessments":[{"title":string,"due":string|null,"dateIso":"YYYY-MM-DD"|null,"weight":number|null,"weightLabel":string|null}],"books":[{"title":string,"author":string|null,"isbn":string|null,"required":boolean}]}. Read the EVALUATION table carefully: each row is Due Date/Due Week, then Type, Platform, Option A, Option B. Preserve the exact due text, including Weekly, As announced, and In common evaluation period. For weightLabel, preserve both options when they differ, such as "30% / 40%"; use one value when they match. Never invent dates or weights. Use null for section when the outline does not state a section number. Text:\n' +
 								input.text
 						}
 					]

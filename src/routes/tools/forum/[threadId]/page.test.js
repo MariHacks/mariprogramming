@@ -30,12 +30,13 @@ describe('forum thread page', () => {
 
 	it('lets signed-in students reply and report without showing a student number', async () => {
 		const user = userEvent.setup();
-		render(ThreadPage, {
+		const { container } = render(ThreadPage, {
 			props: {
 				data: {
 					thread: {
 						...THREAD,
 						authorDisplayName: 'Zhich',
+						authorProfileImageDataUrl: 'data:image/png;base64,YQ==',
 						authorUserId: 'author-1',
 						authorProfileHref: '/tools/people/author-1'
 					},
@@ -72,7 +73,10 @@ describe('forum thread page', () => {
 		expect(screen.getByText('Course help')).toBeInTheDocument();
 		expect(screen.getByText('Original poster')).toBeInTheDocument();
 		expect(screen.getByText('Zhich')).toBeInTheDocument();
-		expect(screen.getByText('ZH')).toBeInTheDocument();
+		expect(container.querySelector('.origin .post-avatar img')).toHaveAttribute(
+			'src',
+			'data:image/png;base64,YQ=='
+		);
 		expect(screen.getByText('nick')).toBeInTheDocument();
 		expect(screen.getByText('NI')).toBeInTheDocument();
 		expect(screen.queryByText('Student')).not.toBeInTheDocument();

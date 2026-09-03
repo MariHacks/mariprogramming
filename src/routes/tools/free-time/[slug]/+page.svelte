@@ -17,7 +17,7 @@
 	import { calendarDate } from '$lib/maritools/term/calendar.js';
 	import '$lib/maritools/styles/preview.css';
 
-	/** @type {{ board: { id: string, title: string, termId?: string, members: Array<{ id: string, displayName: string, availability?: unknown, shareToken?: string | null }> }, shareUrl: string, signedInDisplayName?: string | null } | { board: null, notFound?: boolean, unavailable?: boolean, signedInDisplayName?: string | null }} */
+	/** @type {{ board: { id: string, title: string, termId?: string, members: Array<{ id: string, displayName: string, availability?: unknown, shareToken?: string | null }> }, shareUrl: string, signedInDisplayName?: string | null, savedSchedulePaste?: string } | { board: null, notFound?: boolean, unavailable?: boolean, signedInDisplayName?: string | null, savedSchedulePaste?: string }} */
 	export let data;
 
 	/** @type {{ member?: { shareToken?: string | null }, saveError?: string, saveSuccess?: boolean } | null} */
@@ -30,7 +30,7 @@
 	let saveMessage = '';
 	let copyLabel = 'Copy';
 	let importOpen = false;
-	let omnivoxPaste = '';
+	let omnivoxPaste = String(data?.savedSchedulePaste ?? '');
 	let importError = '';
 	let weekStartIso = mondayOfWeek(calendarDate());
 	let restoredOnce = false;
@@ -41,6 +41,7 @@
 
 	$: board = data.board;
 	$: signedIn = Boolean(data.signedInDisplayName);
+	$: hasSavedSchedule = Boolean(String(data?.savedSchedulePaste ?? '').trim());
 	$: myAvailability = (() => {
 		if (!board || !('members' in board)) return null;
 		const members = board.members ?? [];
@@ -129,8 +130,9 @@
 	$: if (form?.saveError) saveMessage = form.saveError;
 	$: if (form?.saveSuccess) saveMessage = 'Availability saved.';
 
-	function importOmnivox() {
-		const parsed = parseOmnivox(omnivoxPaste);
+	/** @param {string} [source] */
+	function importOmnivox(source = omnivoxPaste) {
+		const parsed = parseOmnivox(source);
 		if (!parsed.ok) {
 			importError = parsed.warnings[0] ?? 'We could not read that paste.';
 			return;
@@ -139,6 +141,15 @@
 		draftByWeek = { ...draftByWeek, [weekStartIso]: new Set(freeCells) };
 		importError = '';
 		importOpen = false;
+	}
+
+	function handleImportOmnivox() {
+		if (hasSavedSchedule) {
+			omnivoxPaste = String(data.savedSchedulePaste ?? '');
+			importOmnivox(omnivoxPaste);
+			return;
+		}
+		importOpen = !importOpen;
 	}
 
 	/**
@@ -312,7 +323,7 @@
 						<button type="submit" class="primary-button wide">Save availability</button>
 					</form>
 
-					<button class="panel-button" type="button" on:click={() => (importOpen = !importOpen)}>
+					<button class="panel-button" type="button" on:click={handleImportOmnivox}>
 						Import Omnivox
 					</button>
 					{#if importOpen}
@@ -320,7 +331,7 @@
 							<span>Omnivox course list</span>
 							<textarea bind:value={omnivoxPaste} rows="8" spellcheck="false" aria-label="Omnivox course list"></textarea>
 						</label>
-						<button class="panel-button" type="button" on:click={importOmnivox}>Read schedule</button>
+						<button class="panel-button" type="button" on:click={() => importOmnivox()}>Read schedule</button>
 						{#if importError}
 							<p class="field-error" role="alert">{importError}</p>
 						{/if}

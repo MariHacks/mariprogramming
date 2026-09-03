@@ -6,37 +6,42 @@
 
 	/** @type {Date | null} */
 	export let now = null;
+	/** @type {boolean} */
+	export let weekdayOnly = false;
 
-	/** @type {string[]} */
 	const hourLabels = gridHourLabels();
 
 	$: lineHours = nowLineHours(now ?? new Date());
 	$: showNow = Boolean(lineHours != null && grid.some((column) => column.isToday));
 
-	/** @param {number} index */
 	function eventTone(index) {
 		return ['event-blue', 'event-ink', 'event-slate', 'event-pale', 'event-line'][index % 5];
 	}
 
-	/** @param {string} startTime @param {string} endTime */
 	function timeRange(startTime, endTime) {
 		return `${formatClock(startTime)}-${formatClock(endTime)}`;
 	}
 
-	/** @param {string} time */
 	function formatClock(time) {
 		const [hours, minutes] = String(time).split(':');
 		return `${Number(hours)}:${minutes}`;
 	}
 </script>
 
-<div class="calendar-frame schedule-calendar" aria-label="Weekly course schedule">
+<div
+	class="calendar-frame schedule-calendar"
+	class:weekday-only={weekdayOnly}
+	aria-label="Weekly course schedule"
+>
 	<div class="calendar-corner"><span>EST</span></div>
 	{#each grid as column (column.date)}
 		<div class="day-head" class:is-today={column.isToday} class:is-no-class={column.isNoClass}>
-			<span>{column.weekday}</span><strong>{column.dayNumber}</strong>
-			{#if column.isToday}<i>Today</i>{/if}
-			{#if column.isNoClass && !column.outOfTerm}<i class="muted">No class</i>{/if}
+			<span>{column.weekday}</span>
+			{#if !weekdayOnly}
+				<strong>{column.dayNumber}</strong>
+				{#if column.isToday}<i>Today</i>{/if}
+				{#if column.isNoClass && !column.outOfTerm}<i class="muted">No class</i>{/if}
+			{/if}
 		</div>
 	{/each}
 	<div class="time-rail">

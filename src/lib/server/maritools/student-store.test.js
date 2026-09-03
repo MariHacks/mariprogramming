@@ -39,6 +39,7 @@ const NESTED_ENTRY = {
 function flatFromNested(row) {
 	if (!row?.contribution) return row;
 	return {
+		listTerms: vi.fn(async () => []),
 		id: row.contribution.id,
 		termId: row.offering?.termId ?? row.contribution.termId,
 		courseCode: row.course?.code ?? row.contribution.courseCode,
@@ -62,9 +63,14 @@ function inner(overrides = {}) {
 		upsertStudentProfile: vi.fn(async () => ({})),
 		acceptNimDisclosure: vi.fn(async () => undefined),
 		listPublishedCatalog: vi.fn(async () => [FLAT_ENTRY]),
+		listUserOutlines: vi.fn(async () => []),
 		findExtraction: vi.fn(async () => null),
 		saveOutlineDocument: vi.fn(async () => ({})),
+		saveOutlineReview: vi.fn(async () => ({})),
+		deleteOutlineDocument: vi.fn(async () => ({})),
 		saveExtraction: vi.fn(async () => ({})),
+		getSavedSchedule: vi.fn(async () => null),
+		saveSchedule: vi.fn(async () => ({})),
 		findOrCreateOffering: vi.fn(async () => ({ offering: { id: 'off-1' } })),
 		publishCatalogContribution: vi.fn(async () => ({ conflict: false })),
 		...overrides
@@ -184,6 +190,91 @@ describe('createStudentStore', () => {
 			proposals: { assessments: [] },
 			inferenceCount: 2
 		});
+	});
+
+	it('returns account-owned outline reviews without private document text', async () => {
+		const createdAt = new Date('2026-08-30T12:00:00.000Z');
+		const store = createStudentStore(
+			inner({
+				listUserOutlines: vi.fn(async () => [
+					{
+						sha256: 'ab'.repeat(32),
+						createdAt,
+						proposals: { courseCode: '203-SN3-RE', title: 'Modern Physics' },
+						inferenceCount: 2,
+						extractedText: 'must never leave the repository'
+					},
+					{
+						sha256: 'cd'.repeat(32),
+						createdAt: new Date('2026-08-30T11:00:00.000Z'),
+						proposals: null,
+						inferenceCount: null
+					}
+				])
+			})
+		);
+
+		const outlines = await store.listOutlines(USER);
+
+		expect(outlines).toEqual([
+			{
+				sha256: 'ab'.repeat(32),
+				createdAt,
+				extraction: {
+					proposals: { courseCode: '203-SN3-RE', title: 'Modern Physics' },
+					inferenceCount: 2
+				}
+			},
+			{
+				sha256: 'cd'.repeat(32),
+				createdAt: new Date('2026-08-30T11:00:00.000Z'),
+				extraction: null
+			}
+		]);
+		expect(JSON.stringify(outlines)).not.toContain('must never leave');
+	});
+
+	it('prefers the student private review and scopes save and delete to that account', async () => {
+		const repo = inner({
+			listUserOutlines: vi.fn(async () => [
+				{
+					sha256: 'ab'.repeat(32),
+					createdAt: new Date('2026-08-30T12:00:00.000Z'),
+					reviewProposals: { title: 'My corrected title' },
+					proposals: { title: 'Shared extraction title' },
+					inferenceCount: 1
+				}
+			])
+		});
+		const store = createStudentStore(repo);
+		expect((await store.listOutlines(USER))[0].extraction.proposals).toEqual({
+			title: 'My corrected title'
+		});
+		await store.saveOutlineReview({
+			userId: USER,
+			sha256: 'ab'.repeat(32),
+			proposals: { title: 'Saved title' }
+		});
+		await store.deleteOutline({ userId: USER, sha256: 'ab'.repeat(32) });
+		expect(repo.saveOutlineReview).toHaveBeenCalledWith(
+			expect.objectContaining({ userId: USER, sha256: 'ab'.repeat(32) })
+		);
+		expect(repo.deleteOutlineDocument).toHaveBeenCalledWith({
+			userId: USER,
+			sha256: 'ab'.repeat(32)
+		});
+	});
+
+	it('loads and saves the signed-in account schedule', async () => {
+		const repo = inner({
+			getSavedSchedule: vi.fn(async () => ({ paste: '1\tCalculus\n' }))
+		});
+		const store = createStudentStore(repo);
+
+		await expect(store.getSchedule(USER)).resolves.toBe('1\tCalculus\n');
+		await store.saveSchedule({ userId: USER, paste: '2\tPhysics\n' });
+
+		expect(repo.saveSchedule).toHaveBeenCalledWith({ userId: USER, paste: '2\tPhysics\n' });
 	});
 
 	it('contributes through offering identity', async () => {

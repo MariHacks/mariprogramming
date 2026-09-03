@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
+import { cleanup, render, screen, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { asOfDate, explicitTermId } from '$lib/maritools/term/session.js';
 
@@ -7,7 +7,8 @@ vi.mock('$app/stores', async () => {
 
 	return {
 		page: writable({
-			url: { pathname: '/tools', searchParams: new URLSearchParams() }
+			url: { pathname: '/tools', searchParams: new URLSearchParams() },
+			data: {}
 		})
 	};
 });
@@ -15,7 +16,7 @@ vi.mock('$app/stores', async () => {
 import { page } from '$app/stores';
 import ToolsLayout from './+layout.svelte';
 
-const testPage = /** @type {{ set: (value: { url: { pathname: string, searchParams?: URLSearchParams } }) => void }} */ (
+const testPage = /** @type {{ set: (value: { url: { pathname: string, searchParams?: URLSearchParams }, data?: Record<string, unknown> }) => void }} */ (
 	/** @type {unknown} */ (page)
 );
 
@@ -27,48 +28,18 @@ afterEach(() => {
 
 describe('tools layout', () => {
 	beforeEach(() => {
-		testPage.set({ url: { pathname: '/tools', searchParams: new URLSearchParams() } });
+		testPage.set({ url: { pathname: '/tools', searchParams: new URLSearchParams() }, data: {} });
 		explicitTermId.set(null);
 		asOfDate.set(null);
 	});
 
-	it('exposes a lean term picker without club initiative copy', () => {
+	it('keeps term selection out of the global tools navigation', () => {
 		const { container } = render(ToolsLayout);
 
-		expect(screen.getByLabelText('Term')).toBeInTheDocument();
-		expect(screen.getByRole('combobox', { name: 'Term' })).toBeInTheDocument();
+		expect(screen.queryByLabelText('Term')).not.toBeInTheDocument();
+		expect(screen.queryByRole('combobox', { name: 'Term' })).not.toBeInTheDocument();
 		expect(container).not.toHaveTextContent('Made by the Programming Club.');
 		expect(container).not.toHaveTextContent('A Programming Club initiative.');
-	});
-
-	it('on a gap date shows unavailable and still accepts Fall 2026', async () => {
-		asOfDate.set('2027-01-05');
-		render(ToolsLayout);
-
-		expect(screen.getByRole('status')).toHaveTextContent(
-			'Current-term data is unavailable.'
-		);
-
-		await fireEvent.change(screen.getByRole('combobox', { name: 'Term' }), {
-			target: { value: 'fall-2026' }
-		});
-
-		expect(screen.getByRole('status')).toHaveTextContent('Showing Fall 2026.');
-		expect(screen.getByRole('combobox', { name: 'Term' })).toHaveValue('fall-2026');
-	});
-
-	it('honors an asOf search param for gap-date proofs', () => {
-		testPage.set({
-			url: {
-				pathname: '/tools',
-				searchParams: new URLSearchParams('asOf=2027-01-05')
-			}
-		});
-		render(ToolsLayout);
-
-		expect(screen.getByRole('status')).toHaveTextContent(
-			'Current-term data is unavailable.'
-		);
 	});
 
 	it('groups MariTools destinations by section in the sidebar', () => {
@@ -108,7 +79,8 @@ describe('tools layout', () => {
 
 	it('marks the active tool in the sidebar', () => {
 		testPage.set({
-			url: { pathname: '/tools/forum/abc', searchParams: new URLSearchParams() }
+			url: { pathname: '/tools/forum/abc', searchParams: new URLSearchParams() },
+			data: {}
 		});
 		render(ToolsLayout);
 		const nav = screen.getByRole('navigation', { name: 'MariTools' });
@@ -118,5 +90,16 @@ describe('tools layout', () => {
 			'page'
 		);
 		expect(within(nav).getByRole('link', { name: 'Schedule' })).not.toHaveAttribute('aria-current');
+	});
+
+	it('collapses the sidebar while signup is incomplete', () => {
+		testPage.set({
+			url: { pathname: '/tools/account', searchParams: new URLSearchParams() },
+			data: { onboardingPending: true }
+		});
+		const { container } = render(ToolsLayout);
+
+		expect(container.querySelector('.tools-shell')).toHaveClass('tools-shell--onboarding');
+		expect(screen.queryByRole('navigation', { name: 'MariTools' })).not.toBeInTheDocument();
 	});
 });

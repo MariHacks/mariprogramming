@@ -2,13 +2,11 @@
 	import { page } from '$app/stores';
 	import { resolve } from '$app/paths';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
-	import { ACADEMIC_TERMS } from '$lib/maritools/term/calendar.js';
-	import { asOfDate, explicitTermId, termResolution } from '$lib/maritools/term/session.js';
 	import { isToolNavCurrent, TOOL_SECTIONS } from '$lib/maritools/tools-nav.js';
 	import '$lib/maritools/styles/preview.css';
 
 	$: pathname = $page.url.pathname;
-	$: applyAsOfParam($page.url.searchParams?.get?.('asOf') ?? null);
+	$: onboardingPending = pathname === '/tools/account' && $page.data?.onboardingPending === true;
 
 	let sidebarOpen = false;
 
@@ -28,18 +26,6 @@
 		return label;
 	}
 
-	/** @param {string | null} raw */
-	function applyAsOfParam(raw) {
-		if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) asOfDate.set(raw);
-	}
-
-	/** @param {Event} event */
-	function onTermChange(event) {
-		if (!(event.currentTarget instanceof HTMLSelectElement)) return;
-		const value = event.currentTarget.value;
-		explicitTermId.set(value === '' ? null : value);
-	}
-
 	/** @param {KeyboardEvent} event */
 	function handleKeydown(event) {
 		if (event.key === 'Escape') closeSidebar();
@@ -48,7 +34,7 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="tools-shell">
+<div class="tools-shell" class:tools-shell--onboarding={onboardingPending}>
 	{#if sidebarOpen}
 		<button
 			class="sidebar-scrim"
@@ -57,7 +43,7 @@
 			on:click={closeSidebar}
 		></button>
 	{/if}
-	<aside class="tools-sidebar" id="tools-sidebar" data-open={sidebarOpen}>
+	{#if !onboardingPending}<aside class="tools-sidebar" id="tools-sidebar" data-open={sidebarOpen}>
 		<div class="tools-brand-row">
 			<a class="tools-wordmark" href={resolve('/tools', {})} on:click={closeSidebar}>
 				<span class="tools-glyph" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -85,30 +71,12 @@
 				</section>
 			{/each}
 		</nav>
-		<div class="term-control">
-			<label for="tools-term">Term</label>
-			<select
-				id="tools-term"
-				value={$explicitTermId ?? ''}
-				on:change={onTermChange}
-			>
-				<option value="">Use current dates</option>
-				{#each ACADEMIC_TERMS as term (term.id)}
-					<option value={term.id}>{term.name}</option>
-				{/each}
-			</select>
-			{#if $termResolution.reason === 'none'}
-				<p class="term-status" role="status">Current-term data is unavailable.</p>
-			{:else if $termResolution.selected}
-				<p class="term-status" role="status">Showing {$termResolution.selected.name}.</p>
-			{/if}
-		</div>
 		<a class="back-club" href={resolve('/', {})} on:click={closeSidebar}>
 			Back to club home <span aria-hidden="true">↗</span>
 		</a>
-	</aside>
+	</aside>{/if}
 	<div class="tools-main">
-		<button
+		{#if !onboardingPending}<button
 			class="tools-menu"
 			type="button"
 			aria-expanded={sidebarOpen}
@@ -116,7 +84,7 @@
 			on:click={toggleSidebar}
 		>
 			<span aria-hidden="true">☰</span> Tools
-		</button>
+		</button>{/if}
 		<slot />
 	</div>
 </div>
@@ -229,36 +197,6 @@
 		content: '';
 	}
 
-	.term-control {
-		display: grid;
-		gap: 0.25rem;
-		padding-block-start: var(--space-sm);
-		border-block-start: var(--rule);
-	}
-
-	.term-control label {
-		font-size: var(--text-xs);
-		font-weight: 650;
-		color: var(--quiet-steel);
-	}
-
-	.term-control select {
-		height: 2.25rem;
-		padding-inline: 0.55rem;
-		border: var(--rule);
-		border-radius: var(--radius-xs);
-		background: #fff;
-		color: inherit;
-		font: inherit;
-		font-size: var(--text-sm);
-	}
-
-	.term-status {
-		margin: 0;
-		font-size: var(--text-xs);
-		color: var(--quiet-steel);
-	}
-
 	.back-club {
 		color: var(--club-blue);
 		font-size: var(--text-sm);
@@ -311,6 +249,10 @@
 	@media (min-width: 52rem) {
 		.tools-shell {
 			grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
+		}
+
+		.tools-shell--onboarding {
+			grid-template-columns: minmax(0, 1fr);
 		}
 
 		.tools-sidebar {

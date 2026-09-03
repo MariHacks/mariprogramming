@@ -238,6 +238,9 @@ describe.sequential('MariTools repository against disposable PostgreSQL', () => 
 		expect(JSON.stringify(publicOutlineView(filled))).not.toContain('PRIVATE OUTLINE TEXT');
 		const loaded = await repo.getOutlineDocument({ userId: USER_A, sha256: SHA_A });
 		expect(loaded.extractedText).toBe('PRIVATE OUTLINE TEXT');
+		expect(await repo.listUserOutlines(USER_A)).toEqual([
+			expect.objectContaining({ sha256: SHA_A, proposals: null })
+		]);
 
 		const first = await repo.saveExtraction({
 			documentSha256: SHA_A,
@@ -263,6 +266,101 @@ describe.sequential('MariTools repository against disposable PostgreSQL', () => 
 		expect(await repo.findExtraction({ offeringId: offering.offering.id })).toMatchObject({
 			documentSha256: SHA_A
 		});
+		expect(await repo.listUserOutlines(USER_A)).toEqual([
+			expect.objectContaining({ sha256: SHA_A, proposals: { assessments: [] } })
+		]);
+	});
+
+	it('round-trips one saved schedule per account', async () => {
+		const repo = repository();
+		await repo.saveSchedule({ userId: USER_A, paste: '1\tCalculus\n' });
+		expect(await repo.getSavedSchedule(USER_A)).toMatchObject({ paste: '1\tCalculus\n' });
+
+		await repo.saveSchedule({ userId: USER_A, paste: '1\tPhysics\n' });
+		expect(await repo.getSavedSchedule(USER_A)).toMatchObject({ paste: '1\tPhysics\n' });
+		expect(await repo.getSavedSchedule(USER_B)).toBeNull();
+	});
+
+	it('joins members atomically and exposes their account details only through staff queries', async () => {
+		const repo = repository();
+		await repo.joinProgrammingClub({
+			userId: USER_A,
+			studentId: '2530622',
+			username: 'ada_member',
+			firstName: 'Ada',
+			lastName: 'Member',
+			profileImageDataUrl: 'data:image/png;base64,YQ==',
+			program: 'Science, Pure and Applied Science',
+			yearLevel: 'second',
+			experienceLevel: 'learning',
+			interests: ['web'],
+			clubGoals: 'Project nights',
+			staffVisibilityAccepted: true
+		});
+		await repo.joinProgrammingClub({
+			userId: USER_B,
+			studentId: '2530623',
+			username: 'grace_member',
+			firstName: 'Grace',
+			lastName: 'Member',
+			program: 'Pure and Applied Science',
+			yearLevel: 'first',
+			experienceLevel: 'new',
+			interests: ['hardware'],
+			staffVisibilityAccepted: true
+		});
+
+		const listing = await repo.listStaffClubMembers({ query: 'science' });
+		expect(listing.totalCount).toBe(2);
+		expect(listing.rows.map((row) => row.email).sort()).toEqual(['a@gmail.com', 'b@gmail.com']);
+		expect(await repo.getStaffClubMember(USER_A)).toMatchObject({
+			displayName: 'ada_member',
+			firstName: 'Ada',
+			studentId: '2530622',
+			yearLevel: 'second',
+			clubGoals: 'Project nights',
+			schedulePaste: '1\tPhysics\n'
+		});
+		expect(await repo.getStaffClubMember(USER_B)).toMatchObject({ clubGoals: null });
+		expect(await repo.listSharedClubSchedules()).toEqual([
+			expect.objectContaining({ userId: USER_A, paste: '1\tPhysics\n' })
+		]);
+
+		expect(await repo.getProgrammingClubMembership(USER_A)).toMatchObject({
+			scheduleSharedAt: expect.any(Date),
+			requiredFormCompletedAt: null
+		});
+		await repo.completeProgrammingClubOnboarding(USER_A);
+		expect(await repo.getProgrammingClubMembership(USER_A)).toMatchObject({
+			requiredFormCompletedAt: expect.any(Date)
+		});
+	});
+
+	it('persists a private reviewed outline and deletes only that account copy', async () => {
+		const repo = repository();
+		await repo.saveOutlineDocument({
+			userId: USER_B,
+			sha256: SHA_B,
+			byteLength: 900,
+			extractedText: 'PRIVATE B'
+		});
+		await repo.saveOutlineReview({
+			userId: USER_B,
+			sha256: SHA_B,
+			proposals: { title: 'Student correction', assessments: [], books: [] }
+		});
+		expect(await repo.listUserOutlines(USER_B)).toEqual([
+			expect.objectContaining({
+				sha256: SHA_B,
+				reviewProposals: expect.objectContaining({ title: 'Student correction' })
+			})
+		]);
+		await repo.deleteOutlineDocument({ userId: USER_B, sha256: SHA_B });
+		expect(await repo.listUserOutlines(USER_B)).toEqual([]);
+		expect(await repo.getOutlineDocument({ userId: USER_A, sha256: SHA_A })).not.toBeNull();
+		await expect(
+			repo.deleteOutlineDocument({ userId: USER_B, sha256: SHA_B })
+		).rejects.toBeInstanceOf(MariToolsNotFoundError);
 	});
 
 	it('publishes catalog contributions with a visible conflict instead of last-write-wins', async () => {

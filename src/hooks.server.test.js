@@ -18,8 +18,14 @@ const approvedSession = {
 	}
 };
 
-/** @param {{ session?: any, account?: any, runtimeError?: Error }} [options] */
-function harness({ session = null, account = null, runtimeError } = {}) {
+/** @param {{ session?: any, account?: any, runtimeError?: Error, membership?: any, membershipError?: Error }} [options] */
+function harness({
+	session = null,
+	account = null,
+	runtimeError,
+	membership = { requiredFormCompletedAt: new Date('2026-09-02T12:00:00.000Z') },
+	membershipError
+} = {}) {
 	const auth = {
 		api: { getSession: vi.fn(async () => session) },
 		handler: vi.fn(),
@@ -35,8 +41,25 @@ function harness({ session = null, account = null, runtimeError } = {}) {
 		return resolve(current);
 	});
 	const resolve = vi.fn(async () => new Response('public response'));
-	const handle = createHandle({ withAuth, officialHandler, isBuilding: false });
-	return { auth, findGoogleAccount, handle, officialHandler, resolve, withAuth };
+	const getMyClubOnboarding = vi.fn(async () => {
+		if (membershipError) throw membershipError;
+		return membership;
+	});
+	const handle = createHandle({
+		withAuth,
+		officialHandler,
+		createClubRepository: () => ({ getMyClubOnboarding }),
+		isBuilding: false
+	});
+	return {
+		auth,
+		findGoogleAccount,
+		getMyClubOnboarding,
+		handle,
+		officialHandler,
+		resolve,
+		withAuth
+	};
 }
 
 describe('server authentication hook', () => {
@@ -184,6 +207,59 @@ describe('server authentication hook', () => {
 			googleSubject: 'google-subject-123',
 			expiresAt: new Date('2030-01-01T00:00:00.000Z')
 		});
+	});
+
+	it('blocks every signed-in MariTools request until onboarding is complete', async () => {
+		const setup = harness({
+			session: {
+				user: { id: 'user-123', email: 'ada@gmail.com', emailVerified: true },
+				session: approvedSession.session
+			},
+			account: { providerId: 'google', accountId: 'google-subject-123', userId: 'user-123' },
+			membership: { requiredFormCompletedAt: null }
+		});
+		const current = event('/tools/schedule', {
+			cookie: 'mari-staff.session_token=signed-token'
+		});
+		const response = await setup.handle({ event: current, resolve: setup.resolve });
+		expect(response.status).toBe(303);
+		expect(response.headers.get('location')).toBe('/tools/account');
+		expect(setup.resolve).not.toHaveBeenCalled();
+	});
+
+	it('returns a signed-in member to the account page when onboarding status is unavailable', async () => {
+		const setup = harness({
+			session: {
+				user: { id: 'user-123', email: 'ada@gmail.com', emailVerified: true },
+				session: approvedSession.session
+			},
+			account: { providerId: 'google', accountId: 'google-subject-123', userId: 'user-123' },
+			membershipError: new Error('database unavailable')
+		});
+		const current = event('/tools', {
+			cookie: 'mari-staff.session_token=signed-token'
+		});
+		const response = await setup.handle({ event: current, resolve: setup.resolve });
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get('location')).toBe('/tools/account');
+		expect(setup.resolve).not.toHaveBeenCalled();
+	});
+
+	it('allows a completed member to use MariTools', async () => {
+		const setup = harness({
+			session: {
+				user: { id: 'user-123', email: 'ada@gmail.com', emailVerified: true },
+				session: approvedSession.session
+			},
+			account: { providerId: 'google', accountId: 'google-subject-123', userId: 'user-123' }
+		});
+		const current = event('/tools/schedule', {
+			cookie: 'mari-staff.session_token=signed-token'
+		});
+		const response = await setup.handle({ event: current, resolve: setup.resolve });
+		expect(response.status).toBe(200);
+		expect(setup.resolve).toHaveBeenCalledOnce();
 	});
 
 	it.each([

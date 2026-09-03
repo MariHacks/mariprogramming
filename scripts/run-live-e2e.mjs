@@ -11,6 +11,7 @@ const PASSTHROUGH_ENVIRONMENT_NAMES = Object.freeze([
 	'HOME',
 	'LANG',
 	'LC_ALL',
+	'LIVE_E2E_VIDEO',
 	'LOGNAME',
 	'NODE_OPTIONS',
 	'PATH',

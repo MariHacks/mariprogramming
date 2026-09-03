@@ -219,6 +219,26 @@ describe('free-time board page', () => {
 		expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 	});
 
+	it('imports the account schedule immediately without showing a duplicate textbox', () => {
+		render(BoardPage, {
+			props: {
+				data: {
+					board: BOARD,
+					shareUrl: 'https://example.com/tools/free-time/study-group',
+					signedInDisplayName: 'Zhicheng',
+					savedSchedulePaste: CANONICAL_OMNIVOX_SCHEDULE
+				}
+			}
+		});
+		fireEvent.click(screen.getByRole('button', { name: 'Import Omnivox' }));
+		expect(screen.queryByLabelText('Omnivox course list')).not.toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Read schedule' })).not.toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Mon 08:00' })).toHaveAttribute(
+			'aria-pressed',
+			'true'
+		);
+	});
+
 	it('confirms a saved availability', () => {
 		render(BoardPage, {
 			props: {

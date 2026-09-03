@@ -18,7 +18,7 @@ export default defineConfig({
 		baseURL: liveBaseURL,
 		trace: 'retain-on-failure',
 		screenshot: 'only-on-failure',
-		video: 'retain-on-failure'
+		video: process.env.LIVE_E2E_VIDEO === 'on' ? 'on' : 'retain-on-failure'
 	},
 	projects: [
 		{

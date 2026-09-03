@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { ACADEMIC_CALENDAR_RULES, ACADEMIC_TERMS } from '../../maritools/term/calendar.js';
 import {
 	mtAcademicCalendarRules,
@@ -14,7 +14,10 @@ import {
 	mtForumThreads,
 	mtOutlineDocuments,
 	mtOutlineExtractions,
-	mtStudentProfiles
+	mtProgrammingClubMemberships,
+	mtSavedSchedules,
+	mtStudentProfiles,
+	user
 } from '../db/schema';
 import { withDatabaseTransaction } from '../db/transaction.js';
 import { isCompleteStudentId } from './community.js';
@@ -188,6 +191,10 @@ export function publicStudentView(profile) {
 	return {
 		userId: profile.userId,
 		displayName: profile.displayName ?? null,
+		username: profile.username ?? null,
+		firstName: profile.firstName ?? null,
+		lastName: profile.lastName ?? null,
+		profileImageDataUrl: profile.profileImageDataUrl ?? null,
 		role: profile.role,
 		nimDisclosureAcceptedAt: profile.nimDisclosureAcceptedAt ?? null,
 		mutedUntil,
@@ -205,6 +212,8 @@ export function publicProfileCard(profile) {
 	return {
 		userId: view.userId,
 		displayName: view.displayName,
+		username: view.username,
+		profileImageDataUrl: view.profileImageDataUrl,
 		role: view.role === 'staff' || view.role === 'moderator' ? view.role : 'student',
 		isRestricted: view.isMuted || view.isBanned,
 		isMuted: view.isMuted,
@@ -265,6 +274,13 @@ function requiredText(value, maximum) {
 /** @param {unknown} value @param {number} maximum */
 function optionalText(value, maximum) {
 	if (value === null || value === undefined) return null;
+	return requiredText(value, maximum);
+}
+
+/** @param {unknown} value @param {number} maximum */
+function optionalBlankText(value, maximum) {
+	if (value === null || value === undefined) return null;
+	if (typeof value === 'string' && value.trim() === '') return null;
 	return requiredText(value, maximum);
 }
 
@@ -445,7 +461,10 @@ async function upsertTermSeed(transaction, seed) {
 			},
 			async () => {
 				const raced = oneRow(
-					await transaction.select().from(mtAcademicTerms).where(eq(mtAcademicTerms.id, seed.term.id))
+					await transaction
+						.select()
+						.from(mtAcademicTerms)
+						.where(eq(mtAcademicTerms.id, seed.term.id))
 				);
 				if (!raced || !termMatchesSeed(seed.term, termDto(raced))) return null;
 				return raced;
@@ -737,6 +756,400 @@ export function createMariToolsRepository({
 			);
 		},
 
+		/**
+		 * @param {{ userId: unknown, email?: unknown, studentId: unknown, username: unknown, firstName: unknown, lastName: unknown, profileImageDataUrl?: unknown, role: unknown, program: unknown, yearLevel: unknown, experienceLevel: unknown, interests: unknown, clubGoals?: unknown, staffVisibilityAccepted: unknown }} input
+		 */
+		async joinProgrammingClub(input) {
+			const userId = requiredUserId(input.userId);
+			if (typeof input.studentId !== 'string' || !isCompleteStudentId(input.studentId))
+				return invalid();
+			const studentId = input.studentId.trim();
+			const username = requiredText(input.username, 32).toLowerCase();
+			if (!/^[a-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const firstName = requiredText(input.firstName, 80);
+			const lastName = requiredText(input.lastName, 80);
+			const displayName = username;
+			const profileImageDataUrl =
+				typeof input.profileImageDataUrl === 'string' && input.profileImageDataUrl
+					? input.profileImageDataUrl
+					: null;
+			const program = requiredText(input.program, 160);
+			const yearLevel = requiredText(input.yearLevel, 8);
+			const experienceLevel = requiredText(input.experienceLevel, 16);
+			const interests = input.interests;
+			const clubGoals = optionalBlankText(input.clubGoals, 1000);
+			if (
+				!['first', 'second', 'third'].includes(yearLevel) ||
+				!['new', 'learning', 'comfortable', 'advanced'].includes(experienceLevel) ||
+				!Array.isArray(interests) ||
+				interests.length === 0 ||
+				interests.some((entry) => typeof entry !== 'string') ||
+				input.staffVisibilityAccepted !== true
+			)
+				return invalid();
+			const role = input.role === 'staff' ? 'staff' : 'student';
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const usernameOwner = oneRow(
+						await transaction
+							.select({ userId: mtStudentProfiles.userId })
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.username, username))
+					);
+					if (usernameOwner && usernameOwner.userId !== userId) return conflict();
+					const profile = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, userId))
+					);
+					if (profile) {
+						if (profile.studentId !== studentId) return conflict();
+						await transaction
+							.update(mtStudentProfiles)
+							.set({
+								displayName,
+								username,
+								firstName,
+								lastName,
+								...(profileImageDataUrl ? { profileImageDataUrl } : {}),
+								updatedAt: new Date()
+							})
+							.where(eq(mtStudentProfiles.userId, userId));
+					} else {
+						const taken = oneRow(
+							await transaction
+								.select()
+								.from(mtStudentProfiles)
+								.where(eq(mtStudentProfiles.studentId, studentId))
+						);
+						if (taken) return conflict();
+						await transaction
+							.insert(mtStudentProfiles)
+							.values({
+								userId,
+								studentId,
+								displayName,
+								username,
+								firstName,
+								lastName,
+								profileImageDataUrl,
+								role
+							});
+					}
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtProgrammingClubMemberships)
+							.where(eq(mtProgrammingClubMemberships.userId, userId))
+					);
+					const savedSchedule = oneRow(
+						await transaction
+							.select()
+							.from(mtSavedSchedules)
+							.where(eq(mtSavedSchedules.userId, userId))
+					);
+					const values = {
+						program,
+						graduationYear: null,
+						yearLevel,
+						experienceLevel,
+						interests,
+						clubGoals,
+						scheduleSharedAt: existing?.scheduleSharedAt ?? (savedSchedule ? new Date() : null),
+						updatedAt: new Date()
+					};
+					if (existing) {
+						const updated = oneRow(
+							await transaction
+								.update(mtProgrammingClubMemberships)
+								.set(values)
+								.where(eq(mtProgrammingClubMemberships.userId, userId))
+								.returning()
+						);
+						return updated ?? unavailable();
+					}
+					const created = oneRow(
+						await transaction
+							.insert(mtProgrammingClubMemberships)
+							.values({ ...values, userId, staffVisibilityAcceptedAt: new Date() })
+							.returning()
+					);
+					return created ?? unavailable();
+				})
+			);
+		},
+
+		/**
+		 * @param {{ userId: unknown, username: unknown, firstName: unknown, lastName: unknown, profileImageDataUrl?: unknown }} input
+		 */
+		async updateMemberProfile(input) {
+			const userId = requiredUserId(input.userId);
+			const username = requiredText(input.username, 32).toLowerCase();
+			if (!/^[a-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const firstName = requiredText(input.firstName, 80);
+			const lastName = requiredText(input.lastName, 80);
+			const hasProfileImage = Object.prototype.hasOwnProperty.call(input, 'profileImageDataUrl');
+			const profileImageDataUrl = hasProfileImage
+				? requiredText(input.profileImageDataUrl, 750_000)
+				: null;
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, userId))
+					);
+					if (!existing) return notFound();
+					const usernameOwner = oneRow(
+						await transaction
+							.select({ userId: mtStudentProfiles.userId })
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.username, username))
+					);
+					if (usernameOwner && usernameOwner.userId !== userId) return conflict();
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({
+								displayName: username,
+								username,
+								firstName,
+								lastName,
+								...(hasProfileImage ? { profileImageDataUrl } : {}),
+								updatedAt: new Date()
+							})
+							.where(eq(mtStudentProfiles.userId, userId))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} userId */
+		async getProgrammingClubMembership(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(async () =>
+				oneRow(
+					await transact((transaction) =>
+						transaction
+							.select()
+							.from(mtProgrammingClubMemberships)
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+					)
+				)
+			);
+		},
+
+		/** @param {unknown} userId */
+		async completeProgrammingClubOnboarding(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtProgrammingClubMemberships)
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+					);
+					if (!existing) return notFound();
+					if (existing.requiredFormCompletedAt) return existing;
+					const updated = oneRow(
+						await transaction
+							.update(mtProgrammingClubMemberships)
+							.set({ requiredFormCompletedAt: new Date(), updatedAt: new Date() })
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} userId */
+		async shareSavedScheduleWithClub(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const schedule = oneRow(
+						await transaction.select().from(mtSavedSchedules).where(eq(mtSavedSchedules.userId, id))
+					);
+					if (!schedule) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtProgrammingClubMemberships)
+							.set({ scheduleSharedAt: new Date(), updatedAt: new Date() })
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+							.returning()
+					);
+					return updated ?? notFound();
+				})
+			);
+		},
+
+		/** @param {unknown} userId */
+		async stopSharingScheduleWithClub(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(async () => {
+				const updated = oneRow(
+					await transact((transaction) =>
+						transaction
+							.update(mtProgrammingClubMemberships)
+							.set({ scheduleSharedAt: null, updatedAt: new Date() })
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+							.returning()
+					)
+				);
+				return updated ?? notFound();
+			});
+		},
+
+		/** @param {{ query?: unknown, page?: unknown }} [filter] */
+		async listStaffClubMembers(filter = {}) {
+			const query = typeof filter.query === 'string' ? filter.query.trim().slice(0, 120) : '';
+			const page = Math.max(1, Number.parseInt(String(filter.page ?? '1'), 10) || 1);
+			const pageSize = 25;
+			return redactUnexpected(async () => {
+				const condition = query
+					? or(
+							ilike(mtStudentProfiles.displayName, `%${query}%`),
+							ilike(mtStudentProfiles.studentId, `%${query}%`),
+							ilike(mtProgrammingClubMemberships.program, `%${query}%`),
+							ilike(user.email, `%${query}%`)
+						)
+					: undefined;
+				const result = await transact(async (transaction) => {
+					let countStatement = transaction
+						.select({ count: sql`count(*)::integer` })
+						.from(mtProgrammingClubMemberships)
+						.innerJoin(
+							mtStudentProfiles,
+							eq(mtStudentProfiles.userId, mtProgrammingClubMemberships.userId)
+						)
+						.innerJoin(user, eq(user.id, mtProgrammingClubMemberships.userId));
+					if (condition) countStatement = countStatement.where(condition);
+					const countRow = oneRow(await countStatement);
+
+					let statement = transaction
+						.select({
+							membership: mtProgrammingClubMemberships,
+							profile: mtStudentProfiles,
+							email: user.email
+						})
+						.from(mtProgrammingClubMemberships)
+						.innerJoin(
+							mtStudentProfiles,
+							eq(mtStudentProfiles.userId, mtProgrammingClubMemberships.userId)
+						)
+						.innerJoin(user, eq(user.id, mtProgrammingClubMemberships.userId));
+					if (condition) statement = statement.where(condition);
+					const rows = await statement
+						.orderBy(desc(mtProgrammingClubMemberships.createdAt))
+						.limit(pageSize)
+						.offset((page - 1) * pageSize);
+					return { rows: asRows(rows), totalCount: Number(countRow?.count ?? 0) };
+				});
+				return {
+					rows: result.rows.map((/** @type {any} */ row) => ({
+						userId: row.membership.userId,
+						email: row.email,
+						studentId: row.profile.studentId,
+						displayName: row.profile.displayName,
+						username: row.profile.username,
+						firstName: row.profile.firstName,
+						lastName: row.profile.lastName,
+						profileImageDataUrl: row.profile.profileImageDataUrl,
+						program: row.membership.program,
+						graduationYear: row.membership.graduationYear,
+						yearLevel: row.membership.yearLevel,
+						experienceLevel: row.membership.experienceLevel,
+						interests: row.membership.interests,
+						clubGoals: row.membership.clubGoals,
+						requiredFormCompletedAt: row.membership.requiredFormCompletedAt,
+						scheduleSharedAt: row.membership.scheduleSharedAt,
+						createdAt: row.membership.createdAt
+					})),
+					totalCount: result.totalCount,
+					query,
+					page,
+					pageSize
+				};
+			});
+		},
+
+		/** @param {unknown} userId */
+		async getStaffClubMember(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(async () => {
+				const row = oneRow(
+					await transact((transaction) =>
+						transaction
+							.select({
+								membership: mtProgrammingClubMemberships,
+								profile: mtStudentProfiles,
+								email: user.email,
+								schedulePaste: mtSavedSchedules.paste
+							})
+							.from(mtProgrammingClubMemberships)
+							.innerJoin(
+								mtStudentProfiles,
+								eq(mtStudentProfiles.userId, mtProgrammingClubMemberships.userId)
+							)
+							.innerJoin(user, eq(user.id, mtProgrammingClubMemberships.userId))
+							.leftJoin(
+								mtSavedSchedules,
+								eq(mtSavedSchedules.userId, mtProgrammingClubMemberships.userId)
+							)
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+					)
+				);
+				if (!row) return null;
+				return {
+					userId: row.membership.userId,
+					email: row.email,
+					studentId: row.profile.studentId,
+					displayName: row.profile.displayName,
+					username: row.profile.username,
+					firstName: row.profile.firstName,
+					lastName: row.profile.lastName,
+					profileImageDataUrl: row.profile.profileImageDataUrl,
+					program: row.membership.program,
+					graduationYear: row.membership.graduationYear,
+					yearLevel: row.membership.yearLevel,
+					experienceLevel: row.membership.experienceLevel,
+					interests: row.membership.interests,
+					clubGoals: row.membership.clubGoals,
+					staffVisibilityAcceptedAt: row.membership.staffVisibilityAcceptedAt,
+					requiredFormCompletedAt: row.membership.requiredFormCompletedAt,
+					scheduleSharedAt: row.membership.scheduleSharedAt,
+					createdAt: row.membership.createdAt,
+					schedulePaste: row.membership.scheduleSharedAt ? row.schedulePaste : null
+				};
+			});
+		},
+
+		async listSharedClubSchedules() {
+			return redactUnexpected(async () =>
+				asRows(
+					await transact((transaction) =>
+						transaction
+							.select({
+								userId: mtProgrammingClubMemberships.userId,
+								paste: mtSavedSchedules.paste
+							})
+							.from(mtProgrammingClubMemberships)
+							.leftJoin(
+								mtSavedSchedules,
+								eq(mtSavedSchedules.userId, mtProgrammingClubMemberships.userId)
+							)
+							.where(isNotNull(mtProgrammingClubMemberships.scheduleSharedAt))
+					)
+				)
+			);
+		},
+
 		/** @param {unknown} userId */
 		async getStudentProfile(userId) {
 			const id = requiredUserId(userId);
@@ -872,9 +1285,7 @@ export function createMariToolsRepository({
 						transaction
 							.select()
 							.from(mtForumThreads)
-							.where(
-								and(eq(mtForumThreads.authorUserId, id), isNull(mtForumThreads.removedAt))
-							)
+							.where(and(eq(mtForumThreads.authorUserId, id), isNull(mtForumThreads.removedAt)))
 							.orderBy(desc(mtForumThreads.createdAt))
 							.limit(take)
 					)
@@ -992,6 +1403,129 @@ export function createMariToolsRepository({
 							)
 					)
 				)
+			);
+		},
+
+		/** @param {unknown} userId */
+		async listUserOutlines(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(() =>
+				transact((transaction) =>
+					transaction
+						.select({
+							sha256: mtOutlineDocuments.sha256,
+							createdAt: mtOutlineDocuments.createdAt,
+							reviewProposals: mtOutlineDocuments.reviewProposals,
+							proposals: mtOutlineExtractions.proposals,
+							inferenceCount: mtOutlineExtractions.inferenceCount
+						})
+						.from(mtOutlineDocuments)
+						.leftJoin(
+							mtOutlineExtractions,
+							eq(mtOutlineExtractions.documentSha256, mtOutlineDocuments.sha256)
+						)
+						.where(eq(mtOutlineDocuments.userId, id))
+						.orderBy(desc(mtOutlineDocuments.createdAt))
+				)
+			);
+		},
+
+		/** @param {{ userId: unknown, sha256: unknown, proposals: unknown }} input */
+		async saveOutlineReview(input) {
+			const userId = requiredUserId(input.userId);
+			const sha256 = requiredSha256(input.sha256);
+			const proposals = requiredJsonObject(input.proposals);
+			return redactUnexpected(async () => {
+				const updated = oneRow(
+					await transact((transaction) =>
+						transaction
+							.update(mtOutlineDocuments)
+							.set({ reviewProposals: proposals, updatedAt: new Date() })
+							.where(
+								and(eq(mtOutlineDocuments.userId, userId), eq(mtOutlineDocuments.sha256, sha256))
+							)
+							.returning()
+					)
+				);
+				return updated ?? notFound();
+			});
+		},
+
+		/** @param {{ userId: unknown, sha256: unknown }} input */
+		async deleteOutlineDocument(input) {
+			const userId = requiredUserId(input.userId);
+			const sha256 = requiredSha256(input.sha256);
+			return redactUnexpected(async () => {
+				const deleted = oneRow(
+					await transact((transaction) =>
+						transaction
+							.delete(mtOutlineDocuments)
+							.where(
+								and(eq(mtOutlineDocuments.userId, userId), eq(mtOutlineDocuments.sha256, sha256))
+							)
+							.returning()
+					)
+				);
+				return deleted ?? notFound();
+			});
+		},
+
+		/** @param {unknown} userId */
+		async getSavedSchedule(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(async () =>
+				oneRow(
+					await transact((transaction) =>
+						transaction.select().from(mtSavedSchedules).where(eq(mtSavedSchedules.userId, id))
+					)
+				)
+			);
+		},
+
+		/** @param {{ userId: unknown, paste: unknown }} input */
+		async saveSchedule(input) {
+			const userId = requiredUserId(input.userId);
+			if (typeof input.paste !== 'string' || !input.paste.trim() || input.paste.length > 100_000) {
+				return invalid();
+			}
+			const paste = input.paste;
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtSavedSchedules)
+							.where(eq(mtSavedSchedules.userId, userId))
+					);
+					let saved;
+					if (existing) {
+						saved = oneRow(
+							await transaction
+								.update(mtSavedSchedules)
+								.set({ paste, updatedAt: new Date() })
+								.where(eq(mtSavedSchedules.userId, userId))
+								.returning()
+						);
+					} else {
+						saved = await insertOrRecover(
+							transaction,
+							mtSavedSchedules,
+							{ userId, paste },
+							async () =>
+								oneRow(
+									await transaction
+										.select()
+										.from(mtSavedSchedules)
+										.where(eq(mtSavedSchedules.userId, userId))
+								)
+						);
+					}
+					await transaction
+						.update(mtProgrammingClubMemberships)
+						.set({ scheduleSharedAt: new Date(), updatedAt: new Date() })
+						.where(eq(mtProgrammingClubMemberships.userId, userId));
+					return saved;
+				})
 			);
 		},
 

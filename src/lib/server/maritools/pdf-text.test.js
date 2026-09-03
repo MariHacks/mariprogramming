@@ -10,7 +10,9 @@ import { extractPdfText, isPdfHeader } from './pdf-text.js';
  * @param {{ flate?: boolean, extraObjects?: string }} [options]
  */
 function buildPdf(content, options = {}) {
-	const payload = options.flate ? deflateSync(Buffer.from(content, 'latin1')) : Buffer.from(content, 'latin1');
+	const payload = options.flate
+		? deflateSync(Buffer.from(content, 'latin1'))
+		: Buffer.from(content, 'latin1');
 	const filter = options.flate ? '/Filter /FlateDecode' : '';
 	const extra = options.extraObjects ?? '';
 	const objects = [
@@ -60,6 +62,11 @@ describe('extractPdfText', () => {
 	it('unescapes newlines, tabs, and backslashes', () => {
 		const pdf = buildPdf('BT (line\\nreturn\\rtab\\tback\\\\slash) Tj ET');
 		expect(extractPdfText(pdf).text).toBe('line\nreturn\rtab\tback\\slash');
+	});
+
+	it('removes NUL control bytes from extracted text', () => {
+		const pdf = buildPdf('BT (Object\u0000-Oriented Programming) Tj ET');
+		expect(extractPdfText(pdf).text).toBe('Object-Oriented Programming');
 	});
 
 	it('reads a stream with no dictionary and no newline after the marker', () => {

@@ -49,6 +49,7 @@ function queuedRepo(queue) {
 			orderBy: () => chain,
 			limit: () => chain,
 			innerJoin: () => chain,
+			leftJoin: () => chain,
 			insert: () => chain,
 			values: () => chain,
 			returning: () => chain,
@@ -177,6 +178,73 @@ describe('maritools repository helpers', () => {
 		expect(() => committedTermSeeds([{ id: 'fall-2026' }], {})).toThrow(MariToolsUnavailableError);
 	});
 
+	it('updates member identity, enforces username ownership, and preserves an omitted avatar', async () => {
+		const existing = {
+			userId: USER,
+			studentId: '2530622',
+			username: 'old_name',
+			profileImageDataUrl: 'data:image/png;base64,b2xk'
+		};
+		const updated = {
+			...existing,
+			username: 'ada_codes',
+			displayName: 'ada_codes',
+			firstName: 'Ada',
+			lastName: 'Lovelace'
+		};
+
+		await expect(
+			queuedRepo([[existing], [], [updated]]).updateMemberProfile({
+				userId: USER,
+				username: 'ada_codes',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).resolves.toEqual(updated);
+		await expect(
+			queuedRepo([[existing], [{ userId: 'someone-else' }]]).updateMemberProfile({
+				userId: USER,
+				username: 'taken_name',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).rejects.toBeInstanceOf(MariToolsConflictError);
+		await expect(
+			queuedRepo([[existing], [{ userId: USER }], [{ ...updated, profileImageDataUrl: 'new' }]])
+				.updateMemberProfile({
+					userId: USER,
+					username: 'ada_codes',
+					firstName: 'Ada',
+					lastName: 'Lovelace',
+					profileImageDataUrl: 'new'
+				})
+		).resolves.toMatchObject({ profileImageDataUrl: 'new' });
+		await expect(
+			queuedRepo([[]]).updateMemberProfile({
+				userId: USER,
+				username: 'ada_codes',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([[existing], [], []]).updateMemberProfile({
+				userId: USER,
+				username: 'ada_codes',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(
+			queuedRepo([]).updateMemberProfile({
+				userId: USER,
+				username: 'bad name',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+	});
+
 	it('rejects invalid repository configuration', () => {
 		expect(() => createMariToolsRepository({ databaseUrl: '' })).toThrow(MariToolsUnavailableError);
 		expect(() => createMariToolsRepository({ databaseUrl: ' postgresql://x' })).toThrow(
@@ -211,6 +279,12 @@ describe('createMariToolsRepository', () => {
 		).rejects.toBeInstanceOf(MariToolsValidationError);
 		await expect(
 			repository.saveOutlineDocument({ userId: USER, sha256: SHA, byteLength: 0 })
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.saveOutlineReview({ userId: USER, sha256: SHA, proposals: [] })
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.deleteOutlineDocument({ userId: USER, sha256: 'bad' })
 		).rejects.toBeInstanceOf(MariToolsValidationError);
 		await expect(repository.findExtraction({})).rejects.toBeInstanceOf(MariToolsValidationError);
 		await expect(
@@ -626,6 +700,26 @@ describe('createMariToolsRepository', () => {
 				extractedText: '   '
 			})
 		).rejects.toBeInstanceOf(MariToolsValidationError);
+
+		const savedOutline = {
+			sha256: SHA,
+			createdAt: new Date('2026-08-30T12:00:00.000Z'),
+			proposals: { courseCode: '203-SN3-RE', title: 'Modern Physics' },
+			inferenceCount: 1
+		};
+		await expect(queuedRepo([[savedOutline]]).listUserOutlines(USER)).resolves.toEqual([
+			savedOutline
+		]);
+
+		await expect(queuedRepo([[{ paste: '1\tCalculus\n' }]]).getSavedSchedule(USER)).resolves.toEqual({
+			paste: '1\tCalculus\n'
+		});
+		await expect(
+			queuedRepo([[], [{ paste: '1\tCalculus\n' }]]).saveSchedule({
+				userId: USER,
+				paste: '1\tCalculus\n'
+			})
+		).resolves.toEqual({ paste: '1\tCalculus\n' });
 
 		const extraction = { id: THREAD, documentSha256: SHA, offeringId: OFFERING };
 		await expect(

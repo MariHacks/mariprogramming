@@ -33,6 +33,7 @@ describe('catalog page', () => {
 					entries: [
 						{
 							id: 'c1',
+							courseId: 'course-physics',
 							termId: 'fall-2026',
 							courseCode: '203-SN3-RE',
 							title: 'Modern Physics',
@@ -55,6 +56,11 @@ describe('catalog page', () => {
 			}
 		});
 		expect(screen.getByText('Modern Physics')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Modern Physics' })).toHaveAttribute(
+			'href',
+			'/tools/catalog/course-physics'
+		);
+		expect(screen.queryByRole('link', { name: '203-SN3-RE' })).not.toBeInTheDocument();
 		expect(screen.getAllByText('Physics').length).toBeGreaterThan(0);
 		expect(screen.getByText(/Midterm/)).toBeInTheDocument();
 		expect(screen.getByText(/University Physics/)).toBeInTheDocument();

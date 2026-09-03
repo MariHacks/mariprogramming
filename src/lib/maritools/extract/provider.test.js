@@ -43,7 +43,7 @@ describe('createOutlineExtractionProvider', () => {
 		let called = 0;
 		const provider = createOutlineExtractionProvider({
 			getKey: () => 'nvapi-test',
-			getModel: () => 'nvidia/nemotron-3.5-lightning-30b-a3b',
+			getModel: () => 'qwen/qwen3.5-122b-a10b',
 			fetchImpl: async () => {
 				called += 1;
 				return {
@@ -78,6 +78,26 @@ describe('createOutlineExtractionProvider', () => {
 		expect(called).toBe(1);
 		expect(provider.inferenceCount()).toBe(1);
 		expect(second.inferenceCount).toBe(1);
+	});
+
+	it('requests lossless due labels and weight options from NIM', async () => {
+		let prompt = '';
+		const provider = createOutlineExtractionProvider({
+			getKey: () => 'nvapi-test',
+			fetchImpl: async (_url, init) => {
+				prompt = JSON.parse(String(init?.body)).messages[0].content;
+				return {
+					ok: true,
+					json: async () => ({ choices: [{ message: { content: '{"assessments":[]}' } }] })
+				};
+			}
+		});
+
+		await provider.extract({ text: SAMPLE, sha256: 'lossless-table' });
+
+		expect(prompt).toContain('"due":string|null');
+		expect(prompt).toContain('"weightLabel":string|null');
+		expect(prompt).toContain('preserve both options');
 	});
 
 	it('fails closed on invalid JSON', async () => {
@@ -171,7 +191,7 @@ describe('createOutlineExtractionProvider', () => {
 			offeringKey: 'offering-only'
 		});
 		expect(first.ok).toBe(true);
-		expect(model).toBe('nvidia/nemotron-3.5-lightning-30b-a3b');
+		expect(model).toBe('qwen/qwen3.5-122b-a10b');
 		const second = await provider.extract({ text: SAMPLE, offeringKey: 'offering-only' });
 		expect(second.cacheHit).toBe(true);
 	});

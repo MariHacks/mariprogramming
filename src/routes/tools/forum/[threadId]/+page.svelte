@@ -126,7 +126,7 @@
 			<div class="thread-layout">
 				<article class="post origin">
 					<aside>
-						<span class="post-avatar">{authorInitials(data.thread.authorDisplayName)}</span>
+						<span class="post-avatar">{#if data.thread.authorProfileImageDataUrl}<img src={data.thread.authorProfileImageDataUrl} alt="" />{:else}{authorInitials(data.thread.authorDisplayName)}{/if}</span>
 						{#if data.thread.authorProfileHref}
 							<a class="author-link" href={data.thread.authorProfileHref}
 								><strong>{authorLabel(data.thread.authorDisplayName)}</strong></a
@@ -214,9 +214,7 @@
 					{#each data.replies as reply (reply.id)}
 						<article class="post">
 							<aside>
-								<span class="post-avatar post-avatar--blue"
-									>{authorInitials(reply.authorDisplayName)}</span
-								>
+								<span class="post-avatar post-avatar--blue">{#if reply.authorProfileImageDataUrl}<img src={reply.authorProfileImageDataUrl} alt="" />{:else}{authorInitials(reply.authorDisplayName)}{/if}</span>
 								{#if reply.authorProfileHref}
 									<a class="author-link" href={reply.authorProfileHref}
 										><strong>{authorLabel(reply.authorDisplayName)}</strong></a

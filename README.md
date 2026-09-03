@@ -41,6 +41,7 @@ Copy `.env.example` to `.env.local` and fill server-only values. For Google sign
 
    Sign-in alone is not enough. Calendar Connect uses the second URI and fails with
    `redirect_uri_mismatch` when it is missing.
+
 3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env.local` to that client.
 4. Set `APP_ORIGIN` and `BETTER_AUTH_URL` to the same origin the browser uses, for example
    `http://127.0.0.1:5174`.
@@ -57,6 +58,9 @@ node scripts/check-google-calendar-oauth-redirect.mjs
 Exit `0` means Google accepted the calendar redirect (consent or account chooser). Exit `1`
 with `redirect_uri_mismatch` means add the calendar callback URI in Console, wait a minute,
 and rerun.
+
+The required Programming Club Microsoft Form opens at its fixed public response URL. Members
+should choose **The Programming Club**, listed under T, before returning to finish signup.
 
 The club routes are `/`, `/about-us`, `/our-workshops`, `/events`, and `/resources`. Book
 Delivery begins at `/books`; commerce controls belong only within that route area.

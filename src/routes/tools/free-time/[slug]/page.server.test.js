@@ -76,6 +76,20 @@ describe('free-time board page server', () => {
 		expect(current.store.getBoardBySlug).toHaveBeenCalledWith('study-group');
 	});
 
+	it('loads the signed-in account schedule for Omnivox import', async () => {
+		const current = handlers({
+			students: {
+				getProfile: vi.fn(async () => ({ displayName: 'Zhicheng' })),
+				getSchedule: vi.fn(async () => '1\tSaved schedule')
+			}
+		});
+		await expect(
+			current.load(
+				event({ locals: { maritools: { userId: 'user-1', email: 'nick.zhicheng@gmail.com' } } })
+			)
+		).resolves.toMatchObject({ savedSchedulePaste: '1\tSaved schedule' });
+	});
+
 	it('prefers the student profile display name when signed in', async () => {
 		const current = handlers();
 		await expect(
@@ -337,4 +351,3 @@ describe('free-time board page server', () => {
 		).resolves.toMatchObject({ saveSuccess: true });
 	});
 });
-

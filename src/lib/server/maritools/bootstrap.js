@@ -5,6 +5,11 @@ import migrationSql0009 from '../../../../drizzle/0009_google_calendar_grants.sq
 import migrationSql0010 from '../../../../drizzle/0010_free_time_boards.sql?raw';
 import migrationSql0011 from '../../../../drizzle/0011_moderation_mutes_bans.sql?raw';
 import migrationSql0012 from '../../../../drizzle/0012_moderation_ban_until.sql?raw';
+import migrationSql0013 from '../../../../drizzle/0013_saved_schedules.sql?raw';
+import migrationSql0014 from '../../../../drizzle/0014_outline_reviews.sql?raw';
+import migrationSql0015 from '../../../../drizzle/0015_programming_club_memberships.sql?raw';
+import migrationSql0016 from '../../../../drizzle/0016_required_club_form.sql?raw';
+import migrationSql0017 from '../../../../drizzle/0017_member_onboarding_profile.sql?raw';
 import { readRuntimeEnvironment } from '../config/environment.js';
 import { createMariToolsRepository } from './repository.js';
 
@@ -27,7 +32,9 @@ const RUNTIME_GRANT_TABLES = [
 	'mt_forum_reports',
 	'mt_google_calendar_grants',
 	'mt_free_time_boards',
-	'mt_free_time_members'
+	'mt_free_time_members',
+	'mt_saved_schedules',
+	'mt_programming_club_memberships'
 ];
 
 /** @param {string} sql */
@@ -83,6 +90,34 @@ const INCREMENTAL_MIGRATIONS = [
 		sentinel: 'mt_student_profiles',
 		column: 'banned_until',
 		sql: migrationSql0012,
+		grantTables: []
+	},
+	{
+		sentinel: 'mt_saved_schedules',
+		sql: migrationSql0013,
+		grantTables: ['mt_saved_schedules']
+	},
+	{
+		sentinel: 'mt_outline_documents',
+		column: 'review_proposals',
+		sql: migrationSql0014,
+		grantTables: []
+	},
+	{
+		sentinel: 'mt_programming_club_memberships',
+		sql: migrationSql0015,
+		grantTables: ['mt_programming_club_memberships']
+	},
+	{
+		sentinel: 'mt_programming_club_memberships',
+		column: 'required_form_completed_at',
+		sql: migrationSql0016,
+		grantTables: []
+	},
+	{
+		sentinel: 'mt_programming_club_memberships',
+		column: 'year_level',
+		sql: migrationSql0017,
 		grantTables: []
 	}
 ];

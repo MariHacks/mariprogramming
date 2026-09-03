@@ -58,6 +58,9 @@ describe('ensureMariToolsSchema', () => {
 			if (text.includes("to_regclass('public.mt_free_time_boards')")) {
 				return { rows: [{ table_name: 'mt_free_time_boards' }] };
 			}
+			if (text.includes("to_regclass('public.mt_saved_schedules')")) {
+				return { rows: [{ table_name: null }] };
+			}
 			if (text.includes('information_schema.columns')) {
 				return { rows: [{ ok: 1 }] };
 			}
@@ -81,6 +84,9 @@ describe('ensureMariToolsSchema', () => {
 		vi.doMock('../../../../drizzle/0012_moderation_ban_until.sql?raw', () => ({
 			default: 'ALTER TABLE "mt_student_profiles" ADD COLUMN IF NOT EXISTS "banned_until" timestamp with time zone;'
 		}));
+		vi.doMock('../../../../drizzle/0013_saved_schedules.sql?raw', () => ({
+			default: 'CREATE TABLE "mt_saved_schedules" ();'
+		}));
 
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
@@ -96,6 +102,9 @@ describe('ensureMariToolsSchema', () => {
 		expect(
 			query.mock.calls.some((call) => String(call[0]).includes('CREATE TABLE "mt_free_time_boards"'))
 		).toBe(false);
+		expect(
+			query.mock.calls.some((call) => String(call[0]).includes('CREATE TABLE "mt_saved_schedules"'))
+		).toBe(true);
 	});
 
 	it('skips migration when mt_academic_terms already exists', async () => {
@@ -105,12 +114,17 @@ describe('ensureMariToolsSchema', () => {
 			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_google_calendar_grants' }] })
 			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_free_time_boards' }] })
 			.mockResolvedValueOnce({ rows: [{ ok: 1 }] })
+			.mockResolvedValueOnce({ rows: [{ ok: 1 }] })
+			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_saved_schedules' }] })
+			.mockResolvedValueOnce({ rows: [{ ok: 1 }] })
+			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_programming_club_memberships' }] })
+			.mockResolvedValueOnce({ rows: [{ ok: 1 }] })
 			.mockResolvedValueOnce({ rows: [{ ok: 1 }] });
 		const client = { query, release: vi.fn() };
 		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
-		expect(query).toHaveBeenCalledTimes(5);
+		expect(query).toHaveBeenCalledTimes(10);
 	});
 
 	it('builds a default pg pool', async () => {

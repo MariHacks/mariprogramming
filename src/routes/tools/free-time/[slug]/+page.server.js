@@ -53,12 +53,22 @@ export function _createHandlers(dependencies = {}) {
 			const store = createStore();
 			const board = await store.getBoardBySlug(slug);
 			if (!board) {
-				return { board: null, notFound: true, signedInDisplayName: null };
+				return { board: null, notFound: true, signedInDisplayName: null, savedSchedulePaste: '' };
 			}
 			let profile = null;
+			let savedSchedulePaste = '';
 			if (session?.userId) {
 				try {
-					profile = await createStudentStore().getProfile(session.userId);
+					const students = createStudentStore();
+					const [profileResult, scheduleResult] = await Promise.allSettled([
+						students.getProfile(session.userId),
+						typeof students.getSchedule === 'function'
+							? students.getSchedule(session.userId)
+							: Promise.resolve('')
+					]);
+					profile = profileResult.status === 'fulfilled' ? profileResult.value : null;
+					savedSchedulePaste =
+						scheduleResult.status === 'fulfilled' ? String(scheduleResult.value ?? '') : '';
 				} catch {
 					profile = null;
 				}
@@ -66,11 +76,12 @@ export function _createHandlers(dependencies = {}) {
 			return {
 				board,
 				shareUrl: `${appOrigin}/tools/free-time/${board.slug}`,
-				signedInDisplayName: signedInDisplayNameFrom(session, profile)
+				signedInDisplayName: signedInDisplayNameFrom(session, profile),
+				savedSchedulePaste
 			};
 		} catch (error) {
 			if (error instanceof MariToolsUnavailableError || error instanceof ServerConfigurationError) {
-				return { board: null, unavailable: true, signedInDisplayName: null };
+				return { board: null, unavailable: true, signedInDisplayName: null, savedSchedulePaste: '' };
 			}
 			throw error;
 		}

@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { describe, expect, it, vi } from 'vitest';
 import { CANONICAL_OMNIVOX_SCHEDULE } from '$lib/maritools/schedule/fixture.js';
 import { _createHandlers, prerender } from './+page.server.js';
@@ -11,19 +13,94 @@ describe('schedule form action', () => {
 		const { actions } = _createHandlers();
 		expect(actions.default).toBeUndefined();
 		expect(typeof actions.pushGoogleCalendar).toBe('function');
+		expect(typeof actions.saveSchedule).toBe('function');
 	});
 
 	it('loads calendar connection state for signed-in users', async () => {
 		const openStore = vi.fn(() => ({
 			hasGrant: vi.fn().mockResolvedValue(true)
 		}));
-		const { load } = _createHandlers({ openStore });
+		const openStudentStore = vi.fn(() => ({
+			getSchedule: vi.fn(async () => CANONICAL_OMNIVOX_SCHEDULE)
+		}));
+		const { load } = _createHandlers({ openStore, openStudentStore });
 		const data = await load({
 			locals: { maritools: { userId: 'user-1', email: 'student@example.com' } },
 			url: new URL('https://example.com/tools/schedule')
 		});
 		expect(data.googleCalendarConnected).toBe(true);
 		expect(data.signedIn).toBe(true);
+		expect(data.savedPaste).toBe(CANONICAL_OMNIVOX_SCHEDULE);
+	});
+
+	it('saves a valid schedule to the signed-in account', async () => {
+		const saveSchedule = vi.fn(async () => undefined);
+		const { actions } = _createHandlers({
+			openStudentStore: () => ({ saveSchedule })
+		});
+		const data = new FormData();
+		data.set('paste', CANONICAL_OMNIVOX_SCHEDULE);
+
+		await expect(
+			actions.saveSchedule({
+				locals: { maritools: { userId: 'user-1' } },
+				request: { formData: async () => data }
+			})
+		).resolves.toMatchObject({ saved: true });
+		expect(saveSchedule).toHaveBeenCalledWith({
+			userId: 'user-1',
+			paste: CANONICAL_OMNIVOX_SCHEDULE
+		});
+	});
+
+	it('does not expose manual schedule-sharing actions', () => {
+		const { actions } = _createHandlers();
+		expect(actions).not.toHaveProperty('shareWithClub');
+		expect(actions).not.toHaveProperty('stopSharingWithClub');
+	});
+
+	it('requires an account and a valid paste before saving a schedule', async () => {
+		const { actions } = _createHandlers({
+			openStudentStore: () => ({ saveSchedule: vi.fn() })
+		});
+		const empty = { formData: async () => new FormData() };
+
+		expect((await actions.saveSchedule({ locals: {}, request: empty })).status).toBe(401);
+		expect(
+			(
+				await actions.saveSchedule({
+					locals: { maritools: { userId: 'user-1' } },
+					request: empty
+				})
+			).status
+		).toBe(400);
+	});
+
+	it('maps unavailable schedule saves and rethrows unexpected failures', async () => {
+		const { MaritoolsUnavailableError } = await import('$lib/server/maritools/student-store.js');
+		const data = new FormData();
+		data.set('paste', CANONICAL_OMNIVOX_SCHEDULE);
+		const event = {
+			locals: { maritools: { userId: 'user-1' } },
+			request: { formData: async () => data }
+		};
+		const down = _createHandlers({
+			openStudentStore: () => ({
+				saveSchedule: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			})
+		});
+		expect((await down.actions.saveSchedule(event)).status).toBe(503);
+
+		const boom = _createHandlers({
+			openStudentStore: () => ({
+				saveSchedule: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			})
+		});
+		await expect(boom.actions.saveSchedule(event)).rejects.toThrow('boom');
 	});
 
 	it('requires sign-in to push to Google Calendar', async () => {
@@ -43,6 +120,7 @@ describe('schedule form action', () => {
 			load({ locals: {}, url: new URL('https://example.com/tools/schedule?gcal=connected') })
 		).resolves.toMatchObject({
 			signedIn: false,
+			savedPaste: '',
 			googleCalendarConnected: false,
 			gcalStatus: 'connected'
 		});
@@ -105,7 +183,11 @@ describe('schedule form action', () => {
 		const { MariToolsUnavailableError } = await import('$lib/server/maritools/repository.js');
 		const pushSchedule = vi.fn().mockResolvedValue({ inserted: 3 });
 		const { actions } = _createHandlers({
-			readEnvironment: () => ({ googleClientId: 'id', googleClientSecret: 'secret', appOrigin: 'https://example.com' }),
+			readEnvironment: () => ({
+				googleClientId: 'id',
+				googleClientSecret: 'secret',
+				appOrigin: 'https://example.com'
+			}),
 			openStore: () => ({}),
 			pushSchedule
 		});

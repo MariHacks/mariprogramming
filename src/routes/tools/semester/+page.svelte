@@ -1,26 +1,66 @@
 <script>
-	import { enhance } from '$app/forms';
+	import { deserialize } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { onMount } from 'svelte';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
-	import { ACADEMIC_TERMS } from '$lib/maritools/term/calendar.js';
-	import { explicitTermId } from '$lib/maritools/term/session.js';
 
+	/** @type {any} */
 	export let data;
+	/** @type {any} */
 	export let form = null;
 
-	let proposals = form?.extraction?.proposals ?? {
-		assessments: [{ title: '', weight: '', date: '' }],
+	const EMPTY_PROPOSALS = {
+		assessments: [{ title: '', weight: '', weightLabel: '', date: '', dateIso: null }],
 		books: [{ title: '', author: '', isbn: '', required: false }]
 	};
+	let proposals = EMPTY_PROPOSALS;
 	let courseCode = '';
 	let title = '';
 	let section = '';
 	let teacherName = '';
-	let contributeCatalog = false;
-	let extracting = false;
+	let editing = false;
 	let selectedFileName = '';
+	/** @type {HTMLInputElement | null} */
+	let outlinePicker = null;
+	/** @type {Array<{ id: number, name: string, status: 'processing' | 'error', error?: string }>} */
+	let pendingUploads = [];
+	/** @type {number | null} */
+	let selectedPendingId = null;
+	let uploadId = 0;
 
 	let lastExtractionKey = '';
+	let selectedSha = '';
+	let latestFormSha = '';
+	/** @type {any[]} */
+	let savedOutlines = [];
+	/** @type {any} */
+	let selectedOutline = null;
+	/** @type {{ id: number, name: string, status: 'processing' | 'error', error?: string } | null} */
+	let selectedPending = null;
+	$: savedOutlines = Array.isArray(data?.outlines) ? data.outlines : [];
+	$: selectedPending = pendingUploads.find((upload) => upload.id === selectedPendingId) ?? null;
+	$: formSha = String(form?.extraction?.sha256 ?? '');
+	$: if (formSha && formSha !== latestFormSha) {
+		latestFormSha = formSha;
+		selectedSha = formSha;
+	}
+	$: if (!selectedSha && savedOutlines.length) selectedSha = String(savedOutlines[0].sha256);
+	$: selectedOutline = savedOutlines.find((/** @type {any} */ outline) => outline.sha256 === selectedSha) ?? null;
+	$: savedExtraction = selectedOutline?.extraction
+		? { ok: true, reason: null, sha256: selectedOutline.sha256, ...selectedOutline.extraction }
+		: null;
+	$: activeExtraction = formSha && selectedSha === formSha ? form.extraction : savedExtraction;
+	$: selectedIsProcessing = Boolean(selectedOutline && !selectedOutline.extraction);
+	$: selectedIsSaved = Boolean(selectedOutline?.extraction);
+	$: fieldsDisabled = selectedIsSaved && !editing;
+
+	onMount(() => {
+		const timer = setInterval(() => {
+			if (savedOutlines.some((/** @type {any} */ outline) => !outline.extraction)) void invalidateAll();
+		}, 2000);
+		return () => clearInterval(timer);
+	});
 
 	/** @param {unknown} value */
 	function textField(value) {
@@ -43,24 +83,46 @@
 	}
 
 	$: if (form?.outlineFileName) selectedFileName = String(form.outlineFileName);
-	$: extractionKey = String(form?.extraction?.sha256 ?? '');
-	$: if (form?.extraction?.proposals && extractionKey !== lastExtractionKey) {
+	$: extractionKey = String(activeExtraction?.sha256 ?? '');
+	$: if (activeExtraction?.proposals && extractionKey !== lastExtractionKey) {
 		lastExtractionKey = extractionKey;
-		extracting = false;
-		proposals = form.extraction.proposals;
-		if (!proposals.assessments) proposals.assessments = [];
-		if (!proposals.books) proposals.books = [];
+		const next = activeExtraction.proposals;
+		proposals = {
+			...next,
+			assessments: (next.assessments ?? []).map((/** @type {any} */ row) => ({
+				...row,
+				weightLabel:
+					textField(row.weightLabel) ||
+					(row.weight === null || row.weight === undefined || row.weight === ''
+						? ''
+						: `${row.weight}%`)
+			})),
+			books: next.books ?? []
+		};
 		applyIdentityFromProposals(/** @type {Record<string, unknown>} */ (proposals));
+		if (formSha && extractionKey === formSha) editing = true;
 	}
-	$: if (form?.error) extracting = false;
+
+	/** @param {string} sha256 */
+	function selectOutline(sha256) {
+		selectedPendingId = null;
+		selectedSha = sha256;
+		editing = false;
+		lastExtractionKey = '';
+	}
+
+	/** @param {number} id */
+	function selectPendingUpload(id) {
+		selectedPendingId = id;
+		editing = false;
+	}
 
 	$: structuredJson = JSON.stringify({
 		assessments: proposals.assessments ?? [],
 		books: proposals.books ?? []
 	});
 
-	$: selectedTerm = $explicitTermId ?? ACADEMIC_TERMS[0]?.id ?? '';
-	$: termName = ACADEMIC_TERMS.find((term) => term.id === selectedTerm)?.name ?? selectedTerm;
+	$: termName = String(data?.activeTerm?.name ?? 'Current term');
 	$: missingDates = (proposals.assessments ?? []).filter((row) => {
 		const title = String(row.title ?? '').trim();
 		const date = String(row.date ?? '').trim();
@@ -78,9 +140,7 @@
 		{ label: 'Teacher', value: teacherName }
 	];
 	$: identityFilled = identityFields.filter((field) => textField(field.value)).length;
-	$: assessmentFilled = (proposals.assessments ?? []).filter((row) =>
-		textField(row.title)
-	).length;
+	$: assessmentFilled = (proposals.assessments ?? []).filter((row) => textField(row.title)).length;
 	$: isReady = data.view.kind === 'ready';
 	$: gateKind = data.view.kind;
 	$: gateStack =
@@ -94,39 +154,68 @@
 				: { status: 'Sign in to upload', action: 'Sign in to add an outline' };
 
 	function addAssessment() {
+		if (fieldsDisabled) return;
 		proposals = {
 			...proposals,
-			assessments: [...(proposals.assessments ?? []), { title: '', weight: '', date: '' }]
+			assessments: [
+				...(proposals.assessments ?? []),
+				{ title: '', weight: '', weightLabel: '', date: '', dateIso: null }
+			]
 		};
 	}
 
 	/** @param {number} index */
 	function removeAssessment(index) {
+		if (fieldsDisabled) return;
 		proposals = {
 			...proposals,
 			assessments: (proposals.assessments ?? []).filter((_, rowIndex) => rowIndex !== index)
 		};
 	}
 
+	/** @param {number} id @param {Partial<{ status: 'processing' | 'error', error: string }>} update */
+	function updateUpload(id, update) {
+		pendingUploads = pendingUploads.map((upload) =>
+			upload.id === id ? { ...upload, ...update } : upload
+		);
+	}
+
+	/** @param {File} file @param {number} id */
+	async function processOutline(file, id) {
+		const body = new FormData();
+		body.append('outline', file);
+		try {
+			const response = await fetch('?/extract', { method: 'POST', body });
+			const result = deserialize(await response.text());
+			const resultData = 'data' in result ? result.data : undefined;
+			const extraction = /** @type {any} */ (resultData)?.extraction;
+			if (result.type === 'success' && extraction) {
+				selectedFileName = file.name;
+				selectedSha = String(extraction.sha256 ?? '');
+				pendingUploads = pendingUploads.filter((upload) => upload.id !== id);
+				if (selectedPendingId === id) selectedPendingId = null;
+				await invalidateAll();
+				return;
+			}
+			updateUpload(id, {
+				status: 'error',
+				error: String((/** @type {any} */ (resultData))?.error ?? 'Could not process this PDF.')
+			});
+		} catch {
+			updateUpload(id, { status: 'error', error: 'Could not process this PDF.' });
+		}
+	}
+
 	/** @param {Event} event */
 	function onOutlineChosen(event) {
 		const input = /** @type {HTMLInputElement} */ (event.currentTarget);
-		const file = input.files?.[0] ?? null;
-		selectedFileName = file?.name ?? '';
-		if (!file) return;
-		extracting = true;
-		input.form?.requestSubmit();
-	}
-
-	function enhanceExtract() {
-		return async ({ result, update }) => {
-			extracting = true;
-			await update({ reset: false });
-			extracting = false;
-			if (result.type === 'failure' || result.type === 'error') {
-				selectedFileName = '';
-			}
-		};
+		const files = Array.from(input.files ?? []);
+		input.value = '';
+		for (const file of files) {
+			const id = (uploadId += 1);
+			pendingUploads = [...pendingUploads, { id, name: file.name, status: 'processing' }];
+			void processOutline(file, id);
+		}
 	}
 </script>
 
@@ -144,32 +233,39 @@
 			<aside class="course-stack">
 				{#if isReady}
 					<form
+						id="semester-outline-upload"
 						method="POST"
 						action="?/extract"
 						enctype="multipart/form-data"
 						class="stack-head"
-						use:enhance={enhanceExtract}
 					>
 						<div>
 							<strong>{termName}</strong>
-							<span>{form?.extraction ? '1 course in review' : 'No outlines yet'}</span>
+							<span
+								>{savedOutlines.length || activeExtraction
+									? `${Math.max(savedOutlines.length, 1)} course${Math.max(savedOutlines.length, 1) === 1 ? '' : 's'} saved`
+									: 'No outlines yet'}</span
+							>
 						</div>
-						<label class="primary-button add-outline" class:is-busy={extracting}>
-							{extracting
-								? 'Extracting…'
-								: selectedFileName
-									? selectedFileName
-									: 'Add outline PDF'}
-							<input
-								type="file"
-								name="outline"
-								accept="application/pdf"
-								required
-								aria-label="Add outline PDF"
-								disabled={extracting}
-								on:change={onOutlineChosen}
-							/>
-						</label>
+						<input
+							bind:this={outlinePicker}
+							type="file"
+							name="outline"
+							form="semester-outline-upload"
+							accept="application/pdf"
+							multiple
+							hidden
+							aria-label="Choose outline PDFs"
+							class="visually-hidden"
+							on:change={onOutlineChosen}
+						/>
+						<button
+							type="button"
+							class="primary-button add-outline"
+							on:click={() => outlinePicker?.click()}
+						>
+							Add outline PDF
+						</button>
 					</form>
 				{:else}
 					<div class="stack-head">
@@ -183,25 +279,59 @@
 					</div>
 				{/if}
 
-				{#if extracting}
-					<button type="button" class="is-selected is-extracting" disabled>
-						<span>Working</span>
-						<strong>Reading outline</strong>
-						<small>Extracting course identity and assessments…</small>
-					</button>
-				{:else if form?.extraction}
+				{#each pendingUploads as upload (upload.id)}
+					<div role="status">
+						<button
+							type="button"
+							class="is-extracting pending-upload"
+							class:is-selected={selectedPendingId === upload.id}
+							class:needs-dates={upload.status === 'error'}
+							on:click={() => selectPendingUpload(upload.id)}
+						>
+							<span>{upload.status === 'error' ? 'Needs attention' : 'Working'}</span>
+							<strong>{upload.name}</strong>
+							<small>{upload.error ?? 'Processing outline'}</small>
+						</button>
+					</div>
+				{/each}
+				{#each savedOutlines as outline (outline.sha256)}
+					{#if outline.extraction}
+						<button
+							type="button"
+							class:is-selected={!selectedPending && selectedSha === outline.sha256}
+							on:click={() => selectOutline(outline.sha256)}
+						>
+							<span>{textField(outline.extraction.proposals?.courseCode) || 'Course'}</span>
+							<strong>{textField(outline.extraction.proposals?.title) || 'Untitled outline'}</strong>
+							<small>Saved to your account</small>
+						</button>
+					{:else}
+						<button
+							type="button"
+							class="is-extracting"
+							class:is-selected={!selectedPending && selectedSha === outline.sha256}
+							on:click={() => selectOutline(outline.sha256)}
+						>
+							<span>Working</span>
+							<strong>Processing PDF</strong>
+							<small>Saved to your account while extraction finishes</small>
+						</button>
+					{/if}
+				{/each}
+				{#if formSha && activeExtraction && !savedOutlines.some((/** @type {any} */ outline) => outline.sha256 === formSha)}
 					<button type="button" class="is-selected" class:needs-dates={missingDates > 0}>
 						<span>{courseCode || 'Course'}</span>
 						<strong>{title || 'Untitled outline'}</strong>
 						<small
-							>{identityFilled}/4 identity · {missingDates
+							>{identityFilled}/4 identity, {missingDates
 								? `${missingDates} date missing`
 								: assessmentFilled
 									? `${assessmentFilled} assessment${assessmentFilled === 1 ? '' : 's'}`
 									: 'Ready to edit'}</small
 						>
 					</button>
-				{:else if !isReady}
+				{/if}
+				{#if !isReady}
 					<div class="stack-placeholder" aria-hidden="true">
 						<span>PDF outline</span>
 						<strong>Your courses appear here after upload</strong>
@@ -252,21 +382,33 @@
 						</div>
 						<a class="primary-button" href={resolve('/tools/account', {})}>Open account</a>
 					</div>
-				{:else if extracting}
-					<div class="sheet-empty" role="status" aria-live="polite">
-						<div class="sheet-head">
-							<div>
-								<span>Semester</span>
-								<h2>Extracting outline</h2>
-								<p>
-									Reading {selectedFileName || 'your PDF'} and filling course identity plus
-									assessments. Stay on this page.
-								</p>
-							</div>
+				{:else if selectedPending || selectedIsProcessing}
+					<div
+						class="processing-state"
+						role="status"
+						aria-live="polite"
+						aria-busy={selectedPending?.status !== 'error'}
+					>
+						<div class="outline-loader" aria-hidden="true">
+							<span class="outline-loader__label">PDF</span>
+							<span class="outline-loader__rules">
+								<span></span>
+								<span></span>
+								<span></span>
+								<span></span>
+							</span>
+							<span class="outline-loader__progress"><span></span></span>
 						</div>
-						<p class="sheet-hint">This can take up to a minute for a long outline.</p>
+						<div class="processing-copy">
+							<h2>{selectedPending?.status === 'error' ? 'Could not process this outline' : 'Extracting your outline'}</h2>
+							<p>{selectedPending?.name || selectedFileName || 'Course outline PDF'}</p>
+							<small
+								>{selectedPending?.error ??
+									'Your editable review will appear when the full outline is ready.'}</small
+							>
+						</div>
 					</div>
-				{:else if !form?.extraction}
+				{:else if !activeExtraction}
 					<div class="sheet-empty">
 						<div class="sheet-head">
 							<div>
@@ -288,10 +430,10 @@
 					<p class="field-error" role="alert">{form.error}</p>
 				{/if}
 
-				{#if form?.extraction}
-					{#if form.extraction.ok === false}
+				{#if activeExtraction && !selectedPending}
+					{#if activeExtraction.ok === false}
 						<p role="status">
-							{#if form.extraction.reason === 'missing-key'}
+							{#if activeExtraction.reason === 'missing-key'}
 								Automatic extraction is unavailable. Type the assessments and books below. Your
 								upload is saved privately.
 							{:else}
@@ -300,99 +442,134 @@
 							{/if}
 						</p>
 					{/if}
-					{#if form.extraction.cacheHit}
+					{#if activeExtraction.cacheHit}
 						<p role="status">Used a saved extraction for this file.</p>
 					{/if}
 
 					<form method="POST" action="?/contribute">
-						<input type="hidden" name="sha256" value={form.extraction.sha256 ?? ''} />
-						<input type="hidden" name="termId" value={selectedTerm} />
+						<input type="hidden" name="sha256" value={activeExtraction.sha256 ?? ''} />
 						<input type="hidden" name="structured" value={structuredJson} />
 
-						<div class="sheet-head">
+						<div class="sheet-head review-heading">
 							<div>
-								<span>Extraction review</span>
-								<h2>{title || 'Untitled outline'}</h2>
-								<p>Private unless you share. Sharing copies only the fields you confirm.</p>
+								<span>Outline review</span>
+								<h2>Review extracted details</h2>
+								<p>{fieldsDisabled ? 'Saved privately to your account.' : 'Review carefully. Saving shares these course facts.'}</p>
 							</div>
-							<span class="course-ref"
-								>{courseCode || 'Course code'}{section ? `, Sec. ${section}` : ''}</span
-							>
-						</div>
-
-						<div class="review-fields">
-							<label>
-								<span>Course code</span>
-								<input name="courseCode" bind:value={courseCode} required={contributeCatalog} />
-							</label>
-							<label>
-								<span>Title</span>
-								<input name="title" bind:value={title} required={contributeCatalog} />
-							</label>
-							<label>
-								<span>Section</span>
-								<input name="section" bind:value={section} required={contributeCatalog} />
-							</label>
-							<label>
-								<span>Teacher</span>
-								<input name="teacherName" bind:value={teacherName} required={contributeCatalog} />
-							</label>
-						</div>
-
-						<div class="review-row header">
-							<span>Assessment</span><span>Date</span><span>Weight</span><span></span>
-						</div>
-						{#each proposals.assessments ?? [] as assessment, index (index)}
-							<div
-								class="review-row"
-								class:warned={!String(assessment.date ?? '').trim() &&
-									String(assessment.title ?? '').trim()}
-							>
-								<input bind:value={assessment.title} aria-label="Assessment" />
-								<input bind:value={assessment.date} aria-label="Date" placeholder="YYYY-MM-DD" />
-								<input bind:value={assessment.weight} aria-label="Weight" />
-								<button
-									type="button"
-									on:click={() => removeAssessment(index)}
-									aria-label="Remove assessment">×</button
+							<div class="review-course-ref">
+								<strong>{title || 'Untitled outline'}</strong>
+								<span class="course-ref"
+									>{courseCode || 'Course code'}{section ? `, Sec. ${section}` : ''}</span
 								>
 							</div>
-						{/each}
-						{#if missingDates}
-							<p class="field-error">Add a date for each named assessment before sharing.</p>
-						{/if}
-						<button class="add-row" type="button" on:click={addAssessment}>+ Add assessment</button>
+						</div>
 
-						{#each proposals.books ?? [] as book, index (index)}
-							<div class="review-row">
-								<input bind:value={book.title} aria-label="Book title" placeholder="Book title" />
-								<input bind:value={book.author} aria-label="Author" placeholder="Author" />
-								<input bind:value={book.isbn} aria-label="ISBN" placeholder="ISBN" />
-								<span></span>
+						<section class="review-section" aria-labelledby="course-details-heading">
+							<div class="review-section__head">
+								<h3 id="course-details-heading">Course details</h3>
+								<span>{identityFilled} of 4 complete</span>
 							</div>
-						{/each}
+							<div class="review-fields">
+								<label>
+									<span>Course code</span>
+									<input name="courseCode" bind:value={courseCode} required disabled={fieldsDisabled} />
+								</label>
+								<label>
+									<span>Title</span>
+									<input name="title" bind:value={title} required disabled={fieldsDisabled} />
+								</label>
+								<label>
+									<span>Section</span>
+									<input name="section" bind:value={section} required disabled={fieldsDisabled} />
+								</label>
+								<label>
+									<span>Teacher</span>
+									<input name="teacherName" bind:value={teacherName} required disabled={fieldsDisabled} />
+								</label>
+							</div>
+						</section>
 
-						<label class="share-band">
-							<input type="checkbox" bind:checked={contributeCatalog} />
-							<span>
-								<strong>Share course facts with the catalog</strong>
-								<small
-									>Only the course code, instructor, assessments, and book references are
-									shared.</small
-								>
-							</span>
-						</label>
+						<section class="review-section" aria-labelledby="assessments-heading">
+							<div class="review-section__head">
+								<h3 id="assessments-heading">Assessments</h3>
+								<span>{assessmentFilled} extracted</span>
+							</div>
+							<div class="review-table" role="group" aria-label="Editable assessments">
+								<div class="review-row header">
+									<span>Assessment</span><span>Due</span><span>Weight options</span><span></span>
+								</div>
+								{#each proposals.assessments ?? [] as assessment, index (index)}
+									<div
+										class="review-row"
+										class:warned={!String(assessment.date ?? '').trim() &&
+											String(assessment.title ?? '').trim()}
+									>
+										<input bind:value={assessment.title} aria-label="Assessment" disabled={fieldsDisabled} />
+										<input
+											bind:value={assessment.date}
+											aria-label="Date"
+											placeholder="Date or schedule"
+											disabled={fieldsDisabled}
+										/>
+										<input bind:value={assessment.weightLabel} aria-label="Weight" disabled={fieldsDisabled} />
+										<button
+											type="button"
+											disabled={fieldsDisabled}
+											on:click={() => removeAssessment(index)}
+											aria-label="Remove assessment">×</button
+										>
+									</div>
+								{/each}
+							</div>
+							{#if missingDates}
+								<p class="field-error">Add a date for each named assessment before sharing.</p>
+							{/if}
+							<button class="add-row" type="button" disabled={fieldsDisabled} on:click={addAssessment}
+								>+ Add assessment</button
+							>
+						</section>
+
+						<section class="review-section" aria-labelledby="books-heading">
+							<div class="review-section__head">
+								<h3 id="books-heading">Books</h3>
+								<span>{(proposals.books ?? []).length} extracted</span>
+							</div>
+							<div class="review-table books-table" role="group" aria-label="Editable books">
+								<div class="review-row header">
+									<span>Title</span><span>Author</span><span>ISBN</span><span></span>
+								</div>
+								{#each proposals.books ?? [] as book, index (index)}
+									<div class="review-row">
+										<input
+											bind:value={book.title}
+											aria-label="Book title"
+											placeholder="Book title"
+											disabled={fieldsDisabled}
+										/>
+										<input bind:value={book.author} aria-label="Author" placeholder="Author" disabled={fieldsDisabled} />
+										<input bind:value={book.isbn} aria-label="ISBN" placeholder="ISBN" disabled={fieldsDisabled} />
+										<span></span>
+									</div>
+								{/each}
+							</div>
+						</section>
+
 						<div class="sheet-actions">
 							<span class:needs-attention={missingDates > 0 || identityFilled < 4}
 								>{missingDates
 									? `${missingDates} assessment date${missingDates === 1 ? '' : 's'} missing`
 									: identityFilled < 4
 										? `${identityFilled}/4 identity fields filled`
-										: 'Private unless you share.'}</span
+										: fieldsDisabled ? 'Saved privately.' : 'Save shares these facts to the catalog.'}</span
 							>
-							{#if contributeCatalog}
-								<button type="submit" class="primary-button">Share to catalog</button>
-							{/if}
+							<div class="course-actions">
+								<button type="submit" class="danger-button" formaction="?/deleteOutline" formnovalidate>Delete</button>
+								{#if fieldsDisabled}
+									<button type="button" class="quiet-button" on:click={() => (editing = true)}>Edit</button>
+								{:else}
+									<button type="submit" class="primary-button">Save</button>
+								{/if}
+							</div>
 						</div>
 					</form>
 				{/if}

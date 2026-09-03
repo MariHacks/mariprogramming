@@ -48,6 +48,10 @@ export function createStudentStore(inner) {
 	}
 
 	return {
+		listTerms() {
+			return wrap(() => inner.listTerms());
+		},
+
 		/** @param {string} userId */
 		getProfile(userId) {
 			return wrap(async () => {
@@ -146,6 +150,43 @@ export function createStudentStore(inner) {
 				if (!row) return null;
 				return { proposals: row.proposals, inferenceCount: row.inferenceCount };
 			});
+		},
+
+		/** @param {string} userId */
+		listOutlines(userId) {
+			return wrap(async () => {
+				const rows = await inner.listUserOutlines(userId);
+				return rows.map((row) => ({
+					sha256: row.sha256,
+					createdAt: row.createdAt,
+					extraction: row.reviewProposals ?? row.proposals
+						? {
+								proposals: row.reviewProposals ?? row.proposals,
+								inferenceCount: row.inferenceCount
+							}
+						: null
+				}));
+			});
+		},
+
+		/** @param {{ userId: string, sha256: string, proposals: object }} input */
+		saveOutlineReview(input) {
+			return wrap(() => inner.saveOutlineReview(input));
+		},
+
+		/** @param {{ userId: string, sha256: string }} input */
+		deleteOutline(input) {
+			return wrap(() => inner.deleteOutlineDocument(input));
+		},
+
+		/** @param {string} userId */
+		getSchedule(userId) {
+			return wrap(async () => (await inner.getSavedSchedule(userId))?.paste ?? '');
+		},
+
+		/** @param {{ userId: string, paste: string }} input */
+		saveSchedule(input) {
+			return wrap(() => inner.saveSchedule({ userId: input.userId, paste: input.paste }));
 		},
 
 		/** @param {{ userId: string, sha256: string, byteLength: number, extractedText: string }} input */

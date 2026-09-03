@@ -129,4 +129,30 @@ describe('ScheduleCalendar', () => {
 		expect(screen.getAllByText('Conflict')).toHaveLength(2);
 		expect(document.querySelector('.now-line')).toBeNull();
 	});
+
+	it('offers a weekday-only layout without calendar dates for compact previews', () => {
+		render(ScheduleCalendar, {
+			props: {
+				weekdayOnly: true,
+				grid: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((weekday, index) => ({
+					date: `2026-09-${String(index + 7).padStart(2, '0')}`,
+					weekday,
+					dayNumber: index + 7,
+					isToday: index === 1,
+					isNoClass: false,
+					outOfTerm: false,
+					overlap: false,
+					meetings: []
+				}))
+			}
+		});
+
+		const calendar = screen.getByLabelText('Weekly course schedule');
+		expect(calendar).toHaveClass('weekday-only');
+		for (const weekday of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']) {
+			expect(screen.getByText(weekday)).toBeInTheDocument();
+		}
+		expect(screen.queryByText('7')).not.toBeInTheDocument();
+		expect(screen.queryByText('Today')).not.toBeInTheDocument();
+	});
 });

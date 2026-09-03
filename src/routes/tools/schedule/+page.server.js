@@ -4,6 +4,10 @@ import { readRuntimeEnvironment } from '$lib/server/config/environment.js';
 import { pushScheduleToGoogleCalendar } from '$lib/server/maritools/google-calendar-push.js';
 import { openGoogleCalendarStore } from '$lib/server/maritools/google-calendar-store.js';
 import { MariToolsUnavailableError } from '$lib/server/maritools/repository.js';
+import {
+	MaritoolsUnavailableError,
+	openStudentStore as createStudentStore
+} from '$lib/server/maritools/student-store.js';
 
 export const prerender = false;
 
@@ -11,28 +15,56 @@ export const prerender = false;
 export function _createHandlers(dependencies = {}) {
 	const readEnvironment = dependencies.readEnvironment ?? readRuntimeEnvironment;
 	const openStore = dependencies.openStore ?? openGoogleCalendarStore;
+	const openStudentStore = dependencies.openStudentStore ?? createStudentStore;
 	const pushSchedule = dependencies.pushSchedule ?? pushScheduleToGoogleCalendar;
 
 	/** @param {any} event */
 	async function load(event) {
 		const session = event.locals.maritools ?? null;
 		let googleCalendarConnected = false;
+		let savedPaste = '';
 		if (session?.userId) {
 			try {
 				googleCalendarConnected = await openStore().hasGrant(session.userId);
 			} catch (error) {
 				if (!(error instanceof MariToolsUnavailableError)) throw error;
 			}
+			try {
+				savedPaste = await openStudentStore().getSchedule(session.userId);
+			} catch (error) {
+				if (!(error instanceof MaritoolsUnavailableError)) throw error;
+			}
 		}
 		return {
 			signedIn: Boolean(session?.userId),
+			savedPaste,
 			googleCalendarConnected,
 			gcalStatus: event.url.searchParams.get('gcal') ?? null
 		};
 	}
 
 	const actions = {
-		pushGoogleCalendar: async ({ request, locals }) => {
+		saveSchedule: async (/** @type {any} */ { request, locals }) => {
+			const session = locals.maritools;
+			if (!session?.userId) {
+				return fail(401, { saveError: 'Sign in to save this schedule to your account.' });
+			}
+			const data = await request.formData();
+			const paste = String(data.get('paste') ?? '');
+			if (!parseOmnivox(paste).ok) {
+				return fail(400, { saveError: 'Paste a valid Omnivox schedule first.' });
+			}
+			try {
+				await openStudentStore().saveSchedule({ userId: session.userId, paste });
+				return { saved: true };
+			} catch (error) {
+				if (error instanceof MaritoolsUnavailableError) {
+					return fail(503, { saveError: 'Saving your schedule is unavailable right now.' });
+				}
+				throw error;
+			}
+		},
+		pushGoogleCalendar: async (/** @type {any} */ { request, locals }) => {
 			try {
 				const session = locals.maritools;
 				if (!session?.userId) {
@@ -67,8 +99,7 @@ export function _createHandlers(dependencies = {}) {
 					return fail(503, { pushError: 'Calendar export is unavailable right now.' });
 				}
 				return fail(400, {
-					pushError:
-						error instanceof Error ? error.message : 'Could not push to Google Calendar.'
+					pushError: error instanceof Error ? error.message : 'Could not push to Google Calendar.'
 				});
 			}
 		}

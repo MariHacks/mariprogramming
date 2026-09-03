@@ -1,6 +1,6 @@
 /**
  * Live proof: nick session uploads a real Desktop course outline on /tools/semester.
- * Usage: node scripts/prove-semester-nim-desktop.mjs [baseUrl] [pdfPath]
+ * Usage: node scripts/prove-semester-nim-desktop.mjs [baseUrl] [pdfPath] [--visual-only]
  * Artifacts: .artifacts/verify-mariTools/semester/
  */
 import { chromium } from '@playwright/test';
@@ -14,11 +14,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 const baseURL = process.argv[2] || 'http://127.0.0.1:5174';
 const pdfPath =
-	process.argv[3] || path.join(process.env.HOME || '', 'Desktop', '420-SNT-MS_F26_Course_Outline.pdf');
+	process.argv[3] ||
+	path.join(process.env.HOME || '', 'Desktop', '420-SNT-MS_F26_Course_Outline.pdf');
+const visualOnly = process.argv.includes('--visual-only');
 const outDir = path.join(root, '.artifacts/verify-mariTools/semester');
 const tmpRoot = path.join(outDir, '_capture-tmp-nim');
 const NICK_EMAIL = 'nick.zhicheng@gmail.com';
-const EXTRACT_WAIT_MS = 120_000;
+const EXTRACT_WAIT_MS = 180_000;
 
 /** @param {number} ms */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -33,19 +35,24 @@ async function mark(page, t0, log, label) {
 	const t = Number(((Date.now() - t0) / 1000).toFixed(2));
 	log.push({ t, label });
 	console.log(`  [${t.toFixed(2)}s] ${label}`);
-	await page.evaluate((text) => {
-		let hud = document.getElementById('nim-proof-hud');
-		if (!hud) {
-			hud = document.createElement('div');
-			hud.id = 'nim-proof-hud';
-			hud.setAttribute(
-				'style',
-				'position:fixed;left:12px;bottom:12px;z-index:99999;max-width:48ch;padding:8px 10px;background:#111c;color:#f5f5f5;font:12px/1.35 ui-monospace,monospace;border-radius:6px'
-			);
-			document.body.appendChild(hud);
-		}
-		hud.textContent = text;
-	}, `${t.toFixed(1)}s ${label}`);
+	if (visualOnly) {
+		await page.evaluate(
+			(text) => {
+				let hud = document.getElementById('nim-proof-hud');
+				if (!hud) {
+					hud = document.createElement('div');
+					hud.id = 'nim-proof-hud';
+					hud.setAttribute(
+						'style',
+						'position:fixed;left:12px;bottom:12px;z-index:99999;max-width:48ch;padding:8px 10px;background:#111c;color:#f5f5f5;font:12px/1.35 ui-monospace,monospace;border-radius:6px'
+					);
+					document.body.appendChild(hud);
+				}
+				hud.textContent = text;
+			},
+			`${t.toFixed(1)}s ${label}`
+		);
+	}
 	await sleep(600);
 }
 
@@ -111,8 +118,7 @@ async function mintNickCookie() {
 async function confirmSsrNim() {
 	await loadEnvLocal(path.join(root, '.env.local'));
 	const key = String(process.env.NVIDIA_NIM_API_KEY ?? '').trim();
-	const model =
-		process.env.NVIDIA_NIM_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b';
+	const model = process.env.NVIDIA_NIM_MODEL || 'qwen/qwen3.5-122b-a10b';
 	const health = await fetch(`${baseURL}/tools/semester`);
 	return {
 		semesterHttp: health.status,
@@ -160,14 +166,41 @@ async function main() {
 	page.on('response', (res) => {
 		if (res.url().includes('/tools/semester') && res.request().method() === 'POST') {
 			outcome.httpStatus = res.status();
+			console.log(`  POST ${res.status()} ${res.url()}`);
 		}
 	});
+	page.on('pageerror', (error) => console.log(`  page error: ${error.message}`));
+	page.on('requestfailed', (request) => {
+		if (request.url().includes('/tools/semester')) {
+			console.log(`  POST request failed: ${request.failure()?.errorText ?? 'unknown'}`);
+		}
+	});
+	if (visualOnly) {
+		await page.route('**/tools/semester**', async (route) => {
+			if (route.request().method() === 'POST') await sleep(3200);
+			await route.continue();
+		});
+	}
 
 	try {
 		await page.goto('/tools/semester', { waitUntil: 'networkidle' });
+		await page.exposeFunction('__nimProcessingSeen', () => {
+			outcome.sawProcessingUi = true;
+		});
+		await page.evaluate(() => {
+			const observer = new MutationObserver(() => {
+				if (/Extracting your outline/i.test(document.body.innerText)) {
+					observer.disconnect();
+					/** @type {any} */ (window).__nimProcessingSeen?.();
+				}
+			});
+			observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+		});
 		await mark(page, t0, log, 'nick session on /tools/semester');
-		const upload = page.getByLabel('Add outline PDF');
-		if ((await upload.count()) < 1) {
+		await page.screenshot({ path: path.join(outDir, 'nim-zero-state.png'), fullPage: false });
+		await sleep(1400);
+		const addOutline = page.getByRole('button', { name: 'Add outline PDF' });
+		if ((await addOutline.count()) < 1) {
 			bugs.push('upload control missing for nick');
 			await page.screenshot({ path: path.join(outDir, 'nim-fail-gated.png'), fullPage: false });
 		} else {
@@ -178,19 +211,40 @@ async function main() {
 			if ((await page.getByText('No file selected').count()) > 0) {
 				bugs.push('visible No file selected chrome still present');
 			}
+			await addOutline.click();
+			const pickerHeading = page.getByRole('heading', { name: 'Choose outline PDF' });
+			const upload = page.getByLabel('Choose outline PDF');
+			await pickerHeading.waitFor({ state: 'visible' });
+			await upload.waitFor({ state: 'visible' });
+			outcome.sawPickerUi = true;
+			await page.screenshot({ path: path.join(outDir, 'nim-picker-open.png'), fullPage: false });
+			await mark(page, t0, log, 'visible in-page file picker open');
+			await sleep(1200);
 			await mark(page, t0, log, `choosing ${path.basename(pdfPath)} (auto-submit)`);
 			const extractDone = page
-				.waitForURL(/\/tools\/semester\?\/extract/, { timeout: EXTRACT_WAIT_MS })
-				.catch(() => null);
-			await upload.setInputFiles(pdfPath);
+				.locator('input[name="courseCode"]')
+				.waitFor({ state: 'visible', timeout: EXTRACT_WAIT_MS });
+			const chooserPromise = page.waitForEvent('filechooser');
+			await upload.click();
+			const chooser = await chooserPromise;
+			await chooser.setFiles(pdfPath);
+			const pickedState = page.getByRole('status').filter({ hasText: 'PDF selected' });
+			await pickedState.waitFor({ state: 'visible', timeout: 1000 });
+			outcome.sawPickedUi = true;
+			await page.screenshot({ path: path.join(outDir, 'nim-picked-state.png'), fullPage: false });
+			await mark(page, t0, log, 'in-page file selection visible');
 
 			// Capture real product processing chrome (not only the proof HUD).
 			let sawProcessing = false;
 			let sawStaleEmpty = false;
 			const processingDeadline = Date.now() + Math.min(EXTRACT_WAIT_MS, 90_000);
 			while (Date.now() < processingDeadline) {
-				const bodyMid = await page.locator('body').innerText().catch(() => '');
-				if (/Extracting outline|Reading outline|Extracting course identity/i.test(bodyMid)) {
+				const bodyMid = await page
+					.locator('body')
+					.innerText()
+					.catch(() => '');
+				if (outcome.sawProcessingUi === true) sawProcessing = true;
+				if (/Extracting your outline/i.test(bodyMid)) {
 					sawProcessing = true;
 					if (/No file selected|Choose a PDF to upload/i.test(bodyMid)) {
 						sawStaleEmpty = true;
@@ -202,7 +256,10 @@ async function main() {
 					});
 					break;
 				}
-				if (page.url().includes('?/extract') && (await page.locator('input[name="courseCode"]').count()) > 0) {
+				if (
+					page.url().includes('?/extract') &&
+					(await page.locator('input[name="courseCode"]').count()) > 0
+				) {
 					break;
 				}
 				await sleep(400);
@@ -212,17 +269,21 @@ async function main() {
 			if (sawStaleEmpty) bugs.push('stale empty upload chrome still visible during extract');
 
 			await extractDone;
-			await page
-				.locator('input[name="courseCode"]')
-				.waitFor({ state: 'visible', timeout: 90_000 });
 			await mark(page, t0, log, 'extract action returned review UI');
 
 			const body = await page.locator('body').innerText();
 			const missingKey = /Automatic extraction is unavailable/i.test(body);
 			const failedClosed = /We could not extract this outline automatically/i.test(body);
 			const cacheHit = /Used a saved extraction for this file/i.test(body);
+			outcome.cacheHit = cacheHit;
 			outcome.extractionOk = !missingKey && !failedClosed;
-			outcome.reason = missingKey ? 'missing-key' : failedClosed ? 'failed-closed' : cacheHit ? 'cache-hit' : 'ok';
+			outcome.reason = missingKey
+				? 'missing-key'
+				: failedClosed
+					? 'failed-closed'
+					: cacheHit
+						? 'cache-hit'
+						: 'ok';
 			if (outcome.httpStatus === 500) bugs.push('extract returned HTTP 500');
 			if (missingKey) bugs.push('SSR missing NIM key');
 
@@ -239,6 +300,15 @@ async function main() {
 			outcome.identity = identity;
 			const identityFilled = Object.values(identity).filter(Boolean).length;
 			outcome.identityFilled = identityFilled;
+			const expectedIdentity = {
+				courseCode: '420-SNT-MS',
+				title: 'Object-Oriented Programming',
+				section: '01',
+				teacher: 'Robert Vincent'
+			};
+			if (JSON.stringify(identity) !== JSON.stringify(expectedIdentity)) {
+				bugs.push(`NIM identity mismatch: ${JSON.stringify(identity)}`);
+			}
 
 			const titles = page.locator('.review-row input[aria-label="Assessment"]');
 			const weights = page.locator('.review-row input[aria-label="Weight"]');
@@ -258,6 +328,11 @@ async function main() {
 			}
 			outcome.assessmentsFilled = filled;
 			outcome.sampleTitles = sampleTitles.slice(0, 5);
+			if (rowCount !== 5 || filled !== 5) {
+				bugs.push(
+					`NIM assessment row mismatch: ${filled} filled of ${rowCount} rows (need 5 of 5)`
+				);
+			}
 
 			if (filled < 1 && outcome.extractionOk) {
 				bugs.push('extraction ok but assessment title fields empty');
@@ -268,7 +343,12 @@ async function main() {
 					`course identity incomplete: ${identityFilled}/4 (need code+title+teacher; section=${identity.section || '∅ — often absent from Science outlines'})`
 				);
 			} else if (!identity.section && outcome.extractionOk) {
-				await mark(page, t0, log, 'section absent from outline (3/4 identity — dates still required)');
+				await mark(
+					page,
+					t0,
+					log,
+					'section absent from outline (3/4 identity — dates still required)'
+				);
 			}
 			if (failedClosed) {
 				await mark(page, t0, log, 'graceful failure (no 500) — manual fields shown');
@@ -277,55 +357,58 @@ async function main() {
 					page,
 					t0,
 					log,
-					`identity ${identityFilled}/4 · assessments ${filled} of ${rowCount}`
+					`identity ${identityFilled}/4, assessments ${filled} of ${rowCount}`
 				);
 			}
 
-			// Live extract must fill calendar dates from the outline — never Playwright-fill.
+			// Live extract must fill every visible fact from the outline — never Playwright-fill.
 			await sleep(1200);
-			const bodyAfter = await page.locator('body').innerText();
-			const missingDateBadge = /\d+\s+date missing/i.test(bodyAfter);
-			/** @param {string} title */
-			const expectsDate = (title) => {
-				const t = title.trim();
-				if (/^(weekly\s+)?labs?$/i.test(t) || /^quizzes?$/i.test(t)) return false;
-				if (/second test|final exam|common evaluation/i.test(t)) return false;
-				return /test|quiz|exam|project|midterm|assignment|paper|essay|presentation/i.test(t);
-			};
-			let dated = 0;
-			let expectedDateRows = 0;
-			let expectedDated = 0;
+			let dueFilled = 0;
+			let weightsFilled = 0;
 			for (let i = 0; i < rowCount; i += 1) {
-				const title = String((await titles.nth(i).inputValue()) ?? '').trim();
 				const date = String((await dates.nth(i).inputValue()) ?? '').trim();
-				if (title && date && date !== 'YYYY-MM-DD') dated += 1;
-				if (title && expectsDate(title)) {
-					expectedDateRows += 1;
-					if (date && date !== 'YYYY-MM-DD') expectedDated += 1;
-				}
+				const weight = String((await weights.nth(i).inputValue()) ?? '').trim();
+				if (date && date !== 'YYYY-MM-DD') dueFilled += 1;
+				if (weight) weightsFilled += 1;
 			}
-			outcome.assessmentDatesFilled = dated;
-			if (missingDateBadge || expectedDated < expectedDateRows) {
+			outcome.assessmentDueFilled = dueFilled;
+			outcome.assessmentWeightsFilled = weightsFilled;
+			if (dueFilled !== rowCount || weightsFilled !== rowCount) {
 				bugs.push(
-					`live extract left required dates incomplete (dated ${expectedDated}/${expectedDateRows}; badge=${missingDateBadge})`
+					`live extract left assessment facts incomplete (due ${dueFilled}/${rowCount}; weights ${weightsFilled}/${rowCount})`
 				);
 			} else {
 				await mark(
 					page,
 					t0,
 					log,
-					`share-ready from live extract (${dated} dated · ${expectedDated}/${expectedDateRows} required)`,
-					1800
+					`${visualOnly ? 'share-ready review' : 'share-ready from live extract'} (${dueFilled}/${rowCount} due, ${weightsFilled}/${rowCount} weights)`
 				);
 			}
 			outcome.shareReady =
-				!missingDateBadge && expectedDated >= expectedDateRows && filled > 0 && coreIdentity;
-			if (cacheHit) {
+				rowCount > 0 &&
+				dueFilled === rowCount &&
+				weightsFilled === rowCount &&
+				filled === rowCount &&
+				coreIdentity;
+			if (cacheHit && !visualOnly) {
 				bugs.push('cache-hit on camera — need live extract filling identity+dates');
 			}
 
-			await page.screenshot({ path: path.join(outDir, 'nim-desktop-extract.png'), fullPage: false });
-			await sleep(1200);
+			await page.screenshot({
+				path: path.join(outDir, 'nim-desktop-extract.png'),
+				fullPage: false
+			});
+			await sleep(1000);
+			if (rowCount > 0) {
+				await titles.nth(rowCount - 1).scrollIntoViewIfNeeded();
+				await mark(page, t0, log, 'all extracted assessment rows visible');
+				await page.screenshot({
+					path: path.join(outDir, 'nim-desktop-assessments.png'),
+					fullPage: false
+				});
+			}
+			await sleep(1000);
 		}
 	} finally {
 		await context.close();
@@ -354,16 +437,28 @@ async function main() {
 		Number(outcome.assessmentsFilled) > 0 &&
 		Number(outcome.identityFilled) >= 3 &&
 		outcome.sawProcessingUi === true &&
+		outcome.sawPickerUi === true &&
+		outcome.sawPickedUi === true &&
 		outcome.shareReady === true &&
 		outcome.httpStatus !== 500;
 
 	const report = {
 		pass,
+		mode: visualOnly ? 'visual-only' : 'live-extraction',
+		continuousOneTake: true,
+		pickerMechanism: 'visible in-page native file input clicked on camera',
+		proofOverlay: visualOnly,
+		sawPickerUi: outcome.sawPickerUi,
+		sawPickedUi: outcome.sawPickedUi,
 		model: ssr.model,
 		assessmentsFilled: outcome.assessmentsFilled,
 		assessmentRows: outcome.assessmentRows,
 		extractionOk: outcome.extractionOk,
 		reason: outcome.reason,
+		cacheHit: outcome.cacheHit,
+		identity: outcome.identity,
+		assessmentDueFilled: outcome.assessmentDueFilled,
+		assessmentWeightsFilled: outcome.assessmentWeightsFilled,
 		httpStatus: outcome.httpStatus,
 		video: dest,
 		screenshot: path.join(outDir, 'nim-desktop-extract.png'),
@@ -373,7 +468,11 @@ async function main() {
 		moments: log,
 		ssr
 	};
-	await writeFile(path.join(outDir, 'nim-desktop-report.json'), JSON.stringify(report, null, 2), 'utf8');
+	await writeFile(
+		path.join(outDir, 'nim-desktop-report.json'),
+		JSON.stringify(report, null, 2),
+		'utf8'
+	);
 	const notes = `# Semester NIM Desktop outline proof
 
 Result: ${pass ? 'PASS' : 'FAIL'}

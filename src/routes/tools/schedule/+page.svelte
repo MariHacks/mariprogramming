@@ -25,15 +25,16 @@
 	/** @type {{ result?: import('$lib/maritools/schedule/parseOmnivox.js').ParseResult, pushError?: string, pushSuccess?: string } | null} */
 	export let form = null;
 
-	/** @type {{ signedIn?: boolean, googleCalendarConnected?: boolean, gcalStatus?: string | null }} */
+	/** @type {{ signedIn?: boolean, savedPaste?: string, googleCalendarConnected?: boolean, gcalStatus?: string | null }} */
 	export let data;
 
-	let paste = '';
+	let paste = String(data?.savedPaste ?? '');
 	/** @type {import('$lib/maritools/schedule/parseOmnivox.js').ParseResult} */
-	let result = { ok: false, courses: [], warnings: [] };
-	let parsed = false;
+	let result = paste.trim() ? parseOmnivox(paste) : { ok: false, courses: [], warnings: [] };
+	let parsed = Boolean(paste.trim());
 	let exportError = '';
-	let drawerOpen = false;
+	let saveError = '';
+	let drawerOpen = result.ok;
 	let exportOpen = false;
 	let tutorialOpen = false;
 	let weekStartIso = mondayOfWeek(calendarDate());
@@ -48,6 +49,7 @@
 
 	onMount(() => {
 		if (!browser) return;
+		if (data?.signedIn) return;
 		const stored = loadSchedulePaste(localStorage);
 		if (!stored.trim()) return;
 		paste = stored;
@@ -56,8 +58,23 @@
 		if (result.ok) drawerOpen = true;
 	});
 
-	function persistPaste() {
-		if (browser) saveSchedulePaste(localStorage, paste);
+	async function persistPaste() {
+		if (!browser) return;
+		if (!data?.signedIn) {
+			saveSchedulePaste(localStorage, paste);
+			return;
+		}
+		if (!result.ok) return;
+		const body = new FormData();
+		body.set('paste', paste);
+		try {
+			const response = await fetch('?/saveSchedule', { method: 'POST', body, keepalive: true });
+			saveError = response.ok
+				? ''
+				: 'Your schedule is shown here, but it could not be saved to your account.';
+		} catch {
+			saveError = 'Your schedule is shown here, but it could not be saved to your account.';
+		}
 	}
 
 	function runParse() {
@@ -65,7 +82,7 @@
 		parsed = true;
 		exportError = '';
 		drawerOpen = true;
-		persistPaste();
+		void persistPaste();
 	}
 
 	$: if (form?.pushError) {
@@ -266,6 +283,10 @@
 			<p class="field-error" role="alert">{result.warnings[0] ?? 'We could not read that paste.'}</p>
 		{/if}
 
+		{#if saveError}
+			<p class="field-error" role="alert">{saveError}</p>
+		{/if}
+
 		{#if result.ok}
 			<section class="courses" aria-labelledby="courses-title" hidden>
 				<h2 id="courses-title">Courses</h2>
@@ -320,4 +341,3 @@
 	</form>
 </CalendarExportModal>
 </div>
-

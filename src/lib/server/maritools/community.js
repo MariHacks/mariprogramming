@@ -43,7 +43,7 @@ export const NIM_DISCLOSURE =
 
 /**
  * @param {{ email: string } | null | undefined} session
- * @param {{ displayName?: string | null, nimDisclosureAcceptedAt?: Date | string | null } | null | undefined} profile
+ * @param {{ displayName?: string | null, username?: string | null, firstName?: string | null, lastName?: string | null, profileImageDataUrl?: string | null, nimDisclosureAcceptedAt?: Date | string | null } | null | undefined} profile
  */
 export function accountPageView(session, profile) {
 	if (!session) return { kind: 'guest' };
@@ -52,6 +52,10 @@ export function accountPageView(session, profile) {
 		kind: 'complete',
 		email: session.email,
 		displayName: profile.displayName ?? null,
+		username: profile.username ?? null,
+		firstName: profile.firstName ?? null,
+		lastName: profile.lastName ?? null,
+		profileImageDataUrl: profile.profileImageDataUrl ?? null,
 		nimAccepted: Boolean(profile.nimDisclosureAcceptedAt)
 	};
 }

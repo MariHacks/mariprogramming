@@ -54,12 +54,16 @@ async function withAuthorDisplayNames(inner, rows) {
 				.filter(Boolean)
 		)
 	];
-	/** @type {Map<string, string | null>} */
-	const names = new Map();
+	/** @type {Map<string, { displayName: string | null, profileImageDataUrl: string | null }>} */
+	const profiles = new Map();
 	await Promise.all(
 		ids.map(async (id) => {
 			const profile = await inner.getStudentProfile(id);
-			names.set(id, normalizeAuthorDisplayName(profile?.displayName));
+			profiles.set(id, {
+				displayName: normalizeAuthorDisplayName(profile?.displayName),
+				profileImageDataUrl:
+					typeof profile?.profileImageDataUrl === 'string' ? profile.profileImageDataUrl : null
+			});
 		})
 	);
 	return rows.map((row) => {
@@ -67,7 +71,12 @@ async function withAuthorDisplayNames(inner, rows) {
 		const authorUserId = typeof row.authorUserId === 'string' ? row.authorUserId : null;
 		return {
 			...row,
-			authorDisplayName: authorUserId ? (names.get(authorUserId) ?? null) : null
+			authorDisplayName: authorUserId
+				? (profiles.get(authorUserId)?.displayName ?? null)
+				: null,
+			authorProfileImageDataUrl: authorUserId
+				? (profiles.get(authorUserId)?.profileImageDataUrl ?? null)
+				: null
 		};
 	});
 }
@@ -94,7 +103,11 @@ export function publicThreadView(thread) {
 		removedAt: thread.removedAt ?? null,
 		authorUserId,
 		authorProfileHref: authorProfileHref(authorUserId),
-		authorDisplayName: normalizeAuthorDisplayName(thread.authorDisplayName)
+		authorDisplayName: normalizeAuthorDisplayName(thread.authorDisplayName),
+		authorProfileImageDataUrl:
+			typeof thread.authorProfileImageDataUrl === 'string'
+				? thread.authorProfileImageDataUrl
+				: null
 	};
 }
 
@@ -110,7 +123,9 @@ export function publicReplyView(reply) {
 		removedAt: reply.removedAt ?? null,
 		authorUserId,
 		authorProfileHref: authorProfileHref(authorUserId),
-		authorDisplayName: normalizeAuthorDisplayName(reply.authorDisplayName)
+		authorDisplayName: normalizeAuthorDisplayName(reply.authorDisplayName),
+		authorProfileImageDataUrl:
+			typeof reply.authorProfileImageDataUrl === 'string' ? reply.authorProfileImageDataUrl : null
 	};
 }
 
