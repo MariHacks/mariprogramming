@@ -1,21 +1,74 @@
 <script>
 	import { page } from '$app/stores';
 	import { resolve } from '$app/paths';
+	import { browser } from '$app/environment';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import { isToolNavCurrent, TOOL_SECTIONS } from '$lib/maritools/tools-nav.js';
+	import { onMount, tick } from 'svelte';
 	import '$lib/maritools/styles/preview.css';
 
 	$: pathname = $page.url.pathname;
 	$: onboardingPending = pathname === '/tools/account' && $page.data?.onboardingPending === true;
 
 	let sidebarOpen = false;
+	/** @type {string | undefined} */
+	let sidebarPathname;
+	let isMobileDrawer = false;
+	/** @type {HTMLButtonElement | undefined} */
+	let menuButton;
+	/** @type {HTMLButtonElement | undefined} */
+	let closeButton;
+	let bodyOverflow = '';
+	let bodyReady = false;
 
-	function closeSidebar() {
-		sidebarOpen = false;
+	$: {
+		if (sidebarPathname === undefined) sidebarPathname = pathname;
+		else if (sidebarPathname !== pathname) {
+			sidebarPathname = pathname;
+			closeSidebar();
+		}
 	}
 
-	function toggleSidebar() {
-		sidebarOpen = !sidebarOpen;
+	$: if (browser && bodyReady) {
+		document.body.style.overflow = sidebarOpen ? 'hidden' : bodyOverflow;
+	}
+
+	onMount(() => {
+		bodyOverflow = document.body.style.overflow;
+		bodyReady = true;
+		const mobileQuery = window.matchMedia('(max-width: 51.999rem)');
+		const updateDrawerMode = () => {
+			isMobileDrawer = mobileQuery.matches;
+			if (!isMobileDrawer && sidebarOpen) closeSidebar();
+		};
+		updateDrawerMode();
+		mobileQuery.addEventListener('change', updateDrawerMode);
+
+		return () => {
+			mobileQuery.removeEventListener('change', updateDrawerMode);
+			document.body.style.overflow = bodyOverflow;
+		};
+	});
+
+	/** @param {boolean} [restoreFocus] */
+	async function closeSidebar(restoreFocus = false) {
+		sidebarOpen = false;
+		if (restoreFocus) {
+			await tick();
+			menuButton?.focus();
+		}
+	}
+
+	/** @param {MouseEvent} event */
+	async function toggleSidebar(event) {
+		if (sidebarOpen) {
+			await closeSidebar(true);
+			return;
+		}
+		menuButton = /** @type {HTMLButtonElement} */ (event.currentTarget);
+		sidebarOpen = true;
+		await tick();
+		closeButton?.focus();
 	}
 
 	/** @param {string} label */
@@ -28,7 +81,10 @@
 
 	/** @param {KeyboardEvent} event */
 	function handleKeydown(event) {
-		if (event.key === 'Escape') closeSidebar();
+		if (event.key === 'Escape' && sidebarOpen) {
+			event.preventDefault();
+			closeSidebar(true);
+		}
 	}
 </script>
 
@@ -40,16 +96,28 @@
 			class="sidebar-scrim"
 			type="button"
 			aria-label="Close tools menu"
-			on:click={closeSidebar}
+			on:click={() => closeSidebar(true)}
 		></button>
 	{/if}
-	{#if !onboardingPending}<aside class="tools-sidebar" id="tools-sidebar" data-open={sidebarOpen}>
+	{#if !onboardingPending}<aside
+		class="tools-sidebar"
+		id="tools-sidebar"
+		data-open={sidebarOpen}
+		aria-hidden={isMobileDrawer && !sidebarOpen ? 'true' : undefined}
+		inert={isMobileDrawer && !sidebarOpen}
+	>
 		<div class="tools-brand-row">
-			<a class="tools-wordmark" href={resolve('/tools', {})} on:click={closeSidebar}>
+			<a class="tools-wordmark" href={resolve('/tools', {})} on:click={() => closeSidebar()}>
 				<span class="tools-glyph" aria-hidden="true"><i></i><i></i><i></i></span>
 				<b>{MARITOOLS_NAME}</b>
 			</a>
-			<button class="sidebar-close" type="button" aria-label="Close tools menu" on:click={closeSidebar}>
+			<button
+				class="sidebar-close"
+				type="button"
+				aria-label="Close tools menu"
+				bind:this={closeButton}
+				on:click={() => closeSidebar(true)}
+			>
 				Close
 			</button>
 		</div>
@@ -63,7 +131,7 @@
 							class:is-current={isToolNavCurrent(pathname, item.href)}
 							href={resolve(item.href, {})}
 							aria-current={isToolNavCurrent(pathname, item.href) ? 'page' : undefined}
-							on:click={closeSidebar}
+							on:click={() => closeSidebar()}
 						>
 							<span>{sidebarLabel(item.label)}</span>
 						</a>
@@ -71,7 +139,7 @@
 				</section>
 			{/each}
 		</nav>
-		<a class="back-club" href={resolve('/', {})} on:click={closeSidebar}>
+		<a class="back-club" href={resolve('/', {})} on:click={() => closeSidebar()}>
 			Back to club home <span aria-hidden="true">↗</span>
 		</a>
 	</aside>{/if}
@@ -81,6 +149,7 @@
 			type="button"
 			aria-expanded={sidebarOpen}
 			aria-controls="tools-sidebar"
+			bind:this={menuButton}
 			on:click={toggleSidebar}
 		>
 			<span aria-hidden="true">☰</span> Tools
@@ -93,7 +162,7 @@
 	.tools-shell {
 		display: grid;
 		align-items: stretch;
-		min-height: calc(100vh - 4.5rem - 4.9375rem);
+		min-height: calc(100dvh - 4.5rem - 4.9375rem);
 		background: var(--paper);
 	}
 
@@ -267,33 +336,63 @@
 	}
 
 	@media (max-width: 51.999rem) {
+		.tools-shell {
+			--tools-header-offset: 4.25rem;
+			min-height: calc(100dvh - var(--tools-header-offset));
+		}
+
 		.tools-sidebar {
 			position: fixed;
 			z-index: 40;
-			top: 4.25rem;
+			top: var(--tools-header-offset);
 			left: 0;
 			width: min(18rem, 88vw);
-			height: calc(100vh - 4.25rem);
+			height: calc(100dvh - var(--tools-header-offset));
 			overflow: auto;
 			transform: translateX(-105%);
-			transition: transform var(--motion-base) var(--ease-out);
+			visibility: hidden;
+			pointer-events: none;
+			transition:
+				transform var(--motion-base) var(--ease-out),
+				visibility 0s linear var(--motion-base);
 		}
 
 		.tools-sidebar[data-open='true'] {
 			transform: none;
+			visibility: visible;
+			pointer-events: auto;
+			transition-delay: 0s;
 		}
 
 		.sidebar-scrim {
 			display: block;
 			position: fixed;
 			z-index: 35;
-			inset: 4.25rem 0 0;
+			inset: var(--tools-header-offset) 0 0;
 			border: 0;
 			background: rgb(var(--midnight-rgb) / 28%);
 		}
 
 		.sidebar-close {
 			display: inline-flex;
+		}
+
+		.sidebar-close,
+		.tools-menu,
+		.tools-nav a,
+		.back-club {
+			align-items: center;
+			min-height: 2.75rem;
+		}
+
+		.back-club {
+			display: flex;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.tools-sidebar {
+			transition: none;
 		}
 	}
 </style>

@@ -217,6 +217,30 @@
 }
 
 @media (max-width: 700px) {
+	.mt-preview .primary-button,
+	.mt-preview .dark-button,
+	.mt-preview .quiet-button,
+	.mt-preview .index-filters button,
+	.mt-preview .forum-toolbar button,
+	.mt-preview .index-filters input,
+	.mt-preview .index-filters select,
+	.mt-preview .forum-toolbar input,
+	.mt-preview .forum-toolbar select {
+		min-height: 44px;
+	}
+
+	.mt-preview .index-filters input,
+	.mt-preview .index-filters select,
+	.mt-preview .forum-toolbar input,
+	.mt-preview .forum-toolbar select {
+		height: 44px;
+	}
+
+	.mt-preview .arrow-pair button {
+		min-width: 44px;
+		min-height: 44px;
+	}
+
 	.mt-preview .empty-calendar {
 		min-height: 22rem;
 		max-height: none;

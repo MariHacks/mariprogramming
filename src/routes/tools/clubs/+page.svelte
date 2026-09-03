@@ -86,7 +86,15 @@
 				{/if}
 			</div>
 		{:else}
-			<div class="club-index">
+			<p class="index-scroll-cue" id="clubs-scroll-cue">Swipe sideways to see all club details.</p>
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex (keyboard access for the scrollable region) -->
+			<div
+				class="club-index"
+				role="region"
+				aria-label="Club directory"
+				aria-describedby="clubs-scroll-cue"
+				tabindex="0"
+			>
 				<div class="club-head">
 					<span>Organization</span><span>Focus</span><span>Listing</span>
 				</div>

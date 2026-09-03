@@ -40,6 +40,13 @@ describe('free-time boards page', () => {
 		);
 		expect(screen.getByText('Saved')).toBeInTheDocument();
 		expect(screen.getByText('Add availability')).toBeInTheDocument();
+		const index = screen.getByRole('region', { name: 'Free-time boards' });
+		expect(index).toHaveAttribute('tabindex', '0');
+		expect(index).toHaveAttribute('aria-describedby', 'boards-scroll-cue');
+		expect(screen.getByText('Swipe sideways to see all board details.')).toHaveAttribute(
+			'id',
+			'boards-scroll-cue'
+		);
 	});
 
 	it('marks a mixed board as still needing availability', () => {

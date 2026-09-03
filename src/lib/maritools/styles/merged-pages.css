@@ -194,6 +194,10 @@
 	flex: 1 1 auto;
 }
 
+.mt-preview .index-scroll-cue {
+	display: none;
+}
+
 .mt-preview .catalog-row h2,
 .mt-preview .club-row h2,
 .mt-preview .topic-row h2 {
@@ -288,6 +292,54 @@
 }
 
 @media (max-width: 700px) {
+	.mt-preview .page-free-boards > .index-filters {
+		grid-template-columns: 1fr;
+	}
+
+	.mt-preview .index-scroll-cue {
+		display: block;
+		margin: 0;
+		padding: 0.65rem clamp(1.25rem, 3vw, 3rem);
+		border-bottom: 1px solid var(--rule);
+		background: white;
+		color: var(--steel);
+		font-size: 0.6875rem;
+	}
+
+	.mt-preview .catalog-index,
+	.mt-preview .club-index,
+	.mt-preview .topic-list,
+	.mt-preview .boards-index {
+		overscroll-behavior-inline: contain;
+		scrollbar-width: thin;
+	}
+
+	.mt-preview .catalog-count {
+		flex-wrap: wrap;
+		padding-block: 0.5rem;
+	}
+
+	.mt-preview .catalog-count button {
+		min-height: 44px;
+		padding-inline: 0.75rem;
+	}
+
+	.mt-preview .catalog-toggle {
+		min-width: 44px;
+		min-height: 44px;
+	}
+
+	.mt-preview .catalog-row h2 a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+	}
+
+	.mt-preview .catalog-head,
+	.mt-preview .catalog-row {
+		grid-template-columns: 100px minmax(220px, 1.4fr) 0.75fr 0.8fr 44px;
+	}
+
 	.mt-preview .paint-toolbar,
 	.mt-preview .paint-grid {
 		width: 100%;
@@ -323,6 +375,27 @@
 
 	.mt-preview .index-filters .dark-button {
 		min-height: 2.75rem;
+	}
+
+	.mt-preview .thread-layout {
+		width: 100%;
+		margin: 0;
+		padding-inline: 1rem;
+	}
+
+	.mt-preview .thread-header nav {
+		flex-wrap: wrap;
+		row-gap: 0.5rem;
+	}
+
+	.mt-preview .post-body footer,
+	.mt-preview .reply-editor footer {
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.mt-preview .reply-editor {
+		margin-left: 0;
 	}
 }
 

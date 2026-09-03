@@ -99,6 +99,13 @@ describe('forum page', () => {
 		expect(screen.getByRole('button', { name: 'Post thread' })).toBeInTheDocument();
 		expect(screen.getByRole('alert')).toHaveTextContent('Check the thread');
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
+		const index = screen.getByRole('region', { name: 'Forum topics' });
+		expect(index).toHaveAttribute('tabindex', '0');
+		expect(index).toHaveAttribute('aria-describedby', 'forum-scroll-cue');
+		expect(screen.getByText('Swipe sideways to see all topic details.')).toHaveAttribute(
+			'id',
+			'forum-scroll-cue'
+		);
 	});
 
 	it('groups the composer metadata beside the title and keeps the body on its own row', () => {

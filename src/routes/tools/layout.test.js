@@ -1,4 +1,5 @@
 import { cleanup, render, screen, within } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { asOfDate, explicitTermId } from '$lib/maritools/term/session.js';
 
@@ -28,6 +29,12 @@ afterEach(() => {
 
 describe('tools layout', () => {
 	beforeEach(() => {
+		window.matchMedia = vi.fn().mockImplementation((query) => ({
+			matches: false,
+			media: query,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn()
+		}));
 		testPage.set({ url: { pathname: '/tools', searchParams: new URLSearchParams() }, data: {} });
 		explicitTermId.set(null);
 		asOfDate.set(null);
@@ -101,5 +108,64 @@ describe('tools layout', () => {
 
 		expect(container.querySelector('.tools-shell')).toHaveClass('tools-shell--onboarding');
 		expect(screen.queryByRole('navigation', { name: 'MariTools' })).not.toBeInTheDocument();
+	});
+
+	it('treats the closed mobile sidebar as hidden and inert', () => {
+		window.matchMedia = vi.fn().mockImplementation((query) => ({
+			matches: query.includes('max-width'),
+			media: query,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn()
+		}));
+		const { container } = render(ToolsLayout);
+		const sidebar = container.querySelector('#tools-sidebar');
+
+		expect(sidebar).toHaveAttribute('aria-hidden', 'true');
+		expect((/** @type {HTMLElement & { inert: boolean }} */ (sidebar)).inert).toBe(true);
+	});
+
+	it('moves focus into the drawer and restores it after Escape', async () => {
+		window.matchMedia = vi.fn().mockImplementation((query) => ({
+			matches: query.includes('max-width'),
+			media: query,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn()
+		}));
+		const user = userEvent.setup();
+		render(ToolsLayout);
+		const trigger = screen.getByRole('button', { name: 'Tools' });
+
+		await user.click(trigger);
+		expect(screen.getByText('Close')).toHaveFocus();
+		expect(document.body.style.overflow).toBe('hidden');
+
+		await user.keyboard('{Escape}');
+		expect(trigger).toHaveFocus();
+		expect(trigger).toHaveAttribute('aria-expanded', 'false');
+		expect(document.body.style.overflow).toBe('');
+	});
+
+	it('closes the drawer on navigation and restores body overflow on teardown', async () => {
+		window.matchMedia = vi.fn().mockImplementation((query) => ({
+			matches: query.includes('max-width'),
+			media: query,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn()
+		}));
+		const user = userEvent.setup();
+		const { unmount } = render(ToolsLayout);
+		const trigger = screen.getByRole('button', { name: 'Tools' });
+
+		await user.click(trigger);
+		expect(document.body.style.overflow).toBe('hidden');
+
+		testPage.set({ url: { pathname: '/tools/forum', searchParams: new URLSearchParams() }, data: {} });
+		await Promise.resolve();
+		expect(trigger).toHaveAttribute('aria-expanded', 'false');
+		expect(document.body.style.overflow).toBe('');
+
+		await user.click(trigger);
+		unmount();
+		expect(document.body.style.overflow).toBe('');
 	});
 });

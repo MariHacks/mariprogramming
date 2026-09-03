@@ -67,6 +67,13 @@ describe('catalog page', () => {
 		expect(screen.getByText(/Midterm/)).toBeInTheDocument();
 		expect(screen.getByText(/University Physics/)).toBeInTheDocument();
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
+		const index = screen.getByRole('region', { name: 'Course catalog results' });
+		expect(index).toHaveAttribute('tabindex', '0');
+		expect(index).toHaveAttribute('aria-describedby', 'catalog-scroll-cue');
+		expect(screen.getByText('Swipe sideways to see all course details.')).toHaveAttribute(
+			'id',
+			'catalog-scroll-cue'
+		);
 		fireEvent.click(screen.getByRole('button', { name: /Sort by course code/ }));
 		fireEvent.click(screen.getByRole('button', { name: /Collapse 203-SN3-RE/ }));
 	});

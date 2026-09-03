@@ -99,7 +99,15 @@
 				{/if}
 			</div>
 		{:else}
-			<div class="topic-list">
+			<p class="index-scroll-cue" id="forum-scroll-cue">Swipe sideways to see all topic details.</p>
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex (keyboard access for the scrollable region) -->
+			<div
+				class="topic-list"
+				role="region"
+				aria-label="Forum topics"
+				aria-describedby="forum-scroll-cue"
+				tabindex="0"
+			>
 				<div class="topic-head">
 					<span>Topic</span><span>Category</span><span>Course</span><span>Latest</span>
 				</div>

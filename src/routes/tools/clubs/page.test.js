@@ -110,6 +110,13 @@ describe('clubs page', () => {
 			'/tools/clubs/new'
 		);
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
+		const index = screen.getByRole('region', { name: 'Club directory' });
+		expect(index).toHaveAttribute('tabindex', '0');
+		expect(index).toHaveAttribute('aria-describedby', 'clubs-scroll-cue');
+		expect(screen.getByText('Swipe sideways to see all club details.')).toHaveAttribute(
+			'id',
+			'clubs-scroll-cue'
+		);
 	});
 
 	it('links staff pending rows into the shared review surface', () => {
