@@ -65,12 +65,10 @@ export function guessOutlineIdentity(text) {
 	const raw = String(text ?? '');
 	const courseCode = raw.match(/\b(\d{3}-[A-Z]{2,4}-[A-Z0-9]{2,3})\b/)?.[1] ?? null;
 	const section = raw.match(/\b(?:section|sec\.?)\s*[:#]?\s*([0-9]{3,5})\b/i)?.[1] ?? null;
-	const teacherName =
-		raw
-			.match(/\b(?:teacher|instructor|professor)\s*[:-]\s*([A-Za-z][A-Za-z .'-]{2,60})/i)?.[1]
-			?.trim() ??
-		raw.match(/\bINSTRUCTOR\s*:\s*\n+\s*([A-Za-z][A-Za-z .'-]{2,60})/i)?.[1]?.trim() ??
-		null;
+	const inlineTeacher = raw.match(
+		/\b(?:teacher|instructor|professor)\s*[:-]\s*([A-Za-z][A-Za-z .'-]{2,60})/i
+	);
+	const teacherName = inlineTeacher ? inlineTeacher[1].trim() : null;
 	const titledAfterCode = strongTitleAfterCode(raw, courseCode);
 	const titleLine = raw
 		.split(/\n/)
@@ -208,7 +206,7 @@ export function withGuessedAssessmentDates(proposals, text) {
 			.slice(0, weights.index)
 			.trim()
 			.split(/\s{2,}/);
-		const type = String(columns[0] ?? '').trim();
+		const type = String(columns[0]).trim();
 		if (!type) continue;
 		const due = dueMatch[1].trim();
 		tableRows.push({

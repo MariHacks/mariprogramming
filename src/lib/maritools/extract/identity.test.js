@@ -13,6 +13,10 @@ describe('outline identity helpers', () => {
 	it('detects missing course identity', () => {
 		expect(proposalsNeedIdentity({ assessments: [] })).toBe(true);
 		expect(proposalsNeedIdentity({ courseCode: '420-SNT-MS', title: 'Web' })).toBe(false);
+		expect(proposalsNeedIdentity(null)).toBe(true);
+		expect(proposalsNeedIdentity([])).toBe(true);
+		expect(proposalsNeedIdentity('bad')).toBe(true);
+		expect(proposalsNeedIdentity({ courseCode: 42, title: '  ' })).toBe(true);
 	});
 
 	it('detects named assessments missing dates only when a calendar day is expected', () => {
@@ -26,10 +30,32 @@ describe('outline identity helpers', () => {
 			proposalsNeedAssessmentDates({ assessments: [{ title: 'Weekly Labs', date: '' }] })
 		).toBe(false);
 		expect(proposalsNeedAssessmentDates({ assessments: [] })).toBe(false);
+		expect(proposalsNeedAssessmentDates(null)).toBe(false);
+		expect(proposalsNeedAssessmentDates([])).toBe(false);
+		expect(proposalsNeedAssessmentDates({ assessments: 'bad' })).toBe(false);
+		expect(
+			proposalsNeedAssessmentDates({
+				assessments: [null, { title: 3 }, { title: 'Midterm', date: 3 }]
+			})
+		).toBe(true);
+		expect(Reflect.apply(assessmentExpectsCalendarDate, undefined, [null])).toBe(false);
+		expect(assessmentExpectsCalendarDate('  ')).toBe(false);
+		expect(assessmentExpectsCalendarDate('Quizzes')).toBe(false);
+		expect(assessmentExpectsCalendarDate('Final exam')).toBe(false);
+		expect(assessmentExpectsCalendarDate('Reading')).toBe(false);
 	});
 
 	it('rejects cached extraction data with no assessment facts', () => {
 		expect(proposalsNeedAssessmentFacts({ assessments: [] })).toBe(true);
+		expect(proposalsNeedAssessmentFacts(null)).toBe(false);
+		expect(proposalsNeedAssessmentFacts([])).toBe(false);
+		expect(proposalsNeedAssessmentFacts({ assessments: 'bad' })).toBe(true);
+		expect(proposalsNeedAssessmentFacts({ assessments: [null, 3] })).toBe(false);
+		expect(
+			proposalsNeedAssessmentFacts({ assessments: [{ dateIso: null, weightLabel: '' }] })
+		).toBe(false);
+		expect(proposalsNeedAssessmentFacts({ assessments: [{ dateIso: null }] })).toBe(true);
+		expect(proposalsNeedAssessmentFacts({ assessments: [{ weightLabel: '' }] })).toBe(true);
 	});
 
 	it('guesses identity fields from outline text', () => {
@@ -43,6 +69,20 @@ Assessments follow.`;
 			courseCode: '420-SNT-MS',
 			section: '00001',
 			teacherName: 'Ada Lovelace'
+		});
+	});
+
+	it('returns null identity fields when malformed text has no candidates', () => {
+		expect(Reflect.apply(guessOutlineIdentity, undefined, [null])).toEqual({
+			courseCode: null,
+			title: null,
+			section: null,
+			teacherName: null
+		});
+		expect(guessOutlineIdentity('420-SNT-MS\nCOURSE CODE\nshort')).toMatchObject({
+			courseCode: '420-SNT-MS',
+			title: null,
+			teacherName: null
 		});
 	});
 
@@ -131,6 +171,30 @@ Assessments follow.`;
 			title: 'Object-Oriented Programming',
 			section: '01',
 			teacherName: 'Robert Vincent'
+		});
+	});
+
+	it('normalizes malformed identity proposal shapes and keeps nonblank values', () => {
+		expect(Reflect.apply(withGuessedIdentity, undefined, [null, null])).toMatchObject({
+			courseCode: null,
+			title: null,
+			section: null,
+			teacherName: null
+		});
+		expect(Reflect.apply(withGuessedIdentity, undefined, [[], ''])).toMatchObject({
+			courseCode: null,
+			title: null
+		});
+		expect(
+			withGuessedIdentity(
+				{ courseCode: 'KEEP', title: 'Keep title', section: 'AB', teacherName: 'Keep teacher' },
+				'No outline identity here'
+			)
+		).toMatchObject({
+			courseCode: 'KEEP',
+			title: 'Keep title',
+			section: 'AB',
+			teacherName: 'Keep teacher'
 		});
 	});
 
@@ -227,6 +291,72 @@ In common evaluation period         Second test*                                
 				date: 'In common evaluation period',
 				weightLabel: '40% / 30%'
 			}
+		]);
+	});
+
+	it('covers malformed assessment proposals and table rows', () => {
+		expect(Reflect.apply(withGuessedAssessmentDates, undefined, [null, null])).toEqual({
+			assessments: []
+		});
+		expect(Reflect.apply(withGuessedAssessmentDates, undefined, [[], ''])).toEqual({
+			assessments: []
+		});
+		expect(withGuessedAssessmentDates({ assessments: 'bad' }, '')).toEqual({
+			assessments: []
+		});
+		const text = `Due Date Option A
+Weekly  Labs without weights
+Weekly   10% 10%
+Friday, October 0  Zero day  10% 10%
+not a due row`;
+		expect(
+			withGuessedAssessmentDates(
+				{ assessments: [null, 3, {}, { title: 4 }, { title: 'Missing' }] },
+				text
+			).assessments
+		).toEqual([null, 3, {}, { title: 4 }, { title: 'Missing' }]);
+		expect(
+			withGuessedAssessmentDates({ assessments: [{ title: 'Missing' }] }, 'Weekly   10% 10%')
+		).toEqual({ assessments: [{ title: 'Missing' }] });
+	});
+
+	it('derives calendar years from generic text and the current year fallback', () => {
+		const generic = withGuessedAssessmentDates(
+			{ assessments: [] },
+			'Copyright 2027\nFriday, October 2  Project  10% 10%'
+		);
+		expect(generic.assessments[0].dateIso).toBe('2027-10-02');
+		const current = withGuessedAssessmentDates(
+			{ assessments: [] },
+			'Friday, November 3  Essay  20% 30%'
+		);
+		expect(current.assessments[0]).toMatchObject({
+			dateIso: `${new Date().getFullYear()}-11-03`,
+			weight: null,
+			weightLabel: '20% / 30%'
+		});
+	});
+
+	it('matches assessment titles by exact and contained text', () => {
+		const text = `Weekly  Labs  10% 10%
+Friday, October 2  Final Project  20% 20%
+Friday, October 3  Essay  30% 30%`;
+		const out = withGuessedAssessmentDates(
+			{
+				assessments: [
+					{ title: 'Labs' },
+					{ title: 'Project' },
+					{ title: 'Essay draft' },
+					{ title: 'Unmatched' }
+				]
+			},
+			text
+		);
+		expect(out.assessments).toMatchObject([
+			{ title: 'Weekly Labs', weightLabel: '10%' },
+			{ title: 'Project', weightLabel: '20%' },
+			{ title: 'Essay draft', weightLabel: '30%' },
+			{ title: 'Unmatched' }
 		]);
 	});
 });

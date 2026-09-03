@@ -34,4 +34,10 @@ describe('schedule paste persistence', () => {
 		expect(loadSchedulePaste(storage)).toBe('');
 		expect(storage.getItem(SCHEDULE_PASTE_STORAGE_KEY)).toBeNull();
 	});
+
+	it('normalizes nullish paste values before clearing them', () => {
+		const storage = memoryStorage();
+		Reflect.apply(saveSchedulePaste, undefined, [storage, null]);
+		expect(loadSchedulePaste(storage)).toBe('');
+	});
 });

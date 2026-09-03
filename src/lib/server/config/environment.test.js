@@ -303,6 +303,7 @@ describe('private server environment', () => {
 			)
 		).toBe(false);
 		expect(isGoogleOAuthConfigured(withEnvironment({ GOOGLE_CLIENT_SECRET: '' }))).toBe(false);
+		expect(isGoogleOAuthConfigured(null)).toBe(false);
 	});
 
 	it('accepts a least-privilege restricted Stripe key at runtime', () => {

@@ -63,6 +63,35 @@ describe('freeCellsFromAvailability', () => {
 		expect(freeCellsFromAvailability(upgraded, weekA)).toEqual(new Set([mon]));
 		expect(freeCellsFromAvailability(upgraded, weekB).size).toBe(0);
 	});
+
+	it('rejects malformed week keys and availability rows', () => {
+		expect(
+			Reflect.apply(freeCellsFromAvailability, undefined, [{ free: ['Mon-09:00'] }, null]).size
+		).toBe(0);
+		expect(freeCellsFromAvailability({ free: ['Mon-09:00'] }, 'bad-date').size).toBe(0);
+		expect(
+			freeCellsFromAvailability(
+				{
+					byWeek: {
+						bad: ['Mon-09:00'],
+						'2026-08-24': 'bad',
+						'2026-08-31': ['Tue-10:00', '', 4]
+					}
+				},
+				'2026-08-31'
+			)
+		).toEqual(new Set(['Tue-10:00']));
+		expect(
+			Reflect.apply(availabilityWithWeek, undefined, [{}, null, new Set(['Mon-09:00'])])
+		).toEqual({
+			version: 2,
+			byWeek: {}
+		});
+		expect(availabilityWithWeek({}, 'bad-date', new Set(['Mon-09:00']))).toEqual({
+			version: 2,
+			byWeek: {}
+		});
+	});
 });
 
 describe('commonFreeCells', () => {
@@ -76,7 +105,11 @@ describe('commonFreeCells', () => {
 			commonFreeCells(
 				[
 					{
-						availability: availabilityWithWeek(null, weekA, new Set([shared, paintCellKey('Mon', '09:00')]))
+						availability: availabilityWithWeek(
+							null,
+							weekA,
+							new Set([shared, paintCellKey('Mon', '09:00')])
+						)
 					},
 					{ availability: availabilityWithWeek(null, weekA, new Set([shared])) }
 				],
@@ -183,6 +216,24 @@ describe('restoreEditorState', () => {
 		expect(restored.displayName).toBe('Nick');
 		expect(restored.freeCells.size).toBe(0);
 	});
+
+	it('normalizes malformed restored identity fields', () => {
+		expect(
+			Reflect.apply(restoreEditorState, undefined, [{ members: 'bad' }, null, null, weekA])
+		).toEqual({
+			shareToken: '',
+			displayName: '',
+			freeCells: new Set()
+		});
+		expect(
+			Reflect.apply(restoreEditorState, undefined, [
+				{ members: [{ shareToken: 'token', displayName: 42 }] },
+				'token',
+				'Ignored',
+				weekA
+			])
+		).toEqual({ shareToken: 'token', displayName: '', freeCells: new Set() });
+	});
 });
 
 describe('paintDayColumnsForTermWeek', () => {
@@ -204,6 +255,16 @@ describe('paintDayColumnsForTermWeek', () => {
 		const columns = paintDayColumnsForTermWeek(weekStart, 'fall-2026');
 		expect(columns.every((column) => column.outOfTerm && column.isNoClass)).toBe(true);
 	});
+
+	it('falls back to ordinary weekdays without a matching term and rules', () => {
+		const expected = ['Mon 24', 'Tue 25', 'Wed 26', 'Thu 27', 'Fri 28'];
+		expect(paintDayColumnsForTermWeek('2026-08-24', null).map((column) => column.header)).toEqual(
+			expected
+		);
+		expect(
+			paintDayColumnsForTermWeek('2026-08-24', 'missing-term', []).map((column) => column.header)
+		).toEqual(expected);
+	});
 });
 
 describe('filterPaintableCells', () => {
@@ -214,5 +275,12 @@ describe('filterPaintableCells', () => {
 			columns
 		);
 		expect(filtered).toEqual(new Set([paintCellKey('Tue', '09:00')]));
+	});
+
+	it('copies cells when every weekday is paintable', () => {
+		const cells = new Set([paintCellKey('Mon', '09:00')]);
+		const filtered = filterPaintableCells(cells, [{ weekday: 'Mon', isNoClass: false }]);
+		expect(filtered).toEqual(cells);
+		expect(filtered).not.toBe(cells);
 	});
 });
