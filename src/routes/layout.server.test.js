@@ -11,7 +11,10 @@ describe('root layout load', () => {
 	it('returns signed-in header state from the student profile', async () => {
 		const load = _createRootLayoutLoad({
 			createRepository: () => ({
-				getProfile: vi.fn().mockResolvedValue({ displayName: 'Maya Singh' })
+				getProfile: vi.fn().mockResolvedValue({
+					displayName: 'Maya Singh',
+					profileImageDataUrl: 'data:image/png;base64,YXZhdGFy'
+				})
 			})
 		});
 		const result = await load({
@@ -21,7 +24,8 @@ describe('root layout load', () => {
 			headerAccount: {
 				kind: 'signed-in',
 				displayName: 'Maya Singh',
-				initials: 'MS'
+				initials: 'MS',
+				profileImageDataUrl: 'data:image/png;base64,YXZhdGFy'
 			}
 		});
 	});

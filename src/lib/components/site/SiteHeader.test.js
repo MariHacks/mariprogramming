@@ -87,6 +87,27 @@ describe('SiteHeader', () => {
 		expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
 	});
 
+	it('shows the saved profile picture in the signed-in identity chip', () => {
+		const { container } = render(SiteHeader, {
+			props: {
+				pathname: '/tools/account',
+				headerAccount: {
+					kind: 'signed-in',
+					displayName: 'Maya Singh',
+					initials: 'MS',
+					profileImageDataUrl: 'data:image/png;base64,YXZhdGFy'
+				}
+			}
+		});
+
+		const identity = container.querySelector('.identity-button');
+		expect(identity?.querySelector('img')).toHaveAttribute(
+			'src',
+			'data:image/png;base64,YXZhdGFy'
+		);
+		expect(identity).not.toHaveTextContent('MS');
+	});
+
 	it('keeps the utility cluster on one header row so Sign up cannot wrap under the bar', () => {
 		expect(siteHeaderSource).toMatch(
 			/\.header-frame\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto;/u

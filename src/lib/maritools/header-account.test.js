@@ -19,11 +19,18 @@ describe('headerAccountView', () => {
 
 	it('returns signed-in identity details from the profile display name', () => {
 		expect(
-			headerAccountView({ email: 'maya.singh@example.com' }, { displayName: 'Maya Singh' })
+			headerAccountView(
+				{ email: 'maya.singh@example.com' },
+				{
+					displayName: 'Maya Singh',
+					profileImageDataUrl: 'data:image/png;base64,YXZhdGFy'
+				}
+			)
 		).toEqual({
 			kind: 'signed-in',
 			displayName: 'Maya Singh',
-			initials: 'MS'
+			initials: 'MS',
+			profileImageDataUrl: 'data:image/png;base64,YXZhdGFy'
 		});
 	});
 
