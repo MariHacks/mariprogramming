@@ -20,6 +20,7 @@
 	let section = '';
 	let teacherName = '';
 	let editing = false;
+	let shareToCatalog = true;
 	let selectedFileName = '';
 	/** @type {HTMLInputElement | null} */
 	let outlinePicker = null;
@@ -110,6 +111,7 @@
 		selectedPendingId = null;
 		selectedSha = sha256;
 		editing = false;
+		shareToCatalog = true;
 		lastExtractionKey = '';
 	}
 
@@ -117,6 +119,7 @@
 	function selectPendingUpload(id) {
 		selectedPendingId = id;
 		editing = false;
+		shareToCatalog = true;
 	}
 
 	$: structuredJson = JSON.stringify({
@@ -222,7 +225,7 @@
 	<title>Semester | {MARITOOLS_NAME}</title>
 	<meta
 		name="description"
-		content="Upload a course outline and check the dates before you share anything."
+		content="Upload a course outline, review the details, and choose whether to share it."
 	/>
 </svelte:head>
 
@@ -349,8 +352,8 @@
 								<span>Semester</span>
 								<h2>Sign in to upload outlines</h2>
 								<p>
-									Course outlines stay private until you choose to share. Sign in with Google, then
-									upload a text PDF to review dates and weights.
+									Course facts are shared to the catalog by default when you save. Sign in with
+									Google to upload, review, or opt out.
 								</p>
 							</div>
 						</div>
@@ -465,8 +468,8 @@
 								<h2>Review extracted details</h2>
 								<p>
 									{fieldsDisabled
-										? 'Saved privately to your account.'
-										: 'Review carefully. Saving shares these course facts.'}
+										? 'Saved to your account.'
+										: 'Review carefully, then save your outline.'}
 								</p>
 							</div>
 							<div class="review-course-ref">
@@ -598,15 +601,39 @@
 							</div>
 						</section>
 
+						{#if !fieldsDisabled}
+							<section class="review-section sharing-choice" aria-labelledby="sharing-heading">
+								<div class="review-section__head">
+									<h3 id="sharing-heading">Sharing</h3>
+									<span>On by default</span>
+								</div>
+								<label>
+									<input
+										type="checkbox"
+										name="shareToCatalog"
+										value="yes"
+										aria-label="Share these course facts in the catalog"
+										bind:checked={shareToCatalog}
+									/>
+									<span>
+										<strong>Share these course facts in the catalog</strong>
+										<small>Uncheck to keep this outline in your account only.</small>
+									</span>
+								</label>
+							</section>
+						{/if}
+
 						<div class="sheet-actions">
 							<span class:needs-attention={missingDates > 0 || identityFilled < 4}
 								>{missingDates
 									? `${missingDates} assessment date${missingDates === 1 ? '' : 's'} missing`
 									: identityFilled < 4
 										? `${identityFilled}/4 identity fields filled`
-										: fieldsDisabled
-											? 'Saved privately.'
-											: 'Save shares these facts to the catalog.'}</span
+									: fieldsDisabled
+											? 'Saved to your account.'
+										: shareToCatalog
+											? 'This outline will be shared in the catalog.'
+											: 'This outline will stay in your account only.'}</span
 							>
 							<div class="course-actions">
 								<button
@@ -629,6 +656,8 @@
 
 				{#if form?.contributed}
 					<p role="status">Saved to the catalog.</p>
+				{:else if form?.saved && form?.shared === false}
+					<p role="status">Saved to your account only.</p>
 				{/if}
 			</div>
 		</div>

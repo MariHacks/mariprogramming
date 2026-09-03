@@ -299,7 +299,7 @@
 		</button>
 	{:else}
 		<div class="field-heading">
-			<span>{label} <small>Optional</small></span>
+			<span>{label} <small class="optional-badge">Optional</small></span>
 			{#if confirmedUrl}<img src={confirmedUrl} alt="Selected avatar" />{/if}
 		</div>
 		<div class="field-picker">
@@ -423,8 +423,14 @@
 	}
 
 	.field-heading small {
-		font-size: 0.7rem;
-		font-weight: 500;
+		padding: 0.18rem 0.42rem;
+		border: 1px solid var(--line, #bdc9d9);
+		background: var(--paper-blue, #f0f5ff);
+		color: var(--ink, #071b38);
+		font-size: 0.64rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
 	}
 
 	.field-heading img {

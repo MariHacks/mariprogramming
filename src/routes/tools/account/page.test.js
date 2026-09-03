@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CANONICAL_OMNIVOX_SCHEDULE } from '$lib/maritools/schedule/fixture.js';
 import AccountPage from './+page.svelte';
 
 const accountPageSource = readFileSync('src/routes/tools/account/+page.svelte', 'utf8');
@@ -10,19 +9,6 @@ const accountPageSource = readFileSync('src/routes/tools/account/+page.svelte', 
 function cssRulesFor(selector) {
 	const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	return accountPageSource.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
-}
-
-/** @param {string} query @param {string} selector */
-function cssRulesForMedia(query, selector) {
-	const mediaStart = accountPageSource.indexOf(`@media (${query})`);
-	if (mediaStart < 0) return '';
-	const nextMedia = accountPageSource.indexOf('@media (', mediaStart + 1);
-	const mediaSource = accountPageSource.slice(
-		mediaStart,
-		nextMedia < 0 ? accountPageSource.length : nextMedia
-	);
-	const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	return mediaSource.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
 }
 
 vi.mock('$lib/auth/staff-sign-out.js', () => ({
@@ -161,10 +147,8 @@ describe('account page', () => {
 		expect(screen.queryByText(/club staff can view my Google email/i)).not.toBeInTheDocument();
 		expect(screen.queryByText(/student numbers are encrypted/i)).not.toBeInTheDocument();
 		const interestsTab = screen.getByRole('tab', { name: 'Interests and experience' });
-		const scheduleTab = screen.getByRole('tab', { name: 'Schedule' });
 		const memberFormTab = screen.getByRole('tab', { name: 'Member form' });
 		expect(interestsTab).not.toBeDisabled();
-		expect(scheduleTab).not.toBeDisabled();
 		expect(memberFormTab).not.toBeDisabled();
 
 		await fireEvent.click(interestsTab);
@@ -175,10 +159,6 @@ describe('account page', () => {
 		expect(screen.getByLabelText(/^What should the club do this year\?/)).not.toBeRequired();
 		expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute('type', 'button');
 		expect(screen.queryByRole('button', { name: 'Join the club' })).not.toBeInTheDocument();
-
-		await fireEvent.click(scheduleTab);
-		expect(screen.getByRole('heading', { name: 'Add your schedule' })).toBeInTheDocument();
-		expect(screen.getByLabelText('Omnivox course list')).not.toBeRequired();
 
 		await fireEvent.click(memberFormTab);
 		expect(screen.getByRole('heading', { name: 'Complete the member form' })).toBeInTheDocument();
@@ -198,6 +178,26 @@ describe('account page', () => {
 		expect(screen.queryByText('2530622')).not.toBeInTheDocument();
 	});
 
+	it('keeps schedule import out of signup and clearly labels optional fields', async () => {
+		render(AccountPage, {
+			props: { data: { ...base, view: { kind: 'incomplete', email: 'ada@gmail.com' } } }
+		});
+
+		expect(screen.getAllByRole('tab').map((tab) => tab.textContent?.trim())).toEqual([
+			'Information',
+			'Interests and experience',
+			'Member form'
+		]);
+		expect(screen.queryByRole('tab', { name: 'Schedule' })).not.toBeInTheDocument();
+		expect(screen.queryByLabelText('Omnivox course list')).not.toBeInTheDocument();
+		expect(screen.getByText('Profile picture', { exact: false })).toHaveTextContent('Optional');
+
+		await fireEvent.click(screen.getByRole('tab', { name: 'Interests and experience' }));
+		expect(
+			screen.getByText('What should the club do this year?', { exact: false })
+		).toHaveTextContent('Optional');
+	});
+
 	it('enables the final submission only after every required field is valid and the member form was opened', async () => {
 		render(AccountPage, {
 			props: { data: { ...base, view: { kind: 'incomplete', email: 'ada@gmail.com' } } }
@@ -213,20 +213,6 @@ describe('account page', () => {
 
 		await fireEvent.click(screen.getByRole('tab', { name: 'Information' }));
 		await completeRequiredSignupFields();
-		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
-		await waitFor(() => expect(joinButton).toBeEnabled());
-
-		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
-		await fireEvent.input(screen.getByLabelText('Omnivox course list'), {
-			target: { value: 'This is not a valid Omnivox schedule.' }
-		});
-		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
-		expect(joinButton).toBeDisabled();
-
-		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
-		await fireEvent.input(screen.getByLabelText('Omnivox course list'), {
-			target: { value: CANONICAL_OMNIVOX_SCHEDULE }
-		});
 		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
 		await waitFor(() => expect(joinButton).toBeEnabled());
 	});
@@ -266,10 +252,6 @@ describe('account page', () => {
 		expectActionRail('Continue');
 		expect(screen.queryByRole('button', { name: 'Join the club' })).not.toBeInTheDocument();
 
-		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
-		expectActionRail('Continue');
-		expect(screen.queryByRole('button', { name: 'Join the club' })).not.toBeInTheDocument();
-
 		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
 		expectActionRail('Join the club');
 
@@ -306,10 +288,6 @@ describe('account page', () => {
 		await fireEvent.input(screen.getByLabelText(/^What should the club do this year\?/), {
 			target: { value: 'Project nights' }
 		});
-		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
-		await fireEvent.input(screen.getByLabelText('Omnivox course list'), {
-			target: { value: CANONICAL_OMNIVOX_SCHEDULE }
-		});
 		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
 		firstRender.unmount();
 
@@ -331,9 +309,6 @@ describe('account page', () => {
 		expect(screen.getByLabelText(/^What should the club do this year\?/)).toHaveValue(
 			'Project nights'
 		);
-		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
-		expect(screen.getByLabelText('Omnivox course list')).toHaveValue(CANONICAL_OMNIVOX_SCHEDULE);
-
 		cleanup();
 		render(AccountPage, {
 			props: {
@@ -379,183 +354,6 @@ describe('account page', () => {
 		expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Join the club' })).not.toBeInTheDocument();
 		expect(screen.queryByText('NVIDIA outline analysis')).not.toBeInTheDocument();
-	});
-
-	it('offers an optional guided schedule tab before the required form', async () => {
-		render(AccountPage, {
-			props: {
-				data: {
-					...base,
-					club: { kind: 'needs_required_form' },
-					view: {
-						kind: 'complete',
-						email: 'ada@gmail.com',
-						displayName: 'Ada',
-						nimAccepted: false
-					}
-				}
-			}
-		});
-		expect(screen.getByLabelText(/^Student number/)).not.toHaveAttribute('placeholder');
-		expect(screen.getByText('Already saved')).toBeInTheDocument();
-		expect(screen.getByRole('tab', { name: 'Schedule' })).not.toBeDisabled();
-		expect(screen.getByRole('tab', { name: 'Member form' })).not.toBeDisabled();
-		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
-		expect(screen.getByRole('heading', { name: 'Add your schedule' })).toBeInTheDocument();
-		expect(screen.getByText(/Your class times help us find meeting times/)).toBeInTheDocument();
-		expect(screen.getByLabelText('Omnivox course list')).not.toBeRequired();
-		expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
-		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
-		expect(screen.getByRole('heading', { name: 'Complete the member form' })).toBeInTheDocument();
-		expect(
-			screen.queryByText('Open the required member form before joining.')
-		).not.toBeInTheDocument();
-		expect(screen.getByRole('link', { name: 'Open required form' })).toHaveAttribute(
-			'href',
-			base.requiredFormUrl
-		);
-		expect(screen.queryByLabelText('I submitted the Microsoft form')).not.toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Join the club' })).toBeInTheDocument();
-		expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
-		expect(screen.queryByRole('heading', { name: 'Account status' })).not.toBeInTheDocument();
-	});
-
-	it('opens the same Omnivox import tutorial from the signup schedule tab', async () => {
-		render(AccountPage, {
-			props: { data: { ...base, view: { kind: 'incomplete', email: 'ada@gmail.com' } } }
-		});
-
-		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
-		const textarea = screen.getByLabelText('Omnivox course list');
-		const tutorialButton = screen.getByRole('button', { name: 'Show import tutorial' });
-		expect(textarea.compareDocumentPosition(tutorialButton)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-		await fireEvent.click(tutorialButton);
-
-		expect(screen.getByRole('dialog')).toBeInTheDocument();
-		expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
-		expect(screen.getByRole('heading', { name: 'Open Omnivox' })).toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Compact list' })).toBeInTheDocument();
-	});
-
-	it('keeps a visible calendar shell beside the empty schedule input', async () => {
-		render(AccountPage, {
-			props: { data: { ...base, view: { kind: 'incomplete', email: 'ada@gmail.com' } } }
-		});
-
-		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
-
-		expect(screen.getByLabelText('Omnivox course list')).toHaveValue('');
-		const calendar = screen.getByLabelText('Weekly course schedule');
-		expect(calendar).toBeVisible();
-		expect(calendar).toHaveClass('weekday-only');
-		expect(accountPageSource).not.toMatch(/\.schedule-onboarding-preview\s*\{[^}]*max-height:/gu);
-		expect(cssRulesFor('.schedule-onboarding-preview')).toContain('overflow: visible;');
-		expect(cssRulesFor('.schedule-onboarding-preview :global(.schedule-calendar)')).toContain(
-			'overflow: visible;'
-		);
-		expect(
-			cssRulesFor(
-				'.schedule-onboarding-preview :global(.schedule-calendar .time-rail span:first-child)'
-			)
-		).toContain('top: 0;');
-		expect(
-			cssRulesFor(
-				'.schedule-onboarding-preview :global(.schedule-calendar .time-rail span:last-child)'
-			)
-		).toContain('bottom: 0;');
-		expect(screen.getByText('8 AM')).toBeInTheDocument();
-		expect(screen.getByText('6 PM')).toBeInTheDocument();
-		expect(screen.queryByText('Schedule preview')).not.toBeInTheDocument();
-		expect(screen.queryByText('Paste your courses to preview them')).not.toBeInTheDocument();
-		for (const weekday of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']) {
-			expect(screen.getByText(weekday)).toBeInTheDocument();
-		}
-	});
-
-	it('fits the five-day schedule and touch targets into a narrow signup viewport', () => {
-		expect(
-			cssRulesFor('.profile-field--wide > select')
-		).toContain('min-height: 2.75rem;');
-		expect(cssRulesFor('.profile-form-action button')).toContain('min-height: 2.75rem;');
-		expect(cssRulesForMedia('max-width: 44rem', '.profile-hero--member')).toContain(
-			'min-height: 0;'
-		);
-		expect(cssRulesForMedia('max-width: 44rem', '.profile-hero--member')).toContain(
-			'grid-template-columns: minmax(0, 1fr) auto;'
-		);
-		expect(cssRulesForMedia('max-width: 44rem', '.profile-hero--member')).toContain(
-			'padding: 0.75rem 1rem;'
-		);
-		expect(cssRulesForMedia('max-width: 44rem', '.schedule-onboarding-preview')).toContain(
-			'overflow: hidden;'
-		);
-		expect(
-			cssRulesForMedia(
-				'max-width: 44rem',
-				'.schedule-onboarding-preview :global(.schedule-calendar)'
-			)
-		).toContain('grid-template-columns: 2.75rem repeat(5, minmax(0, 1fr));');
-		expect(
-			cssRulesForMedia(
-				'max-width: 44rem',
-				'.schedule-onboarding-preview :global(.schedule-calendar .event strong)'
-			)
-		).toContain('font-size: 0.58rem;');
-		expect(
-			cssRulesForMedia(
-				'max-width: 44rem',
-				'.schedule-onboarding-preview :global(.schedule-calendar .event strong)'
-			)
-		).toContain('white-space: normal;');
-	});
-
-	it('previews a valid schedule immediately after it is pasted during signup', async () => {
-		render(AccountPage, {
-			props: { data: { ...base, view: { kind: 'incomplete', email: 'ada@gmail.com' } } }
-		});
-
-		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
-		await fireEvent.input(screen.getByLabelText('Omnivox course list'), {
-			target: { value: CANONICAL_OMNIVOX_SCHEDULE }
-		});
-
-		expect(screen.getByLabelText('Weekly course schedule')).toBeInTheDocument();
-		expect(screen.getByText('Badminton and Conditioning')).toBeInTheDocument();
-		expect(screen.queryByRole('button', { name: 'Read schedule' })).not.toBeInTheDocument();
-	});
-
-	it('warns about an invalid nonempty schedule without showing a calendar', async () => {
-		render(AccountPage, {
-			props: { data: { ...base, view: { kind: 'incomplete', email: 'ada@gmail.com' } } }
-		});
-
-		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
-		await fireEvent.input(screen.getByLabelText('Omnivox course list'), {
-			target: { value: 'This is not a valid Omnivox schedule.' }
-		});
-
-		expect(screen.getByRole('alert')).toHaveTextContent('Could not read this schedule');
-		expect(screen.getByLabelText('Weekly course schedule')).toBeVisible();
-	});
-
-	it('restores the schedule preview from a saved signup draft', async () => {
-		localStorage.setItem(
-			'programming-club-signup-draft:ada@gmail.com',
-			JSON.stringify({
-				profileTab: 'schedule',
-				schedulePaste: CANONICAL_OMNIVOX_SCHEDULE
-			})
-		);
-
-		render(AccountPage, {
-			props: { data: { ...base, view: { kind: 'incomplete', email: 'ada@gmail.com' } } }
-		});
-
-		await waitFor(() =>
-			expect(screen.getByRole('tab', { name: 'Schedule' })).toHaveAttribute('aria-selected', 'true')
-		);
-		expect(screen.getByLabelText('Weekly course schedule')).toBeInTheDocument();
-		expect(screen.getByText('Badminton and Conditioning')).toBeInTheDocument();
 	});
 
 	it('keeps the final member-form step compact and uses the shared action rail position', async () => {
@@ -785,7 +583,9 @@ describe('account page', () => {
 			screen.getByText('Course outlines you contribute will appear here.')
 		).toBeInTheDocument();
 		expect(document.querySelectorAll('.profile-empty-state')).toHaveLength(2);
-		expect(document.querySelectorAll('.profile-empty-state svg[aria-hidden="true"]')).toHaveLength(2);
+		expect(document.querySelectorAll('.profile-empty-state svg[aria-hidden="true"]')).toHaveLength(
+			2
+		);
 		expect(document.querySelector('.profile-empty-state--posts')).toBeInTheDocument();
 		expect(document.querySelector('.profile-empty-state--outlines')).toBeInTheDocument();
 		expect(screen.queryByRole('link', { name: /upload outline/i })).not.toBeInTheDocument();

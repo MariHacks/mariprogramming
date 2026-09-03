@@ -376,6 +376,7 @@ describe('semester page server', () => {
 					title: 'Modern Physics',
 					section: '00021',
 					teacherName: 'Baharak Fatholahzadeh',
+					shareToCatalog: 'yes',
 					structured: JSON.stringify({
 						assessments: [{ title: 'Midterm', weight: 30 }],
 						books: []
@@ -390,6 +391,28 @@ describe('semester page server', () => {
 		expect(current.repository.contribute).toHaveBeenCalledWith(
 			expect.objectContaining({ termId: 'fall-2026' })
 		);
+	});
+
+	it('saves a private review when the student opts out of catalog sharing', async () => {
+		const current = handlers();
+		const result = await current.actions.contribute(
+			event({
+				form: {
+					sha256: 'ab'.repeat(32),
+					courseCode: '203-SN3-RE',
+					title: 'Modern Physics',
+					section: '00021',
+					teacherName: 'Baharak Fatholahzadeh',
+					structured: JSON.stringify({ assessments: [], books: [] })
+				}
+			})
+		);
+
+		expect(result).toEqual({ saved: true, shared: false });
+		expect(current.repository.saveOutlineReview).toHaveBeenCalledWith(
+			expect.objectContaining({ userId: SESSION.userId, sha256: 'ab'.repeat(32) })
+		);
+		expect(current.repository.contribute).not.toHaveBeenCalled();
 	});
 
 	it('deletes only the signed-in student private outline', async () => {
@@ -452,6 +475,7 @@ describe('semester page server', () => {
 					title: 'Modern Physics',
 					section: '00021',
 					teacherName: 'Baharak',
+					shareToCatalog: 'yes',
 					structured: JSON.stringify({ assessments: [], books: [] })
 				}
 			})
@@ -609,7 +633,9 @@ describe('semester page server', () => {
 		});
 		const missingJson = await current.actions.contribute(event({ form: {} }));
 		expect(missingJson.status).toBe(400);
-		const result = await current.actions.contribute(event({ form: { structured: '{}' } }));
+		const result = await current.actions.contribute(
+			event({ form: { structured: '{}', shareToCatalog: 'yes' } })
+		);
 		expect(result.status).toBe(400);
 		expect(current.repository.contribute).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -681,6 +707,7 @@ describe('semester page server', () => {
 						title: 'Modern Physics',
 						section: '00021',
 						teacherName: 'Baharak',
+						shareToCatalog: 'yes',
 						structured: JSON.stringify({ assessments: [], books: [] })
 					}
 				})
@@ -779,6 +806,7 @@ describe('semester page server', () => {
 					title: 'Modern Physics',
 					section: '00021',
 					teacherName: 'Baharak',
+					shareToCatalog: 'yes',
 					structured: JSON.stringify({ assessments: [], books: [] })
 				}
 			})
@@ -789,7 +817,12 @@ describe('semester page server', () => {
 	it('rejects contribution when no academic term is active', async () => {
 		const current = handlers({ repository: { listTerms: vi.fn(async () => []) } });
 		const result = await current.actions.contribute(
-			event({ form: { structured: JSON.stringify({ assessments: [], books: [] }) } })
+			event({
+				form: {
+					shareToCatalog: 'yes',
+					structured: JSON.stringify({ assessments: [], books: [] })
+				}
+			})
 		);
 
 		expect(result.status).toBe(503);

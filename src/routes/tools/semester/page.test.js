@@ -25,7 +25,7 @@ describe('semester page', () => {
 		expect(openAccount).toHaveAttribute('href', '/tools/account');
 		expect(openAccount).toHaveClass('primary-button');
 		expect(
-			screen.getByText(/Course outlines stay private until you choose to share/)
+			screen.getByText(/Course facts are shared to the catalog by default when you save/)
 		).toBeInTheDocument();
 		const stackGate = screen.getByRole('link', { name: 'Sign in to add an outline' });
 		expect(stackGate).toHaveAttribute('href', '/tools/account');
@@ -137,7 +137,8 @@ describe('semester page', () => {
 		expect(screen.queryByLabelText('Add outline PDF')).not.toBeInTheDocument();
 	});
 
-	it('lets a student review extracted assessments privately', () => {
+	it('lets a student review extracted assessments and opt out of sharing', async () => {
+		const user = userEvent.setup();
 		render(SemesterPage, {
 			props: {
 				data: { view: { kind: 'ready' } },
@@ -176,7 +177,15 @@ describe('semester page', () => {
 		expect(screen.getByRole('heading', { name: 'Course details' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Assessments' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Books' })).toBeInTheDocument();
-		expect(screen.getByText('Save shares these facts to the catalog.')).toBeInTheDocument();
+		const sharing = screen.getByRole('checkbox', {
+			name: 'Share these course facts in the catalog'
+		});
+		expect(sharing).toBeChecked();
+		expect(screen.getByText(/Uncheck to keep this outline in your account only/)).toBeInTheDocument();
+		expect(screen.getByText('This outline will be shared in the catalog.')).toBeInTheDocument();
+		await user.click(sharing);
+		expect(sharing).not.toBeChecked();
+		expect(screen.getByText('This outline will stay in your account only.')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
 		const selected = screen.getByRole('button', { name: /Web Programming/ });
 		expect(selected).toHaveTextContent('4/4 identity');

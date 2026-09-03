@@ -20,7 +20,7 @@ import {
 	user
 } from '../db/schema';
 import { withDatabaseTransaction } from '../db/transaction.js';
-import { isCompleteStudentId } from './community.js';
+import { isCompleteStudentId, isMariHacksTeamAccount } from './community.js';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
@@ -754,6 +754,137 @@ export function createMariToolsRepository({
 							return null;
 						}
 					);
+				})
+			);
+		},
+
+		/**
+		 * Creates the official shared mailbox profile without routing it through student signup.
+		 * Existing profile choices are preserved; the exact team identity and completed membership
+		 * are the only values this path enforces.
+		 * @param {{ userId: unknown, email: unknown, now?: Date }} input
+		 */
+		async ensureMariHacksTeamProfile(input) {
+			const userId = requiredUserId(input.userId);
+			if (!isMariHacksTeamAccount(typeof input.email === 'string' ? input.email : null)) {
+				return invalid();
+			}
+			const now = input.now instanceof Date ? input.now : new Date();
+			if (Number.isNaN(now.getTime())) return invalid();
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					let profile = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, userId))
+					);
+					if (!profile) {
+						const preferredUsername = 'MariHacks';
+						const owner = oneRow(
+							await transaction
+								.select({ userId: mtStudentProfiles.userId })
+								.from(mtStudentProfiles)
+								.where(sql`lower(${mtStudentProfiles.username}) = ${preferredUsername.toLowerCase()}`)
+						);
+						const username = owner
+							? `MariHacks_${createHash('sha256').update(userId).digest('hex').slice(0, 6)}`
+							: preferredUsername;
+						profile = oneRow(
+							await transaction
+								.insert(mtStudentProfiles)
+								.values({
+									userId,
+									studentId: 'team@marihacks.com',
+									displayName: 'MariHacks',
+									username,
+									firstName: 'MariHacks',
+									lastName: 'Team',
+									role: 'staff',
+									updatedAt: now
+								})
+								.returning()
+						);
+						if (!profile) return unavailable();
+					} else {
+						let username = profile.username;
+						if (!username) {
+							const preferredUsername = 'MariHacks';
+							const owner = oneRow(
+								await transaction
+									.select({ userId: mtStudentProfiles.userId })
+									.from(mtStudentProfiles)
+									.where(
+										sql`lower(${mtStudentProfiles.username}) = ${preferredUsername.toLowerCase()}`
+									)
+							);
+							username = owner
+								? `MariHacks_${createHash('sha256').update(userId).digest('hex').slice(0, 6)}`
+								: preferredUsername;
+						}
+						const profileValues = {
+							displayName: profile.displayName || 'MariHacks',
+							username,
+							firstName: profile.firstName || 'MariHacks',
+							lastName: profile.lastName || 'Team',
+							role: 'staff',
+							updatedAt: now
+						};
+						if (
+							profile.displayName !== profileValues.displayName ||
+							profile.username !== profileValues.username ||
+							profile.firstName !== profileValues.firstName ||
+							profile.lastName !== profileValues.lastName ||
+							profile.role !== profileValues.role
+						) {
+							profile = oneRow(
+								await transaction
+									.update(mtStudentProfiles)
+									.set(profileValues)
+									.where(eq(mtStudentProfiles.userId, userId))
+									.returning()
+							);
+							if (!profile) return unavailable();
+						}
+					}
+
+					const membership = oneRow(
+						await transaction
+							.select()
+							.from(mtProgrammingClubMemberships)
+							.where(eq(mtProgrammingClubMemberships.userId, userId))
+					);
+					if (membership?.requiredFormCompletedAt) return membership;
+					if (membership) {
+						const completed = oneRow(
+							await transaction
+								.update(mtProgrammingClubMemberships)
+								.set({ requiredFormCompletedAt: now, updatedAt: now })
+								.where(eq(mtProgrammingClubMemberships.userId, userId))
+								.returning()
+						);
+						return completed ?? unavailable();
+					}
+
+					const created = oneRow(
+						await transaction
+							.insert(mtProgrammingClubMemberships)
+							.values({
+								userId,
+								program: 'Programming Club',
+								graduationYear: null,
+								yearLevel: null,
+								experienceLevel: 'advanced',
+								interests: [],
+								clubGoals: null,
+								staffVisibilityAcceptedAt: now,
+								requiredFormCompletedAt: now,
+								scheduleSharedAt: null,
+								updatedAt: now
+							})
+							.returning()
+					);
+					return created ?? unavailable();
 				})
 			);
 		},

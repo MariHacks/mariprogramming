@@ -1,5 +1,10 @@
 const STAFF_EMAIL = 'team@marihacks.com';
 
+/** @param {string | null | undefined} email */
+export function isMariHacksTeamAccount(email) {
+	return String(email ?? '').trim().toLowerCase() === STAFF_EMAIL;
+}
+
 /**
  * @param {string | null | undefined} email
  * @param {string | null | undefined} [role]
@@ -7,7 +12,7 @@ const STAFF_EMAIL = 'team@marihacks.com';
  */
 export function isStaffAccount(email, role = null) {
 	if (role === 'staff' || role === 'moderator') return true;
-	return String(email ?? '').toLowerCase() === STAFF_EMAIL;
+	return isMariHacksTeamAccount(email);
 }
 
 /**
