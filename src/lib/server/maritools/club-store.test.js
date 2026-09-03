@@ -137,6 +137,7 @@ describe('programming club store', () => {
 
 	it('rejects every malformed signup field and accepts a team account', async () => {
 		const store = createClubStore(repository());
+		/** @type {any[]} */
 		const invalidInputs = [
 			{ userId: null },
 			{ userId: '' },
@@ -163,12 +164,12 @@ describe('programming club store', () => {
 		}
 
 		const inner = repository();
-		await createClubStore(inner).joinProgrammingClub({
+		await createClubStore(inner).joinProgrammingClub(/** @type {any} */ ({
 			...joinInput,
 			email: 'team@marihacks.com',
 			profileImageDataUrl: '',
 			clubGoals: null
-		});
+		}));
 		expect(inner.joinProgrammingClub).toHaveBeenCalledWith(
 			expect.objectContaining({ role: 'staff', profileImageDataUrl: null, clubGoals: null })
 		);
@@ -178,7 +179,7 @@ describe('programming club store', () => {
 		const inner = repository();
 		const store = createClubStore(inner);
 
-		const withoutGoals = { ...joinInput };
+		const withoutGoals = /** @type {any} */ ({ ...joinInput });
 		delete withoutGoals.clubGoals;
 		await expect(store.joinProgrammingClub(withoutGoals)).resolves.toMatchObject({
 			clubGoals: null
@@ -323,7 +324,7 @@ describe('programming club store', () => {
 		}
 
 		const noCode = new MariToolsValidationError();
-		noCode.code = null;
+		/** @type {any} */ (noCode).code = null;
 		await expect(
 			createClubStore(
 				repository({
@@ -351,9 +352,9 @@ describe('openClubStore', () => {
 	afterEach(() => vi.restoreAllMocks());
 
 	it('builds a store from runtime configuration', () => {
-		vi.spyOn(environment, 'readRuntimeEnvironment').mockReturnValue({
+		vi.spyOn(environment, 'readRuntimeEnvironment').mockReturnValue(/** @type {any} */ ({
 			databaseUrl: 'postgresql://runtime:secret@db.example/club'
-		});
+		}));
 		expect(typeof openClubStore().joinProgrammingClub).toBe('function');
 	});
 

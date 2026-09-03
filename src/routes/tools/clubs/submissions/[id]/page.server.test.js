@@ -27,6 +27,10 @@ const SUBMISSION = {
 	links: [{ label: 'Site', url: 'https://example.com' }]
 };
 
+/**
+ * @param {any} [overrides]
+ * @returns {any}
+ */
 function handlers(overrides = {}) {
 	const store = {
 		getProfile: vi.fn(async () => null),
@@ -46,6 +50,10 @@ function handlers(overrides = {}) {
 	};
 }
 
+/**
+ * @param {any} [options]
+ * @returns {any}
+ */
 function event({ locals = {}, form = {}, entries = [], id = SUBMISSION.id } = {}) {
 	const data = new FormData();
 	for (const [key, value] of Object.entries(form)) data.set(key, String(value));
@@ -415,7 +423,7 @@ describe('club submission page server', () => {
 			const current = handlers({
 				store: {
 					getClubSubmission: vi.fn(async () => {
-						throw new ErrorType();
+						throw new ErrorType('invalid');
 					})
 				}
 			});

@@ -23,7 +23,7 @@ function event({ session = SESSION, complete = true } = {}) {
 describe('new club listing server', () => {
 	it('redirects signed-out loads and accepts signed-in loads', () => {
 		const handlers = _createHandlers();
-		expect(() => handlers.load(event({ session: null }))).toThrowError(
+		expect(() => handlers.load(event({ session: /** @type {any} */ (null) }))).toThrowError(
 			expect.objectContaining({ status: 303, location: '/tools/account' })
 		);
 		expect(handlers.load(event())).toEqual({});
@@ -77,7 +77,9 @@ describe('new club listing server', () => {
 		const store = { submitClub: vi.fn() };
 		const handlers = _createHandlers({ createStore: () => store });
 		expect((await handlers.actions.submit(event({ complete: false }))).status).toBe(400);
-		expect((await handlers.actions.submit(event({ session: null }))).status).toBe(401);
+		expect(
+			(await handlers.actions.submit(event({ session: /** @type {any} */ (null) }))).status
+		).toBe(401);
 		expect(store.submitClub).not.toHaveBeenCalled();
 	});
 });

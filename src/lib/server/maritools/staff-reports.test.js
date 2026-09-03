@@ -234,7 +234,9 @@ describe('buildStaffReportQueue', () => {
 						createdAt: null
 					}
 				],
-				vi.fn(async () => ({ threadId: THREAD, authorDisplayName: null }))
+				/** @type {any} */ (
+					vi.fn(async () => ({ threadId: THREAD, authorDisplayName: null }))
+				)
 			)
 		).resolves.toEqual([
 			expect.objectContaining({

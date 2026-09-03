@@ -25,6 +25,10 @@ const COURSE = '11111111-1111-4111-8111-111111111111';
 const THREAD = '20000000-0000-4000-8000-000000000001';
 const SUBMISSION = '60000000-0000-4000-8000-000000000001';
 
+/**
+ * @param {any} [overrides]
+ * @returns {any}
+ */
 function inner(overrides = {}) {
 	return {
 		listPublishedClubs: vi.fn(async () => [

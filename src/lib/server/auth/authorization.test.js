@@ -111,10 +111,10 @@ describe('staff authorization', () => {
 			expect.objectContaining({ status: 303, location: '/staff/sign-in?state=reauthenticate' })
 		);
 		expect(() =>
-			requireStaff({
+			requireStaff(/** @type {any} */ ({
 				staff: null,
 				maritools: { userId: 'executive-1', email: 'executive@example.com', role: 'moderator' }
-			})
+			}))
 		).toThrowError(
 			expect.objectContaining({ status: 303, location: '/staff/sign-in?state=reauthenticate' })
 		);

@@ -101,12 +101,12 @@ describe('club listing input', () => {
 			['description', 'Weekly games']
 		]);
 		const data = {
-			get: (key) => values.get(key) ?? null,
+			get: (/** @type {string} */ key) => values.get(key) ?? null,
 			getAll: () => [],
-			has: (key) => values.has(key) || key === 'linkUrl'
+			has: (/** @type {string} */ key) => values.has(key) || key === 'linkUrl'
 		};
 
-		expect(clubListingInput(data)).toMatchObject({ payload: { links: [] } });
+		expect(clubListingInput(/** @type {any} */ (data))).toMatchObject({ payload: { links: [] } });
 	});
 
 	it('rejects missing required fields and malformed contacts at the boundary', () => {

@@ -13,6 +13,10 @@ const BOARD = {
 	members: []
 };
 
+/**
+ * @param {any} [overrides]
+ * @returns {any}
+ */
 function handlers(overrides = {}) {
 	const store = {
 		getBoardBySlug: vi.fn(async () => BOARD),
@@ -40,10 +44,19 @@ function handlers(overrides = {}) {
 	};
 }
 
+/**
+ * @param {any} [options]
+ * @returns {any}
+ */
 function event({ params = { slug: 'study-group' }, locals = { maritools: null } } = {}) {
 	return { params, locals };
 }
 
+/**
+ * @param {any} fields
+ * @param {any} [params]
+ * @returns {any}
+ */
 function saveEvent(fields, params = { slug: 'study-group' }) {
 	return {
 		params,

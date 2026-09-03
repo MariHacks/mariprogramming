@@ -156,7 +156,7 @@ describe('buildCatalogConflictGroups', () => {
 					updatedAt: 17
 				}
 			],
-			null
+			/** @type {any} */ (null)
 		);
 
 		expect(groups).toEqual([

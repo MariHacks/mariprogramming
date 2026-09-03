@@ -5,11 +5,12 @@ import {
 	SCHEDULE_PASTE_STORAGE_KEY
 } from './persistPaste.js';
 
+/** @returns {Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>} */
 function memoryStorage() {
 	/** @type {Map<string, string>} */
 	const map = new Map();
 	return {
-		getItem: (key) => (map.has(key) ? map.get(key) : null),
+		getItem: (key) => map.get(key) ?? null,
 		setItem: (key, value) => {
 			map.set(key, value);
 		},

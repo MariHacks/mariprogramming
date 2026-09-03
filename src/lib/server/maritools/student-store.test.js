@@ -36,6 +36,7 @@ const NESTED_ENTRY = {
 	course: { code: '203-SN3-RE', canonicalTitle: 'Modern Physics' }
 };
 
+/** @param {any} row */
 function flatFromNested(row) {
 	if (!row?.contribution) return row;
 	return {
@@ -51,6 +52,10 @@ function flatFromNested(row) {
 	};
 }
 
+/**
+ * @param {any} [overrides]
+ * @returns {any}
+ */
 function inner(overrides = {}) {
 	return {
 		getStudentProfile: vi.fn(async () => ({
@@ -359,11 +364,11 @@ describe('createStudentStore', () => {
 	it('rejects a contribute payload without identity fields', async () => {
 		const store = createStudentStore(inner());
 		await expect(
-			store.contribute({
+			store.contribute(/** @type {any} */ ({
 				contributorUserId: USER,
 				documentSha256: 'ab'.repeat(32),
 				structured: {}
-			})
+			}))
 		).rejects.toBeInstanceOf(MaritoolsInputError);
 	});
 
@@ -390,7 +395,7 @@ describe('createStudentStore', () => {
 			inner({
 				getStudentProfile: vi.fn(async () => {
 					const error = new MariToolsValidationError();
-					error.code = undefined;
+					/** @type {any} */ (error).code = undefined;
 					throw error;
 				})
 			})
@@ -472,9 +477,9 @@ describe('openStudentStore', () => {
 	afterEach(() => vi.restoreAllMocks());
 
 	it('builds a store from the runtime database url', () => {
-		vi.spyOn(environment, 'readRuntimeEnvironment').mockReturnValue({
+		vi.spyOn(environment, 'readRuntimeEnvironment').mockReturnValue(/** @type {any} */ ({
 			databaseUrl: 'postgresql://runtime:secret@db.example/club'
-		});
+		}));
 		const store = openStudentStore();
 		expect(typeof store.getProfile).toBe('function');
 	});

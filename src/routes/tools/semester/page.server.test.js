@@ -24,6 +24,10 @@ const PROFILE = {
 const TEXT =
 	'Assessment: Midterm 30% on 2026-10-20. Required book: Title, Author. Extra outline sentences for length.';
 
+/**
+ * @param {any} [overrides]
+ * @returns {any}
+ */
 function handlers(overrides = {}) {
 	const repository = {
 		getProfile: vi.fn(async () => PROFILE),
@@ -73,6 +77,10 @@ function handlers(overrides = {}) {
 	};
 }
 
+/**
+ * @param {any} [options]
+ * @returns {any}
+ */
 function event({ locals = { maritools: SESSION }, form, file } = {}) {
 	const data = new FormData();
 	if (form) {

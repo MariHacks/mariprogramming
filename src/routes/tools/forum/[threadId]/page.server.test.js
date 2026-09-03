@@ -23,6 +23,10 @@ const THREAD_ROW = {
 	removedAt: null
 };
 
+/**
+ * @param {any} [overrides]
+ * @returns {any}
+ */
 function handlers(overrides = {}) {
 	const store = {
 		getThread: vi.fn(async () => THREAD_ROW),
@@ -52,6 +56,10 @@ function handlers(overrides = {}) {
 	};
 }
 
+/**
+ * @param {any} [options]
+ * @returns {any}
+ */
 function event({ locals = {}, form = {}, params = { threadId: THREAD } } = {}) {
 	const data = new FormData();
 	for (const [key, value] of Object.entries(form)) data.set(key, String(value));

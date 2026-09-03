@@ -19,6 +19,10 @@ const SESSION = {
 	expiresAt: new Date('2030-01-01T00:00:00.000Z')
 };
 
+/**
+ * @param {any} [overrides]
+ * @returns {any}
+ */
 function handlers(overrides = {}) {
 	const repository = {
 		getProfile: vi.fn(async () => null),
@@ -42,6 +46,10 @@ function handlers(overrides = {}) {
 	};
 }
 
+/**
+ * @param {any} [options]
+ * @returns {any}
+ */
 function event({ locals = {}, form = {} } = {}) {
 	const data = new FormData();
 	for (const [key, value] of Object.entries(form)) data.set(key, String(value));
@@ -468,7 +476,7 @@ describe('account page server', () => {
 			data.set('profileImage', new File(['text'], 'avatar.txt', { type: 'text/plain' }));
 			return data;
 		};
-		const result = await current.actions.updateProfile(updateEvent);
+		const result = /** @type {any} */ (await current.actions.updateProfile(updateEvent));
 		expect(result.status).toBe(400);
 		expect(result.data.error).toMatch(/JPG/);
 		expect(updateMemberProfile).not.toHaveBeenCalled();
@@ -487,12 +495,12 @@ describe('account page server', () => {
 			createClubRepository: vi.fn(() => ({ updateMemberProfile })),
 			isGoogleSignInConfigured: vi.fn(() => true)
 		});
-		const result = await current.actions.updateProfile(
+		const result = /** @type {any} */ (await current.actions.updateProfile(
 			event({
 				locals: session ? { maritools: session } : {},
 				form: { username: 'ada_codes', firstName: 'Ada', lastName: 'Lovelace' }
 			})
-		);
+		));
 		expect(result.status).toBe(status);
 	});
 
@@ -695,7 +703,7 @@ describe('account page server', () => {
 			isGoogleSignInConfigured: vi.fn(() => true)
 		});
 
-		const result = await current.actions.finishOnboarding(
+		const result = /** @type {any} */ (await current.actions.finishOnboarding(
 			event({
 				locals: { maritools: SESSION },
 				form: {
@@ -709,7 +717,7 @@ describe('account page server', () => {
 					interests: 'web'
 				}
 			})
-		);
+		));
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('Check each required signup field.');
 		expect(saveSchedule).not.toHaveBeenCalled();

@@ -36,6 +36,11 @@ function uniqueError() {
 	return Object.assign(new Error('duplicate'), { code: '23505' });
 }
 
+/**
+ * @param {any[]} queue
+ * @param {any[]} [writes]
+ * @returns {any}
+ */
 function queuedRepo(queue, writes = []) {
 	let index = 0;
 	const runTransaction = vi.fn(async (operation) => {
@@ -186,6 +191,7 @@ describe('maritools repository helpers', () => {
 	});
 
 	it('updates member identity, enforces username ownership, and preserves an omitted avatar', async () => {
+		/** @type {any[]} */
 		const writes = [];
 		const existing = {
 			userId: USER,
@@ -488,12 +494,14 @@ describe('repository defensive branches', () => {
 	it('maps empty defensive mutation results', async () => {
 		const until = new Date(Date.now() + 60_000);
 		const existing = { userId: USER, role: 'student' };
-		for (const operation of [
+		/** @type {Array<(repo: any) => Promise<any>>} */
+		const operations = [
 			(repo) => repo.muteUser(USER, until),
 			(repo) => repo.banUser(USER, { until }),
 			(repo) => repo.unmuteUser(USER),
 			(repo) => repo.unbanUser(USER)
-		]) {
+		];
+		for (const operation of operations) {
 			await expect(operation(queuedRepo([[existing], []]))).rejects.toBeInstanceOf(
 				MariToolsConflictError
 			);
@@ -521,15 +529,17 @@ describe('repository defensive branches', () => {
 		await expect(queuedRepo([]).muteUser(USER, new Date('invalid'))).rejects.toBeInstanceOf(
 			MariToolsValidationError
 		);
-		await expect(queuedRepo([]).muteUser(USER, 'tomorrow')).rejects.toBeInstanceOf(
+		await expect(
+			queuedRepo([]).muteUser(USER, /** @type {any} */ ('tomorrow'))
+		).rejects.toBeInstanceOf(
 			MariToolsValidationError
 		);
 		await expect(
 			queuedRepo([]).banUser(USER, { until: new Date('invalid') })
 		).rejects.toBeInstanceOf(MariToolsValidationError);
-		await expect(queuedRepo([]).banUser(USER, { until: 'tomorrow' })).rejects.toBeInstanceOf(
-			MariToolsValidationError
-		);
+		await expect(
+			queuedRepo([]).banUser(USER, { until: /** @type {any} */ ('tomorrow') })
+		).rejects.toBeInstanceOf(MariToolsValidationError);
 		await expect(
 			queuedRepo([[{ userId: USER, bannedAt: new Date(), bannedUntil: null }]]).createThread({
 				authorUserId: USER,

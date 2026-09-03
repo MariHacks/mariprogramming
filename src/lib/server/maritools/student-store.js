@@ -10,6 +10,7 @@ import {
 } from './repository.js';
 
 export class MaritoolsInputError extends Error {
+	/** @param {string} code */
 	constructor(code) {
 		super(code);
 		this.name = 'MaritoolsInputError';
@@ -156,7 +157,7 @@ export function createStudentStore(inner) {
 		listOutlines(userId) {
 			return wrap(async () => {
 				const rows = await inner.listUserOutlines(userId);
-				return rows.map((row) => ({
+				return rows.map((/** @type {any} */ row) => ({
 					sha256: row.sha256,
 					createdAt: row.createdAt,
 					extraction:
