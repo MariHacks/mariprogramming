@@ -280,13 +280,70 @@
 	top: calc(58px + var(--now-hours, 2.3) * var(--hour-h));
 }
 
+.mt-preview .tutorial-overlay {
+	--tutorial-gutter: clamp(16px, 3vw, 48px);
+	padding: var(--tutorial-gutter);
+}
+
+.mt-preview .tutorial-shell {
+	height: min(800px, calc(100vh - 2 * var(--tutorial-gutter)));
+	height: min(800px, calc(100dvh - 2 * var(--tutorial-gutter)));
+	min-height: 0;
+	max-height: none;
+}
+
+.mt-preview .tutorial-rail {
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.mt-preview .tutorial-stage {
+	grid-template-rows: minmax(0, 1fr) auto;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.mt-preview .tutorial-content {
+	display: grid;
+	grid-template-rows: auto minmax(180px, 1fr);
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
 .mt-preview .tutorial-frame {
 	position: relative;
+	min-height: 0;
+	height: 100%;
 	overflow: hidden;
+	aspect-ratio: auto;
 }
 
 .mt-preview .tutorial-screenshots img {
 	display: block;
+}
+
+@media (max-width: 700px) {
+	.mt-preview .tutorial-overlay {
+		--tutorial-gutter: 0px;
+	}
+
+	.mt-preview .tutorial-shell {
+		grid-template-rows: auto minmax(0, 1fr);
+		height: 100vh;
+		height: 100dvh;
+		overflow: hidden;
+	}
+
+	.mt-preview .tutorial-stage {
+		display: grid;
+		padding-bottom: max(18px, env(safe-area-inset-bottom));
+	}
+
+	.mt-preview .tutorial-stage footer {
+		margin-top: 0;
+	}
 }
 
 .mt-preview .calendar-modal-actions button {

@@ -44,16 +44,22 @@ export function isCompleteStudentId(studentId) {
 }
 
 /**
- * @param {{ email: string } | null | undefined} session
+ * @param {{ email: string, displayName?: string | null } | null | undefined} session
  * @param {{ displayName?: string | null, username?: string | null, firstName?: string | null, lastName?: string | null, profileImageDataUrl?: string | null } | null | undefined} profile
  */
 export function accountPageView(session, profile) {
 	if (!session) return { kind: 'guest' };
-	if (!profile) return { kind: 'incomplete', email: session.email };
+	if (!profile) {
+		return {
+			kind: 'incomplete',
+			email: session.email,
+			...(session.displayName ? { displayName: session.displayName } : {})
+		};
+	}
 	return {
 		kind: 'complete',
 		email: session.email,
-		displayName: profile.displayName ?? null,
+		displayName: profile.displayName ?? session.displayName ?? null,
 		username: profile.username ?? null,
 		firstName: profile.firstName ?? null,
 		lastName: profile.lastName ?? null,

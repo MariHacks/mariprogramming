@@ -97,11 +97,12 @@ describe('staff authorization', () => {
 	it('accepts any verified Google mailbox for MariTools without promoting staff', () => {
 		const student = {
 			...approved,
-			user: { ...approved.user, email: 'ada@gmail.com' }
+			user: { ...approved.user, email: 'ada@gmail.com', name: 'Ada Lovelace' }
 		};
 		expect(isMaritoolsSession(student, new Date('2029-12-31T23:59:59.000Z'))).toMatchObject({
 			email: 'ada@gmail.com',
-			userId: 'better-auth-user-123'
+			userId: 'better-auth-user-123',
+			displayName: 'Ada Lovelace'
 		});
 		expect(isStaffSession(student, new Date('2029-12-31T23:59:59.000Z'))).toBeNull();
 	});
@@ -118,6 +119,23 @@ describe('staff authorization', () => {
 		).toThrowError(
 			expect.objectContaining({ status: 303, location: '/staff/sign-in?state=reauthenticate' })
 		);
+	});
+
+	it.each([undefined, null, 42, '', '   '])('ignores an unavailable Google name: %s', (name) => {
+		const session = isMaritoolsSession(
+			{ ...approved, user: { ...approved.user, name } },
+			new Date('2029-12-31T23:59:59.000Z')
+		);
+		expect(session).not.toBeNull();
+		expect(session).not.toHaveProperty('displayName');
+	});
+
+	it('trims and bounds the Google name without changing capitalization', () => {
+		const session = isMaritoolsSession(
+			{ ...approved, user: { ...approved.user, name: `  Ada${'A'.repeat(130)}  ` } },
+			new Date('2029-12-31T23:59:59.000Z')
+		);
+		expect(session?.displayName).toBe(`Ada${'A'.repeat(117)}`);
 	});
 
 	it('returns only server-established staff locals', () => {

@@ -145,8 +145,13 @@ describe('account page server', () => {
 
 	it('asks a signed-in student to finish the account without showing a student number', async () => {
 		const current = handlers();
-		const data = await current.load(event({ locals: { maritools: SESSION } }));
-		expect(data.view).toEqual({ kind: 'incomplete', email: SESSION.email });
+		const namedSession = { ...SESSION, displayName: 'Ada Lovelace' };
+		const data = await current.load(event({ locals: { maritools: namedSession } }));
+		expect(data.view).toEqual({
+			kind: 'incomplete',
+			email: SESSION.email,
+			displayName: 'Ada Lovelace'
+		});
 		expect(JSON.stringify(data)).not.toContain('2530622');
 	});
 

@@ -20,6 +20,10 @@ export function isMaritoolsSession(candidate, now = new Date()) {
 	if (!isRecord(user) || !isRecord(session) || !isRecord(account)) return null;
 
 	const email = typeof user.email === 'string' ? user.email.trim().toLowerCase() : '';
+	const displayName =
+		typeof user.name === 'string' && user.name.trim().length > 0
+			? user.name.trim().slice(0, 120)
+			: null;
 	const expiresAt =
 		session.expiresAt instanceof Date ? session.expiresAt : new Date(String(session.expiresAt));
 
@@ -50,7 +54,8 @@ export function isMaritoolsSession(candidate, now = new Date()) {
 		sessionId: session.id,
 		email,
 		googleSubject: account.accountId,
-		expiresAt
+		expiresAt,
+		...(displayName ? { displayName } : {})
 	});
 }
 

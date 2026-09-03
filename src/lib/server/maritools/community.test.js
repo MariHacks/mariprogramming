@@ -33,11 +33,18 @@ describe('community identity', () => {
 		expect(isCompleteStudentId(undefined)).toBe(false);
 	});
 
+	it('keeps the saved profile name and falls back to Google only when it is absent', () => {
+		const session = { email: 'ada@gmail.com', displayName: 'Ada Lovelace' };
+		expect(accountPageView(session, { displayName: 'AdaCodes' }).displayName).toBe('AdaCodes');
+		expect(accountPageView(session, { displayName: null }).displayName).toBe('Ada Lovelace');
+	});
+
 	it('builds account and semester views without a student number', () => {
 		expect(accountPageView(null, null)).toEqual({ kind: 'guest' });
-		expect(accountPageView({ email: 'a@gmail.com' }, null)).toEqual({
+		expect(accountPageView({ email: 'a@gmail.com', displayName: 'Ada Lovelace' }, null)).toEqual({
 			kind: 'incomplete',
-			email: 'a@gmail.com'
+			email: 'a@gmail.com',
+			displayName: 'Ada Lovelace'
 		});
 		const complete = accountPageView(
 			{ email: 'a@gmail.com' },
