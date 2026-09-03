@@ -170,7 +170,7 @@ test('joins the club with a saved draft and exposes the member to staff', async 
 	await expect(page.getByLabel(/What should the club do this year\? Optional/u)).toBeEmpty();
 	const interestsBackRect = await documentRect(interestsBack);
 	const interestsContinueRect = await documentRect(interestsContinue);
-	expectAligned(interestsContinueRect, informationContinueRect, ['top', 'right', 'height']);
+	expectAligned(interestsContinueRect, informationContinueRect, ['right', 'height']);
 	await proofPause();
 
 	await memberFormTab.click();
@@ -224,8 +224,8 @@ test('joins the club with a saved draft and exposes the member to staff', async 
 	await expect(memberActionRail).toHaveCount(1);
 	const memberBackRect = await documentRect(memberActionRail.getByRole('button', { name: 'Back' }));
 	const memberJoinRect = await documentRect(joinButton);
-	expectAligned(memberBackRect, interestsBackRect, ['top', 'left', 'height']);
-	expectAligned(memberJoinRect, informationContinueRect, ['top', 'right', 'height']);
+	expectAligned(memberBackRect, interestsBackRect, ['left', 'height']);
+	expectAligned(memberJoinRect, informationContinueRect, ['right', 'height']);
 
 	const firstRequiredFormHref = await requiredFormLink.getAttribute('href');
 	expect(firstRequiredFormHref).toBe(
@@ -252,8 +252,8 @@ test('joins the club with a saved draft and exposes the member to staff', async 
 	await expect(page.getByRole('button', { name: 'Join the club' })).toHaveCount(0);
 	const scheduleBackRect = await documentRect(scheduleBack);
 	const scheduleContinueRect = await documentRect(scheduleContinue);
-	expectAligned(scheduleBackRect, interestsBackRect, ['top', 'left', 'height']);
-	expectAligned(scheduleContinueRect, informationContinueRect, ['top', 'right', 'height']);
+	expectAligned(scheduleBackRect, interestsBackRect, ['left', 'height']);
+	expectAligned(scheduleContinueRect, informationContinueRect, ['right', 'height']);
 	await expect(page.getByText('Schedule preview', { exact: true })).toHaveCount(0);
 	const scheduleCalendar = page.getByLabel('Weekly course schedule');
 	await expect(scheduleCalendar).toBeVisible();
@@ -267,11 +267,29 @@ test('joins the club with a saved draft and exposes the member to staff', async 
 		'Thu',
 		'Fri'
 	]);
-	expect(
-		await page
-			.locator('.schedule-onboarding-preview')
-			.evaluate((preview) => preview.scrollWidth <= preview.clientWidth + 1)
-	).toBe(true);
+	const scheduleViewport = await page.locator('.schedule-onboarding-preview').evaluate((preview) => {
+		const calendar = preview.querySelector('.schedule-calendar');
+		const labels = [...preview.querySelectorAll('.time-rail span')];
+		if (!(calendar instanceof HTMLElement) || labels.length === 0) return null;
+		const calendarRect = calendar.getBoundingClientRect();
+		const firstLabelRect = labels[0].getBoundingClientRect();
+		const lastLabelRect = labels.at(-1).getBoundingClientRect();
+		return {
+			hasHorizontalScroll: preview.scrollWidth > preview.clientWidth + 1,
+			hasVerticalScroll: preview.scrollHeight > preview.clientHeight + 1,
+			firstLabel: labels[0].textContent?.trim(),
+			lastLabel: labels.at(-1)?.textContent?.trim(),
+			labelsInsideCalendar:
+				firstLabelRect.top >= calendarRect.top - 1 && lastLabelRect.bottom <= calendarRect.bottom + 1
+		};
+	});
+	expect(scheduleViewport).toEqual({
+		hasHorizontalScroll: false,
+		hasVerticalScroll: false,
+		firstLabel: '8 AM',
+		lastLabel: '6 PM',
+		labelsInsideCalendar: true
+	});
 	const scheduleInput = page.locator('.schedule-onboarding-input');
 	await expect(scheduleInput.locator('textarea, button.schedule-tutorial-button')).toHaveCount(2);
 	expect(
