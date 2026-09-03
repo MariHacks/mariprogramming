@@ -57,6 +57,11 @@ function requiresCompletedOnboarding(pathname) {
 	return isPath(pathname, '/tools') && pathname !== ACCOUNT_PATH;
 }
 
+/** @param {App.Locals} locals */
+function readMariToolsSession(locals) {
+	return locals.maritools;
+}
+
 /** @param {Response} response @param {string} pathname */
 function applyRoutePolicy(response, pathname) {
 	if (!isPrivatePath(pathname)) return response;
@@ -75,7 +80,10 @@ function applyRoutePolicy(response, pathname) {
  * @param {{
  *   withAuth?: typeof withRequestAuth,
  *   officialHandler?: typeof svelteKitHandler,
- *   createClubRepository?: typeof openClubStore,
+ *   createClubRepository?: () => {
+ *     ensureMariHacksTeamProfile: (input: { userId: string, email: string }) => Promise<unknown>,
+ *     getMyClubOnboarding: (userId: string) => Promise<any>
+ *   },
  *   isBuilding?: boolean
  * }} [dependencies]
  */
@@ -143,10 +151,26 @@ export function createHandle({
 			);
 		}
 
-		if (event.locals.maritools && requiresCompletedOnboarding(event.url.pathname)) {
+		const mariToolsSession = readMariToolsSession(event.locals);
+		let clubRepository = null;
+		if (event.locals.staff && mariToolsSession && isPath(event.url.pathname, '/tools')) {
 			try {
-				const membership = await createClubRepository().getMyClubOnboarding(
-					event.locals.maritools.userId
+				clubRepository = createClubRepository();
+				await clubRepository.ensureMariHacksTeamProfile({
+					userId: mariToolsSession.userId,
+					email: mariToolsSession.email
+				});
+			} catch {
+				if (event.url.pathname !== ACCOUNT_PATH) {
+					return finalize(new Response(null, { status: 303, headers: { location: ACCOUNT_PATH } }));
+				}
+			}
+		}
+
+		if (mariToolsSession && requiresCompletedOnboarding(event.url.pathname)) {
+			try {
+				const membership = await (clubRepository ?? createClubRepository()).getMyClubOnboarding(
+					mariToolsSession.userId
 				);
 				if (!membership?.requiredFormCompletedAt) {
 					return finalize(new Response(null, { status: 303, headers: { location: ACCOUNT_PATH } }));

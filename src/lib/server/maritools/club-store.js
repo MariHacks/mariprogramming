@@ -1,6 +1,6 @@
 import { parseOmnivox } from '$lib/maritools/schedule/parseOmnivox.js';
 import { freeCellsFromCourses } from '$lib/maritools/schedule/freeTimeBoard.js';
-import { isCompleteStudentId, isStaffAccount } from './community.js';
+import { isCompleteStudentId, isMariHacksTeamAccount, isStaffAccount } from './community.js';
 import { readRuntimeEnvironment } from '../config/environment.js';
 import {
 	MariToolsConflictError,
@@ -150,9 +150,18 @@ function key(weekday, time) {
 	return `${weekday}-${time}`;
 }
 
-/** @param {{ joinProgrammingClub: Function, updateMemberProfile: Function, getProgrammingClubMembership: Function, completeProgrammingClubOnboarding: Function, shareSavedScheduleWithClub: Function, stopSharingScheduleWithClub: Function, listStaffClubMembers: Function, getStaffClubMember: Function, listSharedClubSchedules: Function, muteUser: Function, banUser: Function, unmuteUser: Function, unbanUser: Function, setMemberRole: Function }} inner */
+/** @param {{ ensureMariHacksTeamProfile: Function, joinProgrammingClub: Function, updateMemberProfile: Function, getProgrammingClubMembership: Function, completeProgrammingClubOnboarding: Function, shareSavedScheduleWithClub: Function, stopSharingScheduleWithClub: Function, listStaffClubMembers: Function, getStaffClubMember: Function, listSharedClubSchedules: Function, muteUser: Function, banUser: Function, unmuteUser: Function, unbanUser: Function, setMemberRole: Function }} inner */
 export function createClubStore(inner) {
 	return Object.freeze({
+		/** @param {{ userId: string, email: string }} input */
+		async ensureMariHacksTeamProfile(input) {
+			const email = String(input.email ?? '').trim().toLowerCase();
+			if (!isMariHacksTeamAccount(email)) throw new ClubInputError('invalid-team-account');
+			return await wrap(() =>
+				inner.ensureMariHacksTeamProfile({ userId: userId(input.userId), email })
+			);
+		},
+
 		/** @param {{ userId: string, email: string, studentId: string, username: string, firstName: string, lastName: string, profileImageDataUrl?: string | null, program: string, yearLevel: string, experienceLevel: string, interests: string[], clubGoals?: string }} input */
 		async joinProgrammingClub(input) {
 			const id = userId(input.userId);

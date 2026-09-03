@@ -704,6 +704,32 @@
 	margin: 10px 0 -8px;
 }
 
+.mt-preview .sharing-choice label {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.85rem;
+	padding: 1rem;
+	border: 1px solid var(--rule);
+	background: var(--blue-pale);
+	cursor: pointer;
+}
+
+.mt-preview .sharing-choice input {
+	width: 1.2rem;
+	height: 1.2rem;
+	margin: 0.15rem 0 0;
+	accent-color: var(--blue);
+}
+
+.mt-preview .sharing-choice label > span {
+	display: grid;
+	gap: 0.25rem;
+}
+
+.mt-preview .sharing-choice small {
+	color: var(--muted);
+}
+
 .mt-preview .page-semester .share-band {
 	margin-top: 32px;
 	padding: 18px 0;

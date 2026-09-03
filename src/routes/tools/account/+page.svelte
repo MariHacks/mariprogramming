@@ -1,14 +1,8 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
-	import OmnivoxTutorialOverlay from '$lib/maritools/components/OmnivoxTutorialOverlay.svelte';
 	import ProfileEmptyState from '$lib/maritools/components/ProfileEmptyState.svelte';
 	import ProfileImageCropper from '$lib/maritools/components/ProfileImageCropper.svelte';
-	import ScheduleCalendar from '$lib/maritools/components/ScheduleCalendar.svelte';
 	import { initialsFromDisplayName } from '$lib/maritools/header-account.js';
-	import { mondayOfWeek, weekGridForTermWeek } from '$lib/maritools/schedule/academicWeekView.js';
-	import { parseOmnivox } from '$lib/maritools/schedule/parseOmnivox.js';
-	import { calendarDate, rulesForTerm } from '$lib/maritools/term/calendar.js';
-	import { termResolution } from '$lib/maritools/term/session.js';
 	import { requestStudentAuthorization } from '$lib/auth/student-sign-in.js';
 	import { endStaffSession } from '$lib/auth/staff-sign-out.js';
 	import { browser } from '$app/environment';
@@ -34,11 +28,8 @@
 	let experienceLevel = data.onboardingDraft?.experienceLevel ?? '';
 	let interests = data.onboardingDraft?.interests ?? [];
 	let clubGoals = data.onboardingDraft?.clubGoals ?? '';
-	let schedulePaste = data.onboardingDraft?.paste ?? '';
 	let interestError = false;
 	let memberFormOpened = false;
-	let scheduleTutorialOpen = false;
-	let scheduleWeekStartIso = mondayOfWeek(calendarDate());
 	let draftReady = false;
 	const signupDraftKey = `programming-club-signup-draft:${data.view.email ?? 'signed-out'}`;
 
@@ -197,9 +188,7 @@
 
 	/** @param {any} draft */
 	function restoreSignupDraft(draft) {
-		if (
-			['information', 'interests', 'schedule', 'member-form'].includes(String(draft.profileTab))
-		) {
+		if (['information', 'interests', 'member-form'].includes(String(draft.profileTab))) {
 			profileTab = String(draft.profileTab);
 		}
 		username = typeof draft.username === 'string' ? draft.username : '';
@@ -213,7 +202,6 @@
 			? draft.interests.filter((/** @type {unknown} */ interest) => typeof interest === 'string')
 			: [];
 		clubGoals = typeof draft.clubGoals === 'string' ? draft.clubGoals : '';
-		schedulePaste = typeof draft.schedulePaste === 'string' ? draft.schedulePaste : '';
 		memberFormOpened = draft.memberFormOpened === true;
 	}
 
@@ -233,7 +221,6 @@
 					experienceLevel,
 					interests,
 					clubGoals,
-					schedulePaste,
 					memberFormOpened
 				})
 			);
@@ -278,27 +265,12 @@
 		} catch {
 			localStorage.removeItem(signupDraftKey);
 		}
-		if (
-			form?.invalidTab &&
-			['information', 'interests', 'schedule', 'member-form'].includes(form.invalidTab)
-		) {
+		if (form?.invalidTab && ['information', 'interests', 'member-form'].includes(form.invalidTab)) {
 			profileTab = form.invalidTab;
 		}
 		draftReady = true;
 	});
 
-	$: scheduleResult = schedulePaste.trim() ? parseOmnivox(schedulePaste) : null;
-	$: scheduleTerm = $termResolution.selected;
-	$: scheduleRules = scheduleTerm ? rulesForTerm(scheduleTerm.id) : null;
-	$: scheduleGrid =
-		scheduleTerm && scheduleRules
-			? weekGridForTermWeek(
-					scheduleWeekStartIso,
-					scheduleTerm,
-					scheduleRules,
-					scheduleResult?.ok ? scheduleResult.courses : []
-				)
-			: [];
 	$: if (draftReady) {
 		profileTab;
 		username;
@@ -310,7 +282,6 @@
 		experienceLevel;
 		interests;
 		clubGoals;
-		schedulePaste;
 		memberFormOpened;
 		tryPersistSignupDraft();
 	}
@@ -332,21 +303,12 @@
 		interests.length > 0 &&
 		interests.every((/** @type {string} */ interest) => interestOptions.includes(interest)) &&
 		clubGoals.length <= 1000;
-	$: scheduleIsValid =
-		schedulePaste.length <= 100000 &&
-		(schedulePaste.trim().length === 0 || parseOmnivox(schedulePaste).ok);
-	$: signupIsReady = informationIsValid && interestsAreValid && scheduleIsValid && memberFormOpened;
+	$: signupIsReady = informationIsValid && interestsAreValid && memberFormOpened;
 	$: signupBlockedMessage = !memberFormOpened
 		? ''
 		: !informationIsValid || !interestsAreValid
 			? 'Complete all required fields before joining.'
-			: !scheduleIsValid
-				? 'Fix or remove the schedule paste before joining.'
-				: '';
-
-	function closeScheduleTutorial() {
-		scheduleTutorialOpen = false;
-	}
+			: '';
 </script>
 
 <svelte:head>
@@ -565,12 +527,6 @@
 							<button
 								type="button"
 								role="tab"
-								aria-selected={profileTab === 'schedule'}
-								on:click={() => (profileTab = 'schedule')}>Schedule</button
-							>
-							<button
-								type="button"
-								role="tab"
 								aria-selected={profileTab === 'member-form'}
 								on:click={() => (profileTab = 'member-form')}>Member form</button
 							>
@@ -694,7 +650,10 @@
 									</p>{/if}
 							</fieldset>
 							<label class="profile-field--wide profile-club-goals">
-								<span>What should the club do this year? <small>Optional</small></span>
+								<span
+									>What should the club do this year?
+									<small class="optional-badge">Optional</small></span
+								>
 								<textarea
 									name="clubGoals"
 									bind:value={clubGoals}
@@ -709,63 +668,13 @@
 									class="quiet-button"
 									on:click={() => (profileTab = 'information')}>Back</button
 								>
-								<button type="button" class="dark-button" on:click={() => (profileTab = 'schedule')}
-									>Continue</button
-								>
-							</div>
-						</div>
-
-						<section
-							data-signup-tab="schedule"
-							class="onboarding-panel"
-							aria-labelledby="schedule-title"
-							hidden={profileTab !== 'schedule'}
-						>
-							<div class="schedule-onboarding-head">
-								<h2 id="schedule-title">Add your schedule</h2>
-								<p>
-									Optional. Your class times help us find meeting times that work for more members.
-								</p>
-							</div>
-							<div class="schedule-onboarding-workspace">
-								<div class="schedule-onboarding-input">
-									<label class="profile-field--wide"
-										><span>Omnivox course list</span><textarea
-											name="paste"
-											bind:value={schedulePaste}
-											rows="8"
-											spellcheck="false"
-											placeholder="Paste the numbered course list here."
-										></textarea></label
-									>
-									<button
-										type="button"
-										class="quiet-button schedule-tutorial-button"
-										on:click={() => (scheduleTutorialOpen = true)}>Show import tutorial</button
-									>
-									{#if scheduleResult && !scheduleResult.ok}
-										<p class="field-error schedule-onboarding-error" role="alert">
-											Could not read this schedule
-										</p>
-									{/if}
-								</div>
-								<div class="schedule-onboarding-preview">
-									<ScheduleCalendar grid={scheduleGrid} weekdayOnly={true} />
-								</div>
-							</div>
-							<div class="profile-form-action profile-form-action--split">
-								<button
-									type="button"
-									class="quiet-button"
-									on:click={() => (profileTab = 'interests')}>Back</button
-								>
 								<button
 									type="button"
 									class="dark-button"
 									on:click={() => (profileTab = 'member-form')}>Continue</button
 								>
 							</div>
-						</section>
+						</div>
 
 						<section
 							data-signup-tab="member-form"
@@ -804,7 +713,7 @@
 								<button
 									type="button"
 									class="quiet-button"
-									on:click={() => (profileTab = 'schedule')}>Back</button
+									on:click={() => (profileTab = 'interests')}>Back</button
 								>
 								<button
 									type="button"
@@ -891,11 +800,6 @@
 			</div>
 		{/if}
 	</section>
-	<OmnivoxTutorialOverlay
-		open={scheduleTutorialOpen}
-		onFinish={closeScheduleTutorial}
-		onSkip={closeScheduleTutorial}
-	/>
 </div>
 
 <style>
@@ -1378,7 +1282,7 @@
 
 	.onboarding-tabs {
 		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 		max-width: 64rem;
 		margin: 0 0 2.5rem;
 		border-bottom: 1px solid var(--line-dark);
@@ -1447,72 +1351,6 @@
 		font-size: inherit;
 	}
 
-	.schedule-onboarding-head {
-		margin-bottom: 1.5rem;
-	}
-
-	.schedule-onboarding-head p {
-		margin-top: 0.65rem;
-	}
-
-	.schedule-onboarding-workspace {
-		display: grid;
-		grid-template-columns: minmax(15rem, 0.72fr) minmax(0, 1.28fr);
-		align-items: start;
-		gap: clamp(1.25rem, 3vw, 2.5rem);
-	}
-
-	.schedule-onboarding-input {
-		display: grid;
-		align-content: start;
-		gap: 0.85rem;
-	}
-
-	.schedule-tutorial-button {
-		justify-self: start;
-	}
-
-	.schedule-onboarding-preview {
-		border: 1px solid var(--line-dark);
-		overflow: visible;
-		background: white;
-	}
-
-	.schedule-onboarding-preview :global(.schedule-calendar) {
-		grid-template-columns: 3rem repeat(5, minmax(0, 1fr));
-		grid-template-rows: 2.5rem calc(var(--hour-h) * 10);
-		width: 100%;
-		min-width: 0;
-		overflow: visible;
-	}
-
-	.schedule-onboarding-preview :global(.schedule-calendar .time-rail span:first-child) {
-		top: 0;
-	}
-
-	.schedule-onboarding-preview :global(.schedule-calendar .time-rail span:last-child) {
-		top: auto;
-		bottom: 0;
-	}
-
-	.schedule-onboarding-preview :global(.schedule-calendar .calendar-corner) {
-		padding-bottom: 0.55rem;
-	}
-
-	.schedule-onboarding-preview :global(.schedule-calendar .day-head) {
-		min-width: 0;
-		padding-inline: 0.15rem;
-	}
-
-	.schedule-onboarding-preview :global(.schedule-calendar .day-head span) {
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.schedule-onboarding-error {
-		margin: 0.75rem 0 0;
-	}
-
 	.profile-section-head {
 		margin-bottom: 2rem;
 	}
@@ -1574,8 +1412,14 @@
 	}
 
 	.profile-field--wide > span small {
-		font: inherit;
-		font-weight: 450;
+		padding: 0.18rem 0.42rem;
+		border: 1px solid var(--line-dark);
+		background: var(--paper-blue);
+		color: var(--ink);
+		font-size: 0.64rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
 	}
 
 	.profile-club-goals {
@@ -1705,21 +1549,15 @@
 
 	@media (max-width: 42rem) {
 		.onboarding-tabs {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+			grid-template-columns: repeat(3, minmax(0, 1fr));
 		}
 	}
 
 	@media (max-width: 44rem) {
 		.profile-enrollment,
 		.profile-form,
-		.onboarding-panel,
-		.schedule-onboarding-workspace {
+		.onboarding-panel {
 			min-width: 0;
-		}
-
-		.schedule-onboarding-preview {
-			min-width: 0;
-			overflow: hidden;
 		}
 
 		.profile-form {
@@ -1727,7 +1565,6 @@
 		}
 
 		.onboarding-tabs button,
-		.schedule-tutorial-button,
 		.member-form-intro > .primary-button,
 		.profile-google {
 			min-height: 2.75rem;
@@ -1854,55 +1691,6 @@
 
 		.member-form-intro {
 			grid-template-columns: 1fr;
-		}
-
-		.schedule-onboarding-head {
-			margin-bottom: 1.25rem;
-		}
-
-		.schedule-onboarding-workspace {
-			grid-template-columns: 1fr;
-		}
-
-		.schedule-onboarding-preview :global(.schedule-calendar) {
-			grid-template-columns: 2.75rem repeat(5, minmax(0, 1fr));
-			width: 100%;
-			min-width: 0;
-			overflow: visible;
-		}
-
-		.schedule-onboarding-preview :global(.schedule-calendar .calendar-corner) {
-			font-size: 0.5rem;
-		}
-
-		.schedule-onboarding-preview :global(.schedule-calendar .time-rail span) {
-			right: 0.35rem;
-			font-size: 0.52rem;
-			white-space: nowrap;
-		}
-
-		.schedule-onboarding-preview :global(.schedule-calendar .event) {
-			left: calc((100% / var(--lanes)) * var(--lane) + 1px);
-			width: calc(100% / var(--lanes) - 2px);
-			padding: 0.2rem;
-		}
-
-		.schedule-onboarding-preview :global(.schedule-calendar .event strong) {
-			display: -webkit-box;
-			font-size: 0.58rem;
-			line-height: 1.05;
-			white-space: normal;
-			-webkit-box-orient: vertical;
-			-webkit-line-clamp: 2;
-			line-clamp: 2;
-		}
-
-		.schedule-onboarding-preview :global(.schedule-calendar .event span) {
-			font-size: 0.5rem;
-		}
-
-		.schedule-onboarding-preview :global(.schedule-calendar .event small) {
-			display: none;
 		}
 
 		.member-form-intro > .primary-button {

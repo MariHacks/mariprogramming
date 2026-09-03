@@ -20,6 +20,12 @@ const joinedAt = new Date('2026-09-02T12:00:00.000Z');
 
 function repository(overrides = {}) {
 	return {
+		ensureMariHacksTeamProfile: vi.fn(async (input) => ({
+			...input,
+			username: 'MariHacks',
+			role: 'staff',
+			requiredFormCompletedAt: joinedAt
+		})),
 		joinProgrammingClub: vi.fn(async (input) => ({ ...input, createdAt: joinedAt })),
 		updateMemberProfile: vi.fn(async (input) => ({ ...input, updatedAt: joinedAt })),
 		getProgrammingClubMembership: vi.fn(async () => null),
@@ -56,6 +62,36 @@ const joinInput = Object.freeze({
 });
 
 describe('programming club store', () => {
+	it('provisions only the exact MariHacks team account with official profile defaults', async () => {
+		const inner = repository();
+		const store = createClubStore(inner);
+
+		await expect(
+			store.ensureMariHacksTeamProfile({
+				userId: 'team-user',
+				email: '  Team@MariHacks.com  '
+			})
+		).resolves.toMatchObject({
+			username: 'MariHacks',
+			role: 'staff',
+			requiredFormCompletedAt: joinedAt
+		});
+		expect(inner.ensureMariHacksTeamProfile).toHaveBeenCalledWith({
+			userId: 'team-user',
+			email: 'team@marihacks.com'
+		});
+
+		await expect(
+			store.ensureMariHacksTeamProfile({ userId: 'student-user', email: 'student@example.com' })
+		).rejects.toBeInstanceOf(ClubInputError);
+		await expect(
+			store.ensureMariHacksTeamProfile(
+				/** @type {any} */ ({ userId: 'student-user', email: null })
+			)
+		).rejects.toBeInstanceOf(ClubInputError);
+		expect(inner.ensureMariHacksTeamProfile).toHaveBeenCalledOnce();
+	});
+
 	it('validates member identity edits and preserves the avatar when omitted', async () => {
 		const inner = repository();
 		const store = createClubStore(inner);

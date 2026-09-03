@@ -18,13 +18,14 @@ const approvedSession = {
 	}
 };
 
-/** @param {{ session?: any, account?: any, runtimeError?: Error, membership?: any, membershipError?: Error }} [options] */
+/** @param {{ session?: any, account?: any, runtimeError?: Error, membership?: any, membershipError?: Error, provisionError?: Error }} [options] */
 function harness({
 	session = null,
 	account = null,
 	runtimeError,
 	membership = { requiredFormCompletedAt: new Date('2026-09-02T12:00:00.000Z') },
-	membershipError
+	membershipError,
+	provisionError
 } = {}) {
 	const auth = {
 		api: { getSession: vi.fn(async () => session) },
@@ -45,15 +46,20 @@ function harness({
 		if (membershipError) throw membershipError;
 		return membership;
 	});
+	const ensureMariHacksTeamProfile = vi.fn(async () => {
+		if (provisionError) throw provisionError;
+		return { requiredFormCompletedAt: new Date('2026-09-02T12:00:00.000Z') };
+	});
 	const handle = createHandle({
 		withAuth,
 		officialHandler,
-		createClubRepository: () => ({ getMyClubOnboarding }),
+		createClubRepository: () => ({ getMyClubOnboarding, ensureMariHacksTeamProfile }),
 		isBuilding: false
 	});
 	return {
 		auth,
 		findGoogleAccount,
+		ensureMariHacksTeamProfile,
 		getMyClubOnboarding,
 		handle,
 		officialHandler,
@@ -258,6 +264,76 @@ describe('server authentication hook', () => {
 			cookie: 'mari-staff.session_token=signed-token'
 		});
 		const response = await setup.handle({ event: current, resolve: setup.resolve });
+		expect(response.status).toBe(200);
+		expect(setup.resolve).toHaveBeenCalledOnce();
+	});
+
+	it('creates the official MariHacks profile before allowing the team account into MariTools', async () => {
+		const setup = harness({
+			session: approvedSession,
+			account: { providerId: 'google', accountId: 'google-subject-123', userId: 'user-123' },
+			membership: { requiredFormCompletedAt: new Date('2026-09-02T12:00:00.000Z') }
+		});
+		const current = event('/tools/schedule', {
+			cookie: 'mari-staff.session_token=signed-token'
+		});
+
+		const response = await setup.handle({ event: current, resolve: setup.resolve });
+
+		expect(response.status).toBe(200);
+		expect(setup.ensureMariHacksTeamProfile).toHaveBeenCalledWith({
+			userId: 'user-123',
+			email: 'team@marihacks.com'
+		});
+		expect(setup.getMyClubOnboarding).toHaveBeenCalledWith('user-123');
+	});
+
+	it('creates the official MariHacks profile on the account landing page', async () => {
+		const setup = harness({
+			session: approvedSession,
+			account: { providerId: 'google', accountId: 'google-subject-123', userId: 'user-123' }
+		});
+		const current = event('/tools/account', {
+			cookie: 'mari-staff.session_token=signed-token'
+		});
+
+		const response = await setup.handle({ event: current, resolve: setup.resolve });
+
+		expect(response.status).toBe(200);
+		expect(setup.ensureMariHacksTeamProfile).toHaveBeenCalledWith({
+			userId: 'user-123',
+			email: 'team@marihacks.com'
+		});
+		expect(setup.getMyClubOnboarding).not.toHaveBeenCalled();
+	});
+
+	it('returns the official account to account setup when automatic provisioning fails', async () => {
+		const setup = harness({
+			session: approvedSession,
+			account: { providerId: 'google', accountId: 'google-subject-123', userId: 'user-123' },
+			provisionError: new Error('database unavailable')
+		});
+		const response = await setup.handle({
+			event: event('/tools/schedule', { cookie: 'mari-staff.session_token=signed-token' }),
+			resolve: setup.resolve
+		});
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get('location')).toBe('/tools/account');
+		expect(setup.resolve).not.toHaveBeenCalled();
+	});
+
+	it('keeps the account recovery page reachable when automatic provisioning fails', async () => {
+		const setup = harness({
+			session: approvedSession,
+			account: { providerId: 'google', accountId: 'google-subject-123', userId: 'user-123' },
+			provisionError: new Error('database unavailable')
+		});
+		const response = await setup.handle({
+			event: event('/tools/account', { cookie: 'mari-staff.session_token=signed-token' }),
+			resolve: setup.resolve
+		});
+
 		expect(response.status).toBe(200);
 		expect(setup.resolve).toHaveBeenCalledOnce();
 	});

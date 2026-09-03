@@ -237,32 +237,41 @@ export function _createHandlers(dependencies = {}) {
 		}
 		try {
 			const repository = ready.repository;
-			const activeTerm = await getActiveTerm(repository);
-			if (!activeTerm) {
-				return fail(503, { error: 'No active academic term is configured.' });
-			}
 			const courseCode = String(data.get('courseCode') ?? '').trim();
 			const title = String(data.get('title') ?? '').trim();
 			const section = String(data.get('section') ?? '').trim();
 			const teacherName = String(data.get('teacherName') ?? '').trim();
 			const documentSha256 = String(data.get('sha256') ?? '').trim();
+			const shareToCatalog = data.get('shareToCatalog') === 'yes';
 			const reviewProposals = { ...structured, courseCode, title, section, teacherName };
+			if (shareToCatalog) {
+				const activeTerm = await getActiveTerm(repository);
+				if (!activeTerm) {
+					return fail(503, { error: 'No active academic term is configured.' });
+				}
+				await repository.saveOutlineReview({
+					userId: ready.session.userId,
+					sha256: documentSha256,
+					proposals: reviewProposals
+				});
+				await repository.contribute({
+					contributorUserId: ready.session.userId,
+					documentSha256,
+					termId: activeTerm.id,
+					courseCode,
+					title,
+					section,
+					teacherName,
+					structured
+				});
+				return { contributed: true };
+			}
 			await repository.saveOutlineReview({
 				userId: ready.session.userId,
 				sha256: documentSha256,
 				proposals: reviewProposals
 			});
-			await repository.contribute({
-				contributorUserId: ready.session.userId,
-				documentSha256,
-				termId: activeTerm.id,
-				courseCode,
-				title,
-				section,
-				teacherName,
-				structured
-			});
-			return { contributed: true };
+			return { saved: true, shared: false };
 		} catch (error) {
 			if (error instanceof MaritoolsInputError) {
 				return fail(400, {

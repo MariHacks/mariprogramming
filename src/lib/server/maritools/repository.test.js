@@ -60,7 +60,10 @@ function queuedRepo(queue, writes = []) {
 			offset: () => chain,
 			insert: () => chain,
 			delete: () => chain,
-			values: () => chain,
+			values: (values) => {
+				writes.push(values);
+				return chain;
+			},
 			returning: () => chain,
 			update: () => chain,
 			set: (values) => {
@@ -352,6 +355,196 @@ describe('repository defensive branches', () => {
 				repository.joinProgrammingClub({ ...membershipInput, ...override })
 			).rejects.toBeInstanceOf(MariToolsValidationError);
 		}
+	});
+
+	it('creates the MariHacks team profile and completed membership with fixed official defaults', async () => {
+		/** @type {any[]} */
+		const writes = [];
+		const completedAt = new Date('2026-09-03T12:00:00.000Z');
+		const created = {
+			userId: USER,
+			program: 'Programming Club',
+			requiredFormCompletedAt: completedAt
+		};
+		const repository = queuedRepo([[], [], [{ userId: USER }], [], [created]], writes);
+
+		await expect(
+			repository.ensureMariHacksTeamProfile({
+				userId: USER,
+				email: 'team@marihacks.com',
+				now: completedAt
+			})
+		).resolves.toEqual(created);
+		expect(writes).toContainEqual(
+			expect.objectContaining({
+				userId: USER,
+				studentId: 'team@marihacks.com',
+				displayName: 'MariHacks',
+				username: 'MariHacks',
+				firstName: 'MariHacks',
+				lastName: 'Team',
+				role: 'staff'
+			})
+		);
+		expect(writes).toContainEqual(
+			expect.objectContaining({
+				userId: USER,
+				program: 'Programming Club',
+				yearLevel: null,
+				experienceLevel: 'advanced',
+				interests: [],
+				requiredFormCompletedAt: completedAt
+			})
+		);
+	});
+
+	it('rejects non-team provisioning and preserves an existing official profile', async () => {
+		await expect(
+			queuedRepo([]).ensureMariHacksTeamProfile({
+				userId: USER,
+				email: 'other@marihacks.com'
+			})
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+
+		const completedAt = new Date('2026-09-03T12:00:00.000Z');
+		const existingProfile = {
+			userId: USER,
+			studentId: '2530622',
+			displayName: 'CustomName',
+			username: 'CustomName',
+			firstName: 'Custom',
+			lastName: 'Name',
+			role: 'staff'
+		};
+		const existingMembership = {
+			userId: USER,
+			requiredFormCompletedAt: completedAt
+		};
+		/** @type {any[]} */
+		const writes = [];
+		await expect(
+			queuedRepo([[existingProfile], [existingMembership]], writes).ensureMariHacksTeamProfile({
+				userId: USER,
+				email: 'team@marihacks.com',
+				now: completedAt
+			})
+		).resolves.toEqual(existingMembership);
+		expect(writes).toEqual([]);
+	});
+
+	it('fills missing official profile fields and completes an existing membership without replacing choices', async () => {
+		const completedAt = new Date('2026-09-03T12:00:00.000Z');
+		const partialProfile = {
+			userId: USER,
+			studentId: '2530622',
+			displayName: 'Existing display',
+			username: null,
+			firstName: null,
+			lastName: null,
+			role: 'student'
+		};
+		const updatedProfile = {
+			...partialProfile,
+			username: 'MariHacks',
+			firstName: 'MariHacks',
+			lastName: 'Team',
+			role: 'staff'
+		};
+		const incompleteMembership = { userId: USER, requiredFormCompletedAt: null };
+		const completedMembership = { ...incompleteMembership, requiredFormCompletedAt: completedAt };
+		/** @type {any[]} */
+		const writes = [];
+
+		await expect(
+			queuedRepo(
+				[
+					[partialProfile],
+					[],
+					[updatedProfile],
+					[incompleteMembership],
+					[completedMembership]
+				],
+				writes
+			).ensureMariHacksTeamProfile({
+				userId: USER,
+				email: 'team@marihacks.com',
+				now: completedAt
+			})
+		).resolves.toEqual(completedMembership);
+		expect(writes).toContainEqual({
+			displayName: 'Existing display',
+			username: 'MariHacks',
+			firstName: 'MariHacks',
+			lastName: 'Team',
+			role: 'staff',
+			updatedAt: completedAt
+		});
+	});
+
+	it('uses a stable fallback when the official username is occupied', async () => {
+		/** @type {any[]} */
+		const writes = [];
+		const membership = { userId: USER, requiredFormCompletedAt: new Date() };
+		await queuedRepo(
+			[[], [{ userId: 'other-user' }], [{ userId: USER }], [], [membership]],
+			writes
+		).ensureMariHacksTeamProfile({ userId: USER, email: 'team@marihacks.com' });
+		expect(writes[0].username).toMatch(/^MariHacks_[0-9a-f]{6}$/u);
+	});
+
+	it('fails closed for malformed provisioning input and empty writes', async () => {
+		await expect(
+			queuedRepo([]).ensureMariHacksTeamProfile({ userId: USER, email: null })
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			queuedRepo([]).ensureMariHacksTeamProfile({
+				userId: USER,
+				email: 'team@marihacks.com',
+				now: new Date('invalid')
+			})
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			queuedRepo([[], [], []]).ensureMariHacksTeamProfile({
+				userId: USER,
+				email: 'team@marihacks.com'
+			})
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+
+		const partialProfile = {
+			userId: USER,
+			studentId: '2530622',
+			displayName: null,
+			username: null,
+			firstName: null,
+			lastName: null,
+			role: 'student'
+		};
+		await expect(
+			queuedRepo([[partialProfile], [{ userId: 'other-user' }], []]).ensureMariHacksTeamProfile({
+				userId: USER,
+				email: 'team@marihacks.com'
+			})
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+
+		const profile = {
+			userId: USER,
+			studentId: '2530622',
+			displayName: 'MariHacks',
+			username: 'MariHacks',
+			firstName: 'MariHacks',
+			lastName: 'Team',
+			role: 'staff'
+		};
+		await expect(
+			queuedRepo([[profile], [{ userId: USER, requiredFormCompletedAt: null }], []])
+				.ensureMariHacksTeamProfile({ userId: USER, email: 'team@marihacks.com' })
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(
+			queuedRepo([[profile], [], []]).ensureMariHacksTeamProfile({
+				userId: USER,
+				email: 'team@marihacks.com'
+			})
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
 	});
 
 	it('updates an existing membership and protects identity ownership', async () => {
