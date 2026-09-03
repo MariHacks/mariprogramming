@@ -131,11 +131,11 @@
 				</div>
 				<form method="POST" action="?/create">
 					<div class="composer-fields">
-						<label>
-							<span>Title</span>
-							<input name="title" required maxlength="240" placeholder="What do you want to ask or share?" />
-						</label>
-						<div class="composer-meta">
+						<div class="composer-primary">
+							<label>
+								<span>Title</span>
+								<input name="title" required maxlength="240" placeholder="What do you want to ask or share?" />
+							</label>
 							<label>
 								<span>Category</span>
 								<select name="category" required>

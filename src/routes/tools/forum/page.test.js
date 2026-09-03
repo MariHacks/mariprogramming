@@ -101,6 +101,28 @@ describe('forum page', () => {
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
 	});
 
+	it('groups the composer metadata beside the title and keeps the body on its own row', () => {
+		const { container } = render(ForumPage, {
+			props: {
+				data: {
+					threads: [],
+					courses: [COURSE],
+					category: '',
+					courseId: '',
+					query: '',
+					signedIn: true
+				}
+			}
+		});
+
+		const primaryFields = container.querySelector('.composer-primary');
+		expect(primaryFields).not.toBeNull();
+		expect(primaryFields).toContainElement(screen.getByLabelText('Title'));
+		expect(primaryFields).toContainElement(screen.getByLabelText('Category'));
+		expect(primaryFields).toContainElement(screen.getByLabelText('Course tag'));
+		expect(primaryFields).not.toContainElement(screen.getByLabelText('Body'));
+	});
+
 	it('explains when the forum is unavailable', () => {
 		render(ForumPage, {
 			props: {

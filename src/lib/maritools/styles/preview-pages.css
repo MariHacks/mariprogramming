@@ -1966,9 +1966,15 @@
 
 	.composer-fields {
 		display: grid;
-		grid-template-columns: 1fr 15rem;
-		gap: 0.75rem 1rem;
+		gap: 0.875rem;
 		padding: 1rem;
+	}
+
+	.composer-primary {
+		display: grid;
+		grid-template-columns: minmax(0, 2fr) minmax(10rem, 0.7fr) minmax(12rem, 1fr);
+		align-items: end;
+		gap: 1rem;
 	}
 
 	.composer-fields label {
@@ -1999,16 +2005,6 @@
 		min-height: 8rem;
 		resize: vertical;
 		padding: 0.625rem;
-	}
-
-	.composer-fields > label:last-child {
-		grid-column: 1 / -1;
-	}
-
-	.composer-meta {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 0.625rem;
 	}
 
 	.composer-actions {
@@ -2994,12 +2990,12 @@
 		}
 	
 	.inline-composer {
-			padding: 18px;
-		}
+		padding: 0;
+	}
 	
-	.inline-composer > div:not(:first-child) {
-			grid-template-columns: 1fr;
-		}
+	.composer-primary {
+		grid-template-columns: 1fr;
+	}
 	
 	.post {
 			grid-template-columns: 1fr;
