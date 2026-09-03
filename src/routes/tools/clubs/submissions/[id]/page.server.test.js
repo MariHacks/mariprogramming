@@ -406,6 +406,27 @@ describe('club submission page server', () => {
 		);
 	});
 
+	it.each([
+		[MaritoolsInputError, 400, 'Check the club details and try again.'],
+		[MaritoolsUnavailableError, 503, 'Saving is unavailable. Try again.']
+	])(
+		'omits draft values when loading the submission throws %s',
+		async (ErrorType, status, error) => {
+			const current = handlers({
+				store: {
+					getClubSubmission: vi.fn(async () => {
+						throw new ErrorType();
+					})
+				}
+			});
+
+			expect(await current.actions.save(event({ locals: { maritools: SESSION } }))).toEqual({
+				status,
+				data: { error }
+			});
+		}
+	);
+
 	it('rethrows unexpected action errors', async () => {
 		const saveBoom = handlers({
 			store: {
