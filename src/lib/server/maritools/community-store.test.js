@@ -209,6 +209,12 @@ function inner(overrides = {}) {
 			displayName: 'Ada',
 			role: 'student'
 		})),
+		getProgrammingClubMembership: vi.fn(async () => ({
+			userId: USER,
+			createdAt: new Date('2025-09-01T12:00:00.000Z'),
+			requiredFormCompletedAt: new Date('2025-09-01T12:05:00.000Z')
+		})),
+		listUserOutlines: vi.fn(async () => []),
 		...overrides
 	};
 }
@@ -721,11 +727,52 @@ describe('createCommunityStore', () => {
 			userId: USER,
 			displayName: 'Ada',
 			role: 'student',
+			joinedAt: new Date('2025-09-01T12:00:00.000Z'),
 			isRestricted: false
 		});
 		await expect(store.listThreadsByAuthor(USER)).resolves.toEqual([
 			expect.objectContaining({ id: THREAD, authorUserId: USER })
 		]);
+	});
+
+	it('preserves executive membership and exposes only safe outline metadata', async () => {
+		const store = createCommunityStore(
+			inner({
+				getStudentProfile: vi.fn(async () => ({
+					userId: USER,
+					studentId: '2530622',
+					displayName: 'Ada',
+					role: 'executive'
+				})),
+				listUserOutlines: vi.fn(async () => [
+					{
+						sha256: 'a'.repeat(64),
+						createdAt: new Date('2026-08-28T16:00:00.000Z'),
+						reviewProposals: { courseCode: '420-202-RE', title: 'Programming II' },
+						proposals: { courseCode: 'wrong', title: 'Wrong' },
+						inferenceCount: 3,
+						extractedText: 'private outline text'
+					}
+				])
+			})
+		);
+
+		await expect(store.getPublicProfile(USER)).resolves.toMatchObject({
+			role: 'executive',
+			joinedAt: new Date('2025-09-01T12:00:00.000Z')
+		});
+		const outlines = await store.listOutlinesByAuthor(USER);
+		expect(outlines).toEqual([
+			{
+				sha256: 'a'.repeat(64),
+				createdAt: new Date('2026-08-28T16:00:00.000Z'),
+				extraction: {
+					proposals: { courseCode: '420-202-RE', title: 'Programming II' }
+				}
+			}
+		]);
+		expect(JSON.stringify(outlines)).not.toContain('private outline text');
+		expect(JSON.stringify(outlines)).not.toContain('inferenceCount');
 	});
 
 	it('redacts profiles and reports staff', async () => {

@@ -25,12 +25,20 @@ function setup(overrides = {}) {
 			userId: USER,
 			displayName: 'Ada',
 			role: 'student',
+			studentId: '2530622',
 			isRestricted: false,
 			isMuted: false,
 			isBanned: false
 		})),
 		listThreadsByAuthor: vi.fn(async () => [
 			{ id: THREAD, title: 'Quiet study hall', createdAt: '2026-08-28T16:00:00.000Z' }
+		]),
+		listOutlinesByAuthor: vi.fn(async () => [
+			{
+				sha256: 'a'.repeat(64),
+				createdAt: '2026-08-20T16:00:00.000Z',
+				extraction: { proposals: { courseCode: '420-202-RE', title: 'Programming II' } }
+			}
 		]),
 		getProfile: vi.fn(async () => ({ userId: STAFF.userId, role: 'staff' })),
 		isStaff: vi.fn((email) => email === 'team@marihacks.com'),
@@ -68,12 +76,25 @@ describe('public profile load', () => {
 		await expect(handlers.load({ params: { userId: USER }, locals: {} })).resolves.toMatchObject({
 			profile: { displayName: 'Ada', userId: USER },
 			threads: [{ id: THREAD, title: 'Quiet study hall' }],
+			courseOutlines: [
+				expect.objectContaining({
+					sha256: 'a'.repeat(64),
+					extraction: { proposals: { courseCode: '420-202-RE', title: 'Programming II' } }
+				})
+			],
 			unavailable: false,
 			viewerSignedIn: false,
 			viewerIsStaff: false
 		});
 		expect(store.getPublicProfile).toHaveBeenCalledWith(USER);
 		expect(store.listThreadsByAuthor).toHaveBeenCalledWith(USER);
+		expect(store.listOutlinesByAuthor).toHaveBeenCalledWith(USER);
+		expect(
+			await handlers.load({ params: { userId: USER }, locals: {} })
+		).not.toHaveProperty('profile.isMuted');
+		expect(JSON.stringify(await handlers.load({ params: { userId: USER }, locals: {} }))).not.toContain(
+			'2530622'
+		);
 	});
 
 	it('marks the viewer as signed in when a session exists', async () => {
@@ -117,7 +138,7 @@ describe('public profile load', () => {
 		});
 		await expect(
 			handlers.load({ params: { userId: USER }, locals: { maritools: STAFF } })
-		).resolves.toMatchObject({ viewerIsStaff: true });
+		).resolves.toMatchObject({ viewerIsStaff: true, profile: { isMuted: false } });
 		expect(isStaff).toHaveBeenCalledWith(STAFF.email, null);
 	});
 
@@ -153,6 +174,7 @@ describe('public profile load', () => {
 		await expect(handlers.load({ params: { userId: USER }, locals: {} })).resolves.toMatchObject({
 			profile: null,
 			threads: [],
+			courseOutlines: [],
 			unavailable: true
 		});
 	});

@@ -206,15 +206,16 @@ export function publicStudentView(profile) {
 }
 
 /** Public profile card: no student number, no staff-only internals beyond restriction flags. */
-/** @param {any} profile */
-export function publicProfileCard(profile) {
+/** @param {any} profile @param {any} [membership] */
+export function publicProfileCard(profile, membership = null) {
 	const view = publicStudentView(profile);
 	return {
 		userId: view.userId,
 		displayName: view.displayName,
 		username: view.username,
 		profileImageDataUrl: view.profileImageDataUrl,
-		role: view.role === 'staff' || view.role === 'moderator' ? view.role : 'student',
+		role: ['executive', 'staff', 'moderator'].includes(view.role) ? view.role : 'student',
+		joinedAt: membership?.createdAt ?? null,
 		isRestricted: view.isMuted || view.isBanned,
 		isMuted: view.isMuted,
 		isBanned: view.isBanned,

@@ -502,8 +502,29 @@ export function createCommunityStore(inner) {
 		/** @param {string} userId */
 		getPublicProfile(userId) {
 			return wrap(async () => {
-				const row = await inner.getStudentProfile(userId);
-				return row ? publicProfileCard(row) : null;
+				const [row, membership] = await Promise.all([
+					inner.getStudentProfile(userId),
+					inner.getProgrammingClubMembership(userId)
+				]);
+				return row
+					? publicProfileCard(row, membership?.requiredFormCompletedAt ? membership : null)
+					: null;
+			});
+		},
+
+		/** Safe outline summaries for a public member profile. */
+		/** @param {string} userId */
+		listOutlinesByAuthor(userId) {
+			return wrap(async () => {
+				const rows = await inner.listUserOutlines(userId);
+				return rows.map((row) => {
+					const proposals = row.reviewProposals ?? row.proposals;
+					return {
+						sha256: row.sha256,
+						createdAt: row.createdAt ?? null,
+						extraction: proposals ? { proposals } : null
+					};
+				});
 			});
 		},
 

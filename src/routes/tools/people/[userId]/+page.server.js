@@ -28,6 +28,33 @@ export function _createPublicProfileHandlers(dependencies = {}) {
 		return { session, staff: store.isStaff(session.email, profile?.role ?? null) };
 	}
 
+	/** @param {Record<string, any>} profile */
+	function publicProfile(profile) {
+		return {
+			userId: profile.userId,
+			displayName: profile.displayName,
+			username: profile.username,
+			profileImageDataUrl: profile.profileImageDataUrl,
+			role: profile.role,
+			joinedAt: profile.joinedAt
+		};
+	}
+
+	/** @param {Record<string, any>} profile @param {boolean} viewerIsStaff */
+	function profileForViewer(profile, viewerIsStaff) {
+		const view = publicProfile(profile);
+		if (!viewerIsStaff) return view;
+		return {
+			...view,
+			isRestricted: profile.isRestricted,
+			isMuted: profile.isMuted,
+			isBanned: profile.isBanned,
+			mutedUntil: profile.mutedUntil,
+			bannedUntil: profile.bannedUntil,
+			bannedPermanent: profile.bannedPermanent
+		};
+	}
+
 	return Object.freeze({
 		/** @param {any} event */
 		async load(event) {
@@ -38,10 +65,14 @@ export function _createPublicProfileHandlers(dependencies = {}) {
 				const identity = await staffContext(event, store);
 				const profile = await store.getPublicProfile(userId);
 				if (!profile) throw error(404, 'That profile is not available.');
-				const threads = await store.listThreadsByAuthor(userId);
+				const [threads, courseOutlines] = await Promise.all([
+					store.listThreadsByAuthor(userId),
+					store.listOutlinesByAuthor(userId)
+				]);
 				return {
-					profile,
+					profile: profileForViewer(profile, identity.staff),
 					threads,
+					courseOutlines,
 					unavailable: false,
 					viewerSignedIn: Boolean(identity.session),
 					viewerIsStaff: identity.staff
@@ -52,6 +83,7 @@ export function _createPublicProfileHandlers(dependencies = {}) {
 					return {
 						profile: null,
 						threads: [],
+						courseOutlines: [],
 						unavailable: true,
 						viewerSignedIn: Boolean(event.locals.maritools),
 						viewerIsStaff: false

@@ -167,6 +167,20 @@ describe('maritools repository helpers', () => {
 				})
 			)
 		).not.toContain('2530622');
+		expect(
+			publicProfileCard(
+				{
+					userId: 'u1',
+					displayName: 'Ada',
+					role: 'executive',
+					studentId: '2530622'
+				},
+				{ createdAt: new Date('2025-09-01T12:00:00.000Z') }
+			)
+		).toMatchObject({
+			role: 'executive',
+			joinedAt: new Date('2025-09-01T12:00:00.000Z')
+		});
 		const outline = publicOutlineView({
 			id: 'd1',
 			userId: 'u1',
