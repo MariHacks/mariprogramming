@@ -76,10 +76,10 @@
 
 	/** @param {string} type */
 	function contactPlaceholder(type) {
-		if (type === 'email' || type === 'mio') return 'club@example.com';
-		if (type === 'discord') return 'discord.gg/your-club';
-		if (type === 'instagram') return 'instagram.com/your-club';
-		return 'your-club.example';
+		if (type === 'email' || type === 'mio') return 'Email address';
+		if (type === 'discord') return 'Invite link';
+		if (type === 'instagram') return 'Profile link';
+		return 'https://';
 	}
 </script>
 

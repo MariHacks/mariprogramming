@@ -64,4 +64,11 @@ describe('ClubListingDetail', () => {
 			'https://example.com/join'
 		);
 	});
+
+	it('uses descriptive contact hints instead of fake domains', () => {
+		render(ClubListingDetail, { props: { mode: 'edit', club: { name: 'Chess', links: [] } } });
+		const contactInput = screen.getByRole('textbox', { name: 'Link' });
+		expect(contactInput).toHaveAttribute('placeholder', 'https://');
+		expect(contactInput.getAttribute('placeholder')).not.toContain('example');
+	});
 });
