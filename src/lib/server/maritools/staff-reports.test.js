@@ -154,4 +154,94 @@ describe('buildStaffReportQueue', () => {
 			})
 		]);
 	});
+
+	it('uses thread fallbacks when the target has no title or author details', async () => {
+		await expect(
+			buildStaffReportQueue(
+				[
+					{
+						id: REPORT,
+						targetKind: 'thread',
+						targetId: THREAD,
+						reporterUserId: USER,
+						reason: 'spam',
+						status: 'open',
+						resolvedAt: null,
+						createdAt: 17
+					}
+				],
+				{
+					getReply: vi.fn(),
+					getThread: vi.fn(async () => ({ title: '', authorDisplayName: '   ' })),
+					getProfile: vi.fn(async () => ({ displayName: '   ' }))
+				}
+			)
+		).resolves.toEqual([
+			expect.objectContaining({
+				targetTitle: 'Thread',
+				subjectUserId: null,
+				subjectDisplayName: 'Student',
+				subjectProfileHref: null,
+				reporterDisplayName: 'Student',
+				createdAt: '17'
+			})
+		]);
+	});
+
+	it('keeps the default reply title when its thread has no title', async () => {
+		await expect(
+			buildStaffReportQueue(
+				[
+					{
+						id: REPORT,
+						targetKind: 'reply',
+						targetId: REPLY,
+						reporterUserId: USER,
+						reason: 'spam',
+						status: 'open',
+						resolvedAt: null,
+						createdAt: ''
+					}
+				],
+				{
+					getReply: vi.fn(async () => ({ threadId: THREAD })),
+					getThread: vi.fn(async () => null),
+					getProfile: vi.fn(async () => null)
+				}
+			)
+		).resolves.toEqual([
+			expect.objectContaining({
+				targetTitle: 'Reply',
+				subjectUserId: null,
+				subjectDisplayName: 'Student',
+				createdAt: ''
+			})
+		]);
+	});
+
+	it('uses the bare reply dependency with neutral lookup fallbacks', async () => {
+		await expect(
+			buildStaffReportQueue(
+				[
+					{
+						id: REPORT,
+						targetKind: 'reply',
+						targetId: REPLY,
+						reporterUserId: USER,
+						reason: 'legacy',
+						status: 'open',
+						resolvedAt: null,
+						createdAt: null
+					}
+				],
+				vi.fn(async () => ({ threadId: THREAD, authorDisplayName: null }))
+			)
+		).resolves.toEqual([
+			expect.objectContaining({
+				threadId: THREAD,
+				targetTitle: 'Reply',
+				reporterDisplayName: 'Student'
+			})
+		]);
+	});
 });

@@ -110,6 +110,17 @@ describe('staff reports load', () => {
 		expect(store.listReports).toHaveBeenCalledWith({ status: 'resolved' });
 	});
 
+	it('falls back to open for an unsupported status filter', async () => {
+		const { handlers, store } = setup({ store: { listReports: vi.fn(async () => []) } });
+		await expect(
+			handlers.load({
+				locals: { staff: STAFF },
+				url: new URL('https://club.example.com/staff/reports?status=unknown')
+			})
+		).resolves.toMatchObject({ statusFilter: 'open' });
+		expect(store.listReports).toHaveBeenCalledWith({ status: 'open' });
+	});
+
 	it('lists every report when status=all', async () => {
 		const { handlers, store } = setup({
 			store: {
@@ -272,6 +283,23 @@ describe('staff reports actions', () => {
 		expect(store.setReportStatus).not.toHaveBeenCalled();
 	});
 
+	it.each([
+		['lockThread', {}, 'That report has no thread to lock.'],
+		['muteAuthor', {}, 'That report has no author to mute.'],
+		['banAuthor', {}, 'That report has no author to ban.']
+	])('rejects incomplete %s requests', async (action, fields, message) => {
+		const { handlers } = setup();
+		await expect(
+			handlers.actions[action](actionEvent({ form: { reportId: REPORT, ...fields } }))
+		).resolves.toMatchObject({ status: 400, data: { error: message } });
+	});
+
+	it('normalizes a missing report id for moderation actions', async () => {
+		const { handlers, store } = setup();
+		await expect(handlers.actions.lockThread(actionEvent())).resolves.toMatchObject({ status: 400 });
+		expect(store.lockThread).not.toHaveBeenCalled();
+	});
+
 	it('maps store input errors to a bounded failure', async () => {
 		const { handlers } = setup({
 			store: {
@@ -309,5 +337,41 @@ describe('staff reports actions', () => {
 		await expect(
 			handlers.actions.resolve(actionEvent({ form: { reportId: REPORT } }))
 		).rejects.toThrow('boom');
+	});
+
+	it.each([
+		[new MaritoolsInputError('invalid'), 400, 'Could not lock from that report.'],
+		[new MaritoolsUnavailableError(), 503, 'Moderation is unavailable. Try again.']
+	])('maps moderation failures to bounded responses', async (failure, status, message) => {
+		const { handlers } = setup({
+			store: {
+				lockThread: vi.fn(async () => {
+					throw failure;
+				})
+			}
+		});
+
+		await expect(
+			handlers.actions.lockThread(
+				actionEvent({ form: { reportId: REPORT, threadId: THREAD } })
+			)
+		).resolves.toMatchObject({ status, data: { error: message } });
+	});
+
+	it('rethrows unexpected moderation failures', async () => {
+		const failure = new Error('boom');
+		const { handlers } = setup({
+			store: {
+				banUser: vi.fn(async () => {
+					throw failure;
+				})
+			}
+		});
+
+		await expect(
+			handlers.actions.banAuthor(
+				actionEvent({ form: { reportId: REPORT, subjectUserId: AUTHOR } })
+			)
+		).rejects.toBe(failure);
 	});
 });

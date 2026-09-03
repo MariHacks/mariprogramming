@@ -5,11 +5,13 @@ import { ClubInputError, ClubUnavailableError } from '$lib/server/maritools/club
 import { _createStaffMemberDetailHandlers } from './+page.server.js';
 
 function actionEvent(fields = {}) {
+	const data = new FormData();
+	for (const [key, value] of Object.entries(fields)) data.set(key, String(value));
 	return {
 		locals: { staff: { userId: 'staff' } },
 		params: { userId: 'member-1' },
 		request: {
-			formData: vi.fn(async () => new Map(Object.entries(fields)))
+			formData: vi.fn(async () => data)
 		}
 	};
 }
@@ -88,6 +90,20 @@ describe('staff member detail route', () => {
 		expect(forgedPromotion.request.formData).not.toHaveBeenCalled();
 	});
 
+	it('supports a timed ban', async () => {
+		const banMember = vi.fn(async () => ({}));
+		const handlers = _createStaffMemberDetailHandlers({
+			authorize: vi.fn(),
+			createStore: () => ({ banMember })
+		});
+
+		await expect(handlers.actions.ban(actionEvent({ banPreset: '30d' }))).resolves.toEqual({
+			updated: true,
+			control: 'ban'
+		});
+		expect(banMember).toHaveBeenCalledWith('member-1', { until: expect.any(Date) });
+	});
+
 	it('rejects a missing target without opening a store', async () => {
 		const createStore = vi.fn();
 		const handlers = _createStaffMemberDetailHandlers({ authorize: vi.fn(), createStore });
@@ -132,5 +148,57 @@ describe('staff member detail route', () => {
 		});
 
 		await expect(handlers.actions.demoteMember(actionEvent())).rejects.toBe(failure);
+	});
+
+	it('normalizes a missing target id', async () => {
+		const createStore = vi.fn();
+		const handlers = _createStaffMemberDetailHandlers({ authorize: vi.fn(), createStore });
+		const event = actionEvent();
+		event.params.userId = null;
+
+		await expect(handlers.actions.unmute(event)).resolves.toMatchObject({ status: 400 });
+		expect(createStore).not.toHaveBeenCalled();
+	});
+
+	it('returns a 404 when the member does not exist', async () => {
+		const handlers = _createStaffMemberDetailHandlers({
+			authorize: vi.fn(),
+			createStore: () => ({ getStaffClubMember: vi.fn(async () => null) })
+		});
+
+		await expect(
+			handlers.load({ locals: { staff: {} }, params: { userId: 'missing' } })
+		).rejects.toMatchObject({ status: 404, body: { message: 'Club member not found' } });
+	});
+
+	it('returns an unavailable detail when the store is down', async () => {
+		const handlers = _createStaffMemberDetailHandlers({
+			authorize: vi.fn(),
+			createStore: () => ({
+				getStaffClubMember: vi.fn(async () => {
+					throw new ClubUnavailableError();
+				})
+			})
+		});
+
+		await expect(
+			handlers.load({ locals: { staff: {} }, params: { userId: 'member-1' } })
+		).resolves.toEqual({ member: null, unavailable: true });
+	});
+
+	it('rethrows unexpected detail failures', async () => {
+		const failure = new Error('boom');
+		const handlers = _createStaffMemberDetailHandlers({
+			authorize: vi.fn(),
+			createStore: () => ({
+				getStaffClubMember: vi.fn(async () => {
+					throw failure;
+				})
+			})
+		});
+
+		await expect(
+			handlers.load({ locals: { staff: {} }, params: { userId: 'member-1' } })
+		).rejects.toBe(failure);
 	});
 });
