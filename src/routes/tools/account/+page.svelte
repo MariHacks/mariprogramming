@@ -87,7 +87,7 @@
 		if (URL.canParse(callbackURL)) {
 			const host = new URL(callbackURL).hostname;
 			if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1') {
-				return 'Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local to a real Google Cloud OAuth web client, then restart the dev server.';
+				return 'Google sign-in is not configured for local development. Check the server OAuth settings, then restart the dev server.';
 			}
 		}
 		return 'Google sign-in is not configured on this site.';

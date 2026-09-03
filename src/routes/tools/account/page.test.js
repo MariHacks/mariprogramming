@@ -111,7 +111,7 @@ describe('account page', () => {
 		});
 		expect(
 			screen.getByText(
-				'Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local to a real Google Cloud OAuth web client, then restart the dev server.'
+				'Google sign-in is not configured for local development. Check the server OAuth settings, then restart the dev server.'
 			)
 		).toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Continue with Google' })).not.toBeInTheDocument();
