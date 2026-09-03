@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MariTools</title>
+    <!--
+      THESIS: MariTools as a Linear workspace. The artifact (week grid, issue list, Settings index) fills the first viewport. Refuses heading + lead + textarea + blue button.
+      OWN-WORLD: Cool mist rail, paper canvas, 36px inset-accent rows, hairline rules, 4px controls. Inter Tight for titles only. Inter tabular-nums for codes and times. Electric blue is current + primary only.
+      STORY: A student opens /tools and operates campus tasks the way they triage issues: scan the rail, work the canvas.
+      FIRST VIEWPORT: 48px club header, 240px dense rail, 40px canvas bar, then the page artifact at remaining height. Schedule is a week grid. Forum is an issue index. Home is a ruled Settings list plus a Today feed.
+      FORM: Assigned Linear workspace (rail + Notion canvas + Settings index). Arena candidate-4. World pinned.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#canvas">Skip to content</a>
+
+    <header class="site">
+      <a class="wordmark" href="https://marihacks.com">Programming Club</a>
+      <nav class="site-nav" aria-label="Club">
+        <a href="#">About</a>
+        <a href="#">Events</a>
+        <a class="is-current" href="#" aria-current="page">MariTools</a>
+        <a href="#account" data-nav="account">Account</a>
+      </nav>
+      <div class="site-end">
+        <label class="picker">
+          <span>Surface</span>
+          <select id="page-picker">
+            <option value="home">Home</option>
+            <option value="schedule">Schedule</option>
+            <option value="free-time">Free time</option>
+            <option value="semester">Semester</option>
+            <option value="catalog">Catalog</option>
+            <option value="clubs">Clubs</option>
+            <option value="forum">Forum</option>
+            <option value="thread">Thread</option>
+            <option value="account">Account</option>
+          </select>
+        </label>
+        <a class="account-link" href="#account" data-nav="account">Account</a>
+        <a
+          class="btn-solid"
+          href="https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header"
+          >Sign up</a
+        >
+      </div>
+    </header>
+
+    <div class="workspace">
+      <button class="menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="rail">
+        MariTools menu
+      </button>
+
+      <aside class="rail" id="rail">
+        <a class="rail-brand" href="#home" data-nav="home">
+          <span class="rail-mark" aria-hidden="true">M</span>
+          <span>
+            <strong>MariTools</strong>
+            <small>Campus workspace</small>
+          </span>
+        </a>
+
+        <nav class="rail-nav" aria-label="Tools">
+          <div class="rail-sec">
+            <span class="rail-label">Schedule</span>
+            <a class="rail-link" href="#schedule" data-nav="schedule">Schedule</a>
+            <a class="rail-link" href="#free-time" data-nav="free-time">Free Time</a>
+          </div>
+          <div class="rail-sec">
+            <span class="rail-label">Courses</span>
+            <a class="rail-link" href="#semester" data-nav="semester">Semester</a>
+            <a class="rail-link" href="#catalog" data-nav="catalog">Catalog</a>
+          </div>
+          <div class="rail-sec">
+            <span class="rail-label">Student life</span>
+            <a class="rail-link" href="#clubs" data-nav="clubs">Clubs</a>
+            <a class="rail-link" href="#forum" data-nav="forum">Forum</a>
+          </div>
+        </nav>
+
+        <a class="rail-foot" href="https://marihacks.com">Club home</a>
+      </aside>
+
+      <button class="backdrop" id="backdrop" type="button" aria-label="Close menu" hidden></button>
+
+      <main class="canvas" id="canvas">
+        <!-- HOME -->
+        <section class="page" data-page="home">
+          <div class="bar">
+            <h1>Tools</h1>
+            <span class="sample">Sample</span>
+            <span class="bar-spacer"></span>
+            <span class="quiet">No term picker in chrome</span>
+          </div>
+          <div class="home">
+            <div class="home-main">
+              <p class="home-kicker">MariTools</p>
+              <h2 class="home-title">All tools</h2>
+              <input class="search home-search" type="search" placeholder="Filter tools" aria-label="Filter tools" />
+
+              <div class="index-group">
+                <div class="index-label">Schedule</div>
+                <a class="index-row" href="#schedule" data-nav="schedule">
+                  <strong>Schedule</strong>
+                  <span>Paste your Omnivox list and download a calendar.</span>
+                  <i aria-hidden="true">›</i>
+                </a>
+                <a class="index-row" href="#free-time" data-nav="free-time">
+                  <strong>Free Time</strong>
+                  <span>Compare a few schedules and see when everyone is free.</span>
+                  <i aria-hidden="true">›</i>
+                </a>
+              </div>
+
+              <div class="index-group">
+                <div class="index-label">Courses</div>
+                <a class="index-row" href="#semester" data-nav="semester">
+                  <strong>Semester</strong>
+                  <span>Review dates and weights from a course outline.</span>
+                  <i aria-hidden="true">›</i>
+                </a>
+                <a class="index-row" href="#catalog" data-nav="catalog">
+                  <strong>Catalog</strong>
+                  <span>Browse course information students have shared.</span>
+                  <i aria-hidden="true">›</i>
+                </a>
+              </div>
+
+              <div class="index-group">
+                <div class="index-label">Student life</div>
+                <a class="index-row" href="#clubs" data-nav="clubs">
+                  <strong>Clubs</strong>
+                  <span>Find campus clubs from verified listings.</span>
+                  <i aria-hidden="true">›</i>
+                </a>
+                <a class="index-row" href="#forum" data-nav="forum">
+                  <strong>Forum</strong>
+                  <span>Read and post questions tagged to real courses.</span>
+                  <i aria-hidden="true">›</i>
+                </a>
+              </div>
+            </div>
+
+            <aside class="today" aria-label="Today">
+              <h2>Today</h2>
+              <div class="feed-item">
+                <span class="dot"></span>
+                <div>
+                  <strong>201-NYA-05 · H-204</strong>
+                  <p class="data">08:30–10:00 · Calculus I</p>
+                </div>
+              </div>
+              <div class="feed-item">
+                <span class="dot dot-warn"></span>
+                <div>
+                  <strong>Overlap on Tuesday</strong>
+                  <p class="data">10:00 · 202-NYA-05 and 420-GEK-03</p>
+                </div>
+              </div>
+              <div class="feed-item">
+                <span class="dot dot-ok"></span>
+                <div>
+                  <strong>Free 90 min with Sam, Jordan</strong>
+                  <p class="data">Wed 13:00–14:30</p>
+                </div>
+              </div>
+              <div class="feed-item">
+                <span class="dot dot-mute"></span>
+                <div>
+                  <strong>MT-184 needs a reply</strong>
+                  <p>Lab report citation format · 603-101-MQ</p>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- SCHEDULE -->
+        <section class="page" data-page="schedule" hidden>
+          <div class="bar">
+            <h1>Schedule</h1>
+            <span class="sep"></span>
+            <div class="seg" role="group" aria-label="View">
+              <button type="button" aria-pressed="true">Week</button>
+              <button type="button" aria-pressed="false">List</button>
+            </div>
+            <button class="btn icon-btn" type="button" aria-label="Previous week">‹</button>
+            <strong class="data">23–27 Mar</strong>
+            <button class="btn icon-btn" type="button" aria-label="Next week">›</button>
+            <span class="bar-spacer"></span>
+            <span class="sample">Sample</span>
+            <button class="btn" type="button">.ics</button>
+            <button class="btn btn-primary" type="button">Paste</button>
+          </div>
+          <div class="split">
+            <div class="split-main">
+              <div class="week" role="grid" aria-label="Week timetable">
+                <div class="week-corner"></div>
+                <div class="dow"><span>Mon</span> <strong>23</strong></div>
+                <div class="dow is-today"><span>Tue</span> <strong>24</strong></div>
+                <div class="dow"><span>Wed</span> <strong>25</strong></div>
+                <div class="dow"><span>Thu</span> <strong>26</strong></div>
+                <div class="dow"><span>Fri</span> <strong>27</strong></div>
+
+                <div class="time-rail">
+                  <div class="hour data">8:00</div>
+                  <div class="hour data">9:00</div>
+                  <div class="hour data">10:00</div>
+                  <div class="hour data">11:00</div>
+                  <div class="hour data">12:00</div>
+                  <div class="hour data">13:00</div>
+                  <div class="hour data">14:00</div>
+                  <div class="hour data">15:00</div>
+                  <div class="hour data">16:00</div>
+                  <div class="hour data">17:00</div>
+                  <div class="hour data">18:00</div>
+                </div>
+
+                <div class="day-col" style="grid-column: 2">
+                  <article class="event" style="--t: 0.5; --d: 1.5">
+                    <b class="data">201-NYA-05</b>
+                    <span class="data">H-204 · 8:30–10:00</span>
+                  </article>
+                  <article class="event event-b" style="--t: 6; --d: 1.5">
+                    <b class="data">603-101-MQ</b>
+                    <span class="data">B-12 · 14:00–15:30</span>
+                  </article>
+                </div>
+                <div class="day-col" style="grid-column: 3">
+                  <article class="event event-conflict" style="--t: 2; --d: 1.5">
+                    <b class="data">202-NYA-05</b>
+                    <span class="data">Lab 3 · 10:00–11:30</span>
+                  </article>
+                  <article class="event event-conflict" style="--t: 2.35; --d: 1.5; left: 28%">
+                    <b class="data">420-GEK-03</b>
+                    <span class="data">C-08 · 10:20–11:50</span>
+                  </article>
+                  <div class="now" title="Now"></div>
+                </div>
+                <div class="day-col" style="grid-column: 4">
+                  <article class="event" style="--t: 0.5; --d: 1.5">
+                    <b class="data">201-NYA-05</b>
+                    <span class="data">H-204 · 8:30–10:00</span>
+                  </article>
+                  <article class="event event-c" style="--t: 3.5; --d: 1.5">
+                    <b class="data">201-NYB-05</b>
+                    <span class="data">H-210 · 11:30–13:00</span>
+                  </article>
+                </div>
+                <div class="day-col" style="grid-column: 5">
+                  <article class="event event-b" style="--t: 2; --d: 3">
+                    <b class="data">202-NYA-05</b>
+                    <span class="data">Lab 3 · 10:00–13:00</span>
+                  </article>
+                </div>
+                <div class="day-col" style="grid-column: 6">
+                  <article class="event" style="--t: 4.5; --d: 1.5">
+                    <b class="data">603-101-MQ</b>
+                    <span class="data">B-12 · 12:30–14:00</span>
+                  </article>
+                  <article class="event event-d" style="--t: 7.5; --d: 1.5">
+                    <b class="data">420-GEK-03</b>
+                    <span class="data">C-08 · 15:30–17:00</span>
+                  </article>
+                </div>
+              </div>
+            </div>
+            <aside class="peek">
+              <h2>Omnivox paste</h2>
+              <p class="lede">Import sits in the inspector. The week is the page.</p>
+              <label for="omnivox">Copied list</label>
+              <textarea class="area" id="omnivox" placeholder="201-NYA-05 Calculus I&#10;Mon 08:30–10:00 H-204"></textarea>
+              <div class="stack">
+                <button class="btn btn-primary" type="button">Build week</button>
+                <button class="btn" type="button">Download .ics</button>
+              </div>
+              <p class="notice notice-warn">Tuesday 10:00 has two blocks. Neither is dropped. Fix the source list or keep both.</p>
+              <details>
+                <summary>Where to copy in Omnivox</summary>
+                <pre>Schedule → List view → select the week → copy. Room and section stay in the line.</pre>
+              </details>
+            </aside>
+          </div>
+        </section>
+
+        <!-- FREE TIME -->
+        <section class="page" data-page="free-time" hidden>
+          <div class="bar">
+            <h1>Free Time</h1>
+            <span class="sep"></span>
+            <div class="radios" role="radiogroup" aria-label="Minimum gap">
+              <label><input type="radio" name="gap" /> <span>30m</span></label>
+              <label><input type="radio" name="gap" checked /> <span>60m</span></label>
+              <label><input type="radio" name="gap" /> <span>90m</span></label>
+            </div>
+            <span class="sep"></span>
+            <span class="legend">
+              <span><i class="lg-free"></i>Free</span>
+              <span><i class="lg-busy"></i>Busy</span>
+            </span>
+            <span class="bar-spacer"></span>
+            <span class="chip is-on">Alex</span>
+            <span class="chip is-on">Sam</span>
+            <span class="chip is-on">Jordan</span>
+            <span class="sample">Sample</span>
+          </div>
+          <div class="split">
+            <div class="split-main">
+              <div class="week is-gap" role="grid" aria-label="Shared free slots">
+                <div class="week-corner"></div>
+                <div class="dow"><span>Mon</span> <strong>23</strong></div>
+                <div class="dow is-today"><span>Tue</span> <strong>24</strong></div>
+                <div class="dow"><span>Wed</span> <strong>25</strong></div>
+                <div class="dow"><span>Thu</span> <strong>26</strong></div>
+                <div class="dow"><span>Fri</span> <strong>27</strong></div>
+
+                <div class="time-rail">
+                  <div class="hour data">8:00</div>
+                  <div class="hour data">9:00</div>
+                  <div class="hour data">10:00</div>
+                  <div class="hour data">11:00</div>
+                  <div class="hour data">12:00</div>
+                  <div class="hour data">13:00</div>
+                  <div class="hour data">14:00</div>
+                  <div class="hour data">15:00</div>
+                  <div class="hour data">16:00</div>
+                  <div class="hour data">17:00</div>
+                  <div class="hour data">18:00</div>
+                </div>
+
+                <div class="day-col" style="grid-column: 2">
+                  <div class="busy" style="--t: 0.5; --d: 1.5"></div>
+                  <div class="gap" style="--t: 2; --d: 2">
+                    <b>2h free</b>
+                    <span class="data">10:00–12:00</span>
+                  </div>
+                  <div class="busy" style="--t: 6; --d: 1.5"></div>
+                </div>
+                <div class="day-col" style="grid-column: 3">
+                  <div class="busy" style="--t: 2; --d: 2"></div>
+                  <div class="gap" style="--t: 5; --d: 1.5">
+                    <b>90m free</b>
+                    <span class="data">13:00–14:30</span>
+                  </div>
+                </div>
+                <div class="day-col" style="grid-column: 4">
+                  <div class="busy" style="--t: 0.5; --d: 1.5"></div>
+                  <div class="busy" style="--t: 3.5; --d: 1.5"></div>
+                  <div class="gap" style="--t: 6; --d: 2">
+                    <b>2h free</b>
+                    <span class="data">14:00–16:00</span>
+                  </div>
+                </div>
+                <div class="day-col" style="grid-column: 5">
+                  <div class="busy" style="--t: 2; --d: 3"></div>
+                  <div class="gap" style="--t: 5; --d: 1">
+                    <b>60m free</b>
+                    <span class="data">13:00–14:00</span>
+                  </div>
+                </div>
+                <div class="day-col" style="grid-column: 6">
+                  <div class="gap" style="--t: 0; --d: 4">
+                    <b>Morning</b>
+                    <span class="data">8:00–12:00</span>
+                  </div>
+                  <div class="busy" style="--t: 4.5; --d: 1.5"></div>
+                </div>
+              </div>
+            </div>
+            <aside class="peek">
+              <h2>People</h2>
+              <p class="lede">When2meet paste stations. Gaps are the artifact.</p>
+              <div class="people">
+                <div class="person">
+                  <header>Alex <span class="ok">Parsed</span></header>
+                  <textarea class="area" aria-label="Alex schedule">201-NYA-05 Mon 8:30-10:00</textarea>
+                </div>
+                <div class="person">
+                  <header>Sam <span class="ok">Parsed</span></header>
+                  <textarea class="area" aria-label="Sam schedule">202-NYA-05 Tue 10:00-13:00</textarea>
+                </div>
+                <div class="person">
+                  <header>Jordan</header>
+                  <textarea class="area" aria-label="Jordan schedule" placeholder="Paste a third Omnivox list"></textarea>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- SEMESTER -->
+        <section class="page" data-page="semester" hidden>
+          <div class="bar">
+            <h1>Semester</h1>
+            <span class="bar-spacer"></span>
+            <button class="btn" type="button">Replace PDF</button>
+            <button class="btn btn-primary" type="button">Save outline</button>
+          </div>
+          <div class="doc">
+            <p class="notice notice-info">Synthetic review of an uploaded outline. Correct a row before it is shared.</p>
+            <h2 class="doc-title">Calculus I</h2>
+            <p class="doc-id data">201-NYA-05 · Section 00001</p>
+            <dl class="props">
+              <dt>Instructor</dt>
+              <dd>Chen</dd>
+              <dt>Credits</dt>
+              <dd class="data">75</dd>
+              <dt>Source</dt>
+              <dd>NYA-outline.pdf · 186 KB</dd>
+              <dt>Share</dt>
+              <dd>Not in catalog yet</dd>
+            </dl>
+
+            <div class="drop">
+              <span>Drop a course outline PDF here, or choose a file. PDF only, 8 MB max.</span>
+              <button class="btn" type="button">Upload</button>
+            </div>
+
+            <h2>Assessments</h2>
+            <table class="sheet">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Weight</th>
+                  <th>Date</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Quizzes (best 8 of 10)</td>
+                  <td class="num">10%</td>
+                  <td class="num">Weekly</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Midterm</td>
+                  <td class="num">25%</td>
+                  <td class="num">12 Mar</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Assignments</td>
+                  <td class="num">25%</td>
+                  <td class="num">See outline</td>
+                  <td class="flag">Check date</td>
+                </tr>
+                <tr>
+                  <td>Final exam</td>
+                  <td class="num">40%</td>
+                  <td class="num">Exam period</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h2>Books on the outline</h2>
+            <p class="quiet">Reference only. MariTools does not sell books.</p>
+            <table class="sheet">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>ISBN</th>
+                  <th>Required</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Single Variable Calculus</td>
+                  <td class="num">978-1-305-26804-3</td>
+                  <td>Yes</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <label class="check">
+              <input type="checkbox" />
+              <span>Contribute this outline to the catalog. Course code, instructor, and assessments become public.</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- CATALOG -->
+        <section class="page" data-page="catalog" hidden>
+          <div class="bar">
+            <h1>Catalog</h1>
+            <span class="quiet">Student-shared course facts</span>
+            <span class="bar-spacer"></span>
+            <span class="sample">Sample</span>
+          </div>
+          <div class="split">
+            <div class="split-main">
+              <div class="filters">
+                <select class="select" aria-label="Term">
+                  <option>Winter 2026</option>
+                  <option>Fall 2025</option>
+                </select>
+                <input class="search" type="search" placeholder="Code, title, instructor" aria-label="Search catalog" />
+                <span class="chip is-on">Science</span>
+                <span class="chip">Arts</span>
+                <span class="bar-spacer"></span>
+                <span class="quiet data">18 courses</span>
+              </div>
+              <div class="head-row head-course">
+                <span>Code</span><span>Title</span><span>Section</span><span>Instructor</span><span>Credits</span><span>Books</span>
+              </div>
+              <ul class="list">
+                <li class="row row-course is-on" tabindex="0">
+                  <span class="code data">201-NYA-05</span>
+                  <span class="title">Calculus I</span>
+                  <span class="sec data">00001</span>
+                  <span class="who">Chen</span>
+                  <span class="meta data">75</span>
+                  <span class="meta">2 refs</span>
+                </li>
+                <li class="row row-course" tabindex="0">
+                  <span class="code data">201-NYB-05</span>
+                  <span class="title">Calculus II</span>
+                  <span class="sec data">00003</span>
+                  <span class="who">Nguyen</span>
+                  <span class="meta data">75</span>
+                  <span class="meta">1 ref</span>
+                </li>
+                <li class="row row-course" tabindex="0">
+                  <span class="code data">202-NYA-05</span>
+                  <span class="title">General Chemistry</span>
+                  <span class="sec data">00002</span>
+                  <span class="who">Patel</span>
+                  <span class="meta data">75</span>
+                  <span class="meta">1 ref</span>
+                </li>
+                <li class="row row-course" tabindex="0">
+                  <span class="code data">203-NYA-05</span>
+                  <span class="title">Mechanics</span>
+                  <span class="sec data">00001</span>
+                  <span class="who">Roy</span>
+                  <span class="meta data">75</span>
+                  <span class="meta">—</span>
+                </li>
+                <li class="row row-course" tabindex="0">
+                  <span class="code data">420-GEK-03</span>
+                  <span class="title">Introduction to Programming</span>
+                  <span class="sec data">00004</span>
+                  <span class="who">El-Khoury</span>
+                  <span class="meta data">45</span>
+                  <span class="meta">—</span>
+                </li>
+                <li class="row row-course" tabindex="0">
+                  <span class="code data">603-101-MQ</span>
+                  <span class="title">Introduction to College English</span>
+                  <span class="sec data">00012</span>
+                  <span class="who">Moreau</span>
+                  <span class="meta data">60</span>
+                  <span class="meta">1 ref</span>
+                </li>
+                <li class="row row-course" tabindex="0">
+                  <span class="code data">345-101-MQ</span>
+                  <span class="title">Knowledge</span>
+                  <span class="sec data">00007</span>
+                  <span class="who">Bouchard</span>
+                  <span class="meta data">45</span>
+                  <span class="meta">—</span>
+                </li>
+                <li class="row row-course" tabindex="0">
+                  <span class="code data">109-102-MQ</span>
+                  <span class="title">Physical Activity and Health</span>
+                  <span class="sec data">00009</span>
+                  <span class="who">Lavoie</span>
+                  <span class="meta data">30</span>
+                  <span class="meta">—</span>
+                </li>
+                <li class="row row-course" tabindex="0">
+                  <span class="code data">330-300-MA</span>
+                  <span class="title">Western Civilization</span>
+                  <span class="sec data">00002</span>
+                  <span class="who">Fraser</span>
+                  <span class="meta data">45</span>
+                  <span class="meta">1 ref</span>
+                </li>
+                <li class="row row-course" tabindex="0">
+                  <span class="code data">101-NYA-05</span>
+                  <span class="title">General Biology I</span>
+                  <span class="sec data">00005</span>
+                  <span class="who">Khan</span>
+                  <span class="meta data">75</span>
+                  <span class="meta">2 refs</span>
+                </li>
+              </ul>
+            </div>
+            <aside class="peek">
+              <h2>201-NYA-05</h2>
+              <p class="lede">Hanging facts for the selected row.</p>
+              <dl class="props" style="margin-bottom: 12px; max-width: none">
+                <dt>Title</dt>
+                <dd>Calculus I</dd>
+                <dt>Section</dt>
+                <dd class="data">00001</dd>
+                <dt>Instructor</dt>
+                <dd>Chen</dd>
+                <dt>Credits</dt>
+                <dd class="data">75</dd>
+              </dl>
+              <h2>Books</h2>
+              <p class="quiet">Reference only. No buy action.</p>
+              <p class="data" style="margin: 8px 0 0">978-1-305-26804-3<br />Single Variable Calculus</p>
+              <button class="btn" type="button" style="margin-top: 14px" data-nav="semester">Open semester review</button>
+            </aside>
+          </div>
+        </section>
+
+        <!-- CLUBS -->
+        <section class="page" data-page="clubs" hidden>
+          <div class="bar">
+            <h1>Clubs</h1>
+            <span class="quiet">Verified campus listings</span>
+            <span class="bar-spacer"></span>
+            <span class="sample">Sample</span>
+            <button class="btn btn-primary" type="button">Submit a club</button>
+          </div>
+          <div class="filters">
+            <input class="search" type="search" placeholder="Name or category" aria-label="Search clubs" />
+            <span class="chip is-on">All</span>
+            <span class="chip">Academic</span>
+            <span class="chip">Community</span>
+            <span class="bar-spacer"></span>
+            <span class="quiet data">6 listed</span>
+          </div>
+          <div class="head-row head-club">
+            <span>Club</span><span>About</span><span>Category</span><span></span>
+          </div>
+          <ul class="list">
+            <li class="row row-club">
+              <span class="title">Programming Club</span>
+              <span class="meta">Workshops, peer help, MariHacks.</span>
+              <span class="meta">Academic</span>
+              <a class="ext" href="https://marihacks.com">Site</a>
+            </li>
+            <li class="row row-club">
+              <span class="title">Math Club</span>
+              <span class="meta">Problem sets and contest practice.</span>
+              <span class="meta">Academic</span>
+              <span class="meta">—</span>
+            </li>
+            <li class="row row-club">
+              <span class="title">Robotics</span>
+              <span class="meta">Build nights in the engineering lab.</span>
+              <span class="meta">Academic</span>
+              <a class="ext" href="#">Site</a>
+            </li>
+            <li class="row row-club">
+              <span class="title">Environment Club</span>
+              <span class="meta">Campus waste audits and outings.</span>
+              <span class="meta">Community</span>
+              <a class="ext" href="#">Site</a>
+            </li>
+            <li class="row row-club">
+              <span class="title">Debating Union</span>
+              <span class="meta">Weekly rounds, tournament travel.</span>
+              <span class="meta">Community</span>
+              <span class="meta">—</span>
+            </li>
+            <li class="row row-club">
+              <span class="title">Film Society</span>
+              <span class="meta">Screenings in the auditorium.</span>
+              <span class="meta">Community</span>
+              <a class="ext" href="#">Site</a>
+            </li>
+          </ul>
+          <div class="empty">
+            <strong>Submit a listing</strong>
+            Signed-in students can add a club. Staff verify before it appears here.
+          </div>
+        </section>
+
+        <!-- FORUM -->
+        <section class="page" data-page="forum" hidden>
+          <div class="bar">
+            <h1>Forum</h1>
+            <div class="seg" role="group" aria-label="Scope">
+              <button type="button" aria-pressed="true">Active</button>
+              <button type="button" aria-pressed="false">All</button>
+            </div>
+            <span class="chip is-on">All courses</span>
+            <span class="chip">201-NYA-05</span>
+            <span class="chip">603-101-MQ</span>
+            <span class="bar-spacer"></span>
+            <span class="quiet"><span class="k">N</span> new thread</span>
+          </div>
+          <div class="head-row head-issue">
+            <span>ID</span><span></span><span>Thread</span><span>Course</span><span>Replies</span><span>Updated</span>
+          </div>
+          <ul class="list">
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-184</span>
+                <span class="status status-open" aria-label="Open"></span>
+                <span class="title">Lab report citation format for 603</span>
+                <span class="who data">603-101-MQ</span>
+                <span class="count data">4</span>
+                <span class="when data">2h</span>
+              </a>
+            </li>
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-179</span>
+                <span class="status" aria-label="Answered"></span>
+                <span class="title">NYA related rates worksheet 4, question 7</span>
+                <span class="who data">201-NYA-05</span>
+                <span class="count data">6</span>
+                <span class="when data">5h</span>
+              </a>
+            </li>
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-166</span>
+                <span class="status status-open" aria-label="Open"></span>
+                <span class="title">Does NYA lab 3 need goggles from day one?</span>
+                <span class="who data">202-NYA-05</span>
+                <span class="count data">2</span>
+                <span class="when data">1d</span>
+              </a>
+            </li>
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-158</span>
+                <span class="status status-done" aria-label="Closed"></span>
+                <span class="title">Shared notes folder for GEK?</span>
+                <span class="who data">420-GEK-03</span>
+                <span class="count data">9</span>
+                <span class="when data">3d</span>
+              </a>
+            </li>
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-141</span>
+                <span class="status" aria-label="Answered"></span>
+                <span class="title">Mechanics tutorial time that is not a conflict</span>
+                <span class="who data">203-NYA-05</span>
+                <span class="count data">3</span>
+                <span class="when data">4d</span>
+              </a>
+            </li>
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-137</span>
+                <span class="status status-open" aria-label="Open"></span>
+                <span class="title">Knowledge essay word count, take-home vs in-class</span>
+                <span class="who data">345-101-MQ</span>
+                <span class="count data">1</span>
+                <span class="when data">6d</span>
+              </a>
+            </li>
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-129</span>
+                <span class="status" aria-label="Answered"></span>
+                <span class="title">NYB integration by parts, worksheet 2</span>
+                <span class="who data">201-NYB-05</span>
+                <span class="count data">5</span>
+                <span class="when data">1w</span>
+              </a>
+            </li>
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-121</span>
+                <span class="status status-open" aria-label="Open"></span>
+                <span class="title">Chem lab 2 pre-lab due before or after the quiz?</span>
+                <span class="who data">202-NYA-05</span>
+                <span class="count data">2</span>
+                <span class="when data">1w</span>
+              </a>
+            </li>
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-118</span>
+                <span class="status status-done" aria-label="Closed"></span>
+                <span class="title">English oral presentation slots that overlap NYA</span>
+                <span class="who data">603-101-MQ</span>
+                <span class="count data">7</span>
+                <span class="when data">1w</span>
+              </a>
+            </li>
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-110</span>
+                <span class="status" aria-label="Answered"></span>
+                <span class="title">Where is C-08 this term?</span>
+                <span class="who data">420-GEK-03</span>
+                <span class="count data">4</span>
+                <span class="when data">2w</span>
+              </a>
+            </li>
+            <li>
+              <a class="row row-issue" href="#thread" data-nav="thread">
+                <span class="code data">MT-098</span>
+                <span class="status status-open" aria-label="Open"></span>
+                <span class="title">Study group for NYA midterm, Wednesday gap</span>
+                <span class="who data">201-NYA-05</span>
+                <span class="count data">8</span>
+                <span class="when data">2w</span>
+              </a>
+            </li>
+          </ul>
+          <form class="compose" action="#" method="get">
+            <label class="quiet" for="new-thread">New</label>
+            <input class="field" id="new-thread" placeholder="Start a thread tagged to a course" />
+            <select class="select" aria-label="Course" style="width: auto; min-width: 10rem">
+              <option>201-NYA-05</option>
+              <option>603-101-MQ</option>
+              <option>420-GEK-03</option>
+            </select>
+            <button class="btn btn-primary" type="button">Post</button>
+          </form>
+        </section>
+
+        <!-- THREAD -->
+        <section class="page" data-page="thread" hidden>
+          <div class="bar">
+            <a class="crumb" href="#forum" data-nav="forum">Forum</a>
+            <span class="quiet">/</span>
+            <h1>MT-184</h1>
+            <span class="bar-spacer"></span>
+            <button class="btn" type="button">Report</button>
+          </div>
+          <article class="issue">
+            <p class="issue-id data">MT-184 · Open · 603-101-MQ</p>
+            <h1>Lab report citation format for 603</h1>
+            <dl class="props">
+              <dt>Author</dt>
+              <dd>A. Mercier</dd>
+              <dt>Course</dt>
+              <dd class="data">603-101-MQ</dd>
+              <dt>Posted</dt>
+              <dd class="data">Yesterday 21:14</dd>
+            </dl>
+            <div class="issue-body">
+              <p>
+                Moreau’s outline says MLA, but the sample report on Omnivox uses in-text dates. Does the lab report
+                follow the essay sheet or the sample?
+              </p>
+              <p>Synthetic thread. Not a live forum post.</p>
+            </div>
+            <div class="activity">
+              <h2>Replies</h2>
+              <div class="reply">
+                <div class="avatar" aria-hidden="true">N</div>
+                <div>
+                  <header><strong>N. Chen</strong> <span class="data">22h</span></header>
+                  <p>The essay sheet wins. The Omnivox sample is from last year.</p>
+                </div>
+              </div>
+              <div class="reply">
+                <div class="avatar" aria-hidden="true">A</div>
+                <div>
+                  <header><strong>A. Mercier</strong> <span class="data">18h</span></header>
+                  <p>Got it. Works cited still required on the lab?</p>
+                </div>
+              </div>
+              <div class="reply">
+                <div class="avatar" aria-hidden="true">S</div>
+                <div>
+                  <header><strong>Staff</strong> <span class="data">9h</span> · <span>Moderated</span></header>
+                  <p>Course-tagged threads stay on the course. Off-topic replies get collapsed.</p>
+                </div>
+              </div>
+              <form class="reply-form" action="#" method="get">
+                <label class="quiet" for="reply">Reply</label>
+                <textarea class="area" id="reply" placeholder="Write a reply"></textarea>
+                <button class="btn btn-primary" type="button">Reply</button>
+              </form>
+            </div>
+          </article>
+        </section>
+
+        <!-- ACCOUNT -->
+        <section class="page" data-page="account" hidden>
+          <div class="bar">
+            <h1>Account</h1>
+          </div>
+          <div class="account">
+            <h1>Account</h1>
+            <p class="lede">MariTools identity. Separate from Book Delivery. Sign-in lives in the site header, not the rail.</p>
+            <dl class="band">
+              <div class="band-row">
+                <dt>Status</dt>
+                <dd>Signed out</dd>
+              </div>
+              <div class="band-row">
+                <dt>Google</dt>
+                <dd>
+                  <button class="btn btn-primary" type="button">Sign in with Google</button>
+                  <p class="quiet" style="margin: 8px 0 0">Used for saved schedules, outline uploads, and forum posts.</p>
+                </dd>
+              </div>
+              <div class="band-row">
+                <dt>Email</dt>
+                <dd class="quiet">Shown after sign-in.</dd>
+              </div>
+              <div class="band-row">
+                <dt>Saves</dt>
+                <dd class="quiet">Private until you contribute an outline or post a thread.</dd>
+              </div>
+            </dl>
+            <details class="legal">
+              <summary>NVIDIA disclosure</summary>
+              <p>
+                Course-outline parsing may run on NVIDIA-hosted models. Do not upload outlines you are not allowed to
+                share. Staff can remove a contribution.
+              </p>
+            </details>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        var picker = document.getElementById("page-picker");
+        var pages = document.querySelectorAll("[data-page]");
+        var links = document.querySelectorAll("[data-nav]");
+        var menuBtn = document.getElementById("menu-btn");
+        var backdrop = document.getElementById("backdrop");
+
+        function closeMenu() {
+          document.body.classList.remove("nav-open");
+          menuBtn.setAttribute("aria-expanded", "false");
+          backdrop.hidden = true;
+        }
+
+        function show(id) {
+          if (!id) id = "home";
+          var thread = id === "thread";
+          pages.forEach(function (p) {
+            p.hidden = p.getAttribute("data-page") !== id;
+          });
+          picker.value = id;
+          links.forEach(function (a) {
+            var nav = a.getAttribute("data-nav");
+            var current = nav === id || (thread && nav === "forum" && a.classList.contains("rail-link"));
+            if (a.classList.contains("rail-link")) {
+              if (current) a.setAttribute("aria-current", "page");
+              else a.removeAttribute("aria-current");
+            }
+          });
+          document.getElementById("canvas").scrollTop = 0;
+          closeMenu();
+          if (location.hash !== "#" + id) {
+            history.replaceState(null, "", "#" + id);
+          }
+        }
+
+        picker.addEventListener("change", function () {
+          show(picker.value);
+        });
+
+        document.body.addEventListener("click", function (e) {
+          var t = e.target.closest("[data-nav]");
+          if (!t) return;
+          e.preventDefault();
+          show(t.getAttribute("data-nav"));
+        });
+
+        menuBtn.addEventListener("click", function () {
+          var open = !document.body.classList.contains("nav-open");
+          document.body.classList.toggle("nav-open", open);
+          menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+          backdrop.hidden = !open;
+        });
+
+        backdrop.addEventListener("click", closeMenu);
+
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") closeMenu();
+        });
+
+        var start = (location.hash || "#home").slice(1);
+        if (![].some.call(pages, function (p) { return p.getAttribute("data-page") === start; })) {
+          start = "home";
+        }
+        show(start);
+      })();
+    </script>
+  </body>
+</html>

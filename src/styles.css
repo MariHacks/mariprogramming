@@ -442,6 +442,140 @@ h4 {
 	opacity: 0.58;
 }
 
+.editorial-page {
+	min-height: calc(100vh - 4.5rem - 4.9375rem);
+	border-block-end: var(--rule);
+}
+
+.editorial-frame {
+	display: grid;
+	padding-block: clamp(3.5rem, 7vw, 6rem);
+	gap: clamp(2.5rem, 7vw, 6rem);
+}
+
+.editorial-frame :global(.section-intro) {
+	align-content: start;
+	max-width: 36rem;
+}
+
+@media (min-width: 52rem) {
+	.editorial-frame--split {
+		grid-template-columns: minmax(15rem, 0.68fr) minmax(0, 1.32fr);
+		align-items: start;
+	}
+
+	.editorial-frame--split .editorial-rail {
+		grid-column: 2;
+	}
+}
+
+@media (max-width: 43.749rem) {
+	.editorial-page {
+		min-height: calc(100vh - 4.25rem - 6.5rem);
+	}
+}
+
+.quiet-link {
+	display: inline-flex;
+	align-items: center;
+	width: fit-content;
+	min-height: var(--control-height);
+	gap: 0.65rem;
+	color: var(--midnight);
+	font-size: var(--text-sm);
+	font-weight: 600;
+	line-height: 1.25;
+	text-decoration: none;
+	transition:
+		color var(--motion-fast) var(--ease-out),
+		transform var(--motion-press) var(--ease-out);
+}
+
+.quiet-link:hover {
+	color: var(--club-blue);
+}
+
+.quiet-link:active {
+	transform: translateY(var(--press-distance));
+}
+
+.ruled-index {
+	margin: 0;
+	padding: 0;
+	border-block: var(--rule);
+	list-style: none;
+}
+
+.ruled-index > li {
+	max-width: none;
+}
+
+.ruled-index > li + li {
+	border-block-start: var(--rule);
+}
+
+.ruled-link {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) max-content;
+	align-items: center;
+	min-height: 3.5rem;
+	padding: 0.7rem var(--space-2xs);
+	color: var(--graphite);
+	font-size: var(--text-sm);
+	font-weight: 600;
+	line-height: 1.35;
+	text-decoration: none;
+	column-gap: var(--space-sm);
+	transition:
+		background-color var(--motion-fast) var(--ease-out),
+		color var(--motion-fast) var(--ease-out),
+		transform var(--motion-press) var(--ease-out);
+}
+
+.ruled-link:hover {
+	background: var(--mist);
+	color: var(--club-blue);
+}
+
+.ruled-link:active {
+	transform: translateY(var(--press-distance));
+}
+
+.ruled-link--primary {
+	color: var(--club-blue);
+	font-weight: 700;
+}
+
+.surface-ink-panel {
+	background: var(--midnight);
+	color: var(--paper);
+}
+
+.surface-ink-panel :where(h1, h2, h3, h4, h5, h6) {
+	color: var(--paper);
+}
+
+.surface-ink-panel a:not([class]) {
+	color: var(--sky);
+	text-decoration-color: rgb(var(--sky-rgb) / 55%);
+}
+
+@keyframes -global-editorial-enter {
+	from {
+		opacity: 0;
+		transform: translateY(0.65rem);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.editorial-enter {
+	animation: editorial-enter var(--motion-base) var(--ease-out) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	html:focus-within {
 		scroll-behavior: auto;

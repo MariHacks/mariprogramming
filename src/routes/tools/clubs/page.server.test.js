@@ -26,7 +26,8 @@ const PENDING = {
 	slug: 'chess',
 	category: 'games',
 	description: 'Play',
-	links: []
+	links: [],
+	submitterRole: 'officer'
 };
 
 function handlers(overrides = {}) {
@@ -36,7 +37,6 @@ function handlers(overrides = {}) {
 		isStaff: vi.fn((email, role) => email === 'team@marihacks.com' || role === 'staff'),
 		listPendingClubSubmissions: vi.fn(async () => [PENDING]),
 		submitClub: vi.fn(async () => ({ id: PENDING.id })),
-		publishPendingClub: vi.fn(async () => CLUB),
 		...overrides.store
 	};
 	return {
@@ -166,49 +166,53 @@ describe('clubs page server', () => {
 		await expect(current.load(event())).rejects.toThrow('boom');
 	});
 
-	it('submits a club for review', async () => {
+	it('starts a pending submission and redirects to the editable detail', async () => {
 		const current = handlers();
-		const result = await current.actions.submit(
-			event({
-				locals: { maritools: SESSION },
-				form: {
-					name: 'Chess Club',
-					category: 'games',
-					description: 'Play',
-					linkLabel: 'Discord',
-					linkUrl: 'https://example.com'
-				}
-			})
-		);
-		expect(result).toEqual({ submitted: true });
+		await expect(
+			current.actions.submit(
+				event({
+					locals: { maritools: SESSION },
+					form: {
+						name: 'Chess Club',
+						category: 'games',
+						submitterRole: 'officer'
+					}
+				})
+			)
+		).rejects.toMatchObject({
+			status: 303,
+			location: `/tools/clubs/submissions/${PENDING.id}`
+		});
 		expect(current.store.submitClub).toHaveBeenCalledWith({
 			submitterUserId: SESSION.userId,
 			payload: expect.objectContaining({
 				name: 'Chess Club',
 				slug: 'chess-club',
 				category: 'games',
-				links: [{ label: 'Discord', url: 'https://example.com' }]
+				submitterRole: 'officer'
 			})
 		});
-		await current.actions.submit(
-			event({ locals: { maritools: SESSION }, form: { name: 'Chess Club', linkUrl: 'https://example.com' } })
-		);
-		expect(current.store.submitClub).toHaveBeenLastCalledWith({
-			submitterUserId: SESSION.userId,
-			payload: expect.objectContaining({
-				links: [{ label: 'Website', url: 'https://example.com' }]
-			})
-		});
+		expect(current.store.submitClub.mock.calls[0][0].payload).not.toHaveProperty('description');
 	});
 
-	it('rejects submit without a session, name, or usable slug', async () => {
+	it('rejects submit without a session, name, role, or usable slug', async () => {
 		expect((await handlers().actions.submit(event({ form: { name: 'Chess' } }))).status).toBe(401);
 		expect(
 			(await handlers().actions.submit(event({ locals: { maritools: SESSION } }))).status
 		).toBe(400);
 		expect(
-			(await handlers().actions.submit(event({ locals: { maritools: SESSION }, form: { name: '!!!' } })))
-				.status
+			(
+				await handlers().actions.submit(
+					event({ locals: { maritools: SESSION }, form: { name: 'Chess', submitterRole: 'nope' } })
+				)
+			).status
+		).toBe(400);
+		expect(
+			(
+				await handlers().actions.submit(
+					event({ locals: { maritools: SESSION }, form: { name: '!!!', submitterRole: 'member' } })
+				)
+			).status
 		).toBe(400);
 	});
 
@@ -221,8 +225,14 @@ describe('clubs page server', () => {
 			}
 		});
 		expect(
-			(await invalid.actions.submit(event({ locals: { maritools: SESSION }, form: { name: 'Chess' } })))
-				.status
+			(
+				await invalid.actions.submit(
+					event({
+						locals: { maritools: SESSION },
+						form: { name: 'Chess', submitterRole: 'member' }
+					})
+				)
+			).status
 		).toBe(400);
 		const down = handlers({
 			store: {
@@ -232,8 +242,14 @@ describe('clubs page server', () => {
 			}
 		});
 		expect(
-			(await down.actions.submit(event({ locals: { maritools: SESSION }, form: { name: 'Chess' } })))
-				.status
+			(
+				await down.actions.submit(
+					event({
+						locals: { maritools: SESSION },
+						form: { name: 'Chess', submitterRole: 'member' }
+					})
+				)
+			).status
 		).toBe(503);
 		const boom = handlers({
 			store: {
@@ -243,87 +259,9 @@ describe('clubs page server', () => {
 			}
 		});
 		await expect(
-			boom.actions.submit(event({ locals: { maritools: SESSION }, form: { name: 'Chess' } }))
+			boom.actions.submit(
+				event({ locals: { maritools: SESSION }, form: { name: 'Chess', submitterRole: 'member' } })
+			)
 		).rejects.toThrow('boom');
-	});
-
-	it('publishes a pending submission for staff', async () => {
-		const current = handlers({
-			store: { getProfile: vi.fn(async () => ({ role: 'staff' })) }
-		});
-		const result = await current.actions.publish(
-			event({ locals: { maritools: SESSION }, form: { submissionId: PENDING.id } })
-		);
-		expect(result).toEqual({ published: true });
-		expect(current.store.publishPendingClub).toHaveBeenCalledWith(PENDING.id);
-	});
-
-	it('rejects publish for guests, students, and empty ids', async () => {
-		expect((await handlers().actions.publish(event())).status).toBe(403);
-		expect((await handlers().actions.publish(event({ locals: { maritools: SESSION } }))).status).toBe(
-			403
-		);
-		const staff = handlers({
-			store: { getProfile: vi.fn(async () => ({ role: 'staff' })) }
-		});
-		expect(
-			(await staff.actions.publish(event({ locals: { maritools: SESSION } }))).status
-		).toBe(400);
-	});
-
-	it('returns bounded publish errors', async () => {
-		const invalid = handlers({
-			store: {
-				getProfile: vi.fn(async () => ({ role: 'staff' })),
-				publishPendingClub: vi.fn(async () => {
-					throw new MaritoolsInputError('invalid-club');
-				})
-			}
-		});
-		expect(
-			(
-				await invalid.actions.publish(
-					event({ locals: { maritools: SESSION }, form: { submissionId: PENDING.id } })
-				)
-			).status
-		).toBe(400);
-		const down = handlers({
-			store: {
-				getProfile: vi.fn(async () => ({ role: 'staff' })),
-				publishPendingClub: vi.fn(async () => {
-					throw new MaritoolsUnavailableError();
-				})
-			}
-		});
-		expect(
-			(
-				await down.actions.publish(
-					event({ locals: { maritools: SESSION }, form: { submissionId: PENDING.id } })
-				)
-			).status
-		).toBe(503);
-		const boom = handlers({
-			store: {
-				getProfile: vi.fn(async () => ({ role: 'staff' })),
-				publishPendingClub: vi.fn(async () => {
-					throw new Error('boom');
-				})
-			}
-		});
-		await expect(
-			boom.actions.publish(event({ locals: { maritools: SESSION }, form: { submissionId: PENDING.id } }))
-		).rejects.toThrow('boom');
-		const closed = handlers({
-			createStore: vi.fn(() => {
-				throw new MaritoolsUnavailableError();
-			})
-		});
-		expect(
-			(
-				await closed.actions.publish(
-					event({ locals: { maritools: STAFF }, form: { submissionId: PENDING.id } })
-				)
-			).status
-		).toBe(503);
 	});
 });

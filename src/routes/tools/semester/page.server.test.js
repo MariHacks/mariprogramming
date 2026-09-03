@@ -24,8 +24,19 @@ const TEXT =
 function handlers(overrides = {}) {
 	const repository = {
 		getProfile: vi.fn(async () => PROFILE),
+		listTerms: vi.fn(async () => [
+			{
+				id: 'fall-2026',
+				name: 'Fall 2026',
+				startDate: '2026-08-18',
+				endDate: '2026-12-22'
+			}
+		]),
+		listOutlines: vi.fn(async () => []),
 		getExtraction: vi.fn(async () => null),
 		saveOutlineDocument: vi.fn(async () => undefined),
+		saveOutlineReview: vi.fn(async () => undefined),
+		deleteOutline: vi.fn(async () => undefined),
 		saveExtraction: vi.fn(async () => undefined),
 		contribute: vi.fn(async () => ({ offeringId: 'off-1' })),
 		...overrides.repository
@@ -47,7 +58,8 @@ function handlers(overrides = {}) {
 			isPdf: overrides.isPdf ?? vi.fn(() => true),
 			createProvider: vi.fn(() => provider),
 			getNimKey: vi.fn(() => 'nvapi-test'),
-			getNimModel: vi.fn(() => 'nvidia/nemotron-3.5-lightning-30b-a3b'),
+		getNimModel: vi.fn(() => 'qwen/qwen3.5-122b-a10b'),
+		getToday: vi.fn(() => '2026-08-31'),
 			...overrides
 		}),
 		repository,
@@ -99,6 +111,48 @@ describe('semester page server', () => {
 	it('is ready when the account is complete', async () => {
 		const data = await handlers().load(event());
 		expect(data.view).toEqual({ kind: 'ready' });
+		expect(data.outlines).toEqual([]);
+		expect(data.activeTerm).toEqual({ id: 'fall-2026', name: 'Fall 2026' });
+	});
+
+	it('restores saved and processing outlines from the signed-in account', async () => {
+		const outlines = [
+			{
+				sha256: 'ab'.repeat(32),
+				createdAt: new Date('2026-08-30T12:00:00.000Z'),
+				extraction: {
+					proposals: { courseCode: '203-SN3-RE', title: 'Modern Physics' },
+					inferenceCount: 1
+				}
+			},
+			{
+				sha256: 'cd'.repeat(32),
+				createdAt: new Date('2026-08-30T11:00:00.000Z'),
+				extraction: null
+			}
+		];
+		const current = handlers({ repository: { listOutlines: vi.fn(async () => outlines) } });
+
+		await expect(current.load(event())).resolves.toMatchObject({
+			view: { kind: 'ready' },
+			outlines
+		});
+	});
+
+	it('keeps a completed account usable when saved outlines are temporarily unavailable', async () => {
+		const current = handlers({
+			repository: {
+				listOutlines: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+
+		await expect(current.load(event())).resolves.toEqual({
+			view: { kind: 'ready' },
+			outlines: [],
+			activeTerm: null
+		});
 	});
 
 	it('extracts a text PDF and keeps it private', async () => {
@@ -117,7 +171,19 @@ describe('semester page server', () => {
 			repository: {
 				getProfile: vi.fn(async () => PROFILE),
 				getExtraction: vi.fn(async () => ({
-					proposals: { assessments: [{ title: 'Cached' }], books: [] },
+					proposals: {
+						courseCode: '203-SN3-RE',
+						title: 'Modern Physics',
+						assessments: [
+							{
+								title: 'Cached',
+								date: '2026-10-01',
+								dateIso: '2026-10-01',
+								weightLabel: null
+							}
+						],
+						books: []
+					},
 					inferenceCount: 4
 				}))
 			}
@@ -127,6 +193,67 @@ describe('semester page server', () => {
 		);
 		expect(result.extraction.cacheHit).toBe(true);
 		expect(current.provider.extract).not.toHaveBeenCalled();
+	});
+
+	it('re-extracts when a cached row is missing course identity', async () => {
+		const current = handlers({
+			repository: {
+				getProfile: vi.fn(async () => PROFILE),
+				getExtraction: vi.fn(async () => ({
+					proposals: { assessments: [{ title: 'Cached' }], books: [] },
+					inferenceCount: 4
+				}))
+			}
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.extraction.cacheHit).not.toBe(true);
+		expect(current.provider.extract).toHaveBeenCalled();
+	});
+
+	it('re-extracts when cached assessments are missing dates', async () => {
+		const current = handlers({
+			repository: {
+				getProfile: vi.fn(async () => PROFILE),
+				getExtraction: vi.fn(async () => ({
+					proposals: {
+						courseCode: '203-SN3-RE',
+						title: 'Modern Physics',
+						assessments: [{ title: 'Midterm', date: '' }],
+						books: []
+					},
+					inferenceCount: 2
+				}))
+			}
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.extraction.cacheHit).not.toBe(true);
+		expect(current.provider.extract).toHaveBeenCalled();
+	});
+
+	it('re-extracts when cached assessment weights are incomplete', async () => {
+		const current = handlers({
+			repository: {
+				getProfile: vi.fn(async () => PROFILE),
+				getExtraction: vi.fn(async () => ({
+					proposals: {
+						courseCode: '420-SNT-MS',
+						title: 'Object-Oriented Programming',
+						assessments: [{ title: 'Labs', date: null, weight: null }],
+						books: []
+					},
+					inferenceCount: 2
+				}))
+			}
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.extraction.cacheHit).not.toBe(true);
+		expect(current.provider.extract).toHaveBeenCalled();
 	});
 
 	it('refuses a scanned PDF before NVIDIA', async () => {
@@ -184,7 +311,7 @@ describe('semester page server', () => {
 			event({
 				form: {
 					sha256: 'ab'.repeat(32),
-					termId: 'fall-2026',
+					termId: 'untrusted-client-term',
 					courseCode: '203-SN3-RE',
 					title: 'Modern Physics',
 					section: '00021',
@@ -197,7 +324,24 @@ describe('semester page server', () => {
 			})
 		);
 		expect(result).toMatchObject({ contributed: true });
-		expect(current.repository.contribute).toHaveBeenCalled();
+		expect(current.repository.saveOutlineReview).toHaveBeenCalledWith(
+			expect.objectContaining({ userId: SESSION.userId, sha256: 'ab'.repeat(32) })
+		);
+		expect(current.repository.contribute).toHaveBeenCalledWith(
+			expect.objectContaining({ termId: 'fall-2026' })
+		);
+	});
+
+	it('deletes only the signed-in student private outline', async () => {
+		const current = handlers();
+		const result = await current.actions.deleteOutline(
+			event({ form: { sha256: 'ab'.repeat(32) } })
+		);
+		expect(result).toEqual({ deleted: true, sha256: 'ab'.repeat(32) });
+		expect(current.repository.deleteOutline).toHaveBeenCalledWith({
+			userId: SESSION.userId,
+			sha256: 'ab'.repeat(32)
+		});
 	});
 
 	it('rejects invalid contribute JSON', async () => {
@@ -255,6 +399,45 @@ describe('semester page server', () => {
 			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
 		);
 		expect(result.status).toBe(503);
+	});
+
+	it('maps outline save validation errors to an in-page failure instead of 500', async () => {
+		const current = handlers({
+			repository: {
+				getProfile: vi.fn(async () => PROFILE),
+				saveOutlineDocument: vi.fn(async () => {
+					throw new MaritoolsInputError('MARITOOLS_INVALID');
+				})
+			}
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.status).toBe(400);
+		expect(result.data.error).toMatch(/outline/i);
+		expect(current.provider.extract).not.toHaveBeenCalled();
+	});
+
+	it('keeps private review when extracted PDF text has leading whitespace', async () => {
+		const padded = `    ${TEXT} ${TEXT} Extra body so a large PDF still counts as extractable text.`;
+		expect(padded.trim().length).toBeGreaterThan(200);
+		const current = handlers({
+			extractPdf: vi.fn(() => ({
+				text: padded,
+				byteLength: 320_702,
+				sha256: 'cd'.repeat(32)
+			}))
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.extraction?.ok).toBe(true);
+		expect(current.repository.saveOutlineDocument).toHaveBeenCalledWith(
+			expect.objectContaining({
+				extractedText: padded.trim(),
+				sha256: 'cd'.repeat(32)
+			})
+		);
 	});
 
 	it('rejects an empty upload and an oversized PDF', async () => {
@@ -320,7 +503,7 @@ describe('semester page server', () => {
 		expect(current.repository.contribute).toHaveBeenCalledWith(
 			expect.objectContaining({
 				documentSha256: '',
-				termId: '',
+				termId: 'fall-2026',
 				courseCode: '',
 				title: '',
 				section: '',
@@ -393,85 +576,76 @@ describe('semester page server', () => {
 	});
 
 	it('uses default NVIDIA helpers when extract succeeds without cache', async () => {
-		const previousKey = process.env.NVIDIA_NIM_API_KEY;
-		const previousModel = process.env.NVIDIA_NIM_MODEL;
-		delete process.env.NVIDIA_NIM_API_KEY;
-		delete process.env.NVIDIA_NIM_MODEL;
-		try {
-			const current = handlers({
-				getNimKey: undefined,
-				getNimModel: undefined,
-				createProvider: undefined
-			});
-			const result = await current.actions.extract(
-				event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
-			);
-			expect(result.extraction.ok).toBe(false);
-			expect(result.extraction.reason).toBe('missing-key');
-			process.env.NVIDIA_NIM_MODEL = 'nvidia/custom';
-			const withModel = handlers({
-				getNimKey: undefined,
-				getNimModel: undefined,
-				createProvider: vi.fn(() => ({
-					extract: vi.fn(async () => ({
-						ok: true,
-						reason: null,
-						proposals: { assessments: [], books: [] },
-						inferenceCount: 1
-					}))
+		const current = handlers({
+			privateEnv: {},
+			getNimKey: undefined,
+			getNimModel: undefined,
+			createProvider: undefined
+		});
+		const result = await current.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.extraction.ok).toBe(false);
+		expect(result.extraction.reason).toBe('missing-key');
+		const withModel = handlers({
+			privateEnv: { NVIDIA_NIM_MODEL: 'nvidia/custom' },
+			getNimKey: undefined,
+			getNimModel: undefined,
+			createProvider: vi.fn(() => ({
+				extract: vi.fn(async () => ({
+					ok: true,
+					reason: null,
+					proposals: { assessments: [], books: [] },
+					inferenceCount: 1
 				}))
-			});
-			const saved = await withModel.actions.extract(
-				event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
-			);
-			expect(saved.extraction.ok).toBe(true);
-			expect(withModel.repository.saveExtraction).toHaveBeenCalledWith(
-				expect.objectContaining({ model: 'nvidia/custom' })
-			);
-			delete process.env.NVIDIA_NIM_MODEL;
-			const defaultModel = handlers({
-				getNimKey: undefined,
-				getNimModel: undefined,
-				createProvider: vi.fn(() => ({
-					extract: vi.fn(async () => ({
-						ok: true,
-						reason: null,
-						proposals: { assessments: [], books: [] },
-						inferenceCount: 1
-					}))
+			}))
+		});
+		const saved = await withModel.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(saved.extraction.ok).toBe(true);
+		expect(withModel.repository.saveExtraction).toHaveBeenCalledWith(
+			expect.objectContaining({ model: 'nvidia/custom' })
+		);
+		const defaultModel = handlers({
+			privateEnv: {},
+			getNimKey: undefined,
+			getNimModel: undefined,
+			createProvider: vi.fn(() => ({
+				extract: vi.fn(async () => ({
+					ok: true,
+					reason: null,
+					proposals: { assessments: [], books: [] },
+					inferenceCount: 1
 				}))
-			});
-			await defaultModel.actions.extract(
-				event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
-			);
-			expect(defaultModel.repository.saveExtraction).toHaveBeenCalledWith(
-				expect.objectContaining({
-					model: 'nvidia/nemotron-3.5-lightning-30b-a3b'
-				})
-			);
-			const fallbackModel = handlers({
-				getNimKey: undefined,
-				getNimModel: undefined,
-				createProvider: vi.fn(() => ({
-					extract: vi.fn(async () => ({
-						ok: true,
-						reason: null,
-						proposals: null,
-						inferenceCount: 1
-					}))
+			}))
+		});
+		await defaultModel.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(defaultModel.repository.saveExtraction).toHaveBeenCalledWith(
+			expect.objectContaining({
+				model: 'qwen/qwen3.5-122b-a10b'
+			})
+		);
+		const fallbackModel = handlers({
+			privateEnv: {},
+			getNimKey: undefined,
+			getNimModel: undefined,
+			createProvider: vi.fn(() => ({
+				extract: vi.fn(async () => ({
+					ok: true,
+					reason: null,
+					proposals: null,
+					inferenceCount: 1
 				}))
-			});
-			const skipped = await fallbackModel.actions.extract(
-				event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
-			);
-			expect(skipped.extraction.ok).toBe(true);
-			expect(fallbackModel.repository.saveExtraction).not.toHaveBeenCalled();
-		} finally {
-			if (previousKey === undefined) delete process.env.NVIDIA_NIM_API_KEY;
-			else process.env.NVIDIA_NIM_API_KEY = previousKey;
-			if (previousModel === undefined) delete process.env.NVIDIA_NIM_MODEL;
-			else process.env.NVIDIA_NIM_MODEL = previousModel;
-		}
+			}))
+		});
+		const skipped = await fallbackModel.actions.extract(
+			event({ file: new File([TEXT], 'outline.pdf', { type: 'application/pdf' }) })
+		);
+		expect(skipped.extraction.ok).toBe(true);
+		expect(fallbackModel.repository.saveExtraction).not.toHaveBeenCalled();
 	});
 
 	it('maps unavailable errors on contribute', async () => {

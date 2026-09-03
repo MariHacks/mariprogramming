@@ -1,111 +1,75 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CANONICAL_OMNIVOX_SCHEDULE } from '$lib/maritools/schedule/fixture.js';
-import { explicitTermId } from '$lib/maritools/term/session.js';
+import { cleanup, render, screen } from '@testing-library/svelte';
+import { afterEach, describe, expect, it } from 'vitest';
 import FreeTimePage from './+page.svelte';
 
-afterEach(() => {
-	cleanup();
-	explicitTermId.set(null);
-	vi.unstubAllGlobals();
-});
+afterEach(cleanup);
 
-function pasteTwo() {
-	const areas = screen.getAllByRole('textbox');
-	fireEvent.input(areas[0], { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
-	fireEvent.input(areas[1], { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
-}
-
-describe('Common free time', () => {
-	it('compares two lists on a week grid', () => {
-		render(FreeTimePage);
-		pasteTwo();
-		fireEvent.click(screen.getByRole('button', { name: 'Find shared free time' }));
-		expect(screen.getByRole('heading', { name: 'Week' })).toBeInTheDocument();
-		expect(screen.getByText('Tue')).toBeInTheDocument();
+describe('free-time boards page', () => {
+	it('creates a board without requiring an account', () => {
+		render(FreeTimePage, { props: { data: { boards: [] } } });
+		expect(screen.getByRole('heading', { name: 'Your boards' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Create board' })).toBeInTheDocument();
+		expect(screen.getByText('No boards yet')).toBeInTheDocument();
+		expect(screen.getByText(/No account needed/)).toBeInTheDocument();
 	});
 
-	it('explains unreadable pastes', () => {
-		render(FreeTimePage);
-		fireEvent.click(screen.getByRole('button', { name: 'Find shared free time' }));
-		expect(screen.getByRole('alert')).toHaveTextContent('at least two compact Omnivox');
-	});
-
-	it('adds a third person and compares a 90-minute gap', () => {
-		render(FreeTimePage);
-		fireEvent.click(screen.getByRole('button', { name: 'Add another person' }));
-		const areas = screen.getAllByRole('textbox');
-		expect(areas.length).toBeGreaterThanOrEqual(3);
-		fireEvent.input(areas[0], { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
-		fireEvent.input(areas[1], { target: { value: CANONICAL_OMNIVOX_SCHEDULE } });
-		fireEvent.click(screen.getByRole('radio', { name: '90 minutes' }));
-		fireEvent.click(screen.getByRole('button', { name: 'Find shared free time' }));
-		expect(screen.getByText('Tue')).toBeInTheDocument();
-		fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0]);
-		expect(screen.getAllByRole('textbox').length).toBe(2);
-	});
-
-	it('uses a custom duration and an optional calendar date', () => {
-		explicitTermId.set('fall-2026');
-		render(FreeTimePage);
-		pasteTwo();
-		fireEvent.click(screen.getByRole('radio', { name: 'Custom' }));
-		fireEvent.input(screen.getByLabelText('Custom minutes'), { target: { value: '30' } });
-		fireEvent.input(screen.getByLabelText('Optional date'), { target: { value: '2026-09-08' } });
-		fireEvent.click(screen.getByRole('button', { name: 'Find shared free time' }));
-		expect(screen.getByText(/2026-09-08 follows Mon/)).toBeInTheDocument();
-	});
-
-	it('treats a no-class date as fully free', () => {
-		explicitTermId.set('fall-2026');
-		render(FreeTimePage);
-		pasteTwo();
-		fireEvent.input(screen.getByLabelText('Optional date'), { target: { value: '2026-09-07' } });
-		fireEvent.click(screen.getByRole('button', { name: 'Find shared free time' }));
-		expect(screen.getByText('08:00–18:00')).toBeInTheDocument();
-	});
-
-	it('rejects an out-of-range custom duration', () => {
-		render(FreeTimePage);
-		pasteTwo();
-		fireEvent.click(screen.getByRole('radio', { name: 'Custom' }));
-		fireEvent.input(screen.getByLabelText('Custom minutes'), { target: { value: '5' } });
-		fireEvent.click(screen.getByRole('button', { name: 'Find shared free time' }));
-		expect(screen.getByRole('alert')).toHaveTextContent('15 and 240');
-	});
-
-	it('asks for a term before filtering by date', () => {
-		explicitTermId.set('not-a-term');
-		render(FreeTimePage);
-		pasteTwo();
-		fireEvent.input(screen.getByLabelText('Optional date'), { target: { value: '2026-09-08' } });
-		fireEvent.click(screen.getByRole('button', { name: 'Find shared free time' }));
-		expect(screen.getByRole('alert')).toHaveTextContent('Choose a term');
-	});
-
-	it('downloads busy intervals without course names', () => {
-		const createObjectURL = vi.fn(() => 'blob:busy');
-		const revokeObjectURL = vi.fn();
-		vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
-		const click = vi.fn();
-		const realCreate = document.createElement.bind(document);
-		vi.spyOn(document, 'createElement').mockImplementation((tag) => {
-			if (tag === 'a') {
-				return /** @type {any} */ ({ click, set href(_value) {}, set download(_value) {} });
+	it('lists boards with member counts', () => {
+		render(FreeTimePage, {
+			props: {
+				data: {
+					boards: [
+						{
+							slug: 'study-group',
+							title: 'Study group',
+							createdAt: '2026-01-01T00:00:00.000Z',
+							members: [{ availability: { free: ['Mon-09:00'] } }]
+						},
+						{
+							slug: 'lab',
+							title: 'Lab partners',
+							createdAt: 'not-a-date',
+							members: []
+						}
+					]
+				}
 			}
-			return realCreate(tag);
 		});
-		render(FreeTimePage);
-		pasteTwo();
-		fireEvent.click(screen.getByRole('button', { name: 'Download busy times (.json)' }));
-		expect(createObjectURL).toHaveBeenCalled();
-		expect(click).toHaveBeenCalled();
-		fireEvent.click(screen.getByRole('button', { name: 'Download busy times (.json)' }));
+		expect(screen.getByRole('link', { name: /Study group/ })).toHaveAttribute(
+			'href',
+			'/tools/free-time/study-group'
+		);
+		expect(screen.getByText('Saved')).toBeInTheDocument();
+		expect(screen.getByText('Add availability')).toBeInTheDocument();
 	});
 
-	it('explains a download without two pastes', () => {
-		render(FreeTimePage);
-		fireEvent.click(screen.getByRole('button', { name: 'Download busy times (.json)' }));
-		expect(screen.getByRole('alert')).toHaveTextContent('at least two compact Omnivox');
+	it('marks a mixed board as still needing availability', () => {
+		render(FreeTimePage, {
+			props: {
+				data: {
+					boards: [
+						{
+							slug: 'mixed',
+							title: 'Mixed board',
+							members: [
+								{ availability: { free: ['Mon-09:00'] } },
+								{ availability: { free: [] } }
+							]
+						}
+					]
+				}
+			}
+		});
+		expect(screen.getByText('Add availability')).toBeInTheDocument();
+	});
+
+	it('explains create errors and unavailable boards', () => {
+		render(FreeTimePage, {
+			props: {
+				data: { boards: [], unavailable: true },
+				form: { createError: 'Enter a board title and term.' }
+			}
+		});
+		expect(screen.getByText('Enter a board title and term.')).toBeInTheDocument();
+		expect(screen.getByText(/Boards are unavailable/)).toBeInTheDocument();
 	});
 });

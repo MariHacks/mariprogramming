@@ -1,49 +1,158 @@
 <script>
-	import { get } from 'svelte/store';
+	import { browser } from '$app/environment';
+	import { enhance } from '$app/forms';
+	import { onMount } from 'svelte';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
+	import CalendarExportModal from '$lib/maritools/components/CalendarExportModal.svelte';
+	import OmnivoxTutorialOverlay from '$lib/maritools/components/OmnivoxTutorialOverlay.svelte';
+	import ScheduleCalendar from '$lib/maritools/components/ScheduleCalendar.svelte';
+	import '$lib/maritools/styles/preview.css';
+	import {
+		addDays,
+		mondayOfWeek,
+		weekGridForTermWeek,
+		weekTitle
+	} from '$lib/maritools/schedule/academicWeekView.js';
 	import { occurrencesToIcs } from '$lib/maritools/schedule/ics.js';
 	import { generateOccurrences } from '$lib/maritools/schedule/occurrences.js';
 	import { parseOmnivox } from '$lib/maritools/schedule/parseOmnivox.js';
-	import { weekGrid } from '$lib/maritools/schedule/timetable.js';
-	import { OMNIVOX_TUTORIAL_STEPS } from '$lib/maritools/tutorial-steps.js';
-	import { rulesForTerm } from '$lib/maritools/term/calendar.js';
+	import { loadSchedulePaste, saveSchedulePaste } from '$lib/maritools/schedule/persistPaste.js';
+	import { calendarDate, rulesForTerm } from '$lib/maritools/term/calendar.js';
 	import { termResolution } from '$lib/maritools/term/session.js';
 
-	/** @type {{ result?: import('$lib/maritools/schedule/parseOmnivox.js').ParseResult } | null} */
+	const TUTORIAL_STORAGE_KEY = 'maritools.omnivox-tutorial.dismissed';
+
+	/** @type {{ result?: import('$lib/maritools/schedule/parseOmnivox.js').ParseResult, pushError?: string, pushSuccess?: string } | null} */
 	export let form = null;
 
-	let paste = '';
+	/** @type {{ signedIn?: boolean, savedPaste?: string, googleCalendarConnected?: boolean, gcalStatus?: string | null }} */
+	export let data;
+
+	let paste = String(data?.savedPaste ?? '');
 	/** @type {import('$lib/maritools/schedule/parseOmnivox.js').ParseResult} */
-	let result = { ok: false, courses: [], warnings: [] };
-	let parsed = false;
+	let result = paste.trim() ? parseOmnivox(paste) : { ok: false, courses: [], warnings: [] };
+	let parsed = Boolean(paste.trim());
 	let exportError = '';
+	let saveError = '';
+	let drawerOpen = result.ok;
+	let exportOpen = false;
+	let tutorialOpen = false;
+	let weekStartIso = mondayOfWeek(calendarDate());
+	let pushing = false;
 
 	$: if (form?.result) {
 		result = form.result;
 		parsed = true;
+		drawerOpen = true;
+		persistPaste();
 	}
 
-	$: grid = result.ok ? weekGrid(result.courses) : [];
+	onMount(() => {
+		if (!browser) return;
+		if (data?.signedIn) return;
+		const stored = loadSchedulePaste(localStorage);
+		if (!stored.trim()) return;
+		paste = stored;
+		result = parseOmnivox(stored);
+		parsed = true;
+		if (result.ok) drawerOpen = true;
+	});
+
+	async function persistPaste() {
+		if (!browser) return;
+		if (!data?.signedIn) {
+			saveSchedulePaste(localStorage, paste);
+			return;
+		}
+		if (!result.ok) return;
+		const body = new FormData();
+		body.set('paste', paste);
+		try {
+			const response = await fetch('?/saveSchedule', { method: 'POST', body, keepalive: true });
+			saveError = response.ok
+				? ''
+				: 'Your schedule is shown here, but it could not be saved to your account.';
+		} catch {
+			saveError = 'Your schedule is shown here, but it could not be saved to your account.';
+		}
+	}
 
 	function runParse() {
 		result = parseOmnivox(paste);
 		parsed = true;
 		exportError = '';
+		drawerOpen = true;
+		void persistPaste();
+	}
+
+	$: if (form?.pushError) {
+		exportError = form.pushError;
+		exportOpen = true;
+	}
+
+	$: if (form?.pushSuccess) {
+		exportError = '';
+		exportOpen = false;
+	}
+
+	$: resolution = $termResolution;
+	$: rules = resolution.selected ? rulesForTerm(resolution.selected.id) : null;
+	$: grid =
+		result.ok && resolution.selected && rules
+			? weekGridForTermWeek(weekStartIso, resolution.selected, rules, result.courses)
+			: [];
+	$: heading = weekTitle(weekStartIso);
+	$: conflictDays = grid.filter((column) => column.overlap).length;
+
+	function goToToday() {
+		weekStartIso = mondayOfWeek(calendarDate());
+	}
+
+	function goToPreviousWeek() {
+		weekStartIso = addDays(weekStartIso, -7);
+	}
+
+	function goToNextWeek() {
+		weekStartIso = addDays(weekStartIso, 7);
+	}
+
+	function openImport() {
+		if (browser && !localStorage.getItem(TUTORIAL_STORAGE_KEY)) {
+			tutorialOpen = true;
+			return;
+		}
+		drawerOpen = true;
+	}
+
+	function finishTutorial() {
+		if (browser) localStorage.setItem(TUTORIAL_STORAGE_KEY, '1');
+		tutorialOpen = false;
+		drawerOpen = true;
+	}
+
+	function skipTutorial() {
+		if (browser) localStorage.setItem(TUTORIAL_STORAGE_KEY, '1');
+		tutorialOpen = false;
+		drawerOpen = true;
+	}
+
+	function showTutorialAgain() {
+		if (browser) localStorage.removeItem(TUTORIAL_STORAGE_KEY);
+		tutorialOpen = true;
 	}
 
 	function downloadIcs() {
-		const resolution = get(termResolution);
 		if (!resolution.selected) {
 			exportError = 'Choose a term before downloading a calendar.';
-			return;
+			return false;
 		}
-		const rules = rulesForTerm(resolution.selected.id);
-		if (!rules) {
+		const termRules = rulesForTerm(resolution.selected.id);
+		if (!termRules) {
 			exportError = 'This term does not have calendar rules yet.';
-			return;
+			return false;
 		}
 		const ics = occurrencesToIcs(
-			generateOccurrences(resolution.selected, rules, result.courses)
+			generateOccurrences(resolution.selected, termRules, result.courses)
 		);
 		const blob = new Blob([ics], { type: 'text/calendar' });
 		const url = URL.createObjectURL(blob);
@@ -53,6 +162,20 @@
 		link.click();
 		URL.revokeObjectURL(url);
 		exportError = '';
+		return true;
+	}
+
+	function openExport() {
+		exportOpen = true;
+		exportError = '';
+	}
+
+	function downloadForGoogle() {
+		if (downloadIcs()) exportOpen = false;
+	}
+
+	function downloadForApple() {
+		if (downloadIcs()) exportOpen = false;
 	}
 </script>
 
@@ -60,263 +183,161 @@
 	<title>My Schedule | {MARITOOLS_NAME}</title>
 	<meta
 		name="description"
-		content="Paste your Omnivox compact list and download a semester calendar."
+		content="Paste an Omnivox compact list and download a semester calendar."
 	/>
 </svelte:head>
 
-<section class="schedule-page page-container">
-	<header class="intro">
-		<h1>My schedule</h1>
-		<p>
-			Paste the numbered course list from Omnivox. You do not need to log in, and nothing is sent to
-			the college.
-		</p>
-	</header>
-
-	<details class="tutorial">
-		<summary>How do I get my schedule?</summary>
-		<ol>
-			{#each OMNIVOX_TUTORIAL_STEPS as step (step.n)}
-				<li>
-					<strong>{step.title}</strong>
-					<p>{step.body}</p>
-				</li>
-			{/each}
-		</ol>
-		<p class="return-note">Then come back here and paste the list.</p>
-	</details>
-
-	<form class="paste-form" method="POST" on:submit|preventDefault={runParse}>
-		<label class="paste-label" for="schedule-paste">Omnivox course list</label>
-		<textarea
-			id="schedule-paste"
-			name="paste"
-			bind:value={paste}
-			rows="16"
-			spellcheck="false"
-			placeholder={'1  Badminton and Conditioning\nPHE-103-A1 sec.00002, teacher: ...'}
-		></textarea>
-		<button type="submit" class="primary">Read schedule</button>
-	</form>
-
-	{#if parsed && result.warnings.length}
-		<ul class="warnings">
-			{#each result.warnings as warning (warning)}
-				<li>{warning}</li>
-			{/each}
-		</ul>
-	{/if}
-
-	{#if parsed && !result.ok}
-		<p class="error" role="alert">{result.warnings[0] ?? 'We could not read that paste.'}</p>
-	{/if}
-
-	{#if result.ok}
-		<section class="courses" aria-labelledby="courses-title">
-			<h2 id="courses-title">Courses</h2>
-			{#each result.courses as course, index (course.courseCode + course.section)}
-				<article class="course">
-					<label>
-						Title
-						<input bind:value={course.title} />
-					</label>
-					<p class="meta">
-						<span class="code">{course.courseCode}</span>
-						sec.{course.section} · {course.teacher}
-					</p>
-					<ul>
-						{#each course.meetings as meeting, meetingIndex (`${index}-${meetingIndex}`)}
-							<li>
-								{meeting.weekday}
-								{meeting.startTime}–{meeting.endTime}
-								<label>
-									Room
-									<input bind:value={meeting.classroom} />
-								</label>
-							</li>
-						{/each}
-					</ul>
-				</article>
-			{/each}
-		</section>
-
-		<section class="timetable" aria-labelledby="grid-title">
-			<h2 id="grid-title">Week</h2>
-			<div class="grid">
-				{#each grid as column (column.weekday)}
-					<div class="day" class:overlap={column.overlap}>
-						<h3>{column.weekday}</h3>
-						{#if column.meetings.length === 0}
-							<p class="gap">Free</p>
-						{/if}
-						{#each column.meetings as meeting (meeting.courseCode + meeting.startTime)}
-							<p>
-								<span class="when">{meeting.startTime}–{meeting.endTime}</span>
-								<span>{meeting.title}</span>
-								<span class="room">{meeting.classroom}</span>
-							</p>
-						{/each}
-					</div>
-				{/each}
+<div class="mt-preview">
+	<section class="page page-schedule">
+		<div class="utility-bar">
+			<div>
+				<h1>{heading}</h1>
 			</div>
-		</section>
+			<div class="utility-actions">
+				<button class="quiet-button" type="button" on:click={goToToday}>Today</button>
+				<div class="arrow-pair">
+					<button type="button" aria-label="Previous week" on:click={goToPreviousWeek}>←</button
+					><button type="button" aria-label="Next week" on:click={goToNextWeek}>→</button>
+				</div>
+				{#if result.ok}
+					<button class="primary-button calendar-export-open" type="button" on:click={openExport}
+						>Add to Google Calendar</button
+					>
+				{/if}
+				<button
+					class="quiet-button import-toggle"
+					type="button"
+					aria-expanded={drawerOpen}
+					on:click={openImport}
+				>
+					Import Omnivox
+				</button>
+			</div>
+		</div>
 
-		<section class="export">
-			<button type="button" class="primary" on:click={downloadIcs}>Download calendar (.ics)</button>
-			{#if exportError}
-				<p class="error" role="alert">{exportError}</p>
+		<div class="schedule-stage" class:drawer-hidden={!drawerOpen}>
+			{#if result.ok}
+				<ScheduleCalendar {grid} />
+			{:else}
+				<div class="empty-calendar">
+					<div class="empty-calendar-copy">
+						<strong>Import your Omnivox schedule</strong>
+						<p>Paste the compact numbered course list to fill this week view.</p>
+					</div>
+					<button class="primary-button" type="button" on:click={openImport}>Import Omnivox</button>
+				</div>
 			{/if}
-			<ul class="import-notes">
-				<li>Apple Calendar: File, Import, then choose the downloaded file.</li>
-				<li>Google Calendar: Settings, Import and export, Import.</li>
-				<li>Outlook: File, Open and Export, Import/Export.</li>
+
+			<aside class="import-drawer" aria-label="Import schedule">
+				<div class="drawer-head">
+					<div>
+						<span>Omnivox import</span>
+						<strong>Paste course list</strong>
+					</div>
+					<button
+						class="drawer-close"
+						type="button"
+						aria-label="Close import drawer"
+						on:click={() => (drawerOpen = false)}>×</button
+					>
+				</div>
+				<p>
+					From Omnivox, open the printer-friendly compact list, copy only the numbered courses, then
+					paste here. Leave out your student number and name.
+				</p>
+				<textarea
+					id="schedule-paste"
+					name="paste"
+					bind:value={paste}
+					aria-label="Omnivox course list"
+					placeholder="Paste the compact course list here."
+					spellcheck="false"
+				></textarea>
+				{#if parsed}
+					<div class="parse-status" aria-live="polite">
+						<span class="parse-count">{result.courses.length} classes detected</span>
+						{#if !result.ok}<span class="parse-fail">Could not read paste</span>{/if}
+						{#if conflictDays > 0}
+							<span class="parse-conflict"
+								>{conflictDays} conflict{conflictDays === 1 ? '' : 's'}</span
+							>
+						{/if}
+					</div>
+				{/if}
+				<button class="primary-button wide" type="button" on:click={runParse}>Read schedule</button>
+				<button class="text-button tutorial-again" type="button" on:click={showTutorialAgain}
+					>Show tutorial again</button
+				>
+			</aside>
+		</div>
+
+		{#if parsed && result.warnings.length}
+			<ul class="field-error">
+				{#each result.warnings as warning (warning)}
+					<li>{warning}</li>
+				{/each}
 			</ul>
-		</section>
-	{/if}
-</section>
+		{/if}
 
-<style>
-	.schedule-page {
-		display: grid;
-		padding-block: var(--space-xl);
-		gap: var(--space-lg);
-	}
+		{#if parsed && !result.ok}
+			<p class="field-error" role="alert">{result.warnings[0] ?? 'We could not read that paste.'}</p>
+		{/if}
 
-	.intro h1 {
-		font-family: var(--font-display);
-		font-size: var(--text-3xl);
-		line-height: 1.05;
-	}
+		{#if saveError}
+			<p class="field-error" role="alert">{saveError}</p>
+		{/if}
 
-	.intro p,
-	.return-note,
-	.import-notes {
-		max-width: 48ch;
-	}
+		{#if result.ok}
+			<section class="courses" aria-labelledby="courses-title" hidden>
+				<h2 id="courses-title">Courses</h2>
+				{#each result.courses as course (course.courseCode + course.section)}
+					<article class="course">
+						<label>
+							Title
+							<input bind:value={course.title} />
+						</label>
+					</article>
+				{/each}
+			</section>
+		{/if}
+	</section>
 
-	.tutorial {
-		border-block: var(--rule);
-		padding-block: var(--space-sm);
-	}
-
-	.tutorial ol {
-		display: grid;
-		gap: var(--space-sm);
-		padding-inline-start: 1.25rem;
-		margin-top: var(--space-sm);
-	}
-
-	textarea,
-	input,
-	button {
-		font: inherit;
-	}
-
-	textarea {
-		width: 100%;
-		min-height: 14rem;
-		padding: var(--space-sm);
-		border: var(--rule-strong);
-		border-radius: var(--radius-sm);
-		background: var(--surface-raised);
-		color: var(--graphite);
-		font-family: var(--font-mono);
-		font-size: var(--text-sm);
-	}
-
-	.paste-form {
-		display: grid;
-		gap: var(--space-sm);
-	}
-
-	.paste-label,
-	.course label {
-		display: grid;
-		gap: var(--space-3xs);
-		font-size: var(--text-sm);
-		font-weight: 600;
-	}
-
-	.primary {
-		justify-self: start;
-		height: var(--control-height);
-		padding-inline: var(--space-md);
-		border: 0;
-		border-radius: var(--radius-sm);
-		background: var(--club-blue);
-		color: #fff;
-		font-weight: 650;
-	}
-
-	.primary:focus-visible {
-		outline: var(--focus-ring-width) solid var(--club-blue);
-		outline-offset: var(--focus-ring-offset);
-	}
-
-	.warnings,
-	.error {
-		color: var(--danger);
-	}
-
-	.course {
-		display: grid;
-		gap: var(--space-xs);
-		padding-block: var(--space-md);
-		border-block-start: var(--rule);
-	}
-
-	.meta {
-		font-size: var(--text-sm);
-		color: var(--quiet-steel);
-	}
-
-	.code {
-		font-family: var(--font-mono);
-	}
-
-	.course input {
-		height: var(--control-height);
-		padding-inline: var(--space-xs);
-		border: var(--rule);
-		border-radius: var(--radius-sm);
-	}
-
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(5, minmax(0, 1fr));
-		gap: var(--space-xs);
-	}
-
-	.day {
-		min-width: 0;
-		padding: var(--space-xs);
-		border: var(--rule);
-	}
-
-	.day.overlap {
-		border-color: var(--danger);
-	}
-
-	.day h3 {
-		font-size: var(--text-sm);
-	}
-
-	.when,
-	.room,
-	.gap {
-		display: block;
-		font-size: var(--text-xs);
-		color: var(--quiet-steel);
-	}
-
-	.day p {
-		margin-top: var(--space-xs);
-		overflow-wrap: anywhere;
-	}
-
-	@media (max-width: 50rem) {
-		.grid {
-			grid-template-columns: minmax(0, 1fr);
-		}
-	}
-</style>
+<OmnivoxTutorialOverlay open={tutorialOpen} onFinish={finishTutorial} onSkip={skipTutorial} />
+<CalendarExportModal
+	open={exportOpen}
+	{exportError}
+	signedIn={data?.signedIn ?? false}
+	googleCalendarConnected={data?.googleCalendarConnected ?? false}
+	connectHref="/tools/schedule/google-calendar/connect"
+	pushTermId={resolution.selected?.id ?? ''}
+	onClose={() => (exportOpen = false)}
+	onDownloadGoogle={downloadForGoogle}
+	onDownloadApple={downloadForApple}
+>
+	<form
+		slot="push-form"
+		method="POST"
+		action="?/pushGoogleCalendar"
+		use:enhance={() => {
+			pushing = true;
+			return async ({ result: actionResult }) => {
+				pushing = false;
+				if (actionResult.type === 'failure') {
+					exportError = String(actionResult.data?.pushError ?? 'Could not push to Google Calendar.');
+					exportOpen = true;
+				}
+				if (actionResult.type === 'success') {
+					exportError = '';
+					exportOpen = false;
+				}
+			};
+		}}
+	>
+		<input type="hidden" name="paste" value={paste} />
+		<input type="hidden" name="termId" value={resolution.selected?.id ?? ''} />
+		<button type="submit" class="primary-button" disabled={pushing || !resolution.selected}>
+			{pushing ? 'Pushing…' : 'Push to Google Calendar'}
+		</button>
+	</form>
+</CalendarExportModal>
+</div>

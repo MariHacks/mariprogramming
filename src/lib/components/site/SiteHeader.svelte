@@ -1,5 +1,7 @@
 <script>
+	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { endStaffSession } from '$lib/auth/staff-sign-out.js';
 	import { clubContent, isExternalSignupUrl } from '$lib/content/club';
 	import { createClubContactLinks } from '$lib/club-contact.js';
 	import SocialIcon from './SocialIcon.svelte';
@@ -7,21 +9,27 @@
 	/** @type {string} */
 	export let pathname;
 
+	/** @type {import('$lib/maritools/header-account.js').ReturnType<typeof import('$lib/maritools/header-account.js').headerAccountView>} */
+	export let headerAccount = { kind: 'signed-out' };
+
 	const primaryLinks = [
 		{ label: 'About', href: '/about-us', external: false },
 		{ label: 'Events', href: '/events', external: false },
 		{ label: 'Workshops', href: '/our-workshops', external: false },
-		{ label: 'Resources', href: '/resources', external: false },
-		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false },
 		{ label: 'MariTools', href: '/tools', external: false }
+	];
+	const statusLinks = [
+		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false }
 	];
 	const compactLinks = primaryLinks.slice(0, 3);
 	const moreLinks = [
 		...primaryLinks.slice(3),
+		...statusLinks,
 		{ label: 'MariHacks', href: 'https://www.marihacks.com/', external: true }
 	];
 	const mobileLinks = [
 		...primaryLinks,
+		...statusLinks,
 		{ label: 'MariHacks', href: 'https://www.marihacks.com/', external: true }
 	];
 	const headerSocialLinks = clubContent.socialLinks.filter(({ label }) =>
@@ -31,6 +39,7 @@
 
 	let mobileOpen = false;
 	let moreOpen = false;
+	let accountMenuOpen = false;
 	let previousPathname = pathname;
 	/** @type {HTMLButtonElement} */
 	let mobileButton;
@@ -45,6 +54,19 @@
 		previousPathname = pathname;
 		mobileOpen = false;
 		moreOpen = false;
+		accountMenuOpen = false;
+	}
+
+	async function signOut() {
+		await endStaffSession();
+		accountMenuOpen = false;
+		closeDisclosures();
+		await invalidateAll();
+		await goto(resolve('/', {}));
+	}
+
+	function toggleAccountMenu() {
+		accountMenuOpen = !accountMenuOpen;
 	}
 
 	/** @param {string} href */
@@ -59,6 +81,8 @@
 		if (moreOpen) {
 			moreOpen = false;
 			moreButton.focus();
+		} else if (accountMenuOpen) {
+			accountMenuOpen = false;
 		} else if (mobileOpen) {
 			mobileOpen = false;
 			mobileButton.focus();
@@ -69,12 +93,14 @@
 	function handleOutsidePointer(event) {
 		if (!(event.target instanceof Node)) return;
 		if (moreOpen && !compactRoot.contains(event.target)) moreOpen = false;
+		if (accountMenuOpen && !event.target.closest('.account-demo')) accountMenuOpen = false;
 		if (mobileOpen && !mobileRoot.contains(event.target)) mobileOpen = false;
 	}
 
 	function closeDisclosures() {
 		mobileOpen = false;
 		moreOpen = false;
+		accountMenuOpen = false;
 	}
 </script>
 
@@ -241,6 +267,32 @@
 							<SocialIcon name="Mail" />
 						</a>
 					</li>
+					<li>
+						{#if headerAccount.kind === 'signed-in'}
+							<a
+								class="menu-link"
+								href={resolve('/tools/account', {})}
+								tabindex={mobileOpen ? undefined : -1}
+								on:click={closeDisclosures}>Account</a
+							>
+						{:else if isExternalSignupUrl()}
+							<a
+								class="menu-link"
+								href={clubContent.signupUrl}
+								target="_blank"
+								rel="external noopener noreferrer"
+								tabindex={mobileOpen ? undefined : -1}
+								on:click={closeDisclosures}>Sign up</a
+							>
+						{:else}
+							<a
+								class="menu-link"
+								href={resolve(clubContent.signupUrl, {})}
+								tabindex={mobileOpen ? undefined : -1}
+								on:click={closeDisclosures}>Sign up</a
+							>
+						{/if}
+					</li>
 				</ul>
 			</nav>
 		</div>
@@ -270,14 +322,38 @@
 				{/each}
 			</div>
 
-			<a
-				class="signup-link"
-				href={clubContent.signupUrl}
-				{...(isExternalSignupUrl()
-					? { target: '_blank', rel: 'external noopener noreferrer' }
-					: {})}
-				on:click={closeDisclosures}>Sign up</a
-			>
+			<div class="account-demo" class:signed-in={headerAccount.kind === 'signed-in'}>
+				{#if headerAccount.kind === 'signed-out'}
+					{#if isExternalSignupUrl()}
+						<a
+							class="signup-link"
+							href={clubContent.signupUrl}
+							target="_blank"
+							rel="external noopener noreferrer"
+							on:click={closeDisclosures}>Sign up</a
+						>
+					{:else}
+						<a class="signup-link" href={resolve(clubContent.signupUrl, {})} on:click={closeDisclosures}
+							>Sign up</a
+						>
+					{/if}
+				{:else}
+					<button
+						class="identity-button"
+						type="button"
+						aria-expanded={accountMenuOpen}
+						aria-controls="account-menu"
+						on:click={toggleAccountMenu}
+					>
+						<span>{headerAccount.initials}</span><b>{headerAccount.displayName}</b
+						><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m2.5 4.5 3.5 3 3.5-3" /></svg>
+					</button>
+					<div class="account-menu" id="account-menu" hidden={!accountMenuOpen}>
+						<a href={resolve('/tools/account', {})} on:click={closeDisclosures}>Your account</a>
+						<button type="button" on:click={signOut}>Sign out</button>
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 </header>
@@ -506,6 +582,92 @@
 		color: var(--club-blue);
 	}
 
+	.account-demo {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.identity-button {
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.75rem;
+		padding: 0.45rem 0.55rem;
+		border: 1px solid rgb(var(--midnight-rgb) / 18%);
+		border-radius: 999px;
+		background: #fff;
+		color: inherit;
+		font: inherit;
+		font-size: 0.8125rem;
+		font-weight: 650;
+		gap: 0.45rem;
+		cursor: pointer;
+	}
+
+	.identity-button span {
+		display: grid;
+		width: 1.65rem;
+		height: 1.65rem;
+		border-radius: 999px;
+		background: var(--mist);
+		color: var(--midnight);
+		font-size: 0.625rem;
+		font-weight: 700;
+		place-items: center;
+	}
+
+	.identity-button svg {
+		width: 0.75rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-linecap: square;
+		stroke-width: 1.4;
+	}
+
+	.account-menu {
+		position: absolute;
+		top: calc(100% + 0.5rem);
+		right: 0;
+		display: grid;
+		min-width: 11rem;
+		border: 1px solid rgb(var(--midnight-rgb) / 24%);
+		background: #fff;
+		box-shadow: 0 1rem 2.5rem rgb(var(--midnight-rgb) / 14%);
+	}
+
+	.account-menu[hidden] {
+		display: none;
+	}
+
+	.account-menu a,
+	.account-menu button {
+		display: flex;
+		align-items: center;
+		min-height: 2.75rem;
+		padding: 0.7rem 1rem;
+		border: 0;
+		border-bottom: 1px solid rgb(var(--midnight-rgb) / 14%);
+		background: transparent;
+		color: inherit;
+		font: inherit;
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-align: left;
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	.account-menu button:last-child,
+	.account-menu a:last-child {
+		border-bottom: 0;
+	}
+
+	.account-menu a:hover,
+	.account-menu button:hover {
+		background: var(--mist);
+		color: var(--club-blue);
+	}
+
 	.signup-link {
 		display: inline-flex;
 		align-items: center;
@@ -606,6 +768,10 @@
 
 		.signup-link {
 			padding-inline: 0.8rem;
+		}
+
+		.identity-button b {
+			display: none;
 		}
 
 		.mobile-navigation {

@@ -1,0 +1,654 @@
+/**
+ * Honest browser proof: club Reject (+ optional reports).
+ *
+ * Reports Resolve/Dismiss MUST use the real OS-pointer lever instead:
+ *   node scripts/prove-reports-resolve-dismiss-real-pointer.mjs [baseUrl]
+ * The old Playwright recordVideo + DOM #proof-cursor reports tape was Architect-FAIL
+ * (spliced / fake cursor). This script refuses --reports-only for that reason.
+ *
+ * Usage: node scripts/prove-staff-reject-resolve-dismiss.mjs [baseUrl]
+ */
+import { chromium } from '@playwright/test';
+import { makeSignature } from 'better-auth/crypto';
+import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import pg from 'pg';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, '..');
+const baseURL = process.argv[2] || 'http://127.0.0.1:5174';
+const outDir = path.join(root, '.artifacts/verify-mariTools/staff-reject-resolve-dismiss');
+const tmpRoot = path.join(root, '.artifacts/verify-mariTools/_capture-tmp-staff-moderation');
+const STAFF_EMAIL = 'team@marihacks.com';
+
+const CLUB = Object.freeze({
+	id: 'c1111111-1111-4111-8111-111111111111',
+	name: 'Reject Proof Club',
+	slug: 'reject-proof-club',
+	category: 'STEM',
+	description: 'Seeded pending club for Reject film.',
+	submitterRole: 'officer'
+});
+
+const REPORTS = Object.freeze({
+	resolveThread: 'c2222222-2222-4222-8222-222222222222',
+	dismissThread: 'c3333333-3333-4333-8333-333333333333',
+	resolveReport: 'c4444444-4444-4444-8444-444444444444',
+	dismissReport: 'c5555555-5555-4555-8555-555555555555',
+	resolveReason: 'proof-resolve spam report',
+	dismissReason: 'proof-dismiss off-topic report'
+});
+
+/** @param {number} ms */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {number} t0
+ * @param {Array<{t:number,label:string}>} log
+ * @param {string} label
+ * @param {number} [dwellMs]
+ */
+async function mark(page, t0, log, label, dwellMs = 800) {
+	const t = Number(((Date.now() - t0) / 1000).toFixed(2));
+	log.push({ t, label });
+	console.log(`  [${t.toFixed(2)}s] ${label}`);
+	await page.evaluate((text) => {
+		let hud = document.getElementById('verify-hud');
+		if (!hud) {
+			hud = document.createElement('div');
+			hud.id = 'verify-hud';
+			hud.setAttribute(
+				'style',
+				[
+					'position:fixed',
+					'top:8px',
+					'left:8px',
+					'z-index:2147483647',
+					'background:#0b1220',
+					'color:#f8fafc',
+					'padding:6px 10px',
+					'font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace',
+					'max-width:72vw',
+					'pointer-events:none',
+					'border:1px solid #334155'
+				].join(';')
+			);
+			document.body.appendChild(hud);
+		}
+		hud.textContent = `${location.pathname}${location.search} · ${text}`;
+	}, label);
+	await sleep(dwellMs);
+}
+
+/** @param {string} filePath */
+async function loadEnvLocal(filePath) {
+	const raw = await readFile(filePath, 'utf8');
+	for (const line of raw.split('\n')) {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith('#')) continue;
+		const eq = trimmed.indexOf('=');
+		if (eq <= 0) continue;
+		const key = trimmed.slice(0, eq).trim();
+		let value = trimmed.slice(eq + 1).trim();
+		if (
+			(value.startsWith('"') && value.endsWith('"')) ||
+			(value.startsWith("'") && value.endsWith("'"))
+		) {
+			value = value.slice(1, -1);
+		}
+		if (!(key in process.env)) process.env[key] = value;
+	}
+}
+
+async function mintStaffCookie() {
+	await loadEnvLocal(path.join(root, '.env.local'));
+	const secret = process.env.BETTER_AUTH_SECRET;
+	const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
+	if (!secret || !databaseUrl) throw new Error('BETTER_AUTH_SECRET or DATABASE_URL missing');
+
+	const pool = new pg.Pool({ connectionString: databaseUrl, max: 1 });
+	try {
+		const user = await pool.query(
+			`select id, email from "user" where lower(email) = lower($1) limit 1`,
+			[STAFF_EMAIL]
+		);
+		if (!user.rows[0]) throw new Error(`${STAFF_EMAIL} not in user table`);
+		const token = `proofMod${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+		const id = `proofModS${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+		await pool.query(
+			`insert into session (id, token, user_id, expires_at, created_at, updated_at)
+			 values ($1, $2, $3, now() + interval '7 days', now(), now())`,
+			[id, token, user.rows[0].id]
+		);
+		const signed = `${token}.${await makeSignature(token, secret)}`;
+		return {
+			userId: user.rows[0].id,
+			cookie: {
+				name: 'mari-staff.session_token',
+				value: signed,
+				domain: '127.0.0.1',
+				path: '/',
+				httpOnly: true,
+				secure: false,
+				sameSite: 'Lax'
+			}
+		};
+	} finally {
+		await pool.end();
+	}
+}
+
+/** @param {string} authorId */
+async function seedPendingClubAndReports(authorId) {
+	await loadEnvLocal(path.join(root, '.env.local'));
+	const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
+	if (!databaseUrl) throw new Error('DATABASE_URL missing');
+
+	const pool = new pg.Pool({ connectionString: databaseUrl, max: 1 });
+	const client = await pool.connect();
+	const payload = {
+		name: CLUB.name,
+		slug: CLUB.slug,
+		category: CLUB.category,
+		description: CLUB.description,
+		links: [{ label: 'Site', url: 'https://example.com/reject-proof' }],
+		submitterRole: CLUB.submitterRole
+	};
+
+	try {
+		await client.query('BEGIN');
+		// Clear leftover open reports so the film only shows the two seeded rows.
+		await client.query(
+			`delete from mt_forum_reports
+			 where status = 'open'
+			    or id in ($1, $2)
+			    or reason like 'staff-portal-proof%'`,
+			[REPORTS.resolveReport, REPORTS.dismissReport]
+		);
+
+		await client.query(
+			`insert into mt_club_submissions (
+				id, submitter_user_id, payload, status, version, created_at, updated_at
+			) values ($1, $2, $3::jsonb, 'pending', 1, now(), now())
+			on conflict (id) do update set
+				payload = excluded.payload,
+				status = 'pending',
+				club_id = null,
+				updated_at = now()`,
+			[CLUB.id, authorId, JSON.stringify(payload)]
+		);
+
+		for (const [threadId, title, body] of [
+			[REPORTS.resolveThread, 'Resolve proof thread', 'Seeded for Resolve film.'],
+			[REPORTS.dismissThread, 'Dismiss proof thread', 'Seeded for Dismiss film.']
+		]) {
+			await client.query(
+				`insert into mt_forum_threads (
+					id, title, body, category, author_user_id, version, created_at, updated_at
+				) values ($1, $2, $3, 'student-life', $4, 1, now(), now())
+				on conflict (id) do update set
+					title = excluded.title,
+					body = excluded.body,
+					removed_at = null,
+					updated_at = now()`,
+				[threadId, title, body, authorId]
+			);
+		}
+
+		await client.query(
+			`insert into mt_forum_reports (
+				id, target_kind, target_id, reporter_user_id, reason, status, version, created_at, updated_at
+			) values ($1, 'thread', $2, $3, $4, 'open', 1, now(), now())
+			on conflict (id) do update set
+				reason = excluded.reason,
+				status = 'open',
+				resolved_at = null,
+				updated_at = now()`,
+			[REPORTS.resolveReport, REPORTS.resolveThread, authorId, REPORTS.resolveReason]
+		);
+		await client.query(
+			`insert into mt_forum_reports (
+				id, target_kind, target_id, reporter_user_id, reason, status, version, created_at, updated_at
+			) values ($1, 'thread', $2, $3, $4, 'open', 1, now(), now())
+			on conflict (id) do update set
+				reason = excluded.reason,
+				status = 'open',
+				resolved_at = null,
+				updated_at = now()`,
+			[REPORTS.dismissReport, REPORTS.dismissThread, authorId, REPORTS.dismissReason]
+		);
+
+		await client.query(
+			`delete from mt_clubs where slug = $1`,
+			[CLUB.slug]
+		);
+		await client.query('COMMIT');
+		return {
+			clubId: CLUB.id,
+			clubName: CLUB.name,
+			clubSlug: CLUB.slug,
+			resolveReportId: REPORTS.resolveReport,
+			dismissReportId: REPORTS.dismissReport
+		};
+	} catch (error) {
+		try {
+			await client.query('ROLLBACK');
+		} catch {
+			// ignore
+		}
+		throw error;
+	} finally {
+		client.release();
+		await pool.end();
+	}
+}
+
+/** @param {string} dir */
+async function listWebms(dir) {
+	const names = await readdir(dir);
+	const out = [];
+	for (const name of names) {
+		if (!name.endsWith('.webm')) continue;
+		const full = path.join(dir, name);
+		const info = await stat(full);
+		out.push({ path: full, size: info.size });
+	}
+	return out.sort((a, b) => b.size - a.size);
+}
+
+/**
+ * @param {import('@playwright/test').Browser} browser
+ * @param {import('@playwright/test').Cookie} cookie
+ * @param {{ clubName: string, clubSlug: string, clubId: string }} seeded
+ */
+async function filmClubReject(browser, cookie, seeded) {
+	const videoDir = path.join(tmpRoot, 'video-club');
+	await mkdir(videoDir, { recursive: true });
+	const bugs = /** @type {string[]} */ ([]);
+	const log = /** @type {Array<{t:number,label:string}>} */ ([]);
+	const t0 = Date.now();
+
+	const context = await browser.newContext({
+		viewport: { width: 1280, height: 800 },
+		recordVideo: { dir: videoDir, size: { width: 1280, height: 800 } },
+		baseURL
+	});
+	await context.addCookies([cookie]);
+	const page = await context.newPage();
+
+	try {
+		await page.goto('/tools/clubs', { waitUntil: 'networkidle' });
+		await mark(page, t0, log, 'staff clubs index');
+		const pending = page.locator(`[data-pending-club="${seeded.clubName}"]`);
+		if ((await pending.count()) < 1) {
+			bugs.push(`pending row missing for ${seeded.clubName}`);
+		} else {
+			await pending.first().scrollIntoViewIfNeeded();
+			await mark(page, t0, log, 'pending club visible', 1100);
+			await page.screenshot({ path: path.join(outDir, 'club-pending.png'), fullPage: false });
+			await pending.locator('[data-testid="review-submission"]').click();
+			await page.waitForURL(new RegExp(`/tools/clubs/submissions/${seeded.clubId}$`, 'i'), {
+				timeout: 20000
+			});
+			await mark(page, t0, log, 'staff review pending');
+			const rejectBtn = page.getByRole('button', { name: 'Reject' });
+			if ((await rejectBtn.count()) < 1) bugs.push('Reject button missing');
+			else {
+				await page.locator('.club-submission-actions').scrollIntoViewIfNeeded();
+				await mark(page, t0, log, 'Reject on camera', 900);
+				await rejectBtn.first().click();
+				await page.waitForURL(/\/tools\/clubs\/?$/, { timeout: 20000 });
+				await page.waitForLoadState('networkidle');
+				await mark(page, t0, log, 'back on clubs after Reject', 1000);
+
+				if ((await page.locator(`[data-pending-club="${seeded.clubName}"]`).count()) > 0) {
+					bugs.push('rejected club still in pending queue');
+				} else {
+					await mark(page, t0, log, 'gone from pending', 1000);
+				}
+
+				const published = page.locator(`a.club-row[href="/tools/clubs/${seeded.clubSlug}"]`);
+				if ((await published.count()) > 0) {
+					bugs.push('rejected club appeared on published list');
+				} else {
+					await mark(page, t0, log, 'not on published list', 1200);
+				}
+				await page.screenshot({ path: path.join(outDir, 'club-after-reject.png'), fullPage: false });
+			}
+		}
+	} finally {
+		await context.close();
+	}
+
+	const videos = await listWebms(videoDir);
+	const dest = path.join(outDir, 'club-reject.webm');
+	if (videos[0]) await copyFile(videos[0].path, dest);
+	else bugs.push('club-reject.webm missing');
+
+	return { bugs, log, video: dest };
+}
+
+/**
+ * Visible pointer + click ring. Preserves last position across soft updates.
+ * @param {import('@playwright/test').Page} page
+ */
+async function installPointer(page) {
+	await page.evaluate(() => {
+		const prior = window.__proofPointer || { x: 640, y: 400 };
+		window.__proofPointer = prior;
+		if (document.getElementById('proof-cursor')) return;
+		const style = document.createElement('style');
+		style.id = 'proof-pointer-style';
+		style.textContent = `
+			#proof-cursor {
+				position: fixed; width: 22px; height: 22px; margin: 0;
+				border: 3px solid #ff3b30; border-radius: 50%;
+				background: rgba(255, 59, 48, 0.45); z-index: 2147483647;
+				pointer-events: none; transform: translate(-50%, -50%);
+			}
+			#proof-click-ring {
+				position: fixed; width: 56px; height: 56px; margin: 0;
+				border: 4px solid #ff3b30; border-radius: 50%;
+				z-index: 2147483647; pointer-events: none;
+				transform: translate(-50%, -50%); opacity: 0;
+				background: rgba(255, 59, 48, 0.15);
+			}
+			#proof-click-ring.on { opacity: 1; }
+			#proof-target-box {
+				position: fixed; z-index: 2147483645; pointer-events: none;
+				border: 3px solid #ff3b30; border-radius: 4px;
+				box-shadow: 0 0 0 2px rgba(255,255,255,0.9);
+			}
+		`;
+		document.head.appendChild(style);
+		const cursor = document.createElement('div');
+		cursor.id = 'proof-cursor';
+		cursor.style.left = `${prior.x}px`;
+		cursor.style.top = `${prior.y}px`;
+		document.documentElement.appendChild(cursor);
+		const ring = document.createElement('div');
+		ring.id = 'proof-click-ring';
+		document.documentElement.appendChild(ring);
+		const box = document.createElement('div');
+		box.id = 'proof-target-box';
+		document.documentElement.appendChild(box);
+		document.addEventListener(
+			'mousemove',
+			(e) => {
+				window.__proofPointer = { x: e.clientX, y: e.clientY };
+				cursor.style.left = `${e.clientX}px`;
+				cursor.style.top = `${e.clientY}px`;
+			},
+			true
+		);
+		document.addEventListener(
+			'mousedown',
+			(e) => {
+				ring.style.left = `${e.clientX}px`;
+				ring.style.top = `${e.clientY}px`;
+				ring.classList.add('on');
+				setTimeout(() => ring.classList.remove('on'), 900);
+			},
+			true
+		);
+	});
+}
+
+/**
+ * Slow visible mouse move + click. Soft submits must NOT use expectNavigation.
+ * @param {import('@playwright/test').Page} page
+ * @param {import('@playwright/test').Locator} target
+ * @param {string} label
+ * @param {{ expectNavigation?: boolean }} [opts]
+ */
+async function pointerClick(page, target, label, opts = {}) {
+	await installPointer(page);
+	await target.scrollIntoViewIfNeeded();
+	const box = await target.boundingBox();
+	if (!box) throw new Error(`no bounding box for ${label}`);
+	const x = box.x + box.width / 2;
+	const y = box.y + box.height / 2;
+	await page.evaluate(
+		({ x: cx, y: cy, w, h }) => {
+			const outline = document.getElementById('proof-target-box');
+			if (outline) {
+				outline.style.left = `${cx}px`;
+				outline.style.top = `${cy}px`;
+				outline.style.width = `${w}px`;
+				outline.style.height = `${h}px`;
+			}
+		},
+		{ x: box.x, y: box.y, w: box.width, h: box.height }
+	);
+	await sleep(500);
+	await page.mouse.move(x, y, { steps: 36 });
+	await sleep(550);
+	if (opts.expectNavigation) {
+		await Promise.all([
+			page.waitForLoadState('networkidle'),
+			page.mouse.click(x, y)
+		]);
+		await sleep(500);
+		await installPointer(page);
+	} else {
+		await page.mouse.down();
+		await sleep(400);
+		await page.mouse.up();
+		await sleep(800);
+	}
+}
+
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {'open'|'resolved'|'dismissed'} status
+ */
+async function filterReportsByStatus(page, status) {
+	await installPointer(page);
+	const select = page.locator('select[name="status"]');
+	await select.scrollIntoViewIfNeeded();
+	const selBox = await select.boundingBox();
+	if (selBox) {
+		await page.mouse.move(selBox.x + selBox.width / 2, selBox.y + selBox.height / 2, {
+			steps: 24
+		});
+		await sleep(300);
+	}
+	await select.selectOption(status);
+	await sleep(500);
+	const apply = page.getByRole('button', { name: 'Apply' });
+	await pointerClick(page, apply, `Apply ${status}`, { expectNavigation: true });
+	await page.waitForURL(new RegExp(`[?&]status=${status}\\b`), { timeout: 20000 });
+	await installPointer(page);
+}
+
+/**
+ * Continuous pointer tape with soft Resolve/Dismiss (no full-document POST cuts).
+ * @param {import('@playwright/test').Browser} browser
+ * @param {import('@playwright/test').Cookie} cookie
+ */
+async function filmReportActions(browser, cookie) {
+	const videoDir = path.join(tmpRoot, 'video-reports');
+	await mkdir(videoDir, { recursive: true });
+	const bugs = /** @type {string[]} */ ([]);
+	const log = /** @type {Array<{t:number,label:string}>} */ ([]);
+	const t0 = Date.now();
+
+	const context = await browser.newContext({
+		viewport: { width: 1280, height: 800 },
+		recordVideo: { dir: videoDir, size: { width: 1280, height: 800 } },
+		baseURL
+	});
+	await context.addCookies([cookie]);
+	const page = await context.newPage();
+
+	/**
+	 * @param {string} reason
+	 * @param {'Resolve'|'Dismiss'} action
+	 */
+	async function pointerActOnOpen(reason, action) {
+		await installPointer(page);
+		await mark(page, t0, log, `pointer → ${action} on “${reason}”`, 1000);
+		const row = page.locator(`li[data-report-reason="${reason}"]`);
+		if ((await row.count()) < 1) {
+			bugs.push(`open report missing: ${reason}`);
+			return;
+		}
+		await row.first().scrollIntoViewIfNeeded();
+		await mark(page, t0, log, `row on camera before ${action}`, 1200);
+		const btn = row.first().getByRole('button', { name: action });
+		const gone = row.first().waitFor({ state: 'detached', timeout: 20000 });
+		await pointerClick(page, btn, `${action} ${reason}`, { expectNavigation: false });
+		await gone;
+		await installPointer(page);
+		await mark(page, t0, log, `${action} click — “${reason}” left Open in place`, 1800);
+
+		const stillOpen = page.locator(`li[data-report-reason="${reason}"]`);
+		if ((await stillOpen.count()) > 0) {
+			bugs.push(`${action}: report still in Open filter (${reason})`);
+		}
+	}
+
+	try {
+		await page.goto('/staff/reports?status=open', { waitUntil: 'networkidle' });
+		if (/sign-in|reauthenticate/i.test(page.url())) {
+			bugs.push(`staff session rejected on reports (${page.url()})`);
+			return { bugs, log, video: path.join(outDir, 'reports-resolve-dismiss.webm') };
+		}
+		await installPointer(page);
+		await mark(page, t0, log, 'Open queue — seeded pair only', 1600);
+		const body = await page.locator('body').innerText();
+		if (!body.includes(REPORTS.resolveReason)) bugs.push('resolve reason missing on open queue');
+		if (!body.includes(REPORTS.dismissReason)) bugs.push('dismiss reason missing on open queue');
+		if (/staff-portal-proof/i.test(body)) {
+			bugs.push('leftover staff-portal-proof still open — seed cleanup failed');
+		}
+		const openCount = await page.locator('li[data-report-reason]').count();
+		if (openCount !== 2) bugs.push(`expected exactly 2 open reports, got ${openCount}`);
+		await page.screenshot({ path: path.join(outDir, 'reports-open.png'), fullPage: false });
+
+		await pointerActOnOpen(REPORTS.resolveReason, 'Resolve');
+		await page.screenshot({ path: path.join(outDir, 'reports-after-resolve.png'), fullPage: false });
+
+		const afterResolve = await page.locator('li[data-report-reason]').count();
+		if (afterResolve !== 1) {
+			bugs.push(`expected 1 open report after Resolve, got ${afterResolve}`);
+		}
+		await mark(page, t0, log, 'still on Open — one row left for Dismiss', 1400);
+
+		await pointerActOnOpen(REPORTS.dismissReason, 'Dismiss');
+		await page.screenshot({ path: path.join(outDir, 'reports-after-dismiss.png'), fullPage: false });
+
+		const afterDismiss = await page.locator('li[data-report-reason]').count();
+		if (afterDismiss !== 0 && !(await page.getByText('No open reports.').count())) {
+			bugs.push(`expected empty Open after Dismiss, got ${afterDismiss} rows`);
+		}
+		await mark(page, t0, log, 'Open empty after Dismiss', 1400);
+
+		await filterReportsByStatus(page, 'dismissed');
+		const dismissedReasons = await page.locator('li[data-report-reason]').evaluateAll((nodes) =>
+			nodes.map((n) => n.getAttribute('data-report-reason') ?? '')
+		);
+		if (!dismissedReasons.includes(REPORTS.dismissReason)) {
+			bugs.push('Dismissed tab missing the clicked dismiss reason');
+		}
+		if (dismissedReasons.includes(REPORTS.resolveReason)) {
+			bugs.push('Dismissed tab incorrectly shows the resolve report');
+		}
+		const dismissedRow = page.locator(`li[data-report-reason="${REPORTS.dismissReason}"]`);
+		if ((await dismissedRow.count()) > 0) {
+			await dismissedRow.first().scrollIntoViewIfNeeded();
+		}
+		await mark(page, t0, log, `Dismissed shows “${REPORTS.dismissReason}”`, 2200);
+	} finally {
+		await context.close();
+	}
+
+	const videos = await listWebms(videoDir);
+	const dest = path.join(outDir, 'reports-resolve-dismiss.webm');
+	if (videos[0]) await copyFile(videos[0].path, dest);
+	else bugs.push('reports-resolve-dismiss.webm missing');
+
+	return { bugs, log, video: dest };
+}
+
+async function main() {
+	const reportsOnly = process.argv.includes('--reports-only');
+	if (reportsOnly) {
+		console.error(
+			'REFUSED: reports tape must use scripts/prove-reports-resolve-dismiss-real-pointer.mjs (OS cursor + continuous screen capture). Playwright recordVideo + #proof-cursor is Architect-FAIL.'
+		);
+		process.exitCode = 2;
+		return;
+	}
+	await rm(tmpRoot, { recursive: true, force: true });
+	await mkdir(outDir, { recursive: true });
+	await mkdir(tmpRoot, { recursive: true });
+
+	const { userId, cookie } = await mintStaffCookie();
+	const seeded = await seedPendingClubAndReports(userId);
+	console.log('seeded', seeded);
+
+	const browser = await chromium.launch({
+		channel: 'chrome',
+		headless: false,
+		slowMo: 40
+	});
+	/** @type {{ bugs: string[], log: Array<{t:number,label:string}>, video: string }} */
+	let club = { bugs: [], log: [], video: path.join(outDir, 'club-reject.webm') };
+	/** @type {{ bugs: string[], log: Array<{t:number,label:string}>, video: string }} */
+	let reports = {
+		bugs: [
+			'reports film deferred to prove-reports-resolve-dismiss-real-pointer.mjs (see SELF-WATCH.md)'
+		],
+		log: [],
+		video: path.join(outDir, 'reports-resolve-dismiss.webm')
+	};
+	try {
+		console.log('— club Reject film —');
+		club = await filmClubReject(browser, cookie, seeded);
+		console.log(
+			'— skipping reports Resolve/Dismiss here; run prove-reports-resolve-dismiss-real-pointer.mjs —'
+		);
+	} finally {
+		await browser.close();
+	}
+
+	const clubPass = club.bugs.length === 0;
+	const reportsPass = false;
+	const verdict = clubPass ? 'CLUB_PASS_REPORTS_DEFERRED' : 'FAIL';
+
+	const notes = [
+		`# Staff Reject / Resolve / Dismiss: ${verdict}`,
+		'',
+		`- Base: ${baseURL}`,
+		`- Club Reject: ${clubPass ? 'PASS' : 'FAIL'} → \`club-reject.webm\``,
+		`- Reports Resolve+Dismiss: DEFERRED → run \`node scripts/prove-reports-resolve-dismiss-real-pointer.mjs\``,
+		`- Club submission: ${seeded.clubId} (${seeded.clubName})`,
+		'',
+		'## Club Reject timeline',
+		...club.log.map((e) => `- ${e.t.toFixed(2)}s ${e.label}`),
+		'',
+		'## Bugs',
+		...(club.bugs.length ? club.bugs.map((b) => `- ${b}`) : ['- none (club)']),
+		'- reports: use real-pointer script (Architect rejected fake cursor tape)',
+		''
+	].join('\n');
+
+	await writeFile(path.join(outDir, 'VERDICT-club-only.md'), notes);
+	await rm(tmpRoot, { recursive: true, force: true });
+
+	console.log(verdict);
+	console.log('Club:', clubPass ? 'PASS' : 'FAIL', club.video);
+	console.log('Reports: DEFERRED (real-pointer script)');
+	if (!clubPass) {
+		console.error(club.bugs.join('\n'));
+		process.exitCode = 1;
+	}
+}
+
+main().catch((error) => {
+	console.error(error);
+	process.exitCode = 1;
+});

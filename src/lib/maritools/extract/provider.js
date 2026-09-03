@@ -24,7 +24,8 @@ export function needsTextPdf(text, byteLength = 0) {
  *   fetchImpl?: (url: string, init?: RequestInit) => Promise<{ ok: boolean, json: () => Promise<any> }>,
  *   getKey?: () => string,
  *   getModel?: () => string,
- *   endpoint?: string
+ *   endpoint?: string,
+ *   timeoutMs?: number
  * }} [options]
  */
 export function createOutlineExtractionProvider(options = {}) {
@@ -33,6 +34,7 @@ export function createOutlineExtractionProvider(options = {}) {
 	const fetchImpl = options.fetchImpl ?? fetch;
 	const endpoint =
 		options.endpoint ?? 'https://integrate.api.nvidia.com/v1/chat/completions';
+	const timeoutMs = options.timeoutMs ?? 90_000;
 
 	/**
 	 * @param {{ text: string, sha256?: string, offeringKey?: string, byteLength?: number }} input
@@ -61,6 +63,8 @@ export function createOutlineExtractionProvider(options = {}) {
 
 		inferenceCount += 1;
 		let payload;
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), timeoutMs);
 		try {
 			const response = await fetchImpl(endpoint, {
 				method: 'POST',
@@ -69,17 +73,18 @@ export function createOutlineExtractionProvider(options = {}) {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
-					model: options.getModel?.() ?? 'nvidia/nemotron-3.5-lightning-30b-a3b',
+					model: options.getModel?.() ?? 'qwen/qwen3.5-122b-a10b',
 					temperature: 0,
 					messages: [
 						{
 							role: 'user',
 							content:
-								'Extract assessments and books as JSON. Use null for unknown fields. Never invent dates. Text:\n' +
+								'Extract course identity, assessments, and books as JSON with shape {"courseCode":string|null,"title":string|null,"section":string|null,"teacherName":string|null,"assessments":[{"title":string,"due":string|null,"dateIso":"YYYY-MM-DD"|null,"weight":number|null,"weightLabel":string|null}],"books":[{"title":string,"author":string|null,"isbn":string|null,"required":boolean}]}. Read the EVALUATION table carefully: each row is Due Date/Due Week, then Type, Platform, Option A, Option B. Preserve the exact due text, including Weekly, As announced, and In common evaluation period. For weightLabel, preserve both options when they differ, such as "30% / 40%"; use one value when they match. Never invent dates or weights. Use null for section when the outline does not state a section number. Text:\n' +
 								input.text
 						}
 					]
-				})
+				}),
+				signal: controller.signal
 			});
 			if (!response.ok) {
 				return { ok: false, reason: 'http', proposals: null, inferenceCount };
@@ -87,6 +92,8 @@ export function createOutlineExtractionProvider(options = {}) {
 			payload = await response.json();
 		} catch {
 			return { ok: false, reason: 'network', proposals: null, inferenceCount };
+		} finally {
+			clearTimeout(timer);
 		}
 
 		const content = payload?.choices?.[0]?.message?.content;

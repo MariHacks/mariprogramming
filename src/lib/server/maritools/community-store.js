@@ -1,3 +1,5 @@
+import { clubListingFromPayload, clubSubmissionView } from '$lib/maritools/club-listing.js';
+import { untilFromDuration } from '$lib/maritools/moderation-duration.js';
 import { readRuntimeEnvironment } from '../config/environment.js';
 import { isStaffAccount } from './community.js';
 import {
@@ -6,6 +8,7 @@ import {
 	MariToolsUnavailableError as RepoUnavailableError,
 	MariToolsValidationError,
 	createMariToolsRepository,
+	publicProfileCard,
 	publicStudentView
 } from './repository.js';
 import { MaritoolsInputError, MaritoolsUnavailableError } from './student-store.js';
@@ -22,9 +25,71 @@ export function slugFromName(name) {
 		.slice(0, 120);
 }
 
+/**
+ * @param {string | null | undefined} authorUserId
+ * @param {{ userId?: string | null, staff?: boolean } | null | undefined} viewer
+ */
+export function canManagePost(authorUserId, viewer) {
+	if (!viewer) return false;
+	if (viewer.staff) return true;
+	return Boolean(viewer.userId && authorUserId && viewer.userId === authorUserId);
+}
+
+/** @param {unknown} value */
+function normalizeAuthorDisplayName(value) {
+	if (typeof value !== 'string') return null;
+	const trimmed = value.trim();
+	return trimmed || null;
+}
+
+/**
+ * @param {ReturnType<typeof createMariToolsRepository>} inner
+ * @param {Array<{ authorUserId?: string | null } | null | undefined>} rows
+ */
+async function withAuthorDisplayNames(inner, rows) {
+	const ids = [
+		...new Set(
+			rows
+				.map((row) => (typeof row?.authorUserId === 'string' ? row.authorUserId : null))
+				.filter(Boolean)
+		)
+	];
+	/** @type {Map<string, { displayName: string | null, profileImageDataUrl: string | null }>} */
+	const profiles = new Map();
+	await Promise.all(
+		ids.map(async (id) => {
+			const profile = await inner.getStudentProfile(id);
+			profiles.set(id, {
+				displayName: normalizeAuthorDisplayName(profile?.displayName),
+				profileImageDataUrl:
+					typeof profile?.profileImageDataUrl === 'string' ? profile.profileImageDataUrl : null
+			});
+		})
+	);
+	return rows.map((row) => {
+		if (!row || typeof row !== 'object') return row;
+		const authorUserId = typeof row.authorUserId === 'string' ? row.authorUserId : null;
+		return {
+			...row,
+			authorDisplayName: authorUserId
+				? (profiles.get(authorUserId)?.displayName ?? null)
+				: null,
+			authorProfileImageDataUrl: authorUserId
+				? (profiles.get(authorUserId)?.profileImageDataUrl ?? null)
+				: null
+		};
+	});
+}
+
+/** @param {unknown} authorUserId */
+function authorProfileHref(authorUserId) {
+	return typeof authorUserId === 'string' && authorUserId ? `/tools/people/${authorUserId}` : null;
+}
+
 /** @param {any} thread */
 export function publicThreadView(thread) {
 	if (!thread || typeof thread !== 'object') return null;
+	const authorUserId = typeof thread.authorUserId === 'string' ? thread.authorUserId : null;
 	return {
 		id: thread.id,
 		title: thread.title,
@@ -35,20 +100,44 @@ export function publicThreadView(thread) {
 		termId: thread.termId ?? null,
 		createdAt: thread.createdAt,
 		lockedAt: thread.lockedAt ?? null,
-		removedAt: thread.removedAt ?? null
+		removedAt: thread.removedAt ?? null,
+		authorUserId,
+		authorProfileHref: authorProfileHref(authorUserId),
+		authorDisplayName: normalizeAuthorDisplayName(thread.authorDisplayName),
+		authorProfileImageDataUrl:
+			typeof thread.authorProfileImageDataUrl === 'string'
+				? thread.authorProfileImageDataUrl
+				: null
 	};
 }
 
 /** @param {any} reply */
 export function publicReplyView(reply) {
 	if (!reply || typeof reply !== 'object') return null;
+	const authorUserId = typeof reply.authorUserId === 'string' ? reply.authorUserId : null;
 	return {
 		id: reply.id,
 		threadId: reply.threadId,
 		body: reply.body,
 		createdAt: reply.createdAt,
-		removedAt: reply.removedAt ?? null
+		removedAt: reply.removedAt ?? null,
+		authorUserId,
+		authorProfileHref: authorProfileHref(authorUserId),
+		authorDisplayName: normalizeAuthorDisplayName(reply.authorDisplayName),
+		authorProfileImageDataUrl:
+			typeof reply.authorProfileImageDataUrl === 'string' ? reply.authorProfileImageDataUrl : null
 	};
+}
+
+/**
+ * @template {Record<string, unknown>} T
+ * @param {T | null} view
+ * @param {string | null | undefined} authorUserId
+ * @param {{ userId?: string | null, staff?: boolean } | null | undefined} viewer
+ */
+function withManageFlag(view, authorUserId, viewer) {
+	if (!view) return null;
+	return { ...view, canManage: canManagePost(authorUserId, viewer) };
 }
 
 /** @param {any} club */
@@ -93,6 +182,11 @@ export function createCommunityStore(inner) {
 			});
 		},
 
+		/** @param {string} slug */
+		getPublishedClubBySlug(slug) {
+			return wrap(async () => publicClubView(await inner.getPublishedClubBySlug(slug)));
+		},
+
 		/** @param {{ submitterUserId?: string, payload: object, clubId?: string | null }} input */
 		submitClub(input) {
 			return wrap(() =>
@@ -107,34 +201,51 @@ export function createCommunityStore(inner) {
 		listPendingClubSubmissions() {
 			return wrap(async () => {
 				const rows = await inner.listClubSubmissions({ status: 'pending' });
-				return rows.map((row) => ({
-					id: row.id,
-					name: row.payload?.name ?? '',
-					slug: row.payload?.slug ?? '',
-					category: row.payload?.category ?? '',
-					description: row.payload?.description ?? '',
-					links: Array.isArray(row.payload?.links) ? row.payload.links : []
-				}));
+				return rows.map((row) => clubSubmissionView(row));
+			});
+		},
+
+		/** @param {string} submissionId */
+		getClubSubmission(submissionId) {
+			return wrap(async () => {
+				const row = await inner.getClubSubmission(submissionId);
+				if (!row) return null;
+				return clubSubmissionView(row);
+			});
+		},
+
+		/**
+		 * @param {string} submissionId
+		 * @param {Record<string, unknown>} payload
+		 */
+		updateClubSubmissionPayload(submissionId, payload) {
+			return wrap(async () => {
+				const existing = await inner.getClubSubmission(submissionId);
+				if (!existing) throw new MaritoolsInputError('missing-submission');
+				if (existing.status !== 'pending') throw new MaritoolsInputError('not-pending');
+				const updated = await inner.updateClubSubmissionPayload(submissionId, payload);
+				return clubSubmissionView(updated);
 			});
 		},
 
 		/** @param {string} submissionId */
 		publishPendingClub(submissionId) {
 			return wrap(async () => {
-				const pending = await inner.listClubSubmissions({ status: 'pending' });
-				const submission = pending.find((row) => row.id === submissionId);
-				if (!submission) throw new MaritoolsInputError('missing-submission');
-				const payload = submission.payload ?? {};
-				const name = String(payload.name ?? '').trim();
-				const slug = String(payload.slug ?? '').trim() || slugFromName(name);
+				const submission = await inner.getClubSubmission(submissionId);
+				if (!submission || submission.status !== 'pending') {
+					throw new MaritoolsInputError('missing-submission');
+				}
+				const listing = clubListingFromPayload(submission.payload);
+				const name = listing.name;
+				const slug = listing.slug || slugFromName(name);
 				if (!name || !slug) throw new MaritoolsInputError('invalid-club');
 				try {
 					const club = await inner.createClub({
 						name,
 						slug,
-						category: payload.category ?? null,
-						description: payload.description ?? null,
-						links: payload.links ?? [],
+						category: listing.category || null,
+						description: listing.description || null,
+						links: listing.links,
 						published: true
 					});
 					await inner.setClubSubmissionStatus(submissionId, 'published');
@@ -146,6 +257,18 @@ export function createCommunityStore(inner) {
 					const club = clubs.find((row) => row.slug === slug);
 					return publicClubView(club);
 				}
+			});
+		},
+
+		/** @param {string} submissionId */
+		rejectPendingClub(submissionId) {
+			return wrap(async () => {
+				const submission = await inner.getClubSubmission(submissionId);
+				if (!submission || submission.status !== 'pending') {
+					throw new MaritoolsInputError('missing-submission');
+				}
+				const updated = await inner.setClubSubmissionStatus(submissionId, 'rejected');
+				return clubSubmissionView(updated);
 			});
 		},
 
@@ -162,6 +285,15 @@ export function createCommunityStore(inner) {
 			});
 		},
 
+		listConflictCatalog() {
+			return wrap(() => inner.listConflictCatalog());
+		},
+
+		/** @param {string} contributionId */
+		resolveCatalogConflict(contributionId) {
+			return wrap(() => inner.resolveCatalogConflict(contributionId));
+		},
+
 		/** @param {{ category?: string, courseId?: string }} [filter] */
 		listThreads(filter = {}) {
 			return wrap(async () => {
@@ -173,32 +305,118 @@ export function createCommunityStore(inner) {
 			});
 		},
 
-		/** @param {string} id */
-		getThread(id) {
-			return wrap(async () => publicThreadView(await inner.getThread(id)));
+		/**
+		 * @param {string} id
+		 * @param {{ userId?: string | null, staff?: boolean } | null} [viewer]
+		 */
+		getThread(id, viewer = null) {
+			return wrap(async () => {
+				const thread = await inner.getThread(id);
+				if (!thread) return null;
+				const [enriched] = await withAuthorDisplayNames(inner, [thread]);
+				return withManageFlag(publicThreadView(enriched), thread.authorUserId, viewer);
+			});
 		},
 
-		/** @param {string} threadId */
-		listReplies(threadId) {
+		/**
+		 * @param {string} threadId
+		 * @param {{ userId?: string | null, staff?: boolean } | null} [viewer]
+		 */
+		listReplies(threadId, viewer = null) {
 			return wrap(async () => {
 				const rows = await inner.listReplies(threadId);
-				return rows.map(publicReplyView).filter(Boolean);
+				const enriched = await withAuthorDisplayNames(inner, rows);
+				return enriched
+					.map((row, index) =>
+						withManageFlag(publicReplyView(row), rows[index]?.authorUserId, viewer)
+					)
+					.filter(Boolean);
+			});
+		},
+
+		/**
+		 * @param {string} id
+		 * @param {{ userId?: string | null, staff?: boolean } | null | undefined} viewer
+		 */
+		canManageThread(id, viewer) {
+			return wrap(async () => {
+				const thread = await inner.getThread(id);
+				if (!thread || thread.removedAt) return false;
+				return canManagePost(thread.authorUserId, viewer);
+			});
+		},
+
+		/**
+		 * @param {string} id
+		 * @param {{ userId?: string | null, staff?: boolean } | null | undefined} viewer
+		 */
+		canManageReply(id, viewer) {
+			return wrap(async () => {
+				const reply = await inner.getReply(id);
+				if (!reply || reply.removedAt) return false;
+				return canManagePost(reply.authorUserId, viewer);
 			});
 		},
 
 		/** @param {Record<string, unknown>} input */
 		createThread(input) {
-			return wrap(async () => publicThreadView(await inner.createThread(input)));
+			return wrap(async () => {
+				const created = await inner.createThread(input);
+				const [enriched] = await withAuthorDisplayNames(inner, [created]);
+				return publicThreadView(enriched);
+			});
 		},
 
 		/** @param {Record<string, unknown>} input */
 		createReply(input) {
-			return wrap(async () => publicReplyView(await inner.createReply(input)));
+			return wrap(async () => {
+				const created = await inner.createReply(input);
+				const [enriched] = await withAuthorDisplayNames(inner, [created]);
+				return publicReplyView(enriched);
+			});
+		},
+
+		/** @param {{ id: unknown, body: unknown }} input */
+		updateThread(input) {
+			return wrap(async () => {
+				const updated = await inner.updateThread(input);
+				const [enriched] = await withAuthorDisplayNames(inner, [updated]);
+				return publicThreadView(enriched);
+			});
+		},
+
+		/** @param {{ id: unknown, body: unknown }} input */
+		updateReply(input) {
+			return wrap(async () => {
+				const updated = await inner.updateReply(input);
+				const [enriched] = await withAuthorDisplayNames(inner, [updated]);
+				return publicReplyView(enriched);
+			});
 		},
 
 		/** @param {Record<string, unknown>} input */
 		createReport(input) {
 			return wrap(() => inner.createReport(input));
+		},
+
+		/** @param {{ status?: unknown }} [input] */
+		listReports(input = {}) {
+			return wrap(() => inner.listReports(input));
+		},
+
+		/** @param {string} id @param {'resolved' | 'dismissed'} status */
+		setReportStatus(id, status) {
+			return wrap(() => inner.setReportStatus(id, status));
+		},
+
+		/** @param {string} id */
+		getReply(id) {
+			return wrap(async () => {
+				const reply = await inner.getReply(id);
+				if (!reply) return null;
+				const [enriched] = await withAuthorDisplayNames(inner, [reply]);
+				return publicReplyView(enriched);
+			});
 		},
 
 		lockThread(id) {
@@ -213,11 +431,71 @@ export function createCommunityStore(inner) {
 			return wrap(async () => publicReplyView(await inner.removeReply(id)));
 		},
 
+		/**
+		 * @param {string} userId
+		 * @param {{ days?: number, hours?: number, until?: Date }} [opts]
+		 */
+		muteUser(userId, opts = {}) {
+			const until =
+				opts.until instanceof Date
+					? opts.until
+					: untilFromDuration({ hours: opts.hours, days: opts.days });
+			return wrap(async () => publicStudentView(await inner.muteUser(userId, until)));
+		},
+
+		/**
+		 * @param {string} userId
+		 * @param {{ permanent?: boolean, days?: number, hours?: number, until?: Date | null }} [opts]
+		 */
+		banUser(userId, opts = {}) {
+			let until = null;
+			if (opts.permanent === true) {
+				until = null;
+			} else if (opts.until instanceof Date) {
+				until = opts.until;
+			} else if (opts.until === null) {
+				until = null;
+			} else if (opts.hours != null || opts.days != null) {
+				until = untilFromDuration({ hours: opts.hours, days: opts.days });
+			} else {
+				until = null;
+			}
+			return wrap(async () => publicStudentView(await inner.banUser(userId, { until })));
+		},
+
+		/** @param {string} userId */
+		unmuteUser(userId) {
+			return wrap(async () => publicStudentView(await inner.unmuteUser(userId)));
+		},
+
+		/** @param {string} userId */
+		unbanUser(userId) {
+			return wrap(async () => publicStudentView(await inner.unbanUser(userId)));
+		},
+
+		/** @param {string} userId */
+		listThreadsByAuthor(userId) {
+			return wrap(async () => {
+				const rows = await inner.listThreadsByAuthor(userId);
+				const enriched = await withAuthorDisplayNames(inner, rows);
+				return enriched.map((row) => publicThreadView(row)).filter(Boolean);
+			});
+		},
+
 		/** @param {string} userId */
 		getProfile(userId) {
 			return wrap(async () => {
 				const row = await inner.getStudentProfile(userId);
 				return row ? publicStudentView(row) : null;
+			});
+		},
+
+		/** Public card for /tools/people/[userId] (no student number). */
+		/** @param {string} userId */
+		getPublicProfile(userId) {
+			return wrap(async () => {
+				const row = await inner.getStudentProfile(userId);
+				return row ? publicProfileCard(row) : null;
 			});
 		},
 

@@ -109,14 +109,22 @@ export const mtStudentProfiles = pgTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		studentId: varchar('student_id', { length: 32 }).notNull(),
 		displayName: varchar('display_name', { length: 120 }),
+		username: varchar('username', { length: 32 }),
+		firstName: varchar('first_name', { length: 80 }),
+		lastName: varchar('last_name', { length: 80 }),
+		profileImageDataUrl: text('profile_image_data_url'),
 		role: varchar('role', { length: 16 }).default('student').notNull(),
 		nimDisclosureAcceptedAt: timestamp('nim_disclosure_accepted_at', { withTimezone: true }),
+		mutedUntil: timestamp('muted_until', { withTimezone: true }),
+		bannedAt: timestamp('banned_at', { withTimezone: true }),
+		bannedUntil: timestamp('banned_until', { withTimezone: true }),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
 	},
 	(table) => [
 		uniqueIndex('mt_student_profiles_student_id_unique_idx').on(table.studentId),
+		uniqueIndex('mt_student_profiles_username_unique_idx').on(table.username),
 		check(
 			'mt_student_profiles_role_valid',
 			sql`${table.role} IN ('student', 'moderator', 'staff')`
@@ -135,6 +143,7 @@ export const mtOutlineDocuments = pgTable(
 		sha256: varchar('sha256', { length: 64 }).notNull(),
 		byteLength: integer('byte_length').notNull(),
 		extractedText: text('extracted_text'),
+		reviewProposals: jsonb('review_proposals'),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
@@ -300,6 +309,124 @@ export const mtForumReplies = pgTable(
 	(table) => [
 		index('mt_forum_replies_thread_idx').on(table.threadId),
 		check('mt_forum_replies_version_positive', sql`${table.version} > 0`)
+	]
+);
+
+export const mtGoogleCalendarGrants = pgTable(
+	'mt_google_calendar_grants',
+	{
+		userId: text('user_id')
+			.primaryKey()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		refreshToken: text('refresh_token').notNull(),
+		accessToken: text('access_token'),
+		accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+		version: version(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	(table) => [check('mt_google_calendar_grants_version_positive', sql`${table.version} > 0}`)]
+);
+
+export const mtSavedSchedules = pgTable(
+	'mt_saved_schedules',
+	{
+		userId: text('user_id')
+			.primaryKey()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		paste: text('paste').notNull(),
+		version: version(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	(table) => [
+		check('mt_saved_schedules_paste_not_blank', sql`length(btrim(${table.paste})) > 0`),
+		check('mt_saved_schedules_version_positive', sql`${table.version} > 0`)
+	]
+);
+
+export const mtProgrammingClubMemberships = pgTable(
+	'mt_programming_club_memberships',
+	{
+		userId: text('user_id')
+			.primaryKey()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		program: varchar('program', { length: 160 }).notNull(),
+		graduationYear: integer('graduation_year'),
+		yearLevel: varchar('year_level', { length: 8 }),
+		experienceLevel: varchar('experience_level', { length: 16 }).notNull(),
+		interests: jsonb('interests').$type<string[]>().default([]).notNull(),
+		clubGoals: text('club_goals'),
+		staffVisibilityAcceptedAt: timestamp('staff_visibility_accepted_at', {
+			withTimezone: true
+		}).notNull(),
+		requiredFormCompletedAt: timestamp('required_form_completed_at', { withTimezone: true }),
+		scheduleSharedAt: timestamp('schedule_shared_at', { withTimezone: true }),
+		version: version(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	(table) => [
+		index('mt_programming_club_memberships_schedule_shared_idx').on(table.scheduleSharedAt),
+		check(
+			'mt_programming_club_memberships_graduation_year_valid',
+			sql`${table.graduationYear} IS NULL OR (${table.graduationYear} >= 2026 AND ${table.graduationYear} <= 2040)`
+		),
+		check(
+			'mt_programming_club_memberships_year_level_valid',
+			sql`${table.yearLevel} IS NULL OR ${table.yearLevel} IN ('first', 'second', 'third')`
+		),
+		check(
+			'mt_programming_club_memberships_experience_level_valid',
+			sql`${table.experienceLevel} IN ('new', 'learning', 'comfortable', 'advanced')`
+		),
+		check(
+			'mt_programming_club_memberships_interests_array',
+			sql`jsonb_typeof(${table.interests}) = 'array'`
+		),
+		check('mt_programming_club_memberships_version_positive', sql`${table.version} > 0`)
+	]
+);
+
+export const mtFreeTimeBoards = pgTable(
+	'mt_free_time_boards',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		slug: varchar('slug', { length: 120 }).notNull(),
+		title: varchar('title', { length: 240 }).notNull(),
+		termId: varchar('term_id', { length: 64 })
+			.notNull()
+			.references(() => mtAcademicTerms.id, { onDelete: 'restrict' }),
+		ownerUserId: text('owner_user_id').references(() => user.id, { onDelete: 'set null' }),
+		version: version(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	(table) => [
+		uniqueIndex('mt_free_time_boards_slug_unique_idx').on(table.slug),
+		index('mt_free_time_boards_term_idx').on(table.termId),
+		check('mt_free_time_boards_version_positive', sql`${table.version} > 0`)
+	]
+);
+
+export const mtFreeTimeMembers = pgTable(
+	'mt_free_time_members',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		boardId: uuid('board_id')
+			.notNull()
+			.references(() => mtFreeTimeBoards.id, { onDelete: 'cascade' }),
+		displayName: varchar('display_name', { length: 120 }).notNull(),
+		availability: jsonb('availability').$type<Record<string, unknown>>().default({}).notNull(),
+		shareToken: varchar('share_token', { length: 64 }),
+		version: version(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	(table) => [
+		uniqueIndex('mt_free_time_members_share_token_unique_idx').on(table.shareToken),
+		index('mt_free_time_members_board_idx').on(table.boardId),
+		check('mt_free_time_members_version_positive', sql`${table.version} > 0`)
 	]
 );
 

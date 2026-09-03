@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MariTools — Availability workshop</title>
+  <!--
+    THESIS: Common free time is a comparison bench, not a paste form. Person stations sit as labeled columns; the shared-gap week is the object you came for. Refuses heading + lead + textarea + blue button as the first viewport.
+    OWN-WORLD: Cool paper bench, ink station headers, white week canvas on a steel work surface. Inter Tight for titles only. Tabular times. Electric blue marks free slots and the current tool.
+    STORY: A student pastes two Omnivox lists, sets a minimum gap, and reads when everyone is free as weekday geometry.
+    FIRST VIEWPORT: Sticky workbar with gap radios. Three Person columns. Shared-gap matrix with time rail and positioned blocks.
+    FORM: Availability workshop. When2meet columns + Google Calendar Find a time, inverted to free gaps.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter+Tight:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="preview-bar">
+    <strong>Preview · Availability workshop</strong>
+    <label>
+      Page
+      <select id="page-picker">
+        <option value="home">Home</option>
+        <option value="schedule">Schedule</option>
+        <option value="free-time" selected>Free Time</option>
+        <option value="semester">Semester</option>
+        <option value="catalog">Catalog</option>
+        <option value="clubs">Clubs</option>
+        <option value="forum">Forum</option>
+        <option value="thread">Thread</option>
+        <option value="account">Account</option>
+      </select>
+    </label>
+  </div>
+
+  <header class="site-header">
+    <a class="brand-lockup" href="#home" data-go="home">
+      <span class="brand-name">Programming Club</span>
+      <span class="brand-split" aria-hidden="true">/</span>
+      <span class="brand-product">MariTools</span>
+    </a>
+    <nav class="site-nav" aria-label="Site">
+      <a href="#home" class="hide-sm">Club home</a>
+      <a href="#home" data-go="home" aria-current="page">MariTools</a>
+    </nav>
+    <div class="header-account">
+      <a class="account-chip" href="#account" data-go="account">maya.chen@gmail.com</a>
+      <a class="btn btn-primary" href="https://docs.google.com/forms/d/e/1FAIpQLScgamwSUyaJO6wyY0w2KPxsJ_l7wdORyR37vhuHn209l7os0g/viewform?usp=header">Sign up</a>
+    </div>
+  </header>
+
+  <div class="shell" id="shell">
+    <button class="menu-toggle" type="button" id="menu-toggle" aria-expanded="false" aria-controls="tools-nav">
+      MariTools menu
+      <span data-current-label>Free Time</span>
+    </button>
+    <aside class="sidebar" id="tools-nav" aria-label="MariTools">
+      <a class="side-brand" href="#home" data-go="home">MariTools</a>
+      <nav class="nav-group" aria-labelledby="nav-schedule">
+        <div class="nav-label" id="nav-schedule">Schedule</div>
+        <a class="nav-link" href="#schedule" data-go="schedule">Schedule</a>
+        <a class="nav-link" href="#free-time" data-go="free-time" aria-current="page">Free Time</a>
+      </nav>
+      <nav class="nav-group" aria-labelledby="nav-courses">
+        <div class="nav-label" id="nav-courses">Courses</div>
+        <a class="nav-link" href="#semester" data-go="semester">Semester</a>
+        <a class="nav-link" href="#catalog" data-go="catalog">Catalog</a>
+      </nav>
+      <nav class="nav-group" aria-labelledby="nav-life">
+        <div class="nav-label" id="nav-life">Student life</div>
+        <a class="nav-link" href="#clubs" data-go="clubs">Clubs</a>
+        <a class="nav-link" href="#forum" data-go="forum">Forum</a>
+      </nav>
+      <p class="side-foot"><a href="#home">Back to club home</a></p>
+    </aside>
+
+    <main class="workspace">
+      <!-- HOME -->
+      <section class="page" data-page="home" id="page-home">
+        <div class="stage">
+          <header class="workbar">
+            <div>
+              <h1>MariTools</h1>
+              <p class="lede">Free tools for Marianopolis students, built by students. Start with a comparison if you need a room that actually works.</p>
+            </div>
+            <a class="btn btn-primary" href="#free-time" data-go="free-time">Open common free time</a>
+          </header>
+          <div class="home-grid">
+            <div class="home-compare">
+              <h2>Last comparison · 45 minutes</h2>
+              <p class="lede" style="margin-bottom:0.75rem">Maya, Alex, Jordan. Synthetic sample for this preview.</p>
+              <div class="mini-days">
+                <div class="mini-day">
+                  <h3>Mon</h3>
+                  <p class="chip data">12:00–13:30</p>
+                  <p class="chip data">16:00–18:00</p>
+                </div>
+                <div class="mini-day">
+                  <h3>Tue</h3>
+                  <p class="chip data">11:00–12:15</p>
+                </div>
+                <div class="mini-day">
+                  <h3>Wed</h3>
+                  <p class="chip data">12:00–13:30</p>
+                  <p class="chip data">15:30–17:00</p>
+                </div>
+                <div class="mini-day">
+                  <h3>Thu</h3>
+                  <p class="chip none">No 45-minute gap</p>
+                </div>
+                <div class="mini-day">
+                  <h3>Fri</h3>
+                  <p class="chip data">08:00–10:00</p>
+                  <p class="chip data">14:00–16:00</p>
+                </div>
+              </div>
+            </div>
+            <div class="suite">
+              <div class="suite-block">
+                <h2>Schedule</h2>
+                <a class="dest" href="#schedule" data-go="schedule">
+                  <span class="dest-name">Schedule</span>
+                  <span class="dest-sum">Paste your Omnivox list and download a calendar.</span>
+                </a>
+                <a class="dest" href="#free-time" data-go="free-time">
+                  <span class="dest-name">Common free time</span>
+                  <span class="dest-sum">Compare a few schedules and see when everyone is free.</span>
+                </a>
+              </div>
+              <div class="suite-block">
+                <h2>Courses</h2>
+                <a class="dest" href="#semester" data-go="semester">
+                  <span class="dest-name">Semester</span>
+                  <span class="dest-sum">Review dates and weights from a course outline.</span>
+                </a>
+                <a class="dest" href="#catalog" data-go="catalog">
+                  <span class="dest-name">Course catalog</span>
+                  <span class="dest-sum">Browse course information students have shared.</span>
+                </a>
+              </div>
+              <div class="suite-block">
+                <h2>Student life</h2>
+                <a class="dest" href="#clubs" data-go="clubs">
+                  <span class="dest-name">Clubs</span>
+                  <span class="dest-sum">Find campus clubs from verified listings.</span>
+                </a>
+                <a class="dest" href="#forum" data-go="forum">
+                  <span class="dest-name">Forum</span>
+                  <span class="dest-sum">Read and post questions tagged to real courses.</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCHEDULE -->
+      <section class="page" data-page="schedule" id="page-schedule">
+        <div class="stage stage-wide">
+          <header class="workbar">
+            <div>
+              <h1>My schedule</h1>
+              <p class="lede">Paste the numbered course list from Omnivox. You do not need to log in, and nothing is sent to the college.</p>
+            </div>
+            <div class="work-actions">
+              <button class="btn btn-ghost" type="button">Read schedule</button>
+              <button class="btn btn-primary" type="button">Download calendar (.ics)</button>
+            </div>
+          </header>
+          <div class="split">
+            <aside class="paste-rail">
+              <h2>Omnivox course list</h2>
+              <textarea class="area data" spellcheck="false" aria-label="Omnivox course list">1  Calculus I
+201-NYA-05 sec.00012, teacher: Chen
+Mon 08:30-10:00 H-204
+Wed 08:30-10:00 H-204
+Fri 08:30-10:00 H-204
+
+2  Programming I
+420-A11-AB sec.00003, teacher: Roy
+Mon 10:00-12:00 B-312
+Thu 13:00-15:00 B-312
+
+3  Introduction to College English
+603-101-MQ sec.00021, teacher: Walsh
+Tue 09:00-10:30 A-110
+Fri 10:15-11:45 A-110</textarea>
+              <p class="notice notice-warn">Tuesday 09:00–10:30 overlaps a second meeting. Check the red block.</p>
+              <details>
+                <summary>How do I get my schedule?</summary>
+                <ol>
+                  <li>Open Omnivox and sign in with your student number.</li>
+                  <li>Course Schedule, then Obtain my schedule.</li>
+                  <li>Printer-friendly version, Compact printable semester schedule, View.</li>
+                  <li>Paste the numbered list here.</li>
+                </ol>
+              </details>
+            </aside>
+            <div class="canvas">
+              <div class="matrix-caption">
+                <h2>Week</h2>
+                <p>Meetings sit on the hour rail. Overlap uses the danger fill and the word Overlap.</p>
+              </div>
+              <div class="week" role="img" aria-label="Week timetable from Monday to Friday, 8:00 to 19:00">
+                <div class="week-labels">
+                  <div class="corner"></div>
+                  <div class="day-label">Mon <span class="sub">3 meetings</span></div>
+                  <div class="day-label">Tue <span class="sub">Overlap</span></div>
+                  <div class="day-label">Wed <span class="sub">1 meeting</span></div>
+                  <div class="day-label">Thu <span class="sub">1 meeting</span></div>
+                  <div class="day-label">Fri <span class="sub">2 meetings</span></div>
+                </div>
+                <div class="week-body">
+                  <div class="time-rail" aria-hidden="true">
+                    <div class="hour-label">8:00</div>
+                    <div class="hour-label">9:00</div>
+                    <div class="hour-label">10:00</div>
+                    <div class="hour-label">11:00</div>
+                    <div class="hour-label">12:00</div>
+                    <div class="hour-label">13:00</div>
+                    <div class="hour-label">14:00</div>
+                    <div class="hour-label">15:00</div>
+                    <div class="hour-label">16:00</div>
+                    <div class="hour-label">17:00</div>
+                    <div class="hour-label">18:00</div>
+                  </div>
+                  <div class="day-col">
+                    <article class="block meet-block" style="top: calc(0.5 * var(--hour-h)); height: calc(1.5 * var(--hour-h));">
+                      <span class="when data">08:30–10:00</span>
+                      201-NYA-05
+                      <span class="when">H-204</span>
+                    </article>
+                    <article class="block meet-block" style="top: calc(2 * var(--hour-h)); height: calc(2 * var(--hour-h));">
+                      <span class="when data">10:00–12:00</span>
+                      420-A11-AB
+                      <span class="when">B-312</span>
+                    </article>
+                  </div>
+                  <div class="day-col">
+                    <article class="block meet-block" style="top: calc(0.5 * var(--hour-h)); height: calc(1.5 * var(--hour-h));">
+                      <span class="when data">08:30–10:00</span>
+                    </article>
+                    <article class="block meet-block is-warn" style="top: calc(1 * var(--hour-h)); height: calc(1.5 * var(--hour-h)); left: 1.15rem; z-index: 1;">
+                      <span class="when data">09:00–10:30</span>
+                      Overlap
+                    </article>
+                  </div>
+                  <div class="day-col">
+                    <article class="block meet-block" style="top: calc(0.5 * var(--hour-h)); height: calc(1.5 * var(--hour-h));">
+                      <span class="when data">08:30–10:00</span>
+                      201-NYA-05
+                      <span class="when">H-204</span>
+                    </article>
+                  </div>
+                  <div class="day-col">
+                    <article class="block meet-block" style="top: calc(5 * var(--hour-h)); height: calc(2 * var(--hour-h));">
+                      <span class="when data">13:00–15:00</span>
+                      420-A11-AB
+                      <span class="when">B-312</span>
+                    </article>
+                  </div>
+                  <div class="day-col">
+                    <article class="block meet-block" style="top: calc(0.5 * var(--hour-h)); height: calc(1.5 * var(--hour-h));">
+                      <span class="when data">08:30–10:00</span>
+                      201-NYA-05
+                      <span class="when">H-204</span>
+                    </article>
+                    <article class="block meet-block" style="top: calc(2.25 * var(--hour-h)); height: calc(1.5 * var(--hour-h));">
+                      <span class="when data">10:15–11:45</span>
+                      603-101-MQ
+                      <span class="when">A-110</span>
+                    </article>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FREE TIME (flagship) -->
+      <section class="page is-on" data-page="free-time" id="page-free-time">
+        <div class="stage stage-wide bench">
+          <header class="workbar">
+            <div>
+              <h1>Common free time</h1>
+              <p class="lede">Paste two or more compact Omnivox lists. We compare busy times only, not course names.</p>
+            </div>
+            <div class="work-actions">
+              <fieldset class="radios">
+                <legend>Minimum gap</legend>
+                <label><input type="radio" name="gap" value="30" /> 30 min</label>
+                <label><input type="radio" name="gap" value="45" checked /> 45 min</label>
+                <label><input type="radio" name="gap" value="60" /> 60 min</label>
+                <label><input type="radio" name="gap" value="90" /> 90 min</label>
+              </fieldset>
+              <button class="btn btn-primary" type="button">Find shared free time</button>
+            </div>
+          </header>
+
+          <div class="stations">
+            <section class="station" aria-labelledby="p1">
+              <header class="station-head">
+                <span class="station-who" id="p1">Person 1</span>
+                <span class="station-tag">P1</span>
+              </header>
+              <div class="station-name">Maya Chen</div>
+              <textarea class="area data" spellcheck="false" aria-label="Person 1 schedule">1  Calculus I
+201-NYA-05 sec.00012
+Mon 08:30-10:00
+Wed 08:30-10:00
+Fri 08:30-10:00</textarea>
+              <footer class="station-foot">
+                <span class="ready">6 courses ready</span>
+                <span class="data">busy 08:30–16:00</span>
+              </footer>
+            </section>
+            <section class="station" aria-labelledby="p2">
+              <header class="station-head">
+                <span class="station-who" id="p2">Person 2</span>
+                <span class="station-tag">P2</span>
+              </header>
+              <div class="station-name">Alex Roy</div>
+              <textarea class="area data" spellcheck="false" aria-label="Person 2 schedule">1  Programming I
+420-A11-AB sec.00003
+Mon 10:00-12:00
+Thu 08:30-12:00
+Thu 13:00-16:00</textarea>
+              <footer class="station-foot">
+                <span class="ready">5 courses ready</span>
+                <span class="data">busy 08:30–17:00</span>
+              </footer>
+            </section>
+            <section class="station" aria-labelledby="p3">
+              <header class="station-head">
+                <span class="station-who" id="p3">Person 3</span>
+                <span class="station-tag">P3</span>
+              </header>
+              <div class="station-name">Jordan Patel</div>
+              <textarea class="area data" spellcheck="false" aria-label="Person 3 schedule">1  Linear Algebra
+201-NYC-05 sec.00007
+Tue 08:30-11:00
+Wed 13:00-15:30
+Fri 10:00-13:00</textarea>
+              <footer class="station-foot">
+                <span class="ready">4 courses ready</span>
+                <span class="data">busy 08:30–15:30</span>
+              </footer>
+            </section>
+          </div>
+          <p class="add-person"><button class="btn btn-ghost" type="button">Add another person</button>
+            <button class="btn btn-ghost" type="button">Download busy times (.json)</button></p>
+
+          <section class="matrix-wrap" aria-labelledby="gaps-title">
+            <div class="matrix-caption">
+              <div>
+                <h2 id="gaps-title">Shared gaps</h2>
+                <p>Minimum 45 minutes. White cells with a blue leading rule are free for all three people.</p>
+              </div>
+              <div class="matrix-key">
+                <span><i class="key-swatch key-free"></i> Free for everyone</span>
+                <span><i class="key-swatch key-busy"></i> Someone is in class</span>
+              </div>
+            </div>
+            <div class="week" role="img" aria-label="Shared free time from Monday to Friday">
+              <div class="week-labels">
+                <div class="corner"></div>
+                <div class="day-label">Mon <span class="sub">2 gaps</span></div>
+                <div class="day-label">Tue <span class="sub">1 gap</span></div>
+                <div class="day-label">Wed <span class="sub">2 gaps</span></div>
+                <div class="day-label">Thu <span class="sub">None</span></div>
+                <div class="day-label">Fri <span class="sub">2 gaps</span></div>
+              </div>
+              <div class="week-body">
+                <div class="time-rail" aria-hidden="true">
+                  <div class="hour-label">8:00</div>
+                  <div class="hour-label">9:00</div>
+                  <div class="hour-label">10:00</div>
+                  <div class="hour-label">11:00</div>
+                  <div class="hour-label">12:00</div>
+                  <div class="hour-label">13:00</div>
+                  <div class="hour-label">14:00</div>
+                  <div class="hour-label">15:00</div>
+                  <div class="hour-label">16:00</div>
+                  <div class="hour-label">17:00</div>
+                  <div class="hour-label">18:00</div>
+                </div>
+                <div class="day-col">
+                  <div class="busy-hatch" style="top: 0; height: calc(4 * var(--hour-h));"></div>
+                  <article class="block gap-block" style="top: calc(4 * var(--hour-h)); height: calc(1.5 * var(--hour-h));">
+                    <strong class="data">12:00–13:30</strong>
+                    <span>1 h 30 · all 3</span>
+                  </article>
+                  <div class="busy-hatch" style="top: calc(5.5 * var(--hour-h)); height: calc(2.5 * var(--hour-h));"></div>
+                  <article class="block gap-block" style="top: calc(8 * var(--hour-h)); height: calc(2 * var(--hour-h));">
+                    <strong class="data">16:00–18:00</strong>
+                    <span>2 h · all 3</span>
+                  </article>
+                </div>
+                <div class="day-col">
+                  <div class="busy-hatch" style="top: 0; height: calc(3 * var(--hour-h));"></div>
+                  <article class="block gap-block" style="top: calc(3 * var(--hour-h)); height: calc(1.25 * var(--hour-h));">
+                    <strong class="data">11:00–12:15</strong>
+                    <span>1 h 15 · all 3</span>
+                  </article>
+                  <div class="busy-hatch" style="top: calc(4.25 * var(--hour-h)); height: calc(6.75 * var(--hour-h));"></div>
+                </div>
+                <div class="day-col">
+                  <div class="busy-hatch" style="top: 0; height: calc(4 * var(--hour-h));"></div>
+                  <article class="block gap-block" style="top: calc(4 * var(--hour-h)); height: calc(1.5 * var(--hour-h));">
+                    <strong class="data">12:00–13:30</strong>
+                    <span>1 h 30 · all 3</span>
+                  </article>
+                  <div class="busy-hatch" style="top: calc(5.5 * var(--hour-h)); height: calc(2 * var(--hour-h));"></div>
+                  <article class="block gap-block" style="top: calc(7.5 * var(--hour-h)); height: calc(1.5 * var(--hour-h));">
+                    <strong class="data">15:30–17:00</strong>
+                    <span>1 h 30 · all 3</span>
+                  </article>
+                </div>
+                <div class="day-col is-empty">
+                  <div class="busy-hatch" style="top: 0; height: calc(11 * var(--hour-h));"></div>
+                </div>
+                <div class="day-col">
+                  <article class="block gap-block" style="top: 0; height: calc(2 * var(--hour-h));">
+                    <strong class="data">08:00–10:00</strong>
+                    <span>2 h · all 3</span>
+                  </article>
+                  <div class="busy-hatch" style="top: calc(2 * var(--hour-h)); height: calc(4 * var(--hour-h));"></div>
+                  <article class="block gap-block" style="top: calc(6 * var(--hour-h)); height: calc(2 * var(--hour-h));">
+                    <strong class="data">14:00–16:00</strong>
+                    <span>2 h · all 3</span>
+                  </article>
+                  <div class="busy-hatch" style="top: calc(8 * var(--hour-h)); height: calc(3 * var(--hour-h));"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- SEMESTER -->
+      <section class="page" data-page="semester" id="page-semester">
+        <div class="stage">
+          <header class="workbar">
+            <div>
+              <h1>Semester</h1>
+              <p class="lede">Upload a text PDF of a course outline. Check the dates and weights before anything is shared. Scanned image PDFs will not work.</p>
+            </div>
+          </header>
+          <div class="review">
+            <aside class="drop">
+              <h2>Course outline PDF</h2>
+              <p class="lede">One file. Text PDF, not a scan.</p>
+              <div class="file-target">201-NYA-05_outline.pdf<br />248 KB</div>
+              <button class="btn btn-ghost" type="button">Replace file</button>
+              <p class="notice notice-ok" style="margin-top:0.75rem">Dates and weights extracted. Confirm the table before saving.</p>
+            </aside>
+            <div class="extracted">
+              <h2>201-NYA-05 Calculus I</h2>
+              <p class="meta-line data">sec.00012 · Chen · Fall 2025 · private until you contribute</p>
+              <table class="sheet">
+                <thead>
+                  <tr>
+                    <th>Assessment</th>
+                    <th>Weight</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><input value="Quiz 1" aria-label="Assessment title" /></td>
+                    <td class="data"><input value="10%" aria-label="Weight" /></td>
+                    <td class="data"><input value="2025-09-22" aria-label="Date" /></td>
+                  </tr>
+                  <tr>
+                    <td><input value="Midterm" aria-label="Assessment title" /></td>
+                    <td class="data"><input value="25%" aria-label="Weight" /></td>
+                    <td class="data"><input value="2025-10-20" aria-label="Date" /></td>
+                  </tr>
+                  <tr>
+                    <td><input value="Quiz 2" aria-label="Assessment title" /></td>
+                    <td class="data"><input value="10%" aria-label="Weight" /></td>
+                    <td class="data"><input value="2025-11-17" aria-label="Date" /></td>
+                  </tr>
+                  <tr>
+                    <td><input value="Final exam" aria-label="Assessment title" /></td>
+                    <td class="data"><input value="45%" aria-label="Weight" /></td>
+                    <td class="data"><input value="TBA" aria-label="Date" /></td>
+                  </tr>
+                  <tr>
+                    <td><input value="Assignments" aria-label="Assessment title" /></td>
+                    <td class="data"><input value="10%" aria-label="Weight" /></td>
+                    <td class="data"><input value="" aria-label="Date" /></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="contrib">
+                <label>
+                  <input type="checkbox" />
+                  <span>Share this section in the course catalog. Books stay reference data. There is no purchase action here.</span>
+                </label>
+              </div>
+              <div class="work-actions" style="margin-top:1rem">
+                <button class="btn btn-primary" type="button">Save outline</button>
+                <button class="btn btn-ghost" type="button">Discard extraction</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CATALOG -->
+      <section class="page" data-page="catalog" id="page-catalog">
+        <div class="stage">
+          <header class="workbar">
+            <div>
+              <h1>Course catalog</h1>
+              <p class="lede">Course facts students have shared, including books for a section. You can browse without an account.</p>
+            </div>
+          </header>
+          <form class="filter-row" action="#" method="get">
+            <label class="stack">
+              Term
+              <select class="field" name="term">
+                <option>All terms</option>
+                <option selected>Fall 2025</option>
+                <option>Winter 2026</option>
+              </select>
+            </label>
+            <label class="stack grow">
+              Course code
+              <input class="field data" name="q" value="201" />
+            </label>
+            <button class="btn btn-primary" type="submit">Show courses</button>
+          </form>
+          <ul class="index">
+            <li>
+              <article class="course-row">
+                <div class="course-code data">201-NYA-05</div>
+                <div>
+                  <h2 class="course-title">Calculus I</h2>
+                  <p class="course-facts">Quiz 10% · Midterm 25% · Quiz 10% · Final 45% · Assignments 10%</p>
+                  <p class="books-note"><em>Reference only.</em> Stewart, Calculus, ISBN 978-1285741550</p>
+                </div>
+                <div class="col-meta data">sec.00012</div>
+                <div class="col-meta">Chen</div>
+                <div class="col-meta data">Fall 2025</div>
+              </article>
+            </li>
+            <li>
+              <article class="course-row">
+                <div class="course-code data">201-NYB-05</div>
+                <div>
+                  <h2 class="course-title">Calculus II</h2>
+                  <p class="course-facts">Tests 30% · Midterm 25% · Final 45%</p>
+                  <p class="books-note"><em>Reference only.</em> Stewart, Calculus, ISBN 978-1285741550</p>
+                </div>
+                <div class="col-meta data">sec.00004</div>
+                <div class="col-meta">Nguyen</div>
+                <div class="col-meta data">Fall 2025</div>
+              </article>
+            </li>
+            <li>
+              <article class="course-row">
+                <div class="course-code data">201-NYC-05</div>
+                <div>
+                  <h2 class="course-title">Linear Algebra</h2>
+                  <p class="course-facts">Quizzes 20% · Midterm 30% · Final 50%</p>
+                  <p class="books-note"><em>Reference only.</em> Anton, Elementary Linear Algebra</p>
+                </div>
+                <div class="col-meta data">sec.00007</div>
+                <div class="col-meta">Patel</div>
+                <div class="col-meta data">Fall 2025</div>
+              </article>
+            </li>
+            <li>
+              <article class="course-row">
+                <div class="course-code data">420-A11-AB</div>
+                <div>
+                  <h2 class="course-title">Programming I</h2>
+                  <p class="course-facts">Labs 20% · Tests 30% · Project 20% · Final 30%</p>
+                  <p class="books-note">No books listed.</p>
+                </div>
+                <div class="col-meta data">sec.00003</div>
+                <div class="col-meta">Roy</div>
+                <div class="col-meta data">Fall 2025</div>
+              </article>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- CLUBS -->
+      <section class="page" data-page="clubs" id="page-clubs">
+        <div class="stage">
+          <header class="workbar">
+            <div>
+              <h1>Clubs</h1>
+              <p class="lede">Published listings students have sent in. Rooms stay off this page until staff check them.</p>
+            </div>
+          </header>
+          <form class="filter-row" action="#" method="get">
+            <label class="stack grow">
+              Search
+              <input class="field" name="q" value="" placeholder="Name or description" />
+            </label>
+            <label class="stack">
+              Category
+              <input class="field" name="category" value="" placeholder="Any" />
+            </label>
+            <button class="btn btn-primary" type="submit">Show clubs</button>
+          </form>
+          <ul class="index">
+            <li>
+              <article class="club-row">
+                <div>
+                  <h2>Programming Club</h2>
+                  <p class="club-cat">Academic</p>
+                </div>
+                <p class="course-facts">Workshops, peer help, and MariHacks. Beginners are welcome.</p>
+                <a href="https://www.instagram.com/mari_programming_club/">Instagram</a>
+              </article>
+            </li>
+            <li>
+              <article class="club-row">
+                <div>
+                  <h2>Math Club</h2>
+                  <p class="club-cat">Academic</p>
+                </div>
+                <p class="course-facts">Problem sessions and contest practice for Science and Commerce students.</p>
+                <a href="#">Website</a>
+              </article>
+            </li>
+            <li>
+              <article class="club-row">
+                <div>
+                  <h2>Robotics</h2>
+                  <p class="club-cat">Technology</p>
+                </div>
+                <p class="course-facts">Build and compete. Meetings posted after staff confirm a room.</p>
+                <a href="#">Discord</a>
+              </article>
+            </li>
+          </ul>
+          <section class="compose">
+            <h2>Submit a club</h2>
+            <p class="lede">Staff publish a listing after they check it.</p>
+            <form class="compose-grid" action="#" method="post">
+              <label class="stack">Name<input class="field" name="name" required maxlength="160" /></label>
+              <label class="stack">One-line description<input class="field" name="description" maxlength="240" /></label>
+              <button class="btn btn-primary" type="submit">Send listing</button>
+            </form>
+          </section>
+        </div>
+      </section>
+
+      <!-- FORUM -->
+      <section class="page" data-page="forum" id="page-forum">
+        <div class="stage">
+          <header class="workbar">
+            <div>
+              <h1>Forum</h1>
+              <p class="lede">Anyone can read threads. Sign in with Google to post or reply. Course tags come from the catalog.</p>
+            </div>
+          </header>
+          <form class="filter-row" action="#" method="get">
+            <label class="stack">
+              Category
+              <select class="field" name="category">
+                <option>All</option>
+                <option selected>Courses</option>
+                <option>Student life</option>
+              </select>
+            </label>
+            <label class="stack grow">
+              Course
+              <select class="field" name="course">
+                <option>All courses</option>
+                <option selected>201-NYA-05 Calculus I</option>
+                <option>420-A11-AB Programming I</option>
+              </select>
+            </label>
+            <button class="btn btn-primary" type="submit">Show threads</button>
+          </form>
+          <table class="topic-table">
+            <thead>
+              <tr>
+                <th>Thread</th>
+                <th>Course</th>
+                <th class="num">Replies</th>
+                <th class="num">Last reply</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <a class="topic-title" href="#thread" data-go="thread">Does tutorial 3 assume we already finished related rates?</a>
+                  <span class="topic-meta">Courses · Maya C.</span>
+                </td>
+                <td class="col-meta data">201-NYA-05</td>
+                <td class="num data">4</td>
+                <td class="num data">2h</td>
+              </tr>
+              <tr>
+                <td>
+                  <a class="topic-title" href="#thread" data-go="thread">Lab 2 heap vs stack, what did people put for question 4?</a>
+                  <span class="topic-meta">Courses · Alex R.</span>
+                </td>
+                <td class="col-meta data">420-A11-AB</td>
+                <td class="num data">7</td>
+                <td class="num data">5h</td>
+              </tr>
+              <tr>
+                <td>
+                  <a class="topic-title" href="#thread" data-go="thread">Study group for the October midterm</a>
+                  <span class="topic-meta">Courses · Jordan P.</span>
+                </td>
+                <td class="col-meta data">201-NYA-05</td>
+                <td class="num data">12</td>
+                <td class="num data">1d</td>
+              </tr>
+              <tr>
+                <td>
+                  <a class="topic-title" href="#thread" data-go="thread">Where do people print the compact Omnivox list?</a>
+                  <span class="topic-meta">Student life · Sam K.</span>
+                </td>
+                <td class="col-meta">—</td>
+                <td class="num data">3</td>
+                <td class="num data">3d</td>
+              </tr>
+            </tbody>
+          </table>
+          <section class="compose">
+            <h2>Start a thread</h2>
+            <form class="compose-grid" action="#" method="post">
+              <div>
+                <label class="stack">Category
+                  <select class="field" name="category">
+                    <option>Courses</option>
+                    <option>Student life</option>
+                  </select>
+                </label>
+                <label class="stack" style="margin-top:0.75rem">Course tag
+                  <select class="field" name="courseId">
+                    <option>201-NYA-05 Calculus I</option>
+                    <option>No course tag</option>
+                  </select>
+                </label>
+              </div>
+              <div>
+                <label class="stack">Title<input class="field" name="title" maxlength="240" required /></label>
+                <label class="stack" style="margin-top:0.75rem">Body<textarea class="area" name="body" required></textarea></label>
+                <button class="btn btn-primary" type="submit" style="margin-top:0.75rem">Post thread</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </section>
+
+      <!-- THREAD -->
+      <section class="page" data-page="thread" id="page-thread">
+        <div class="stage">
+          <p class="crumb"><a href="#forum" data-go="forum">Forum</a> · Courses · <span class="data">201-NYA-05</span></p>
+          <header class="thread-head">
+            <h1>Does tutorial 3 assume we already finished related rates?</h1>
+            <p class="thread-meta">Maya C. · 12 Sep 2025 · 4 replies</p>
+          </header>
+          <article class="post">
+            <p>Tutorial 3 question 2 looks like related rates, but we only started that section on Friday. Did anyone’s teacher say to skip it, or should I just attempt it with the chain rule notes?</p>
+            <p>I can meet in the library Monday 12:00–13:30 if anyone wants to go through it. That slot is free for the three of us according to Common free time.</p>
+            <button class="quiet-action" type="button">Report thread</button>
+          </article>
+          <section class="replies">
+            <h2>Replies</h2>
+            <article class="reply">
+              <p class="reply-meta">Alex R. · 12 Sep 2025, 18:40</p>
+              <p>Chen said related rates start next week. I treated Q2 as optional and still handed the rest in.</p>
+              <button class="quiet-action" type="button">Report</button>
+            </article>
+            <article class="reply">
+              <p class="reply-meta">Jordan P. · 12 Sep 2025, 19:12</p>
+              <p>Same. Monday lunch works. I’ll bring the tutorial PDF.</p>
+              <button class="quiet-action" type="button">Report</button>
+            </article>
+          </section>
+          <section class="compose">
+            <h2>Reply</h2>
+            <label class="stack">Body<textarea class="area" name="body"></textarea></label>
+            <button class="btn btn-primary" type="button" style="margin-top:0.75rem">Post reply</button>
+          </section>
+        </div>
+      </section>
+
+      <!-- ACCOUNT -->
+      <section class="page" data-page="account" id="page-account">
+        <div class="stage">
+          <div class="account-band">
+            <div>
+              <h1>Your account</h1>
+              <p class="lede">Signed in as maya.chen@gmail.com. We keep your student number on the server. It does not show on the catalog, forum, or schedule pages.</p>
+            </div>
+            <dl>
+              <div class="status-line">
+                <dt>Google</dt>
+                <dd>maya.chen@gmail.com</dd>
+              </div>
+              <div class="status-line">
+                <dt>Student number</dt>
+                <dd>
+                  <label class="stack">
+                    <span class="hint">5 to 8 digits</span>
+                    <input class="field data" name="studentId" inputmode="numeric" autocomplete="off" value="1234567" maxlength="8" />
+                  </label>
+                </dd>
+              </div>
+              <div class="status-line">
+                <dt>Saved outlines</dt>
+                <dd>2 private</dd>
+              </div>
+            </dl>
+            <button class="btn btn-primary" type="button">Save account</button>
+            <details class="legal">
+              <summary>NVIDIA disclosure</summary>
+              <p>Outline text may be sent for analysis after you confirm this disclosure on your account. Confirm it here before Semester will upload.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const picker = document.getElementById("page-picker");
+    const pages = document.querySelectorAll(".page");
+    const links = document.querySelectorAll("[data-go]");
+    const shell = document.getElementById("shell");
+    const menu = document.getElementById("menu-toggle");
+    const currentLabel = document.querySelector("[data-current-label]");
+    const labels = {
+      home: "Home",
+      schedule: "Schedule",
+      "free-time": "Free Time",
+      semester: "Semester",
+      catalog: "Catalog",
+      clubs: "Clubs",
+      forum: "Forum",
+      thread: "Forum",
+      account: "Account"
+    };
+
+    function show(id) {
+      pages.forEach((page) => {
+        page.classList.toggle("is-on", page.dataset.page === id);
+      });
+      picker.value = id === "thread" ? "thread" : id;
+      document.querySelectorAll(".nav-link").forEach((link) => {
+        const match =
+          link.dataset.go === id || (id === "thread" && link.dataset.go === "forum");
+        if (match) link.setAttribute("aria-current", "page");
+        else link.removeAttribute("aria-current");
+      });
+      if (currentLabel) currentLabel.textContent = labels[id] || id;
+      shell.classList.remove("nav-open");
+      if (menu) menu.setAttribute("aria-expanded", "false");
+    }
+
+    picker.addEventListener("change", () => show(picker.value));
+    links.forEach((el) => {
+      el.addEventListener("click", (event) => {
+        event.preventDefault();
+        show(el.dataset.go);
+      });
+    });
+    menu.addEventListener("click", () => {
+      const open = shell.classList.toggle("nav-open");
+      menu.setAttribute("aria-expanded", String(open));
+    });
+  </script>
+</body>
+</html>

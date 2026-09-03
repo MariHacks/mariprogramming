@@ -3,11 +3,13 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { isMaritoolsSession, isStaffSession } from '$lib/server/auth/authorization.js';
 import { withRequestAuth } from '$lib/server/auth/runtime.js';
 import { ensureMariToolsBootstrap } from '$lib/server/maritools/bootstrap.js';
+import { openClubStore } from '$lib/server/maritools/club-store.js';
 
 const AUTH_UNAVAILABLE = 'Authentication service is unavailable';
 const AUTH_PATH = '/api/auth';
 const STAFF_PATH = '/staff';
 const PUBLIC_STAFF_SIGN_IN_PATH = '/staff/sign-in';
+const ACCOUNT_PATH = '/tools/account';
 const SESSION_COOKIE_NAMES = ['__Secure-mari-staff.session_token', 'mari-staff.session_token'];
 const PRIVATE_PAGE_PATHS = [
 	'/books/cart',
@@ -50,6 +52,11 @@ function isPrivatePath(pathname) {
 	);
 }
 
+/** @param {string} pathname */
+function requiresCompletedOnboarding(pathname) {
+	return isPath(pathname, '/tools') && pathname !== ACCOUNT_PATH;
+}
+
 /** @param {Response} response @param {string} pathname */
 function applyRoutePolicy(response, pathname) {
 	if (!isPrivatePath(pathname)) return response;
@@ -68,12 +75,14 @@ function applyRoutePolicy(response, pathname) {
  * @param {{
  *   withAuth?: typeof withRequestAuth,
  *   officialHandler?: typeof svelteKitHandler,
+ *   createClubRepository?: typeof openClubStore,
  *   isBuilding?: boolean
  * }} [dependencies]
  */
 export function createHandle({
 	withAuth = withRequestAuth,
 	officialHandler = svelteKitHandler,
+	createClubRepository = openClubStore,
 	isBuilding = building
 } = {}) {
 	/** @type {import('@sveltejs/kit').Handle} */
@@ -89,8 +98,12 @@ export function createHandle({
 		const staffPath = isPath(event.url.pathname, STAFF_PATH);
 		const publicStaffSignIn = event.url.pathname === PUBLIC_STAFF_SIGN_IN_PATH;
 		const sessionCookie = hasStaffSessionCookie(event.request);
+		const skipAuth =
+			isBuilding ||
+			(publicStaffSignIn && !sessionCookie) ||
+			(!authPath && !staffPath && !sessionCookie);
 
-		if (isBuilding || publicStaffSignIn || (!authPath && !staffPath && !sessionCookie)) {
+		if (skipAuth) {
 			return finalize(await resolve(event));
 		}
 
@@ -118,13 +131,31 @@ export function createHandle({
 			const authResponse = await withAuth(authenticate);
 			if (authPath) return finalize(/** @type {Response} */ (authResponse));
 		} catch {
-			if (!authPath && !staffPath) return finalize(await resolve(event));
+			// Sign-in must stay reachable when a stale cookie meets an auth outage.
+			if (!authPath && (!staffPath || publicStaffSignIn)) {
+				return finalize(await resolve(event));
+			}
 			return finalize(
 				new Response(AUTH_UNAVAILABLE, {
 					status: 503,
 					headers: { 'cache-control': 'no-store', 'content-type': 'text/plain; charset=utf-8' }
 				})
 			);
+		}
+
+		if (event.locals.maritools && requiresCompletedOnboarding(event.url.pathname)) {
+			try {
+				const membership = await createClubRepository().getMyClubOnboarding(
+					event.locals.maritools.userId
+				);
+				if (!membership?.requiredFormCompletedAt) {
+					return finalize(new Response(null, { status: 303, headers: { location: ACCOUNT_PATH } }));
+				}
+			} catch {
+				return finalize(
+					new Response(null, { status: 303, headers: { location: ACCOUNT_PATH } })
+				);
+			}
 		}
 
 		return finalize(await resolve(event));

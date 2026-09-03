@@ -7,7 +7,16 @@
 
 	$: catalogueActive = data.pathname.startsWith('/staff/catalogue');
 	$: bookWorkActive = data.pathname.startsWith('/staff/book-work');
-	$: ordersActive = !catalogueActive && !bookWorkActive && data.pathname !== '/staff/sign-in';
+	$: reportsActive = data.pathname.startsWith('/staff/reports');
+	$: catalogConflictsActive = data.pathname.startsWith('/staff/catalog-conflicts');
+	$: membersActive = data.pathname.startsWith('/staff/members');
+	$: ordersActive =
+		!catalogueActive &&
+		!bookWorkActive &&
+		!reportsActive &&
+		!catalogConflictsActive &&
+		!membersActive &&
+		data.pathname !== '/staff/sign-in';
 
 	let signingOut = false;
 	let signOutError = '';
@@ -56,6 +65,21 @@
 					aria-current={catalogueActive ? 'page' : undefined}
 					href={resolve('/staff/catalogue/entries', {})}>Catalogue</a
 				>
+				<a
+					class:active={membersActive}
+					aria-current={membersActive ? 'page' : undefined}
+					href={resolve('/staff/members', {})}>Members</a
+				>
+				<a
+					class:active={reportsActive}
+					aria-current={reportsActive ? 'page' : undefined}
+					href={resolve('/staff/reports', {})}>Reports</a
+				>
+				<a
+					class:active={catalogConflictsActive}
+					aria-current={catalogConflictsActive ? 'page' : undefined}
+					href={resolve('/staff/catalog-conflicts', {})}>Catalog conflicts</a
+				>
 			</nav>
 
 			<div class="staff-account">
@@ -78,7 +102,7 @@
 <style>
 	.staff-shell {
 		min-height: 100vh;
-		background: #f7f9fc;
+		background: var(--paper);
 		color: var(--midnight);
 	}
 
@@ -89,7 +113,7 @@
 		min-height: 4.5rem;
 		padding: 0 var(--page-gutter);
 		border-bottom: var(--rule-strong);
-		background: var(--surface-raised);
+		background: #fff;
 	}
 
 	.staff-brand,

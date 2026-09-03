@@ -11,6 +11,7 @@ import {
 import {
 	MaritoolsInputError,
 	MaritoolsUnavailableError,
+	canManagePost,
 	createCommunityStore,
 	openCommunityStore,
 	publicClubView,
@@ -29,19 +30,50 @@ function inner(overrides = {}) {
 		listPublishedClubs: vi.fn(async () => [
 			{ id: 'c1', name: 'Robotics', slug: 'robotics', category: 'stem', description: 'Bots', links: [] }
 		]),
+		getPublishedClubBySlug: vi.fn(async (slug) =>
+			slug === 'robotics'
+				? { id: 'c1', name: 'Robotics', slug: 'robotics', category: 'stem', description: 'Bots', links: [] }
+				: null
+		),
 		submitClub: vi.fn(async () => ({ id: SUBMISSION, status: 'pending' })),
 		listClubSubmissions: vi.fn(async () => [
 			{
 				id: SUBMISSION,
+				status: 'pending',
+				submitterUserId: USER,
 				payload: {
 					name: 'Chess',
 					slug: 'chess',
 					category: 'games',
 					description: 'Play',
-					links: [{ label: 'Site', url: 'https://example.com' }]
+					links: [{ label: 'Site', url: 'https://example.com' }],
+					submitterRole: 'officer'
 				}
 			}
 		]),
+		getClubSubmission: vi.fn(async (id) =>
+			id === SUBMISSION
+				? {
+						id: SUBMISSION,
+						status: 'pending',
+						submitterUserId: USER,
+						payload: {
+							name: 'Chess',
+							slug: 'chess',
+							category: 'games',
+							description: 'Play',
+							links: [{ label: 'Site', url: 'https://example.com' }],
+							submitterRole: 'officer'
+						}
+					}
+				: null
+		),
+		updateClubSubmissionPayload: vi.fn(async (id, payload) => ({
+			id,
+			status: 'pending',
+			submitterUserId: USER,
+			payload
+		})),
 		createClub: vi.fn(async () => ({
 			id: 'club-1',
 			name: 'Chess',
@@ -57,7 +89,7 @@ function inner(overrides = {}) {
 			{ courseCode: 'NO-ID', title: 'Skipped' }
 		]),
 		listThreads: vi.fn(async () => [
-			{ id: THREAD, title: 'Hi', body: 'Hello', category: 'courses', courseId: COURSE }
+			{ id: THREAD, title: 'Hi', body: 'Hello', category: 'courses', courseId: COURSE, authorUserId: USER }
 		]),
 		getThread: vi.fn(async () => ({
 			id: THREAD,
@@ -67,12 +99,78 @@ function inner(overrides = {}) {
 			authorUserId: USER
 		})),
 		listReplies: vi.fn(async () => [{ id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: USER }]),
-		createThread: vi.fn(async () => ({ id: THREAD, title: 'Hi', body: 'Hello', category: 'student-life' })),
-		createReply: vi.fn(async () => ({ id: 'r1', threadId: THREAD, body: 'Thanks' })),
+		createThread: vi.fn(async () => ({
+			id: THREAD,
+			title: 'Hi',
+			body: 'Hello',
+			category: 'student-life',
+			authorUserId: USER
+		})),
+		createReply: vi.fn(async () => ({
+			id: 'r1',
+			threadId: THREAD,
+			body: 'Thanks',
+			authorUserId: USER
+		})),
 		createReport: vi.fn(async () => ({ id: 'rep-1' })),
+		listReports: vi.fn(async () => [
+			{
+				id: 'rep-1',
+				targetKind: 'thread',
+				targetId: THREAD,
+				reporterUserId: USER,
+				reason: 'spam',
+				status: 'open'
+			}
+		]),
+		setReportStatus: vi.fn(async (id, status) => ({
+			id,
+			status,
+			resolvedAt: new Date('2026-08-28T19:00:00.000Z')
+		})),
+		getReply: vi.fn(async () => ({ id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: USER })),
 		lockThread: vi.fn(async () => ({ id: THREAD, lockedAt: new Date() })),
 		removeThread: vi.fn(async () => ({ id: THREAD, removedAt: new Date() })),
 		removeReply: vi.fn(async () => ({ id: 'r1', removedAt: new Date() })),
+		muteUser: vi.fn(async (userId, until) => ({
+			userId,
+			studentId: '2530622',
+			displayName: 'Ada',
+			role: 'student',
+			mutedUntil: until,
+			bannedAt: null,
+			bannedUntil: null
+		})),
+		banUser: vi.fn(async (userId, opts = {}) => ({
+			userId,
+			studentId: '2530622',
+			displayName: 'Ada',
+			role: 'student',
+			mutedUntil: null,
+			bannedAt: new Date(),
+			bannedUntil: opts.until ?? null
+		})),
+		unmuteUser: vi.fn(async (userId) => ({
+			userId,
+			studentId: '2530622',
+			displayName: 'Ada',
+			role: 'student',
+			mutedUntil: null,
+			bannedAt: null,
+			bannedUntil: null
+		})),
+		unbanUser: vi.fn(async (userId) => ({
+			userId,
+			studentId: '2530622',
+			displayName: 'Ada',
+			role: 'student',
+			mutedUntil: null,
+			bannedAt: null,
+			bannedUntil: null
+		})),
+		listThreadsByAuthor: vi.fn(async () => [
+			{ id: THREAD, title: 'Hi', body: 'Hello', category: 'courses', authorUserId: USER }
+		]),
 		getStudentProfile: vi.fn(async () => ({
 			userId: USER,
 			studentId: '2530622',
@@ -90,20 +188,136 @@ describe('community views', () => {
 		expect(publicReplyView(undefined)).toBeNull();
 		expect(publicClubView(null)).toBeNull();
 		expect(publicClubView({ id: '1', name: 'Chess', slug: 'chess', links: 'nope' }).links).toEqual([]);
+		expect(canManagePost(USER, null)).toBe(false);
+		expect(canManagePost(USER, { userId: USER })).toBe(true);
+		expect(canManagePost(USER, { userId: 'other', staff: true })).toBe(true);
+		expect(canManagePost(null, { userId: USER })).toBe(false);
+		expect(
+			publicThreadView({
+				id: THREAD,
+				title: 'Hi',
+				body: 'Hello',
+				category: 'courses',
+				authorUserId: USER,
+				authorDisplayName: '  Zhich  ',
+				studentId: '2530622'
+			})
+		).toMatchObject({
+			authorDisplayName: 'Zhich',
+			authorUserId: USER,
+			authorProfileHref: `/tools/people/${USER}`
+		});
+		expect(
+			JSON.stringify(
+				publicThreadView({
+					id: THREAD,
+					title: 'Hi',
+					body: 'Hello',
+					category: 'courses',
+					authorUserId: USER,
+					studentId: '2530622'
+				})
+			)
+		).not.toContain('2530622');
+		expect(
+			publicThreadView({
+				id: THREAD,
+				title: 'Hi',
+				body: 'Hello',
+				category: 'courses',
+				authorDisplayName: '   '
+			}).authorDisplayName
+		).toBeNull();
+		expect(
+			publicReplyView({
+				id: 'r1',
+				threadId: THREAD,
+				body: 'Thanks',
+				authorUserId: USER,
+				authorDisplayName: 'nick'
+			})
+		).toMatchObject({
+			authorDisplayName: 'nick',
+			authorUserId: USER,
+			authorProfileHref: `/tools/people/${USER}`
+		});
+		expect(
+			JSON.stringify(
+				publicReplyView({
+					id: 'r1',
+					threadId: THREAD,
+					body: 'Thanks',
+					authorUserId: USER,
+					studentId: '2530622'
+				})
+			)
+		).not.toContain('2530622');
 	});
 });
 
 describe('createCommunityStore', () => {
+	it('loads a published club by slug', async () => {
+		const store = createCommunityStore(inner());
+		await expect(store.getPublishedClubBySlug('robotics')).resolves.toMatchObject({
+			slug: 'robotics',
+			name: 'Robotics'
+		});
+		await expect(store.getPublishedClubBySlug('missing')).resolves.toBeNull();
+	});
+
 	it('lists clubs, pending submissions, and catalog courses without student numbers', async () => {
 		const repo = inner();
 		const store = createCommunityStore(repo);
 		const clubs = await store.listClubs();
 		expect(clubs[0].name).toBe('Robotics');
 		const pending = await store.listPendingClubSubmissions();
-		expect(pending[0]).toMatchObject({ id: SUBMISSION, name: 'Chess', slug: 'chess' });
+		expect(pending[0]).toMatchObject({
+			id: SUBMISSION,
+			name: 'Chess',
+			slug: 'chess',
+			submitterRole: 'officer',
+			submitterUserId: USER
+		});
+		expect(pending[0]).not.toHaveProperty('payload');
 		const courses = await store.listCatalogCourses();
 		expect(courses).toEqual([{ id: COURSE, code: '203-SN3-RE', title: 'Modern Physics' }]);
 		expect(JSON.stringify({ clubs, pending, courses })).not.toContain('2530622');
+	});
+
+	it('loads and updates a pending club submission', async () => {
+		const repo = inner();
+		const store = createCommunityStore(repo);
+		await expect(store.getClubSubmission(SUBMISSION)).resolves.toMatchObject({
+			id: SUBMISSION,
+			name: 'Chess',
+			submitterRole: 'officer'
+		});
+		await expect(store.getClubSubmission('missing')).resolves.toBeNull();
+		await expect(
+			store.updateClubSubmissionPayload(SUBMISSION, {
+				name: 'Chess Club',
+				slug: 'chess-club',
+				description: 'Play weekly',
+				submitterRole: 'officer'
+			})
+		).resolves.toMatchObject({ name: 'Chess Club', description: 'Play weekly' });
+		expect(repo.updateClubSubmissionPayload).toHaveBeenCalled();
+		const missing = createCommunityStore(inner({ getClubSubmission: vi.fn(async () => null) }));
+		await expect(missing.updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })).rejects.toMatchObject({
+			code: 'missing-submission'
+		});
+		const published = createCommunityStore(
+			inner({
+				getClubSubmission: vi.fn(async () => ({
+					id: SUBMISSION,
+					status: 'published',
+					payload: { name: 'Chess' }
+				}))
+			})
+		);
+		await expect(
+			published.updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })
+		).rejects.toMatchObject({ code: 'not-pending' });
 	});
 
 	it('publishes a pending club through the repository', async () => {
@@ -113,25 +327,78 @@ describe('createCommunityStore', () => {
 		expect(repo.createClub).toHaveBeenCalledWith(
 			expect.objectContaining({ name: 'Chess', slug: 'chess', published: true })
 		);
+		expect(repo.createClub.mock.calls[0][0]).not.toHaveProperty('submitterRole');
 		expect(repo.setClubSubmissionStatus).toHaveBeenCalledWith(SUBMISSION, 'published');
 	});
 
+	it('rejects a pending club without publishing it', async () => {
+		const repo = inner({
+			setClubSubmissionStatus: vi.fn(async () => ({
+				id: SUBMISSION,
+				status: 'rejected',
+				submitterUserId: USER,
+				payload: {
+					name: 'Chess',
+					slug: 'chess',
+					category: 'games',
+					description: 'Play',
+					links: [],
+					submitterRole: 'officer'
+				}
+			}))
+		});
+		const store = createCommunityStore(repo);
+		await expect(store.rejectPendingClub(SUBMISSION)).resolves.toMatchObject({
+			id: SUBMISSION,
+			status: 'rejected',
+			name: 'Chess'
+		});
+		expect(repo.setClubSubmissionStatus).toHaveBeenCalledWith(SUBMISSION, 'rejected');
+		expect(repo.createClub).not.toHaveBeenCalled();
+		const missing = createCommunityStore(inner({ getClubSubmission: vi.fn(async () => null) }));
+		await expect(missing.rejectPendingClub(SUBMISSION)).rejects.toMatchObject({
+			code: 'missing-submission'
+		});
+		const published = createCommunityStore(
+			inner({
+				getClubSubmission: vi.fn(async () => ({
+					id: SUBMISSION,
+					status: 'published',
+					payload: { name: 'Chess' }
+				}))
+			})
+		);
+		await expect(published.rejectPendingClub(SUBMISSION)).rejects.toMatchObject({
+			code: 'missing-submission'
+		});
+	});
+
 	it('rejects a missing or nameless pending club', async () => {
-		const missing = createCommunityStore(inner({ listClubSubmissions: vi.fn(async () => []) }));
+		const missing = createCommunityStore(inner({ getClubSubmission: vi.fn(async () => null) }));
 		await expect(missing.publishPendingClub(SUBMISSION)).rejects.toMatchObject({
 			code: 'missing-submission'
 		});
 		const nameless = createCommunityStore(
-			inner({ listClubSubmissions: vi.fn(async () => [{ id: SUBMISSION, payload: { name: '   ' } }]) })
+			inner({
+				getClubSubmission: vi.fn(async () => ({
+					id: SUBMISSION,
+					status: 'pending',
+					payload: { name: '   ' }
+				}))
+			})
 		);
 		await expect(nameless.publishPendingClub(SUBMISSION)).rejects.toMatchObject({ code: 'invalid-club' });
 		const repo = inner({
-			listClubSubmissions: vi.fn(async () => [{ id: SUBMISSION, payload: { name: 'Chess Club' } }])
+			getClubSubmission: vi.fn(async () => ({
+				id: SUBMISSION,
+				status: 'pending',
+				payload: { name: 'Chess Club' }
+			}))
 		});
 		await createCommunityStore(repo).publishPendingClub(SUBMISSION);
 		expect(repo.createClub).toHaveBeenCalledWith(expect.objectContaining({ slug: 'chess-club' }));
 		const emptyPayload = inner({
-			listClubSubmissions: vi.fn(async () => [{ id: SUBMISSION }])
+			getClubSubmission: vi.fn(async () => ({ id: SUBMISSION, status: 'pending' }))
 		});
 		await expect(
 			createCommunityStore(emptyPayload).publishPendingClub(SUBMISSION)
@@ -165,22 +432,124 @@ describe('createCommunityStore', () => {
 			payload: { name: 'Chess' }
 		});
 		const threads = await store.listThreads({ category: 'courses', courseId: COURSE });
-		expect(threads[0]).not.toHaveProperty('authorUserId');
+		expect(threads[0]).toMatchObject({ authorUserId: USER, authorProfileHref: `/tools/people/${USER}` });
 		await store.listThreads();
-		expect(await store.getThread(THREAD)).toMatchObject({ id: THREAD, title: 'Hi' });
+		expect(await store.getThread(THREAD)).toMatchObject({
+			id: THREAD,
+			title: 'Hi',
+			canManage: false,
+			authorDisplayName: 'Ada',
+			authorUserId: USER
+		});
+		const owned = await store.getThread(THREAD, { userId: USER, staff: false });
+		expect(owned).toMatchObject({ canManage: true, authorDisplayName: 'Ada', authorUserId: USER });
+		expect(JSON.stringify(owned)).not.toContain('2530622');
 		const empty = createCommunityStore(inner({ getThread: vi.fn(async () => null) }));
 		await expect(empty.getThread(THREAD)).resolves.toBeNull();
-		expect((await store.listReplies(THREAD))[0]).not.toHaveProperty('authorUserId');
+		const replies = await store.listReplies(THREAD);
+		expect(replies[0]).toMatchObject({ authorDisplayName: 'Ada', authorUserId: USER });
+		expect((await store.listReplies(THREAD, { userId: USER }))[0].canManage).toBe(true);
+		const nameless = createCommunityStore(
+			inner({ getStudentProfile: vi.fn(async () => ({ userId: USER, displayName: null })) })
+		);
+		await expect(nameless.getThread(THREAD)).resolves.toMatchObject({ authorDisplayName: null });
+		const anonymous = createCommunityStore(
+			inner({
+				getThread: vi.fn(async () => ({
+					id: THREAD,
+					title: 'Hi',
+					body: 'Hello',
+					category: 'courses',
+					authorUserId: null
+				})),
+				listReplies: vi.fn(async () => [null, { id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: 42 }])
+			})
+		);
+		await expect(anonymous.getThread(THREAD)).resolves.toMatchObject({
+			id: THREAD,
+			authorDisplayName: null
+		});
+		await expect(anonymous.listReplies(THREAD)).resolves.toEqual([
+			expect.objectContaining({ id: 'r1', authorDisplayName: null })
+		]);
+	});
+
+	it('reports manage rights and updates bodies without leaking authors', async () => {
+		const repo = inner({
+			getReply: vi.fn(async () => ({
+				id: 'r1',
+				threadId: THREAD,
+				body: 'Thanks',
+				authorUserId: USER
+			})),
+			updateThread: vi.fn(async () => ({
+				id: THREAD,
+				title: 'Hi',
+				body: 'Edited',
+				category: 'courses',
+				authorUserId: USER
+			})),
+			updateReply: vi.fn(async () => ({
+				id: 'r1',
+				threadId: THREAD,
+				body: 'Edited reply',
+				authorUserId: USER
+			}))
+		});
+		const store = createCommunityStore(repo);
+		await expect(store.canManageThread(THREAD, { userId: USER })).resolves.toBe(true);
+		await expect(store.canManageThread(THREAD, { userId: 'other' })).resolves.toBe(false);
+		await expect(store.canManageThread(THREAD, { userId: 'other', staff: true })).resolves.toBe(
+			true
+		);
+		await expect(store.canManageReply('r1', { userId: USER })).resolves.toBe(true);
+		const removedReply = createCommunityStore(
+			inner({
+				getReply: vi.fn(async () => ({
+					id: 'r1',
+					threadId: THREAD,
+					body: 'Thanks',
+					authorUserId: USER,
+					removedAt: new Date()
+				}))
+			})
+		);
+		await expect(removedReply.canManageReply('r1', { userId: USER })).resolves.toBe(false);
+		const removedThread = createCommunityStore(
+			inner({
+				getThread: vi.fn(async () => ({
+					id: THREAD,
+					title: 'Hi',
+					body: 'Hello',
+					category: 'courses',
+					authorUserId: USER,
+					removedAt: new Date()
+				}))
+			})
+		);
+		await expect(removedThread.canManageThread(THREAD, { userId: USER })).resolves.toBe(false);
+		await expect(store.updateThread({ id: THREAD, body: 'Edited' })).resolves.toMatchObject({
+			body: 'Edited'
+		});
+		await expect(store.updateReply({ id: 'r1', body: 'Edited reply' })).resolves.toMatchObject({
+			body: 'Edited reply'
+		});
+		expect(await store.updateThread({ id: THREAD, body: 'Edited' })).toMatchObject({
+			authorUserId: USER
+		});
+		expect(JSON.stringify(await store.updateThread({ id: THREAD, body: 'Edited' }))).not.toContain(
+			'2530622'
+		);
 	});
 
 	it('creates threads, replies, and reports', async () => {
 		const store = createCommunityStore(inner());
 		await expect(
 			store.createThread({ authorUserId: USER, title: 'Hi', body: 'Hello', category: 'student-life' })
-		).resolves.toMatchObject({ id: THREAD });
+		).resolves.toMatchObject({ id: THREAD, authorDisplayName: 'Ada' });
 		await expect(
 			store.createReply({ threadId: THREAD, authorUserId: USER, body: 'Thanks' })
-		).resolves.toMatchObject({ body: 'Thanks' });
+		).resolves.toMatchObject({ body: 'Thanks', authorDisplayName: 'Ada' });
 		await expect(
 			store.createReport({
 				targetKind: 'thread',
@@ -189,6 +558,42 @@ describe('createCommunityStore', () => {
 				reason: 'spam'
 			})
 		).resolves.toMatchObject({ id: 'rep-1' });
+		await expect(store.listReports({ status: 'open' })).resolves.toEqual([
+			expect.objectContaining({ id: 'rep-1', status: 'open' })
+		]);
+		await expect(
+			createCommunityStore({
+				listConflictCatalog: vi.fn(async () => [{ status: 'conflict', courseCode: '420-NYA-05' }])
+			}).listConflictCatalog()
+		).resolves.toEqual([{ status: 'conflict', courseCode: '420-NYA-05' }]);
+		await expect(
+			createCommunityStore({
+				resolveCatalogConflict: vi.fn(async (id) => ({ id, status: 'published' }))
+			}).resolveCatalogConflict('70000000-0000-4000-8000-000000000001')
+		).resolves.toMatchObject({ status: 'published' });
+		await expect(store.getReply('r1')).resolves.toMatchObject({
+			id: 'r1',
+			threadId: THREAD,
+			authorDisplayName: 'Ada'
+		});
+	});
+
+	it('sets report status through the repository', async () => {
+		const repo = inner();
+		const store = createCommunityStore(repo);
+		await expect(store.setReportStatus('rep-1', 'resolved')).resolves.toMatchObject({
+			id: 'rep-1',
+			status: 'resolved'
+		});
+		expect(repo.setReportStatus).toHaveBeenCalledWith('rep-1', 'resolved');
+		await expect(store.setReportStatus('rep-1', 'dismissed')).resolves.toMatchObject({
+			status: 'dismissed'
+		});
+	});
+
+	it('returns null when a reply is missing', async () => {
+		const store = createCommunityStore(inner({ getReply: vi.fn(async () => null) }));
+		await expect(store.getReply('missing')).resolves.toBeNull();
 	});
 
 	it('locks and removes forum records', async () => {
@@ -196,6 +601,36 @@ describe('createCommunityStore', () => {
 		await expect(store.lockThread(THREAD)).resolves.toMatchObject({ id: THREAD });
 		await expect(store.removeThread(THREAD)).resolves.toMatchObject({ id: THREAD });
 		await expect(store.removeReply('r1')).resolves.toMatchObject({ id: 'r1' });
+	});
+
+	it('mutes, bans, and loads public profiles', async () => {
+		const repo = inner();
+		const store = createCommunityStore(repo);
+		await expect(store.muteUser(USER, { hours: 1 })).resolves.toMatchObject({
+			userId: USER,
+			isMuted: true
+		});
+		expect(repo.muteUser).toHaveBeenCalled();
+		await expect(store.banUser(USER, { days: 30 })).resolves.toMatchObject({
+			userId: USER,
+			isBanned: true
+		});
+		expect(repo.banUser).toHaveBeenCalledWith(USER, expect.objectContaining({ until: expect.any(Date) }));
+		await expect(store.banUser(USER, { permanent: true })).resolves.toMatchObject({
+			userId: USER,
+			isBanned: true
+		});
+		await expect(store.unmuteUser(USER)).resolves.toMatchObject({ userId: USER, isMuted: false });
+		await expect(store.unbanUser(USER)).resolves.toMatchObject({ userId: USER, isBanned: false });
+		await expect(store.getPublicProfile(USER)).resolves.toMatchObject({
+			userId: USER,
+			displayName: 'Ada',
+			role: 'student',
+			isRestricted: false
+		});
+		await expect(store.listThreadsByAuthor(USER)).resolves.toEqual([
+			expect.objectContaining({ id: THREAD, authorUserId: USER })
+		]);
 	});
 
 	it('redacts profiles and reports staff', async () => {
@@ -270,6 +705,17 @@ describe('createCommunityStore', () => {
 			})
 		);
 		await expect(unavailable.listClubs()).rejects.toBeInstanceOf(MaritoolsUnavailableError);
+
+		const slugDown = createCommunityStore(
+			inner({
+				getPublishedClubBySlug: vi.fn(async () => {
+					throw new MariToolsNotFoundError();
+				})
+			})
+		);
+		await expect(slugDown.getPublishedClubBySlug('robotics')).rejects.toBeInstanceOf(
+			MaritoolsUnavailableError
+		);
 	});
 
 	it('defaults pending payload fields', async () => {
@@ -279,7 +725,17 @@ describe('createCommunityStore', () => {
 			})
 		);
 		await expect(store.listPendingClubSubmissions()).resolves.toEqual([
-			{ id: SUBMISSION, name: '', slug: '', category: '', description: '', links: [] }
+			{
+				id: SUBMISSION,
+				status: 'pending',
+				submitterUserId: null,
+				submitterRole: null,
+				name: '',
+				slug: '',
+				category: '',
+				description: '',
+				links: []
+			}
 		]);
 	});
 });

@@ -15,8 +15,8 @@ Browse published clubs; submit updates for staff review.
 ## Driving it with browser MCP
 
 - Guest: see published clubs or empty state.
-- Signed in: submission form (name, description, links).
-- Staff (`team@marihacks.com`): publish form and pending queue.
+- Signed in: short intake (role + name), then editable listing at `/tools/clubs/submissions/[id]`.
+- Staff (`team@marihacks.com`): pending queue links into the same submission page; Publish there.
 
 Proof: Postgres `mt_clubs` / `mt_club_submissions`; screenshot of published list.
 

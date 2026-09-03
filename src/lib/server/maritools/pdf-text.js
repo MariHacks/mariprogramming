@@ -49,7 +49,7 @@ export function extractPdfText(bytes) {
 		pieces.push(textFromContent(data.toString('latin1')));
 	}
 
-	return { text: pieces.filter(Boolean).join('\n'), byteLength, sha256 };
+	return { text: pieces.filter(Boolean).join('\n').replace(/\0/g, ''), byteLength, sha256 };
 }
 
 /** @param {string} content */

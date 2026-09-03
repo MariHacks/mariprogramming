@@ -1,10 +1,14 @@
 <script>
 	import { resolve } from '$app/paths';
-	import { clubContent, isExternalSignupUrl } from '$lib/content/club';
+	import { clubContent, getUpcomingEvents, isExternalSignupUrl } from '$lib/content/club';
 
 	const workshops = clubContent.workshops.slice(0, 3);
 	const discordUrl = clubContent.socialLinks.find(({ label }) => label === 'Discord')?.url;
 	const mariHacksUrl = clubContent.socialLinks.find(({ label }) => label === 'MariHacks')?.url;
+	const hasUpcomingEvents = getUpcomingEvents(clubContent.events).length > 0;
+	const heroSecondary = hasUpcomingEvents
+		? { label: 'Explore upcoming events', href: '/events' }
+		: { label: 'Browse workshops', href: '/our-workshops' };
 
 	const activities = [
 		{
@@ -78,7 +82,7 @@
 	<meta name="description" content={clubContent.mission} />
 </svelte:head>
 
-<section class="hero" data-home-section="hero" aria-labelledby="home-title">
+<section class="hero editorial-enter" data-home-section="hero" aria-labelledby="home-title">
 	<div class="hero-copy">
 		<h1 id="home-title">
 			<span>Come build</span>
@@ -102,8 +106,8 @@
 			>
 				Join the club <span aria-hidden="true">{isExternalSignupUrl() ? '↗' : '→'}</span>
 			</a>
-			<a class="quiet-link" href={resolve('/events', {})}
-				>Explore upcoming events <span aria-hidden="true">→</span></a
+			<a class="quiet-link" href={resolve(heroSecondary.href, {})}
+				>{heroSecondary.label} <span aria-hidden="true">→</span></a
 			>
 		</div>
 		<p class="eligibility">Open to all Marianopolis students. No experience required.</p>
@@ -330,23 +334,6 @@
 		justify-content: space-between;
 		border-radius: 0;
 		padding-inline: 0.95rem;
-	}
-
-	.quiet-link {
-		display: inline-flex;
-		align-items: center;
-		width: fit-content;
-		min-height: 2.75rem;
-		gap: 0.65rem;
-		color: var(--midnight);
-		font-size: 0.75rem;
-		font-weight: 600;
-		line-height: 1.25;
-		text-decoration: none;
-	}
-
-	.quiet-link:hover {
-		color: var(--club-blue);
 	}
 
 	.eligibility {
@@ -664,31 +651,43 @@
 	@media (max-width: 47.999rem) {
 		.hero {
 			grid-template-columns: 1fr;
+			grid-template-rows: auto minmax(42svh, 1fr);
+			min-height: calc(100svh - 4.5rem);
 			height: auto;
 		}
 
 		.hero-copy {
-			min-height: 31rem;
-			padding: 3rem var(--page-gutter) 2rem;
+			min-height: 0;
+			padding: 1.35rem var(--page-gutter) 0.85rem;
 		}
 
 		.hero h1 {
-			font-size: clamp(3rem, 15vw, 4.25rem);
+			font-size: clamp(2.35rem, 10.5vw, 3.15rem);
+		}
+
+		.hero-lead {
+			margin-block-start: 0.7rem;
+		}
+
+		.hero-body {
+			display: none;
 		}
 
 		.hero-actions {
 			align-items: flex-start;
 			flex-direction: column;
-			margin-block-start: 2rem;
-			gap: 0.25rem;
+			margin-block-start: 1rem;
+			gap: 0.15rem;
 		}
 
 		.eligibility {
-			margin-block-start: 0.75rem;
+			margin-block-start: 0.45rem;
 		}
 
 		.hero-image {
-			aspect-ratio: 4 / 3;
+			aspect-ratio: unset;
+			min-height: 42svh;
+			height: 100%;
 		}
 
 		.activities,
@@ -748,11 +747,11 @@
 
 	@media (max-width: 24rem) {
 		.hero-copy {
-			min-height: 33rem;
+			padding-block-start: 1.1rem;
 		}
 
 		.hero h1 {
-			font-size: 2.9rem;
+			font-size: 2.25rem;
 		}
 	}
 </style>

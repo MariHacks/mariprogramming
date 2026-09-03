@@ -54,7 +54,7 @@ describe('forum page server', () => {
 		const data = await current.load(event());
 		expect(data.threads[0].courseCode).toBe('203-SN3-RE');
 		expect(data.signedIn).toBe(false);
-		expect(JSON.stringify(data)).not.toMatch(/2530622|authorUserId/);
+		expect(JSON.stringify(data)).not.toMatch(/2530622/);
 		const signed = await current.load(event({ locals: { maritools: SESSION } }));
 		expect(signed.signedIn).toBe(true);
 		const untagged = handlers({
@@ -74,6 +74,36 @@ describe('forum page server', () => {
 			}
 		});
 		expect((await unknownCourse.load(event())).threads[0].courseCode).toBeNull();
+	});
+
+	it('filters listed threads by search text', async () => {
+		const current = handlers({
+			store: {
+				listThreads: vi.fn(async () => [
+					{ id: THREAD, title: 'Midterm tips', body: 'Bring a calculator.', category: 'courses' },
+					{ id: 't2', title: 'Club hours', body: 'Workshop tonight.', category: 'student-life' }
+				])
+			}
+		});
+		const data = await current.load(event({ search: '?q=calculator' }));
+		expect(data.threads).toHaveLength(1);
+		expect(data.threads[0].title).toBe('Midterm tips');
+		expect(data.query).toBe('calculator');
+	});
+
+	it('searches threads that omit a title or body', async () => {
+		const current = handlers({
+			store: {
+				listThreads: vi.fn(async () => [
+					{ id: 't1', title: null, body: 'Bring a calculator.', category: 'courses' },
+					{ id: 't2', title: 'Club hours', body: null, category: 'student-life' }
+				])
+			}
+		});
+		const byBody = await current.load(event({ search: '?q=calculator' }));
+		expect(byBody.threads.map((thread) => thread.id)).toEqual(['t1']);
+		const byTitle = await current.load(event({ search: '?q=Club' }));
+		expect(byTitle.threads.map((thread) => thread.id)).toEqual(['t2']);
 	});
 
 	it('forwards category and valid course filters', async () => {

@@ -65,6 +65,8 @@ describe('staff book work board', () => {
 		});
 		expect(screen.getByRole('heading', { name: 'Unassigned' })).toBeVisible();
 		expect(screen.getByRole('heading', { name: 'Campus Books' })).toBeVisible();
+		expect(screen.getByText('REQ-ABCDEFGH2345')).toBeVisible();
+		expect(screen.getByText('MPC-ABCDEFGH2345')).toBeVisible();
 		expect(screen.getByRole('button', { name: 'Assign' })).toBeVisible();
 		expect(screen.getByRole('button', { name: 'Record pickup' })).toBeVisible();
 		expect(screen.getByText('2 hours old')).toHaveClass('age-fresh');
@@ -82,6 +84,10 @@ describe('staff book work board', () => {
 			}
 		});
 		expect(screen.getByText('There is no outstanding book work.')).toBeVisible();
+		expect(screen.getByRole('link', { name: 'Open orders ledger' })).toHaveAttribute(
+			'href',
+			'/staff'
+		);
 		expect(screen.getByRole('status')).toHaveTextContent('Request assigned.');
 	});
 
@@ -95,8 +101,10 @@ describe('staff book work board', () => {
 				form: /** @type {any} */ ({})
 			}
 		});
-		expect(screen.getByRole('alert')).toHaveTextContent(
-			'Book work is unavailable right now. Reload this page to try again.'
+		expect(screen.getByRole('alert')).toHaveTextContent('Book work is unavailable right now.');
+		expect(screen.getByRole('link', { name: 'Reload book work' })).toHaveAttribute(
+			'href',
+			'/staff/book-work'
 		);
 		expect(document.body).not.toHaveTextContent(/Failed query|book_pickups|postgres|secret/i);
 	});

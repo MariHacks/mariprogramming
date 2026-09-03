@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	ServerConfigurationError,
+	isGoogleOAuthConfigured,
 	readBookDeliveryJobEnvironment,
 	readBookRequestEnvironment,
 	readClubEventDeliveryEnvironment,
@@ -23,7 +24,7 @@ const validEnvironment = Object.freeze({
 		'postgresql://runtime-user:runtime-password@runtime.example.com/books?sslmode=require',
 	BETTER_AUTH_SECRET: 'better-auth-secret-with-at-least-32-characters',
 	BETTER_AUTH_URL: 'https://books.example.com',
-	GOOGLE_CLIENT_ID: 'google-client-id.apps.googleusercontent.com',
+	GOOGLE_CLIENT_ID: '123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com',
 	GOOGLE_CLIENT_SECRET: 'google-client-secret',
 	STRIPE_SECRET_KEY: 'sk_test_foundationexample123',
 	STRIPE_WEBHOOK_SECRET: 'whsec_foundationexample123',
@@ -289,6 +290,21 @@ describe('private server environment', () => {
 		expect(Object.isFrozen(configuration)).toBe(true);
 	});
 
+	it('reports Google OAuth configured only for real web client ids', () => {
+		expect(isGoogleOAuthConfigured(validEnvironment)).toBe(true);
+		expect(
+			isGoogleOAuthConfigured(
+				withEnvironment({ GOOGLE_CLIENT_ID: 'local-dev.apps.googleusercontent.com' })
+			)
+		).toBe(false);
+		expect(
+			isGoogleOAuthConfigured(
+				withEnvironment({ GOOGLE_CLIENT_ID: 'google-client-id.apps.googleusercontent.com' })
+			)
+		).toBe(false);
+		expect(isGoogleOAuthConfigured(withEnvironment({ GOOGLE_CLIENT_SECRET: '' }))).toBe(false);
+	});
+
 	it('accepts a least-privilege restricted Stripe key at runtime', () => {
 		const configuration = readRuntimeEnvironment(
 			withEnvironment({ STRIPE_SECRET_KEY: 'rk_test_foundationexample123' })
@@ -357,6 +373,14 @@ describe('private server environment', () => {
 		['mismatched auth origin', withEnvironment({ BETTER_AUTH_URL: 'https://auth.example.com' })],
 		['short Better Auth secret', withEnvironment({ BETTER_AUTH_SECRET: 'too-short' })],
 		['blank Google client ID', withEnvironment({ GOOGLE_CLIENT_ID: '' })],
+		[
+			'placeholder Google client ID',
+			withEnvironment({ GOOGLE_CLIENT_ID: 'local-dev.apps.googleusercontent.com' })
+		],
+		[
+			'non-numeric Google client ID',
+			withEnvironment({ GOOGLE_CLIENT_ID: 'google-client-id.apps.googleusercontent.com' })
+		],
 		['blank Google client secret', withEnvironment({ GOOGLE_CLIENT_SECRET: '' })],
 		['invalid Stripe secret key', withEnvironment({ STRIPE_SECRET_KEY: 'pk_test_not-secret' })],
 		['invalid Stripe webhook secret', withEnvironment({ STRIPE_WEBHOOK_SECRET: 'webhook-secret' })],

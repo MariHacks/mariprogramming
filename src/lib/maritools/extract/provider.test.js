@@ -43,7 +43,7 @@ describe('createOutlineExtractionProvider', () => {
 		let called = 0;
 		const provider = createOutlineExtractionProvider({
 			getKey: () => 'nvapi-test',
-			getModel: () => 'nvidia/nemotron-3.5-lightning-30b-a3b',
+			getModel: () => 'qwen/qwen3.5-122b-a10b',
 			fetchImpl: async () => {
 				called += 1;
 				return {
@@ -80,6 +80,26 @@ describe('createOutlineExtractionProvider', () => {
 		expect(second.inferenceCount).toBe(1);
 	});
 
+	it('requests lossless due labels and weight options from NIM', async () => {
+		let prompt = '';
+		const provider = createOutlineExtractionProvider({
+			getKey: () => 'nvapi-test',
+			fetchImpl: async (_url, init) => {
+				prompt = JSON.parse(String(init?.body)).messages[0].content;
+				return {
+					ok: true,
+					json: async () => ({ choices: [{ message: { content: '{"assessments":[]}' } }] })
+				};
+			}
+		});
+
+		await provider.extract({ text: SAMPLE, sha256: 'lossless-table' });
+
+		expect(prompt).toContain('"due":string|null');
+		expect(prompt).toContain('"weightLabel":string|null');
+		expect(prompt).toContain('preserve both options');
+	});
+
 	it('fails closed on invalid JSON', async () => {
 		const provider = createOutlineExtractionProvider({
 			getKey: () => 'nvapi-test',
@@ -107,6 +127,25 @@ describe('createOutlineExtractionProvider', () => {
 			}
 		});
 		expect((await net.extract({ text: SAMPLE, sha256: 'n' })).reason).toBe('network');
+	});
+
+	it('aborts a hung NIM request and fails closed as network', async () => {
+		const provider = createOutlineExtractionProvider({
+			getKey: () => 'k',
+			timeoutMs: 40,
+			fetchImpl: async (_url, init) => {
+				await new Promise((_, reject) => {
+					const signal = init?.signal;
+					if (!signal) reject(new Error('missing abort signal'));
+					signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+				});
+				return { ok: true, json: async () => ({}) };
+			}
+		});
+		const result = await provider.extract({ text: SAMPLE, sha256: 'hung' });
+		expect(result.ok).toBe(false);
+		expect(result.reason).toBe('network');
+		expect(provider.inferenceCount()).toBe(1);
 	});
 
 	it('rejects a scanned PDF before calling the model', async () => {
@@ -152,7 +191,7 @@ describe('createOutlineExtractionProvider', () => {
 			offeringKey: 'offering-only'
 		});
 		expect(first.ok).toBe(true);
-		expect(model).toBe('nvidia/nemotron-3.5-lightning-30b-a3b');
+		expect(model).toBe('qwen/qwen3.5-122b-a10b');
 		const second = await provider.extract({ text: SAMPLE, offeringKey: 'offering-only' });
 		expect(second.cacheHit).toBe(true);
 	});

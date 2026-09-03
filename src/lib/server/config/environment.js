@@ -4,6 +4,8 @@ import { env as privateEnvironment } from '$env/dynamic/private';
 import { isIP } from 'node:net';
 
 const DNS_LABEL_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
+const GOOGLE_OAUTH_WEB_CLIENT_ID_PATTERN =
+	/^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/u;
 const GENERIC_CONFIGURATION_ERROR = 'Server configuration is unavailable';
 const MAX_CONFIGURATION_VALUE_LENGTH = 2048;
 const MIN_SECRET_LENGTH = 32;
@@ -370,6 +372,26 @@ export function readStaffSignInEnvironment(source = privateEnvironment) {
 }
 
 /**
+ * True when GOOGLE_CLIENT_ID matches a real Google OAuth web client id shape.
+ * Placeholder values like `local-dev.apps.googleusercontent.com` return false.
+ *
+ * @param {unknown} [source]
+ */
+export function isGoogleOAuthConfigured(source = privateEnvironment) {
+	if (!isEnvironmentRecord(source)) return false;
+	const clientId = source.GOOGLE_CLIENT_ID;
+	const clientSecret = source.GOOGLE_CLIENT_SECRET;
+	return (
+		typeof clientId === 'string' &&
+		GOOGLE_OAUTH_WEB_CLIENT_ID_PATTERN.test(clientId) &&
+		typeof clientSecret === 'string' &&
+		clientSecret.trim().length > 0 &&
+		clientSecret.length <= MAX_CONFIGURATION_VALUE_LENGTH &&
+		clientSecret === clientSecret.trim()
+	);
+}
+
+/**
  * Reads only the provider credential required to expire a Session during a protected staff
  * cancellation. Ledger reads and unrelated staff actions do not depend on Stripe configuration.
  *
@@ -557,12 +579,17 @@ export function readRuntimeEnvironment(source = privateEnvironment) {
 		return invalidConfiguration();
 	}
 
+	const googleClientId = requiredString(source, 'GOOGLE_CLIENT_ID');
+	if (!GOOGLE_OAUTH_WEB_CLIENT_ID_PATTERN.test(googleClientId)) {
+		return invalidConfiguration();
+	}
+
 	return Object.freeze({
 		appOrigin,
 		databaseUrl: postgresUrl(requiredString(source, 'DATABASE_URL')),
 		betterAuthSecret,
 		betterAuthOrigin,
-		googleClientId: requiredString(source, 'GOOGLE_CLIENT_ID'),
+		googleClientId,
 		googleClientSecret: requiredString(source, 'GOOGLE_CLIENT_SECRET'),
 		stripeSecretKey,
 		stripeWebhookSecret,

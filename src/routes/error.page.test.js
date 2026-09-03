@@ -104,4 +104,12 @@ describe('club error route', () => {
 			'mailto:team@marihacks.com?subject=Programming%20Club%20bug%20report'
 		);
 	});
+
+	it('uses a flat ink panel for recovery routes instead of a floating card', () => {
+		const { container } = render(ErrorPage);
+		const panel = container.querySelector('.recovery-index');
+
+		expect(panel).toHaveClass('surface-ink-panel');
+		expect(panel?.className ?? '').not.toMatch(/shadow/i);
+	});
 });

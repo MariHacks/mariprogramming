@@ -1,3 +1,4 @@
+import { env as privateEnvironment } from '$env/dynamic/private';
 import { Pool as NeonPool, neonConfig } from '@neondatabase/serverless';
 import { drizzle as drizzleNeon } from 'drizzle-orm/neon-serverless';
 import { drizzle as drizzlePostgres } from 'drizzle-orm/node-postgres';
@@ -5,18 +6,30 @@ import pg from 'pg';
 import WebSocket from 'ws';
 import * as schema from './schema';
 
+const LOOPBACK_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** @param {string} databaseUrl */
+function usesDirectPostgres(databaseUrl) {
+	if (privateEnvironment.LIVE_E2E_MODE === 'isolated-local') return true;
+	try {
+		return LOOPBACK_DATABASE_HOSTS.has(new URL(databaseUrl).hostname);
+	} catch {
+		return false;
+	}
+}
+
 /** @param {string} databaseUrl @returns {any} */
 export function createRequestPool(databaseUrl) {
-	if (process.env.LIVE_E2E_MODE === 'isolated-local') {
+	if (usesDirectPostgres(databaseUrl)) {
 		return new pg.Pool({ connectionString: databaseUrl });
 	}
 	neonConfig.webSocketConstructor = WebSocket;
 	return new NeonPool({ connectionString: databaseUrl });
 }
 
-/** @param {any} client */
-export function createTransactionDatabase(client) {
-	return process.env.LIVE_E2E_MODE === 'isolated-local'
+/** @param {any} client @param {string} [databaseUrl] */
+export function createTransactionDatabase(client, databaseUrl = '') {
+	return usesDirectPostgres(databaseUrl)
 		? drizzlePostgres(client, { schema })
 		: drizzleNeon(client, { schema });
 }
@@ -54,7 +67,7 @@ export async function withDatabaseTransaction(
 		client = await pool.connect();
 		const database =
 			/** @type {{ transaction: (operation: (transaction: unknown) => Promise<Result>) => Promise<Result> }} */ (
-				createDatabase(client)
+				createDatabase(client, databaseUrl)
 			);
 		result = await database.transaction(operation);
 	} catch (error) {

@@ -1,5 +1,13 @@
+import { env } from '$env/dynamic/private';
 import { fail } from '@sveltejs/kit';
 import { createOutlineExtractionProvider, needsTextPdf } from '$lib/maritools/extract/provider.js';
+import {
+	proposalsNeedAssessmentFacts,
+	proposalsNeedAssessmentDates,
+	proposalsNeedIdentity,
+	withGuessedAssessmentDates,
+	withGuessedIdentity
+} from '$lib/maritools/extract/identity.js';
 import { semesterPageView } from '$lib/server/maritools/community.js';
 import { extractPdfText, isPdfHeader } from '$lib/server/maritools/pdf-text.js';
 import {
@@ -17,10 +25,14 @@ export function _createHandlers(dependencies = {}) {
 	const createRepository = dependencies.createRepository ?? openStudentStore;
 	const extractPdf = dependencies.extractPdf ?? extractPdfText;
 	const isPdf = dependencies.isPdf ?? isPdfHeader;
-	const getNimKey = dependencies.getNimKey ?? (() => String(process.env.NVIDIA_NIM_API_KEY ?? '').trim());
+	const privateEnv = dependencies.privateEnv ?? env;
+	const getNimKey =
+		dependencies.getNimKey ?? (() => String(privateEnv.NVIDIA_NIM_API_KEY ?? '').trim());
 	const getNimModel =
 		dependencies.getNimModel ??
-		(() => process.env.NVIDIA_NIM_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b');
+		(() => privateEnv.NVIDIA_NIM_MODEL || 'qwen/qwen3.5-122b-a10b');
+	const getToday =
+		dependencies.getToday ?? (() => new Date().toISOString().slice(0, 10));
 	const createProvider =
 		dependencies.createProvider ??
 		(() => createOutlineExtractionProvider({ getKey: getNimKey, getModel: getNimModel }));
@@ -29,14 +41,32 @@ export function _createHandlers(dependencies = {}) {
 	async function load(event) {
 		const session = event.locals.maritools ?? null;
 		let profile = null;
+		let outlines = [];
+		let activeTerm = null;
 		if (session) {
+			let repository;
 			try {
-				profile = await createRepository().getProfile(session.userId);
+				repository = createRepository();
+				profile = await repository.getProfile(session.userId);
 			} catch {
 				profile = null;
 			}
+			if (repository && semesterPageView(session, profile).kind === 'ready') {
+				try {
+					const [savedOutlines, terms] = await Promise.all([
+						repository.listOutlines(session.userId),
+						repository.listTerms()
+					]);
+					outlines = savedOutlines;
+					const today = getToday();
+					const term = terms.find((entry) => entry.startDate <= today && today <= entry.endDate);
+					activeTerm = term ? { id: term.id, name: term.name } : null;
+				} catch {
+					outlines = [];
+				}
+			}
 		}
-		return { view: semesterPageView(session, profile) };
+		return { view: semesterPageView(session, profile), outlines, activeTerm };
 	}
 
 	/** @param {any} event @param {{ kind: string }} view */
@@ -53,8 +83,10 @@ export function _createHandlers(dependencies = {}) {
 		const session = event.locals.maritools;
 		if (!session) return { error: rejectView({ kind: 'need-sign-in' }) };
 		let profile;
+		let repository;
 		try {
-			profile = await createRepository().getProfile(session.userId);
+			repository = createRepository();
+			profile = await repository.getProfile(session.userId);
 		} catch (error) {
 			if (error instanceof MaritoolsUnavailableError) {
 				return { error: fail(503, { error: 'Semester tools are unavailable. Try again.' }) };
@@ -63,7 +95,14 @@ export function _createHandlers(dependencies = {}) {
 		}
 		const view = semesterPageView(session, profile);
 		if (view.kind !== 'ready') return { error: rejectView(view) };
-		return { session };
+		return { session, repository };
+	}
+
+	/** @param {any} repository */
+	async function getActiveTerm(repository) {
+		const today = getToday();
+		const terms = await repository.listTerms();
+		return terms.find((term) => term.startDate <= today && today <= term.endDate) ?? null;
 	}
 
 	/** @param {any} event */
@@ -75,6 +114,7 @@ export function _createHandlers(dependencies = {}) {
 		if (!(file instanceof File) || file.size === 0) {
 			return fail(400, { error: 'Choose a PDF to upload.' });
 		}
+		const outlineFileName = file.name;
 		if (file.size > MAX_PDF_BYTES) {
 			return fail(400, { error: 'That PDF is too large. Try one under 8 MB.' });
 		}
@@ -83,22 +123,29 @@ export function _createHandlers(dependencies = {}) {
 			return fail(400, { error: 'Upload a PDF file.' });
 		}
 		const extracted = extractPdf(bytes);
-		if (needsTextPdf(extracted.text, extracted.byteLength)) {
+		const text = String(extracted.text ?? '').trim();
+		if (needsTextPdf(text, extracted.byteLength)) {
 			return fail(400, {
 				error: 'This looks like a scanned PDF. Export a text PDF from the original document and upload that.'
 			});
 		}
 		try {
-			const repository = createRepository();
+			const repository = ready.repository;
 			await repository.saveOutlineDocument({
 				userId: ready.session.userId,
 				sha256: extracted.sha256,
 				byteLength: extracted.byteLength,
-				extractedText: extracted.text
+				extractedText: text
 			});
 			const cached = await repository.getExtraction(extracted.sha256);
-			if (cached) {
+			if (
+				cached &&
+				!proposalsNeedIdentity(cached.proposals) &&
+				!proposalsNeedAssessmentDates(cached.proposals) &&
+				!proposalsNeedAssessmentFacts(cached.proposals)
+			) {
 				return {
+					outlineFileName,
 					extraction: {
 						ok: true,
 						reason: null,
@@ -111,26 +158,42 @@ export function _createHandlers(dependencies = {}) {
 			}
 			const provider = createProvider();
 			const result = await provider.extract({
-				text: extracted.text,
+				text,
 				sha256: extracted.sha256,
 				byteLength: extracted.byteLength
 			});
+			const proposals = result.ok
+				? withGuessedAssessmentDates(
+						withGuessedIdentity(
+							/** @type {Record<string, unknown> | null} */ (result.proposals),
+							text
+						),
+						text
+					)
+				: null;
 			if (result.ok && result.proposals) {
 				await repository.saveExtraction({
 					documentSha256: extracted.sha256,
 					offeringId: null,
-					proposals: result.proposals,
+					proposals,
 					model: getNimModel(),
 					inferenceCount: result.inferenceCount
 				});
 			}
 			return {
+				outlineFileName,
 				extraction: {
 					...result,
+					proposals,
 					sha256: extracted.sha256
 				}
 			};
 		} catch (error) {
+			if (error instanceof MaritoolsInputError) {
+				return fail(400, {
+					error: 'Could not save that outline. Try another PDF or enter the details manually.'
+				});
+			}
 			if (error instanceof MaritoolsUnavailableError) {
 				return fail(503, { error: 'Semester tools are unavailable. Try again.' });
 			}
@@ -153,14 +216,30 @@ export function _createHandlers(dependencies = {}) {
 			return fail(400, { error: 'Review the assessments and books before sharing.' });
 		}
 		try {
-			await createRepository().contribute({
+			const repository = ready.repository;
+			const activeTerm = await getActiveTerm(repository);
+			if (!activeTerm) {
+				return fail(503, { error: 'No active academic term is configured.' });
+			}
+			const courseCode = String(data.get('courseCode') ?? '').trim();
+			const title = String(data.get('title') ?? '').trim();
+			const section = String(data.get('section') ?? '').trim();
+			const teacherName = String(data.get('teacherName') ?? '').trim();
+			const documentSha256 = String(data.get('sha256') ?? '').trim();
+			const reviewProposals = { ...structured, courseCode, title, section, teacherName };
+			await repository.saveOutlineReview({
+				userId: ready.session.userId,
+				sha256: documentSha256,
+				proposals: reviewProposals
+			});
+			await repository.contribute({
 				contributorUserId: ready.session.userId,
-				documentSha256: String(data.get('sha256') ?? ''),
-				termId: String(data.get('termId') ?? ''),
-				courseCode: String(data.get('courseCode') ?? ''),
-				title: String(data.get('title') ?? ''),
-				section: String(data.get('section') ?? ''),
-				teacherName: String(data.get('teacherName') ?? ''),
+				documentSha256,
+				termId: activeTerm.id,
+				courseCode,
+				title,
+				section,
+				teacherName,
 				structured
 			});
 			return { contributed: true };
@@ -175,7 +254,27 @@ export function _createHandlers(dependencies = {}) {
 		}
 	}
 
-	return { load, actions: { extract, contribute } };
+	/** @param {any} event */
+	async function deleteOutline(event) {
+		const ready = await requireReady(event);
+		if (ready.error) return ready.error;
+		const data = await event.request.formData();
+		const sha256 = String(data.get('sha256') ?? '').trim();
+		try {
+			await ready.repository.deleteOutline({ userId: ready.session.userId, sha256 });
+			return { deleted: true, sha256 };
+		} catch (error) {
+			if (error instanceof MaritoolsInputError) {
+				return fail(400, { error: 'Could not delete that saved outline.' });
+			}
+			if (error instanceof MaritoolsUnavailableError) {
+				return fail(503, { error: 'Deleting that outline is unavailable. Try again.' });
+			}
+			throw error;
+		}
+	}
+
+	return { load, actions: { extract, contribute, deleteOutline } };
 }
 
 const handlers = _createHandlers();

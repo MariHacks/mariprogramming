@@ -14,8 +14,8 @@
 	<meta name="description" content={archiveDescription} />
 </svelte:head>
 
-<section class="archive-page surface-paper">
-	<div class="page-container archive-frame">
+<section class="archive-page surface-paper editorial-page">
+	<div class="page-container archive-frame editorial-frame">
 		<SectionIntro
 			title="Workshop archive"
 			summary="Original workshop materials made by the club."
@@ -64,13 +64,7 @@
 </section>
 
 <style>
-	.archive-page {
-		border-block-end: var(--rule);
-	}
-
 	.archive-frame {
-		display: grid;
-		padding-block: clamp(3.5rem, 7vw, 6rem);
 		gap: clamp(2.75rem, 7vw, 5.5rem);
 	}
 

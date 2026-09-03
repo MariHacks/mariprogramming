@@ -18,6 +18,7 @@ export function _createHandlers(dependencies = {}) {
 		const category = event.url.searchParams.get('category') ?? '';
 		const courseIdRaw = event.url.searchParams.get('course') ?? '';
 		const courseId = UUID.test(courseIdRaw) ? courseIdRaw : '';
+		const query = event.url.searchParams.get('q') ?? '';
 		const session = event.locals.maritools ?? null;
 		try {
 			const store = createStore();
@@ -30,14 +31,22 @@ export function _createHandlers(dependencies = {}) {
 				store.listCatalogCourses()
 			]);
 			const byId = new Map(courses.map((course) => [course.id, course]));
-			return {
-				threads: threads.map((thread) => ({
+			const needle = query.trim().toLowerCase();
+			const listed = threads
+				.map((thread) => ({
 					...thread,
 					courseCode: thread.courseId ? (byId.get(thread.courseId)?.code ?? null) : null
-				})),
+				}))
+				.filter((thread) => {
+					if (!needle) return true;
+					return `${thread.title ?? ''} ${thread.body ?? ''}`.toLowerCase().includes(needle);
+				});
+			return {
+				threads: listed,
 				courses,
 				category,
 				courseId,
+				query,
 				signedIn: Boolean(session)
 			};
 		} catch (error) {
@@ -47,6 +56,7 @@ export function _createHandlers(dependencies = {}) {
 					courses: [],
 					category,
 					courseId,
+					query,
 					signedIn: Boolean(session),
 					unavailable: true
 				};

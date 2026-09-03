@@ -73,6 +73,21 @@ describe('consolidated database schema', () => {
 		expect(schema.accountRelations).toBeDefined();
 	});
 
+	it('tracks completion of the required Programming Club form', () => {
+		const membershipColumns = getTableConfig(schema.mtProgrammingClubMemberships).columns.map(
+			(column) => column.name
+		);
+		expect(membershipColumns).toEqual(
+			expect.arrayContaining(['year_level', 'club_goals', 'required_form_completed_at'])
+		);
+		const profileColumns = getTableConfig(schema.mtStudentProfiles).columns.map(
+			(column) => column.name
+		);
+		expect(profileColumns).toEqual(
+			expect.arrayContaining(['username', 'first_name', 'last_name', 'profile_image_data_url'])
+		);
+	});
+
 	it('declares catalogue uniqueness, lookup indexes, versions, timestamps, and value checks', () => {
 		expect(indexNames(schema.teachers)).toEqual([
 			'teachers_active_idx',

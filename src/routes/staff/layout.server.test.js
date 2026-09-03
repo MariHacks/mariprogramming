@@ -13,6 +13,18 @@ describe('staff layout authorization', () => {
 		).toEqual({ staff: null, pathname: '/staff/sign-in' });
 	});
 
+	it('sends an active staff session past sign-in into the console', () => {
+		const staff = Object.freeze({ userId: 'user-123', email: 'team@marihacks.com' });
+		expect(() =>
+			load(
+				/** @type {any} */ ({
+					locals: { staff },
+					url: new URL('https://club.example.com/staff/sign-in')
+				})
+			)
+		).toThrowError(expect.objectContaining({ status: 303, location: '/staff' }));
+	});
+
 	it.each(['/staff', '/staff/orders', '/staff/catalogue'])(
 		'redirects unauthenticated %s',
 		(path) => {

@@ -48,7 +48,7 @@ if (!extracted.text || extracted.text.length < 40) {
 
 const provider = createOutlineExtractionProvider({
 	getKey: () => key,
-	getModel: () => process.env.NVIDIA_NIM_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b'
+	getModel: () => process.env.NVIDIA_NIM_MODEL || 'qwen/qwen3.5-122b-a10b'
 });
 
 const cold = await provider.extract({

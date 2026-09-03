@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test';
 
 const clubRoutes = [
 	{ label: 'About', path: '/about-us', heading: 'About the club' },
-	{ label: 'Workshops', path: '/our-workshops', heading: 'Workshop archive' },
 	{ label: 'Events', path: '/events', heading: 'Events' },
-	{ label: 'Resources', path: '/resources', heading: 'Resources' }
+	{ label: 'Workshops', path: '/our-workshops', heading: 'Workshop archive' },
+	{ label: 'MariTools', path: '/tools', heading: 'MariTools' }
 ];
 
 async function expectNoCartControls(page) {
@@ -95,9 +95,12 @@ test.describe('mobile club navigation', () => {
 	test('keeps closed menu links out of the keyboard sequence', async ({ page }) => {
 		await page.goto('/');
 		const menuButton = page.getByRole('button', { name: 'Open navigation' });
+		const account = page.getByRole('link', { name: 'Account' });
 		const signUp = page.getByRole('link', { name: 'Sign up' });
 
 		await menuButton.focus();
+		await page.keyboard.press('Tab');
+		await expect(account).toBeFocused();
 		await page.keyboard.press('Tab');
 		await expect(signUp).toBeFocused();
 
@@ -136,10 +139,24 @@ for (const width of [320, 768, 1024]) {
 }
 
 test('current schedule, workshop archive, and resource paths remain useful', async ({ page }) => {
+	await page.goto('/');
+	const primary = page.getByRole('navigation', { name: 'Primary navigation' });
+	await expect(primary.getByRole('link', { name: 'Workshops' })).toHaveAttribute(
+		'href',
+		'/our-workshops'
+	);
+	await expect(primary.getByRole('link', { name: 'Resources' })).toHaveCount(0);
+	await expect(primary.getByRole('link', { name: 'Mini-Competitions' })).toHaveCount(0);
+	await expect(page.getByRole('link', { name: 'Account' })).toHaveAttribute(
+		'href',
+		'/tools/account'
+	);
+
 	await page.goto('/events');
 	await expect(page.getByRole('heading', { name: 'No upcoming events are listed' })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Follow on Instagram' }).first()).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Browse workshop archive' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Browse resources' })).toBeVisible();
 
 	await page.goto('/our-workshops');
 	await expect(page.getByRole('heading', { name: 'Python foundations' })).toBeVisible();

@@ -1,6 +1,6 @@
 # Club redesign surface brief
 
-- **Scope:** Replace the visual system across the public Programming Club site and the complete Book Delivery flow.
+- **Scope:** Replace the visual system across the public Programming Club site and MariTools (`/tools`). Book Delivery (`/books`) is an independent service with its own brief and chrome; do not treat it as part of MariTools.
 - **Visitor modes:** Persuade on the homepage, read and browse on club archives, operate during Book Delivery and checkout.
 - **Audience:** Marianopolis students, including complete beginners and students buying required course books.
 - **Primary action:** Sign up through the verified club member registration form.

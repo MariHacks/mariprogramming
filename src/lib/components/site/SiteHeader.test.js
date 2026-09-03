@@ -20,26 +20,22 @@ describe('SiteHeader', () => {
 			'href',
 			'/about-us'
 		);
-		expect(within(navigation).getByRole('link', { name: 'Workshops' })).toHaveAttribute(
-			'href',
-			'/our-workshops'
-		);
 		expect(within(navigation).getByRole('link', { name: 'Events' })).toHaveAttribute(
 			'href',
 			'/events'
 		);
-		expect(within(navigation).getByRole('link', { name: 'Resources' })).toHaveAttribute(
+		expect(within(navigation).getByRole('link', { name: 'Workshops' })).toHaveAttribute(
 			'href',
-			'/resources'
-		);
-		expect(within(navigation).getByRole('link', { name: 'Mini-Competitions' })).toHaveAttribute(
-			'href',
-			'/mini-competitions'
+			'/our-workshops'
 		);
 		expect(within(navigation).getByRole('link', { name: 'MariTools' })).toHaveAttribute(
 			'href',
 			'/tools'
 		);
+		expect(
+			within(navigation).queryByRole('link', { name: 'Mini-Competitions' })
+		).not.toBeInTheDocument();
+		expect(within(navigation).queryByRole('link', { name: 'Resources' })).not.toBeInTheDocument();
 	});
 
 	it('renders the verified Sign up action once', () => {
@@ -50,6 +46,45 @@ describe('SiteHeader', () => {
 		expect(signUpLinks).toHaveLength(1);
 		expect(signUpLinks[0]).toHaveAttribute('href', clubContent.signupUrl);
 		expect(signUpLinks[0]).not.toHaveAttribute('target');
+	});
+
+	it('places Sign up in the top-right actions when signed out', () => {
+		const { container } = render(SiteHeader, {
+			props: { pathname: '/', headerAccount: { kind: 'signed-out' } }
+		});
+		const actions = container.querySelector('.header-actions');
+		if (!(actions instanceof HTMLElement)) throw new Error('Header actions are required');
+
+		expect(within(actions).getByRole('link', { name: 'Sign up' })).toBeInTheDocument();
+		expect(within(actions).queryByRole('link', { name: 'Account' })).not.toBeInTheDocument();
+		expect(within(actions).queryByRole('button', { name: /Maya/i })).not.toBeInTheDocument();
+	});
+
+	it('shows an identity menu instead of Sign up when signed in', async () => {
+		const user = userEvent.setup();
+		const { container } = render(SiteHeader, {
+			props: {
+				pathname: '/tools/account',
+				headerAccount: {
+					kind: 'signed-in',
+					displayName: 'Maya Singh',
+					initials: 'MS'
+				}
+			}
+		});
+		const actions = container.querySelector('.header-actions');
+		if (!(actions instanceof HTMLElement)) throw new Error('Header actions are required');
+
+		expect(within(actions).queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();
+		const identity = within(actions).getByRole('button', { name: /Maya Singh/i });
+		expect(identity).toHaveTextContent('MS');
+
+		await user.click(identity);
+		expect(screen.getByRole('link', { name: 'Your account' })).toHaveAttribute(
+			'href',
+			'/tools/account'
+		);
+		expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
 	});
 
 	it('keeps the utility cluster on one header row so Sign up cannot wrap under the bar', () => {
@@ -77,7 +112,7 @@ describe('SiteHeader', () => {
 	});
 
 	it('provides full, compact, and mobile navigation structures for the three responsive modes', () => {
-		const { container } = render(SiteHeader, { props: { pathname: '/resources' } });
+		const { container } = render(SiteHeader, { props: { pathname: '/tools' } });
 
 		const wide = screen.getByRole('navigation', { name: 'Primary navigation' });
 		const compact = screen.getByRole('navigation', { name: 'Compact navigation' });
@@ -90,7 +125,7 @@ describe('SiteHeader', () => {
 			'aria-controls',
 			'compact-more-menu'
 		);
-		expect(container.querySelector('#compact-more-menu a[href="/resources"]')).toHaveAttribute(
+		expect(container.querySelector('#compact-more-menu a[href="/tools"]')).toHaveAttribute(
 			'aria-current',
 			'page'
 		);
@@ -106,7 +141,7 @@ describe('SiteHeader', () => {
 		const moreMenu = container.querySelector('#compact-more-menu');
 		const mobileNavigation = container.querySelector('#mobile-navigation');
 
-		expect(within(compact).queryByRole('link', { name: 'Resources' })).not.toBeInTheDocument();
+		expect(within(compact).queryByRole('link', { name: 'MariTools' })).not.toBeInTheDocument();
 		expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).not.toBeInTheDocument();
 		expect(moreMenu).toHaveAttribute('aria-hidden', 'true');
 		expect(mobileNavigation).toHaveAttribute('aria-hidden', 'true');
@@ -184,18 +219,38 @@ describe('SiteHeader', () => {
 		expect(within(navigation).getByRole('link', { name: 'About' })).not.toHaveAttribute(
 			'aria-current'
 		);
-		expect(within(navigation).getByRole('link', { name: 'Workshops' })).not.toHaveAttribute(
+		expect(within(navigation).getByRole('link', { name: 'Events' })).not.toHaveAttribute(
 			'aria-current'
 		);
 	});
 
-	it('marks Mini-Competitions current in every responsive navigation mode', () => {
+	it('keeps Mini-Competitions reachable from compact and mobile disclosure menus', () => {
 		const { container } = render(SiteHeader, { props: { pathname: '/mini-competitions' } });
 
-		for (const link of container.querySelectorAll('a[href="/mini-competitions"]')) {
+		expect(container.querySelector('#compact-more-menu a[href="/mini-competitions"]')).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+		expect(container.querySelector('#mobile-navigation a[href="/mini-competitions"]')).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+		expect(
+			within(screen.getByRole('navigation', { name: 'Primary navigation' })).queryByRole(
+				'link',
+				{ name: 'Mini-Competitions' }
+			)
+		).not.toBeInTheDocument();
+		expect(container.querySelectorAll('a[href="/mini-competitions"]')).toHaveLength(2);
+	});
+
+	it('marks Workshops current in every responsive navigation mode', () => {
+		const { container } = render(SiteHeader, { props: { pathname: '/our-workshops' } });
+
+		for (const link of container.querySelectorAll('a[href="/our-workshops"]')) {
 			expect(link).toHaveAttribute('aria-current', 'page');
 		}
-		expect(container.querySelectorAll('a[href="/mini-competitions"]')).toHaveLength(3);
+		expect(container.querySelectorAll('a[href="/our-workshops"]')).toHaveLength(3);
 	});
 
 	it('does not expose Book Delivery for a route with a shared path prefix', () => {

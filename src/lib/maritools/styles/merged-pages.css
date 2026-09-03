@@ -1,0 +1,413 @@
+/* Production-only rules for catalog, clubs, forum, and thread. */
+
+.mt-preview {
+	--header-h: 4.5rem;
+	--preview-h: 4.9375rem;
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	min-height: 100%;
+}
+
+@media (max-width: 51.999rem) {
+	.mt-preview {
+		--header-h: 4.25rem;
+		--preview-h: 6.5rem;
+	}
+}
+
+.mt-preview .page-semester,
+.mt-preview .page-catalog,
+.mt-preview .page-clubs,
+.mt-preview .page-forum,
+.mt-preview .page-account {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 100%;
+}
+
+.mt-preview .page.page-catalog,
+.mt-preview .page.page-clubs,
+.mt-preview .page.page-forum,
+.mt-preview .page.page-semester,
+.mt-preview .page.page-account {
+	background: var(--white);
+}
+
+.mt-preview .page-account > .index-title {
+	border-bottom: 0;
+}
+
+.mt-preview .account-layout {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	max-width: 900px;
+	width: 100%;
+	margin: 0 clamp(1.25rem, 3vw, 3rem);
+}
+
+.mt-preview .account-layout.account-layout--guest {
+	max-width: none;
+	margin: 0;
+}
+
+.mt-preview .settings-sheet {
+	flex: 1 1 auto;
+}
+
+.mt-preview .settings-sheet.settings-sheet--guest {
+	display: flex;
+	flex-direction: column;
+}
+
+.mt-preview .page-semester {
+	padding: 0;
+}
+
+.mt-preview .page-semester .semester-layout {
+	flex: 1 1 auto;
+	min-height: 100%;
+	align-items: stretch;
+}
+
+.mt-preview .page-semester .course-stack,
+.mt-preview .page-semester .review-sheet {
+	min-height: 0;
+}
+
+.mt-preview .page-semester .review-sheet {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+}
+
+.mt-preview .page-semester .sheet-empty {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 1.25rem;
+	max-width: 34rem;
+}
+
+.mt-preview .page-semester .sheet-empty .sheet-head {
+	margin-bottom: 0;
+}
+
+.mt-preview .page-semester .sheet-hint {
+	margin: 0;
+	color: var(--steel);
+	font-size: 0.75rem;
+}
+
+.mt-preview .page-semester .stack-placeholder {
+	display: grid;
+	gap: 0.25rem;
+	margin: 0.75rem;
+	padding: 0.9rem 0.85rem;
+	border: 1px dashed var(--rule-dark);
+	background: rgb(255 255 255 / 55%);
+	color: var(--steel);
+	font-size: 0.625rem;
+}
+
+.mt-preview .page-semester .stack-placeholder strong {
+	color: var(--ink-soft, #334155);
+	font-size: 0.75rem;
+}
+
+.mt-preview .page-semester .add-outline--gate {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 2.5rem;
+	padding: 0 0.75rem;
+	border-color: var(--line-dark, #c5d0dc);
+	background: white;
+	color: var(--ink-soft, #334155);
+	font-size: 0.625rem;
+	font-weight: 650;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.mt-preview .page-semester .add-outline--gate:hover {
+	border-color: #8d9db0;
+	background: var(--mist, #eef2f6);
+	color: var(--ink-soft, #334155);
+	text-decoration: none;
+}
+
+.mt-preview .catalog-titlebar .catalog-eyebrow {
+	display: block;
+	margin-bottom: 0.35rem;
+	color: var(--steel);
+	font-size: 0.625rem;
+	font-weight: 650;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.mt-preview .catalog-count,
+.mt-preview .catalog-empty {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.mt-preview .catalog-empty {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 2rem clamp(1.25rem, 3vw, 3rem) 2.5rem;
+	border-bottom: 0;
+	background: white;
+}
+
+.mt-preview .catalog-empty strong {
+	font-size: 1rem;
+}
+
+.mt-preview .catalog-empty p {
+	margin: 0;
+	max-width: 42ch;
+	color: var(--steel);
+	font-size: 0.8125rem;
+	line-height: 1.5;
+}
+
+.mt-preview .catalog-empty a {
+	width: fit-content;
+	margin-top: 0.35rem;
+	color: var(--blue);
+	font-size: 0.8125rem;
+	font-weight: 650;
+}
+
+.mt-preview .catalog-index,
+.mt-preview .club-index,
+.mt-preview .topic-list,
+.mt-preview .directory-empty {
+	flex: 1 1 auto;
+}
+
+.mt-preview .catalog-row h2,
+.mt-preview .club-row h2,
+.mt-preview .topic-row h2 {
+	margin: 0;
+}
+
+.mt-preview .submit-club:has(form) {
+	grid-template-columns: minmax(12rem, 0.9fr) minmax(0, 1.4fr);
+	align-items: start;
+}
+
+.mt-preview .submit-club form {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.mt-preview .submit-club form label {
+	display: grid;
+	gap: 0.3rem;
+	color: var(--steel);
+	font-size: 0.625rem;
+	font-weight: 650;
+}
+
+.mt-preview .submit-club form input,
+.mt-preview .submit-club form textarea,
+.mt-preview .submit-club form select {
+	width: 100%;
+	border: 1px solid var(--rule-dark);
+	border-radius: 2px;
+	background: white;
+	font-size: 0.75rem;
+}
+
+.mt-preview .submit-club form input,
+.mt-preview .submit-club form select {
+	height: var(--control-h);
+	padding: 0 0.625rem;
+}
+
+.mt-preview .submit-club form textarea {
+	padding: 0.625rem;
+}
+
+.mt-preview .submit-club article {
+	display: grid;
+	gap: 0.5rem;
+	padding: 0.75rem 0;
+	border-top: 1px solid var(--rule);
+}
+
+.mt-preview .staff-pending {
+	grid-template-columns: minmax(10rem, 0.7fr) minmax(0, 1.6fr);
+	align-items: start;
+}
+
+.mt-preview .staff-pending-list {
+	max-height: min(22rem, 48vh);
+	overflow: auto;
+	padding-right: 0.25rem;
+}
+
+.mt-preview .forum-tabs a {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	min-height: 2.75rem;
+	padding: 0 0.75rem;
+	color: var(--steel);
+	font-size: 0.6875rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.mt-preview .forum-tabs a:hover,
+.mt-preview .forum-tabs a.is-active {
+	color: var(--ink);
+}
+
+.mt-preview .forum-tabs a.is-active::after {
+	position: absolute;
+	right: 0.75rem;
+	bottom: -1px;
+	left: 0.75rem;
+	height: 2px;
+	background: var(--signal);
+	content: '';
+}
+
+.mt-preview .page-free-boards > .index-filters {
+	grid-template-columns: minmax(18rem, 1fr) 11rem;
+}
+
+@media (max-width: 700px) {
+	.mt-preview .paint-toolbar,
+	.mt-preview .paint-grid {
+		width: 100%;
+		min-width: 0;
+	}
+
+	.mt-preview .page-semester {
+		padding: 0;
+	}
+
+	.mt-preview .page-semester .semester-layout {
+		grid-template-rows: auto minmax(0, 1fr);
+	}
+
+	.mt-preview .page-semester .course-stack {
+		display: block;
+		overflow: visible;
+	}
+
+	.mt-preview .page-semester .stack-head {
+		min-height: 3.25rem;
+	}
+
+	.mt-preview .page-semester .sheet-empty {
+		justify-content: flex-start;
+		padding-top: 0.25rem;
+	}
+
+	.mt-preview .page-semester .add-outline--gate {
+		width: 100%;
+		min-height: 2.75rem;
+	}
+
+	.mt-preview .index-filters .dark-button {
+		min-height: 2.75rem;
+	}
+}
+
+.mt-preview .inline-composer > p,
+.mt-preview .inline-composer > a {
+	margin: 1rem;
+}
+
+.mt-preview .post-body footer form {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.mt-preview .post-body footer input {
+	height: 1.5rem;
+	width: 10rem;
+	padding: 0 0.4rem;
+	border: 1px solid var(--rule-dark);
+	border-radius: 2px;
+	font-size: 0.625rem;
+}
+
+.mt-preview .post-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.mt-preview .report-control {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
+.mt-preview .report-popover {
+	position: absolute;
+	right: 0;
+	bottom: calc(100% + 0.35rem);
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.45rem;
+	border: 1px solid var(--rule-dark);
+	border-radius: 4px;
+	background: var(--surface, #fff);
+	box-shadow: 0 0.35rem 0.85rem color-mix(in srgb, #000 12%, transparent);
+}
+
+.mt-preview .post-edit {
+	display: grid;
+	gap: 0.5rem;
+}
+
+.mt-preview .post-edit textarea {
+	width: 100%;
+	min-height: 6rem;
+}
+
+.mt-preview .sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.mt-preview .reply-editor form {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.mt-preview .page-club-detail > p,
+.mt-preview .page-thread > p {
+	padding: 2rem clamp(1.25rem, 3vw, 3rem);
+}
+
+@media (max-width: 52rem) {
+	.mt-preview .submit-club:has(form) {
+		grid-template-columns: 1fr;
+	}
+}

@@ -48,6 +48,10 @@ export function createStudentStore(inner) {
 	}
 
 	return {
+		listTerms() {
+			return wrap(() => inner.listTerms());
+		},
+
 		/** @param {string} userId */
 		getProfile(userId) {
 			return wrap(async () => {
@@ -98,12 +102,15 @@ export function createStudentStore(inner) {
 				return rows
 					.filter((row) => {
 						if (!query) return true;
-						return String(row.courseCode ?? '')
-							.toLowerCase()
-							.includes(query);
+						return [row.courseCode, row.title, row.teacherName].some((value) =>
+							String(value ?? '')
+								.toLowerCase()
+								.includes(query)
+						);
 					})
 					.map((row) => ({
 						id: row.id,
+						offeringId: row.offeringId ?? null,
 						courseId: row.courseId ?? null,
 						termId: row.termId,
 						courseCode: row.courseCode,
@@ -116,6 +123,26 @@ export function createStudentStore(inner) {
 			});
 		},
 
+		/** @param {string} courseId */
+		listCatalogForCourse(courseId) {
+			return wrap(async () => {
+				const rows = await inner.listCatalogForCourse(courseId);
+				return rows.map((row) => ({
+					id: row.id,
+					offeringId: row.offeringId ?? null,
+					courseId: row.courseId ?? null,
+					termId: row.termId,
+					courseCode: row.courseCode,
+					title: row.title,
+					section: row.section,
+					teacherName: row.teacherName,
+					structured: row.structured,
+					status: row.status,
+					createdAt: row.createdAt ?? null
+				}));
+			});
+		},
+
 		/** @param {string} sha256 */
 		getExtraction(sha256) {
 			return wrap(async () => {
@@ -123,6 +150,43 @@ export function createStudentStore(inner) {
 				if (!row) return null;
 				return { proposals: row.proposals, inferenceCount: row.inferenceCount };
 			});
+		},
+
+		/** @param {string} userId */
+		listOutlines(userId) {
+			return wrap(async () => {
+				const rows = await inner.listUserOutlines(userId);
+				return rows.map((row) => ({
+					sha256: row.sha256,
+					createdAt: row.createdAt,
+					extraction: row.reviewProposals ?? row.proposals
+						? {
+								proposals: row.reviewProposals ?? row.proposals,
+								inferenceCount: row.inferenceCount
+							}
+						: null
+				}));
+			});
+		},
+
+		/** @param {{ userId: string, sha256: string, proposals: object }} input */
+		saveOutlineReview(input) {
+			return wrap(() => inner.saveOutlineReview(input));
+		},
+
+		/** @param {{ userId: string, sha256: string }} input */
+		deleteOutline(input) {
+			return wrap(() => inner.deleteOutlineDocument(input));
+		},
+
+		/** @param {string} userId */
+		getSchedule(userId) {
+			return wrap(async () => (await inner.getSavedSchedule(userId))?.paste ?? '');
+		},
+
+		/** @param {{ userId: string, paste: string }} input */
+		saveSchedule(input) {
+			return wrap(() => inner.saveSchedule({ userId: input.userId, paste: input.paste }));
 		},
 
 		/** @param {{ userId: string, sha256: string, byteLength: number, extractedText: string }} input */
@@ -199,7 +263,12 @@ export function createStudentStore(inner) {
 }
 
 export function openStudentStore() {
-	return createStudentStore(
-		createMariToolsRepository({ databaseUrl: readRuntimeEnvironment().databaseUrl })
-	);
+	try {
+		return createStudentStore(
+			createMariToolsRepository({ databaseUrl: readRuntimeEnvironment().databaseUrl })
+		);
+	} catch (error) {
+		if (error instanceof MaritoolsUnavailableError) throw error;
+		throw new MaritoolsUnavailableError();
+	}
 }

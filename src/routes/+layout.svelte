@@ -4,13 +4,16 @@
 	import SiteFooter from '$lib/components/site/SiteFooter.svelte';
 	import SiteHeader from '$lib/components/site/SiteHeader.svelte';
 
+	/** @type {import('./$types').LayoutData} */
+	export let data;
+
 	$: pathname = $page.url.pathname;
 	$: isStaffRoute = pathname === '/staff' || pathname.startsWith('/staff/');
 </script>
 
 <a class="skip-link" href="#main-content">Skip to main content</a>
 
-{#if !isStaffRoute}<SiteHeader {pathname} />{/if}
+{#if !isStaffRoute}<SiteHeader {pathname} headerAccount={data.headerAccount} />{/if}
 
 <main id="main-content" tabindex="-1">
 	<slot></slot>

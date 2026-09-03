@@ -118,6 +118,30 @@ describe('staff order ledger', () => {
 		expect(screen.getByDisplayValue('purchase_list')).toHaveAttribute('type', 'hidden');
 	});
 
+	it('keeps purchase export failures on the ledger instead of navigating away', async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = vi.fn(async () => ({
+			ok: false,
+			status: 403,
+			async blob() {
+				return new Blob(['nope']);
+			}
+		}));
+		try {
+			render(OrdersPage, { props: { data: data() } });
+			await submit(screen.getByRole('button', { name: 'Download purchase list' }));
+			const alert = await screen.findByRole('alert');
+			expect(alert).toHaveTextContent('Purchase export failed. Stay on this page and try again.');
+			expect(screen.getByRole('heading', { level: 1, name: 'Orders' })).toBeVisible();
+			expect(globalThis.fetch).toHaveBeenCalledWith(
+				'/staff/orders/export',
+				expect.objectContaining({ method: 'POST', body: 'intent=purchase_list' })
+			);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
 	it('renders one exact POST search result without moving the email into a link', () => {
 		render(OrdersPage, {
 			props: {
@@ -195,13 +219,21 @@ describe('staff order ledger', () => {
 				}
 			}
 		});
-		expect(screen.getByText('No exact match found.')).toBeVisible();
+		expect(screen.getByText(/No exact match found/)).toBeVisible();
+		expect(screen.getByRole('link', { name: 'Clear search' })).toBeVisible();
 
 		rerender({ data: data({ unavailable: true }), form: null });
-		expect(screen.getByRole('alert')).toHaveTextContent(
-			'Orders are unavailable right now. Reload this page to try again.'
-		);
+		expect(screen.getByRole('alert')).toHaveTextContent('Orders are unavailable right now.');
+		expect(screen.getByRole('link', { name: 'Reload orders' })).toHaveAttribute('href', '/staff');
 		expect(document.body).not.toHaveTextContent(/database|postgres|secret/i);
+	});
+
+	it('offers a next step when the actionable queue is empty', () => {
+		render(OrdersPage, {
+			props: { data: data({ listing: listing({ orders: [], totalCount: 0 }) }) }
+		});
+		expect(screen.getByText('No orders match these filters.')).toBeVisible();
+		expect(screen.getByRole('link', { name: 'Show all payments' })).toBeVisible();
 	});
 
 	it('focuses a bounded search error without exposing submitted customer data', async () => {

@@ -1,5 +1,7 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
+	import { CLUB_SUBMITTER_ROLES } from '$lib/maritools/club-listing.js';
+	import { initialsFromClubName } from '$lib/maritools/club-initials.js';
 
 	export let data;
 	export let form = null;
@@ -9,257 +11,144 @@
 	<title>Clubs | {MARITOOLS_NAME}</title>
 	<meta
 		name="description"
-		content="Browse published campus clubs and send a listing for staff to review."
+		content="Campus clubs and how to reach them."
 	/>
 </svelte:head>
 
-<section class="clubs-page page-container">
-	<header class="intro">
-		<h1>Clubs</h1>
-		<p>
-			Published listings students have sent in. Rooms stay off this page until staff check them.
-		</p>
-	</header>
+<div class="mt-preview">
+	<section class="page page-clubs">
+		<header class="catalog-titlebar">
+			<div>
+				<h1>Clubs</h1>
+			</div>
+			<p>Campus clubs and how to reach them.</p>
+		</header>
 
-	<form method="GET" class="filters">
-		<label>
-			Search
-			<input name="q" value={data.query} />
-		</label>
-		<label>
-			Category
-			<input name="category" value={data.category} />
-		</label>
-		<button type="submit" class="primary">Show clubs</button>
-	</form>
-
-	{#if data.unavailable}
-		<p class="error" role="alert">Clubs are unavailable right now. Try again.</p>
-	{:else if data.clubs.length === 0}
-		<p>No published clubs yet.</p>
-	{:else}
-		<ul class="club-list">
-			{#each data.clubs as club (club.id)}
-				<li>
-					<article>
-						<h2>{club.name}</h2>
-						{#if club.category}
-							<p class="meta">{club.category}</p>
-						{/if}
-						{#if club.description}
-							<p>{club.description}</p>
-						{/if}
-						{#if Array.isArray(club.links) && club.links.length}
-							<ul class="links">
-								{#each club.links as link, index (`${club.id}-link-${index}`)}
-									<li>
-										<a href={link.url} rel="noopener noreferrer">{link.label ?? 'Website'}</a>
-									</li>
-								{/each}
-							</ul>
-						{/if}
-					</article>
-				</li>
-			{/each}
-		</ul>
-	{/if}
-
-	{#if data.signedIn}
-		<section class="panel">
-			<h2>Submit a club</h2>
-			<p>Staff publish a listing after they check it.</p>
-			<form method="POST" action="?/submit" class="stack">
-				<label>
-					Club name
-					<input name="name" required maxlength="160" />
-				</label>
-				<label>
-					Category
-					<input name="category" maxlength="80" />
-				</label>
-				<label>
-					Description
-					<textarea name="description" rows="4" maxlength="4000"></textarea>
-				</label>
-				<label>
-					Link label
-					<input name="linkLabel" maxlength="80" />
-				</label>
-				<label>
-					Website
-					<input name="linkUrl" type="url" maxlength="500" />
-				</label>
-				<button type="submit" class="primary">Send for review</button>
-			</form>
-			{#if form?.submitted}
-				<p class="status" role="status">Sent for review.</p>
-			{/if}
-			{#if form?.error}
-				<p class="error" role="alert">{form.error}</p>
-			{/if}
-		</section>
-	{:else}
-		<p><a href="/tools/account">Sign in with Google</a> to submit a club.</p>
-	{/if}
-
-	{#if data.staff}
-		<section class="panel">
-			<h2>Pending listings</h2>
-			{#if form?.published}
-				<p class="status" role="status">Published.</p>
-			{/if}
-			{#if data.pending.length === 0}
-				<p>No pending submissions.</p>
-			{:else}
-				<ul class="pending">
-					{#each data.pending as submission (submission.id)}
-						<li>
-							<strong>{submission.name}</strong>
-							{#if submission.category}
-								<span class="meta">{submission.category}</span>
-							{/if}
-							{#if submission.description}
-								<p>{submission.description}</p>
-							{/if}
-							<form method="POST" action="?/publish">
-								<input type="hidden" name="submissionId" value={submission.id} />
-								<button type="submit" class="primary">Publish</button>
-							</form>
-						</li>
+		<form method="GET" class="index-filters clubs-filters">
+			<label class="search-field">
+				<span>⌕</span>
+				<input name="q" value={data.query} placeholder="Search clubs and interests" />
+			</label>
+			<label>
+				<span>Category</span>
+				<select name="category">
+					<option value="">All categories</option>
+					{#each data.categories ?? [] as option (option)}
+						<option value={option} selected={option === data.category}>{option}</option>
 					{/each}
-				</ul>
+				</select>
+			</label>
+			<button type="submit" class="dark-button">Filter</button>
+		</form>
+
+		{#if data.staff}
+			<aside class="submit-club staff-pending" data-testid="staff-pending-clubs">
+				<div>
+					<strong>Staff</strong>
+					<h2>Pending listings</h2>
+				</div>
+				{#if data.pending.length === 0}
+					<p>No pending submissions.</p>
+				{:else}
+					<div class="staff-pending-list">
+						{#each data.pending as submission (submission.id)}
+							<article data-pending-club={submission.name}>
+								<strong>{submission.name}</strong>
+								{#if submission.category}
+									<span>{submission.category}</span>
+								{/if}
+								{#if submission.description}
+									<p>{submission.description}</p>
+								{/if}
+								<a
+									class="primary-button"
+									href="/tools/clubs/submissions/{submission.id}"
+									data-testid="review-submission"
+								>Review listing</a>
+							</article>
+						{/each}
+					</div>
+				{/if}
+			</aside>
+		{/if}
+
+		{#if data.unavailable}
+			<p class="field-error" role="alert">Clubs are unavailable right now. Try again.</p>
+		{:else if data.clubs.length === 0}
+			<div class="directory-empty" role="status">
+				{#if data.query || data.category}
+					<strong>No clubs match those filters.</strong>
+					<p>Clear the search or choose All categories to see every published listing.</p>
+					<a href="/tools/clubs">Reset filters</a>
+				{:else if data.signedIn}
+					<strong>No published clubs yet.</strong>
+					<p>Use the form below to start a listing for staff review.</p>
+				{:else}
+					<strong>No published clubs yet.</strong>
+					<p>Browse stays open while staff review listings. Sign in to submit one.</p>
+				{/if}
+			</div>
+		{:else}
+			<div class="club-index">
+				<div class="club-head">
+					<span>Organization</span><span>Focus</span><span>Listing</span>
+				</div>
+				{#each data.clubs as club (club.id)}
+					<a class="club-row" href="/tools/clubs/{club.slug}">
+						<div>
+							<span class="club-initials">{initialsFromClubName(club.name)}</span>
+							<div>
+								<h2>{club.name}</h2>
+								{#if club.description}
+									<p>{club.description}</p>
+								{/if}
+							</div>
+						</div>
+						<span>{club.category ?? 'General'}</span>
+						<span class="club-open">Open listing ↗</span>
+					</a>
+				{/each}
+			</div>
+		{/if}
+
+		<aside class="submit-club">
+			<div>
+				<strong>Missing a group?</strong>
+				<h2>Start a club listing</h2>
+			</div>
+			{#if data.unavailable}
+				<p>Club submissions are unavailable right now. Try again later.</p>
+			{:else if data.signedIn}
+				<p>Tell us your role and the club name. You will finish the listing on the next page.</p>
+				<form method="POST" action="?/submit">
+					<label>
+						<span>Your role in this club</span>
+						<select name="submitterRole" required data-testid="submitter-role">
+							<option value="">Choose one</option>
+							{#each CLUB_SUBMITTER_ROLES as role (role.value)}
+								<option value={role.value}>{role.label}</option>
+							{/each}
+						</select>
+					</label>
+					<label>
+						<span>Club name</span>
+						<input name="name" required maxlength="160" />
+					</label>
+					<label>
+						<span>Category</span>
+						<input name="category" maxlength="80" />
+					</label>
+					<button type="submit" class="primary-button">Continue to listing</button>
+				</form>
+				{#if form?.error}
+					<p class="field-error" role="alert">{form.error}</p>
+				{/if}
+			{:else}
+				<p>
+					Sign in to add or update a listing. Staff check it before it goes live.
+				</p>
+				<a class="primary-button" href="/tools/account">Sign in with Google</a>
 			{/if}
-		</section>
-	{/if}
-</section>
-
-<style>
-	.clubs-page {
-		display: grid;
-		padding-block: var(--space-xl);
-		gap: var(--space-md);
-	}
-
-	.intro h1,
-	h1 {
-		font-family: var(--font-display);
-		font-size: var(--text-3xl);
-		line-height: 1.05;
-	}
-
-	.intro p {
-		max-width: 52ch;
-	}
-
-	.filters {
-		display: grid;
-		grid-template-columns: minmax(0, 16rem) minmax(0, 16rem) auto;
-		gap: var(--space-sm);
-		align-items: end;
-		border-block: var(--rule);
-		padding-block: var(--space-sm);
-	}
-
-	.club-list,
-	.pending,
-	.links {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.club-list li + li,
-	.pending li + li,
-	.panel {
-		border-block-start: var(--rule);
-	}
-
-	article,
-	.pending li,
-	.panel {
-		display: grid;
-		gap: var(--space-xs);
-		padding-block: var(--space-md);
-	}
-
-	.meta {
-		color: var(--quiet-steel);
-		font-size: var(--text-sm);
-	}
-
-	.links {
-		display: flex;
-		gap: var(--space-sm);
-		flex-wrap: wrap;
-	}
-
-	.stack,
-	label {
-		display: grid;
-		gap: var(--space-3xs);
-	}
-
-	.stack {
-		gap: var(--space-sm);
-		max-width: 36rem;
-	}
-
-	label {
-		font-size: var(--text-sm);
-		font-weight: 600;
-	}
-
-	input,
-	textarea,
-	button {
-		font: inherit;
-	}
-
-	input,
-	textarea {
-		width: 100%;
-		height: var(--control-height);
-		padding-inline: var(--space-xs);
-		border: var(--rule-strong);
-		border-radius: var(--radius-sm);
-		background: var(--surface-raised);
-	}
-
-	textarea {
-		height: auto;
-		padding: var(--space-sm);
-	}
-
-	.primary {
-		justify-self: start;
-		height: var(--control-height);
-		padding-inline: var(--space-md);
-		border: 0;
-		border-radius: var(--radius-sm);
-		background: var(--club-blue);
-		color: #fff;
-		font-weight: 650;
-	}
-
-	.primary:focus-visible,
-	input:focus-visible,
-	textarea:focus-visible {
-		outline: var(--focus-ring-width) solid var(--club-blue);
-		outline-offset: var(--focus-ring-offset);
-	}
-
-	.error {
-		color: var(--danger);
-		font-size: var(--text-sm);
-	}
-
-	.status {
-		font-size: var(--text-sm);
-	}
-
-	@media (max-width: 40rem) {
-		.filters {
-			grid-template-columns: minmax(0, 1fr);
-		}
-	}
-</style>
+		</aside>
+	</section>
+</div>

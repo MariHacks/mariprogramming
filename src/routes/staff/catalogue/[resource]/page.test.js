@@ -634,11 +634,11 @@ describe('staff catalogue workspace', () => {
 		});
 		expect(screen.getByRole('status')).toHaveTextContent('Book saved.');
 		expect(screen.getByText('No books found.')).toBeVisible();
+		expect(screen.getAllByRole('link', { name: 'Add book' }).length).toBeGreaterThan(0);
 
 		rerender({ data: data('books', { unavailable: true }), form: null });
-		expect(screen.getByRole('alert')).toHaveTextContent(
-			'Catalogue data is unavailable. Try again later.'
-		);
+		expect(screen.getByRole('alert')).toHaveTextContent('Catalogue data is unavailable.');
+		expect(screen.getByRole('link', { name: 'Reload catalogue' })).toBeVisible();
 		expect(document.body).not.toHaveTextContent(/database|postgres|secret/i);
 	});
 });

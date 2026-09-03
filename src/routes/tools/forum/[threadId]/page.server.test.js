@@ -27,13 +27,18 @@ function handlers(overrides = {}) {
 	const store = {
 		getThread: vi.fn(async () => THREAD_ROW),
 		listReplies: vi.fn(async () => [{ id: REPLY, threadId: THREAD, body: 'Thanks' }]),
+		listCatalogCourses: vi.fn(async () => []),
 		getProfile: vi.fn(async () => null),
 		isStaff: vi.fn((email, role) => email === 'team@marihacks.com' || role === 'staff'),
 		createReply: vi.fn(async () => ({ id: REPLY })),
 		createReport: vi.fn(async () => ({ id: 'rep-1' })),
+		updateThread: vi.fn(async () => ({ ...THREAD_ROW, body: 'Edited' })),
+		updateReply: vi.fn(async () => ({ id: REPLY, body: 'Edited reply' })),
 		lockThread: vi.fn(async () => THREAD_ROW),
 		removeThread: vi.fn(async () => THREAD_ROW),
 		removeReply: vi.fn(async () => ({ id: REPLY })),
+		canManageThread: vi.fn(async () => false),
+		canManageReply: vi.fn(async () => false),
 		...overrides.store
 	};
 	return {
@@ -63,15 +68,67 @@ describe('forum thread page server', () => {
 	it('loads a thread for anonymous readers', async () => {
 		const data = await handlers().load(event());
 		expect(data.thread.title).toBe('Midterm tips');
+		expect(data.thread.courseCode).toBeNull();
 		expect(data.replies).toHaveLength(1);
 		expect(data.canReply).toBe(false);
 		expect(JSON.stringify(data)).not.toMatch(/2530622/);
+	});
+
+	it('attaches a catalog course code when the thread is tagged', async () => {
+		const courseId = '11111111-1111-4111-8111-111111111111';
+		const current = handlers({
+			store: {
+				getThread: vi.fn(async () => ({ ...THREAD_ROW, courseId })),
+				listCatalogCourses: vi.fn(async () => [{ id: courseId, code: '203-SN3-RE', title: 'Modern Physics' }])
+			}
+		});
+		const data = await current.load(event());
+		expect(data.thread.courseCode).toBe('203-SN3-RE');
+	});
+
+	it('leaves courseCode empty when the tagged course is gone', async () => {
+		const current = handlers({
+			store: {
+				getThread: vi.fn(async () => ({
+					...THREAD_ROW,
+					courseId: '11111111-1111-4111-8111-111111111111'
+				})),
+				listCatalogCourses: vi.fn(async () => [{ id: 'other', code: '201-NYA-05' }])
+			}
+		});
+		const data = await current.load(event());
+		expect(data.thread.courseCode).toBeNull();
 	});
 
 	it('lets a signed-in student reply when the thread is open', async () => {
 		const data = await handlers().load(event({ locals: { maritools: SESSION } }));
 		expect(data.signedIn).toBe(true);
 		expect(data.canReply).toBe(true);
+	});
+
+	it('passes the viewer into thread and reply loads for manage flags', async () => {
+		const current = handlers({
+			store: {
+				getThread: vi.fn(async (_id, viewer) => ({
+					...THREAD_ROW,
+					canManage: Boolean(viewer?.staff || viewer?.userId === SESSION.userId)
+				})),
+				listReplies: vi.fn(async (_id, viewer) => [
+					{ id: REPLY, body: 'Thanks', canManage: Boolean(viewer?.userId === SESSION.userId) }
+				])
+			}
+		});
+		const data = await current.load(event({ locals: { maritools: SESSION } }));
+		expect(current.store.getThread).toHaveBeenCalledWith(
+			THREAD,
+			expect.objectContaining({ userId: SESSION.userId, staff: false })
+		);
+		expect(current.store.listReplies).toHaveBeenCalledWith(
+			THREAD,
+			expect.objectContaining({ userId: SESSION.userId, staff: false })
+		);
+		expect(data.thread.canManage).toBe(true);
+		expect(data.replies[0].canManage).toBe(true);
 	});
 
 	it('returns not found for missing or removed threads', async () => {
@@ -244,14 +301,239 @@ describe('forum thread page server', () => {
 		).rejects.toThrow('boom');
 	});
 
+	it('edits and deletes as the author or staff', async () => {
+		const author = handlers({
+			store: {
+				canManageThread: vi.fn(async () => true),
+				canManageReply: vi.fn(async () => true)
+			}
+		});
+		await expect(
+			author.actions.edit(
+				event({
+					locals: { maritools: SESSION },
+					form: { targetKind: 'thread', targetId: THREAD, body: 'Updated body' }
+				})
+			)
+		).resolves.toEqual({ edited: true });
+		expect(author.store.updateThread).toHaveBeenCalledWith({
+			id: THREAD,
+			body: 'Updated body'
+		});
+		await expect(
+			author.actions.edit(
+				event({
+					locals: { maritools: SESSION },
+					form: { targetKind: 'reply', targetId: REPLY, body: 'Updated reply' }
+				})
+			)
+		).resolves.toEqual({ edited: true });
+		await expect(
+			author.actions.delete(
+				event({
+					locals: { maritools: SESSION },
+					form: { targetKind: 'reply', targetId: REPLY }
+				})
+			)
+		).resolves.toEqual({ deleted: true });
+		expect(author.store.removeReply).toHaveBeenCalledWith(REPLY);
+
+		const denied = handlers({
+			store: {
+				canManageThread: vi.fn(async () => false),
+				canManageReply: vi.fn(async () => false)
+			}
+		});
+		expect(
+			(
+				await denied.actions.edit(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'thread', targetId: THREAD, body: 'Nope' }
+					})
+				)
+			).status
+		).toBe(403);
+		expect((await denied.actions.edit(event({ form: { body: 'Nope' } }))).status).toBe(401);
+		expect(
+			(
+				await denied.actions.edit(
+					event({ locals: { maritools: SESSION }, form: { targetKind: 'thread', targetId: THREAD } })
+				)
+			).status
+		).toBe(400);
+
+		const staff = handlers({
+			store: {
+				canManageThread: vi.fn(async () => true),
+				canManageReply: vi.fn(async () => true)
+			}
+		});
+		await expect(
+			staff.actions.delete(
+				event({
+					locals: { maritools: STAFF },
+					form: { targetKind: 'thread', targetId: THREAD }
+				})
+			)
+		).rejects.toMatchObject({ status: 303, location: '/tools/forum' });
+		expect(staff.store.removeThread).toHaveBeenCalledWith(THREAD);
+	});
+
+	it('returns bounded edit and delete errors', async () => {
+		const invalid = handlers({
+			store: {
+				canManageThread: vi.fn(async () => true),
+				updateThread: vi.fn(async () => {
+					throw new MaritoolsInputError('invalid');
+				})
+			}
+		});
+		expect(
+			(
+				await invalid.actions.edit(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'thread', targetId: THREAD, body: 'Hi' }
+					})
+				)
+			).status
+		).toBe(400);
+		const downEdit = handlers({
+			store: {
+				canManageThread: vi.fn(async () => true),
+				updateThread: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		expect(
+			(
+				await downEdit.actions.edit(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'thread', targetId: THREAD, body: 'Hi' }
+					})
+				)
+			).status
+		).toBe(503);
+		const boomEdit = handlers({
+			store: {
+				canManageReply: vi.fn(async () => true),
+				updateReply: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			}
+		});
+		await expect(
+			boomEdit.actions.edit(
+				event({
+					locals: { maritools: SESSION },
+					form: { targetKind: 'reply', targetId: REPLY, body: 'Hi' }
+				})
+			)
+		).rejects.toThrow('boom');
+		expect(
+			(
+				await handlers().actions.edit(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'post', targetId: THREAD, body: 'Hi' }
+					})
+				)
+			).status
+		).toBe(400);
+		const down = handlers({
+			store: {
+				canManageReply: vi.fn(async () => true),
+				removeReply: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		expect(
+			(
+				await down.actions.delete(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'reply', targetId: REPLY }
+					})
+				)
+			).status
+		).toBe(503);
+		expect((await handlers().actions.delete(event())).status).toBe(401);
+		expect(
+			(await handlers().actions.delete(event({ locals: { maritools: SESSION } }))).status
+		).toBe(400);
+		expect(
+			(
+				await handlers().actions.delete(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'post', targetId: THREAD }
+					})
+				)
+			).status
+		).toBe(400);
+		const deniedDelete = handlers({
+			store: { canManageReply: vi.fn(async () => false) }
+		});
+		expect(
+			(
+				await deniedDelete.actions.delete(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'reply', targetId: REPLY }
+					})
+				)
+			).status
+		).toBe(403);
+		const invalidDelete = handlers({
+			store: {
+				canManageReply: vi.fn(async () => true),
+				removeReply: vi.fn(async () => {
+					throw new MaritoolsInputError('invalid');
+				})
+			}
+		});
+		expect(
+			(
+				await invalidDelete.actions.delete(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'reply', targetId: REPLY }
+					})
+				)
+			).status
+		).toBe(400);
+		const boomDelete = handlers({
+			store: {
+				canManageReply: vi.fn(async () => true),
+				removeReply: vi.fn(async () => {
+					throw new Error('boom');
+				})
+			}
+		});
+		await expect(
+			boomDelete.actions.delete(
+				event({
+					locals: { maritools: SESSION },
+					form: { targetKind: 'reply', targetId: REPLY }
+				})
+			)
+		).rejects.toThrow('boom');
+	});
+
 	it('moderates as staff', async () => {
 		const current = handlers();
 		await expect(
 			current.actions.moderate(event({ locals: { maritools: STAFF }, form: { moderation: 'lock' } }))
 		).resolves.toEqual({ moderated: true });
-		await current.actions.moderate(
-			event({ locals: { maritools: STAFF }, form: { moderation: 'remove-thread' } })
-		);
+		await expect(
+			current.actions.moderate(
+				event({ locals: { maritools: STAFF }, form: { moderation: 'remove-thread' } })
+			)
+		).rejects.toMatchObject({ status: 303, location: '/tools/forum' });
 		await current.actions.moderate(
 			event({
 				locals: { maritools: STAFF },

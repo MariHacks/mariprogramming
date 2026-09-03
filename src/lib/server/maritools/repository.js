@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, asc, desc, eq, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { ACADEMIC_CALENDAR_RULES, ACADEMIC_TERMS } from '../../maritools/term/calendar.js';
 import {
 	mtAcademicCalendarRules,
@@ -14,7 +14,10 @@ import {
 	mtForumThreads,
 	mtOutlineDocuments,
 	mtOutlineExtractions,
-	mtStudentProfiles
+	mtProgrammingClubMemberships,
+	mtSavedSchedules,
+	mtStudentProfiles,
+	user
 } from '../db/schema';
 import { withDatabaseTransaction } from '../db/transaction.js';
 import { isCompleteStudentId } from './community.js';
@@ -81,6 +84,46 @@ function unavailable() {
 	throw new MariToolsUnavailableError();
 }
 
+/**
+ * @param {any} transaction
+ * @param {string} userId
+ */
+/**
+ * @param {any} profile
+ * @param {number} [now]
+ */
+export function isBanActive(profile, now = Date.now()) {
+	if (!profile?.bannedAt) return false;
+	const until = profile.bannedUntil ?? null;
+	if (!until) return true;
+	const end = until instanceof Date ? until.getTime() : new Date(until).getTime();
+	return Number.isFinite(end) && end > now;
+}
+
+/**
+ * @param {any} profile
+ * @param {number} [now]
+ */
+export function isMuteActive(profile, now = Date.now()) {
+	const until = profile?.mutedUntil ?? null;
+	if (!until) return false;
+	const end = until instanceof Date ? until.getTime() : new Date(until).getTime();
+	return Number.isFinite(end) && end > now;
+}
+
+/**
+ * @param {any} transaction
+ * @param {string} userId
+ */
+async function assertPosterAllowed(transaction, userId) {
+	const profile = oneRow(
+		await transaction.select().from(mtStudentProfiles).where(eq(mtStudentProfiles.userId, userId))
+	);
+	if (!profile) return;
+	if (isBanActive(profile)) return conflict();
+	if (isMuteActive(profile)) return conflict();
+}
+
 /** @param {Buffer | Uint8Array | string} input */
 export function sha256Hex(input) {
 	const buffer = typeof input === 'string' ? Buffer.from(input) : Buffer.from(input);
@@ -140,11 +183,44 @@ export function resolveCatalogContributionStatus(
 /** @param {any} profile */
 export function publicStudentView(profile) {
 	if (profile === null || typeof profile !== 'object') return invalid();
+	const mutedUntil = profile.mutedUntil ?? null;
+	const bannedAt = profile.bannedAt ?? null;
+	const bannedUntil = profile.bannedUntil ?? null;
+	const mutedActive = isMuteActive(profile);
+	const bannedActive = isBanActive(profile);
 	return {
 		userId: profile.userId,
 		displayName: profile.displayName ?? null,
+		username: profile.username ?? null,
+		firstName: profile.firstName ?? null,
+		lastName: profile.lastName ?? null,
+		profileImageDataUrl: profile.profileImageDataUrl ?? null,
 		role: profile.role,
-		nimDisclosureAcceptedAt: profile.nimDisclosureAcceptedAt ?? null
+		nimDisclosureAcceptedAt: profile.nimDisclosureAcceptedAt ?? null,
+		mutedUntil,
+		bannedAt,
+		bannedUntil,
+		isMuted: Boolean(mutedActive),
+		isBanned: Boolean(bannedActive)
+	};
+}
+
+/** Public profile card: no student number, no staff-only internals beyond restriction flags. */
+/** @param {any} profile */
+export function publicProfileCard(profile) {
+	const view = publicStudentView(profile);
+	return {
+		userId: view.userId,
+		displayName: view.displayName,
+		username: view.username,
+		profileImageDataUrl: view.profileImageDataUrl,
+		role: view.role === 'staff' || view.role === 'moderator' ? view.role : 'student',
+		isRestricted: view.isMuted || view.isBanned,
+		isMuted: view.isMuted,
+		isBanned: view.isBanned,
+		mutedUntil: view.mutedUntil,
+		bannedUntil: view.bannedUntil,
+		bannedPermanent: Boolean(view.isBanned && view.bannedAt && !view.bannedUntil)
 	};
 }
 
@@ -198,6 +274,13 @@ function requiredText(value, maximum) {
 /** @param {unknown} value @param {number} maximum */
 function optionalText(value, maximum) {
 	if (value === null || value === undefined) return null;
+	return requiredText(value, maximum);
+}
+
+/** @param {unknown} value @param {number} maximum */
+function optionalBlankText(value, maximum) {
+	if (value === null || value === undefined) return null;
+	if (typeof value === 'string' && value.trim() === '') return null;
 	return requiredText(value, maximum);
 }
 
@@ -378,7 +461,10 @@ async function upsertTermSeed(transaction, seed) {
 			},
 			async () => {
 				const raced = oneRow(
-					await transaction.select().from(mtAcademicTerms).where(eq(mtAcademicTerms.id, seed.term.id))
+					await transaction
+						.select()
+						.from(mtAcademicTerms)
+						.where(eq(mtAcademicTerms.id, seed.term.id))
 				);
 				if (!raced || !termMatchesSeed(seed.term, termDto(raced))) return null;
 				return raced;
@@ -670,6 +756,400 @@ export function createMariToolsRepository({
 			);
 		},
 
+		/**
+		 * @param {{ userId: unknown, email?: unknown, studentId: unknown, username: unknown, firstName: unknown, lastName: unknown, profileImageDataUrl?: unknown, role: unknown, program: unknown, yearLevel: unknown, experienceLevel: unknown, interests: unknown, clubGoals?: unknown, staffVisibilityAccepted: unknown }} input
+		 */
+		async joinProgrammingClub(input) {
+			const userId = requiredUserId(input.userId);
+			if (typeof input.studentId !== 'string' || !isCompleteStudentId(input.studentId))
+				return invalid();
+			const studentId = input.studentId.trim();
+			const username = requiredText(input.username, 32).toLowerCase();
+			if (!/^[a-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const firstName = requiredText(input.firstName, 80);
+			const lastName = requiredText(input.lastName, 80);
+			const displayName = username;
+			const profileImageDataUrl =
+				typeof input.profileImageDataUrl === 'string' && input.profileImageDataUrl
+					? input.profileImageDataUrl
+					: null;
+			const program = requiredText(input.program, 160);
+			const yearLevel = requiredText(input.yearLevel, 8);
+			const experienceLevel = requiredText(input.experienceLevel, 16);
+			const interests = input.interests;
+			const clubGoals = optionalBlankText(input.clubGoals, 1000);
+			if (
+				!['first', 'second', 'third'].includes(yearLevel) ||
+				!['new', 'learning', 'comfortable', 'advanced'].includes(experienceLevel) ||
+				!Array.isArray(interests) ||
+				interests.length === 0 ||
+				interests.some((entry) => typeof entry !== 'string') ||
+				input.staffVisibilityAccepted !== true
+			)
+				return invalid();
+			const role = input.role === 'staff' ? 'staff' : 'student';
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const usernameOwner = oneRow(
+						await transaction
+							.select({ userId: mtStudentProfiles.userId })
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.username, username))
+					);
+					if (usernameOwner && usernameOwner.userId !== userId) return conflict();
+					const profile = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, userId))
+					);
+					if (profile) {
+						if (profile.studentId !== studentId) return conflict();
+						await transaction
+							.update(mtStudentProfiles)
+							.set({
+								displayName,
+								username,
+								firstName,
+								lastName,
+								...(profileImageDataUrl ? { profileImageDataUrl } : {}),
+								updatedAt: new Date()
+							})
+							.where(eq(mtStudentProfiles.userId, userId));
+					} else {
+						const taken = oneRow(
+							await transaction
+								.select()
+								.from(mtStudentProfiles)
+								.where(eq(mtStudentProfiles.studentId, studentId))
+						);
+						if (taken) return conflict();
+						await transaction
+							.insert(mtStudentProfiles)
+							.values({
+								userId,
+								studentId,
+								displayName,
+								username,
+								firstName,
+								lastName,
+								profileImageDataUrl,
+								role
+							});
+					}
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtProgrammingClubMemberships)
+							.where(eq(mtProgrammingClubMemberships.userId, userId))
+					);
+					const savedSchedule = oneRow(
+						await transaction
+							.select()
+							.from(mtSavedSchedules)
+							.where(eq(mtSavedSchedules.userId, userId))
+					);
+					const values = {
+						program,
+						graduationYear: null,
+						yearLevel,
+						experienceLevel,
+						interests,
+						clubGoals,
+						scheduleSharedAt: existing?.scheduleSharedAt ?? (savedSchedule ? new Date() : null),
+						updatedAt: new Date()
+					};
+					if (existing) {
+						const updated = oneRow(
+							await transaction
+								.update(mtProgrammingClubMemberships)
+								.set(values)
+								.where(eq(mtProgrammingClubMemberships.userId, userId))
+								.returning()
+						);
+						return updated ?? unavailable();
+					}
+					const created = oneRow(
+						await transaction
+							.insert(mtProgrammingClubMemberships)
+							.values({ ...values, userId, staffVisibilityAcceptedAt: new Date() })
+							.returning()
+					);
+					return created ?? unavailable();
+				})
+			);
+		},
+
+		/**
+		 * @param {{ userId: unknown, username: unknown, firstName: unknown, lastName: unknown, profileImageDataUrl?: unknown }} input
+		 */
+		async updateMemberProfile(input) {
+			const userId = requiredUserId(input.userId);
+			const username = requiredText(input.username, 32).toLowerCase();
+			if (!/^[a-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const firstName = requiredText(input.firstName, 80);
+			const lastName = requiredText(input.lastName, 80);
+			const hasProfileImage = Object.prototype.hasOwnProperty.call(input, 'profileImageDataUrl');
+			const profileImageDataUrl = hasProfileImage
+				? requiredText(input.profileImageDataUrl, 750_000)
+				: null;
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, userId))
+					);
+					if (!existing) return notFound();
+					const usernameOwner = oneRow(
+						await transaction
+							.select({ userId: mtStudentProfiles.userId })
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.username, username))
+					);
+					if (usernameOwner && usernameOwner.userId !== userId) return conflict();
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({
+								displayName: username,
+								username,
+								firstName,
+								lastName,
+								...(hasProfileImage ? { profileImageDataUrl } : {}),
+								updatedAt: new Date()
+							})
+							.where(eq(mtStudentProfiles.userId, userId))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} userId */
+		async getProgrammingClubMembership(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(async () =>
+				oneRow(
+					await transact((transaction) =>
+						transaction
+							.select()
+							.from(mtProgrammingClubMemberships)
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+					)
+				)
+			);
+		},
+
+		/** @param {unknown} userId */
+		async completeProgrammingClubOnboarding(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtProgrammingClubMemberships)
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+					);
+					if (!existing) return notFound();
+					if (existing.requiredFormCompletedAt) return existing;
+					const updated = oneRow(
+						await transaction
+							.update(mtProgrammingClubMemberships)
+							.set({ requiredFormCompletedAt: new Date(), updatedAt: new Date() })
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} userId */
+		async shareSavedScheduleWithClub(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const schedule = oneRow(
+						await transaction.select().from(mtSavedSchedules).where(eq(mtSavedSchedules.userId, id))
+					);
+					if (!schedule) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtProgrammingClubMemberships)
+							.set({ scheduleSharedAt: new Date(), updatedAt: new Date() })
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+							.returning()
+					);
+					return updated ?? notFound();
+				})
+			);
+		},
+
+		/** @param {unknown} userId */
+		async stopSharingScheduleWithClub(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(async () => {
+				const updated = oneRow(
+					await transact((transaction) =>
+						transaction
+							.update(mtProgrammingClubMemberships)
+							.set({ scheduleSharedAt: null, updatedAt: new Date() })
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+							.returning()
+					)
+				);
+				return updated ?? notFound();
+			});
+		},
+
+		/** @param {{ query?: unknown, page?: unknown }} [filter] */
+		async listStaffClubMembers(filter = {}) {
+			const query = typeof filter.query === 'string' ? filter.query.trim().slice(0, 120) : '';
+			const page = Math.max(1, Number.parseInt(String(filter.page ?? '1'), 10) || 1);
+			const pageSize = 25;
+			return redactUnexpected(async () => {
+				const condition = query
+					? or(
+							ilike(mtStudentProfiles.displayName, `%${query}%`),
+							ilike(mtStudentProfiles.studentId, `%${query}%`),
+							ilike(mtProgrammingClubMemberships.program, `%${query}%`),
+							ilike(user.email, `%${query}%`)
+						)
+					: undefined;
+				const result = await transact(async (transaction) => {
+					let countStatement = transaction
+						.select({ count: sql`count(*)::integer` })
+						.from(mtProgrammingClubMemberships)
+						.innerJoin(
+							mtStudentProfiles,
+							eq(mtStudentProfiles.userId, mtProgrammingClubMemberships.userId)
+						)
+						.innerJoin(user, eq(user.id, mtProgrammingClubMemberships.userId));
+					if (condition) countStatement = countStatement.where(condition);
+					const countRow = oneRow(await countStatement);
+
+					let statement = transaction
+						.select({
+							membership: mtProgrammingClubMemberships,
+							profile: mtStudentProfiles,
+							email: user.email
+						})
+						.from(mtProgrammingClubMemberships)
+						.innerJoin(
+							mtStudentProfiles,
+							eq(mtStudentProfiles.userId, mtProgrammingClubMemberships.userId)
+						)
+						.innerJoin(user, eq(user.id, mtProgrammingClubMemberships.userId));
+					if (condition) statement = statement.where(condition);
+					const rows = await statement
+						.orderBy(desc(mtProgrammingClubMemberships.createdAt))
+						.limit(pageSize)
+						.offset((page - 1) * pageSize);
+					return { rows: asRows(rows), totalCount: Number(countRow?.count ?? 0) };
+				});
+				return {
+					rows: result.rows.map((/** @type {any} */ row) => ({
+						userId: row.membership.userId,
+						email: row.email,
+						studentId: row.profile.studentId,
+						displayName: row.profile.displayName,
+						username: row.profile.username,
+						firstName: row.profile.firstName,
+						lastName: row.profile.lastName,
+						profileImageDataUrl: row.profile.profileImageDataUrl,
+						program: row.membership.program,
+						graduationYear: row.membership.graduationYear,
+						yearLevel: row.membership.yearLevel,
+						experienceLevel: row.membership.experienceLevel,
+						interests: row.membership.interests,
+						clubGoals: row.membership.clubGoals,
+						requiredFormCompletedAt: row.membership.requiredFormCompletedAt,
+						scheduleSharedAt: row.membership.scheduleSharedAt,
+						createdAt: row.membership.createdAt
+					})),
+					totalCount: result.totalCount,
+					query,
+					page,
+					pageSize
+				};
+			});
+		},
+
+		/** @param {unknown} userId */
+		async getStaffClubMember(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(async () => {
+				const row = oneRow(
+					await transact((transaction) =>
+						transaction
+							.select({
+								membership: mtProgrammingClubMemberships,
+								profile: mtStudentProfiles,
+								email: user.email,
+								schedulePaste: mtSavedSchedules.paste
+							})
+							.from(mtProgrammingClubMemberships)
+							.innerJoin(
+								mtStudentProfiles,
+								eq(mtStudentProfiles.userId, mtProgrammingClubMemberships.userId)
+							)
+							.innerJoin(user, eq(user.id, mtProgrammingClubMemberships.userId))
+							.leftJoin(
+								mtSavedSchedules,
+								eq(mtSavedSchedules.userId, mtProgrammingClubMemberships.userId)
+							)
+							.where(eq(mtProgrammingClubMemberships.userId, id))
+					)
+				);
+				if (!row) return null;
+				return {
+					userId: row.membership.userId,
+					email: row.email,
+					studentId: row.profile.studentId,
+					displayName: row.profile.displayName,
+					username: row.profile.username,
+					firstName: row.profile.firstName,
+					lastName: row.profile.lastName,
+					profileImageDataUrl: row.profile.profileImageDataUrl,
+					program: row.membership.program,
+					graduationYear: row.membership.graduationYear,
+					yearLevel: row.membership.yearLevel,
+					experienceLevel: row.membership.experienceLevel,
+					interests: row.membership.interests,
+					clubGoals: row.membership.clubGoals,
+					staffVisibilityAcceptedAt: row.membership.staffVisibilityAcceptedAt,
+					requiredFormCompletedAt: row.membership.requiredFormCompletedAt,
+					scheduleSharedAt: row.membership.scheduleSharedAt,
+					createdAt: row.membership.createdAt,
+					schedulePaste: row.membership.scheduleSharedAt ? row.schedulePaste : null
+				};
+			});
+		},
+
+		async listSharedClubSchedules() {
+			return redactUnexpected(async () =>
+				asRows(
+					await transact((transaction) =>
+						transaction
+							.select({
+								userId: mtProgrammingClubMemberships.userId,
+								paste: mtSavedSchedules.paste
+							})
+							.from(mtProgrammingClubMemberships)
+							.leftJoin(
+								mtSavedSchedules,
+								eq(mtSavedSchedules.userId, mtProgrammingClubMemberships.userId)
+							)
+							.where(isNotNull(mtProgrammingClubMemberships.scheduleSharedAt))
+					)
+				)
+			);
+		},
+
 		/** @param {unknown} userId */
 		async getStudentProfile(userId) {
 			const id = requiredUserId(userId);
@@ -680,6 +1160,138 @@ export function createMariToolsRepository({
 					)
 				)
 			);
+		},
+
+		/**
+		 * Mute posting until `until` (Date).
+		 * @param {unknown} userId
+		 * @param {Date} until
+		 */
+		async muteUser(userId, until) {
+			const id = requiredUserId(userId);
+			if (!(until instanceof Date) || Number.isNaN(until.getTime())) return invalid();
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, id))
+					);
+					if (!existing) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({ mutedUntil: until, updatedAt: new Date() })
+							.where(eq(mtStudentProfiles.userId, id))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/**
+		 * Ban a user. Permanent when `until` is null; timed when `until` is a Date.
+		 * @param {unknown} userId
+		 * @param {{ until?: Date | null }} [opts]
+		 */
+		async banUser(userId, opts = {}) {
+			const id = requiredUserId(userId);
+			const until = Object.prototype.hasOwnProperty.call(opts, 'until') ? opts.until : null;
+			if (until !== null && (!(until instanceof Date) || Number.isNaN(until.getTime()))) {
+				return invalid();
+			}
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, id))
+					);
+					if (!existing) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({
+								bannedAt: new Date(),
+								bannedUntil: until,
+								updatedAt: new Date()
+							})
+							.where(eq(mtStudentProfiles.userId, id))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} userId */
+		async unmuteUser(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, id))
+					);
+					if (!existing) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({ mutedUntil: null, updatedAt: new Date() })
+							.where(eq(mtStudentProfiles.userId, id))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} userId */
+		async unbanUser(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, id))
+					);
+					if (!existing) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({ bannedAt: null, bannedUntil: null, updatedAt: new Date() })
+							.where(eq(mtStudentProfiles.userId, id))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} authorUserId @param {number} [limit] */
+		async listThreadsByAuthor(authorUserId, limit = 20) {
+			const id = requiredUserId(authorUserId);
+			const take = Math.min(Math.max(Number(limit) || 20, 1), 50);
+			return redactUnexpected(async () => {
+				const rows = asRows(
+					await transact((transaction) =>
+						transaction
+							.select()
+							.from(mtForumThreads)
+							.where(and(eq(mtForumThreads.authorUserId, id), isNull(mtForumThreads.removedAt)))
+							.orderBy(desc(mtForumThreads.createdAt))
+							.limit(take)
+					)
+				);
+				return rows;
+			});
 		},
 
 		/** @param {unknown} userId */
@@ -723,7 +1335,7 @@ export function createMariToolsRepository({
 			const extractedText =
 				input.extractedText === undefined || input.extractedText === null
 					? null
-					: requiredText(input.extractedText, 2_000_000);
+					: requiredText(String(input.extractedText).trim(), 2_000_000);
 			return redactUnexpected(() =>
 				transact(async (transaction) => {
 					const existing = oneRow(
@@ -791,6 +1403,129 @@ export function createMariToolsRepository({
 							)
 					)
 				)
+			);
+		},
+
+		/** @param {unknown} userId */
+		async listUserOutlines(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(() =>
+				transact((transaction) =>
+					transaction
+						.select({
+							sha256: mtOutlineDocuments.sha256,
+							createdAt: mtOutlineDocuments.createdAt,
+							reviewProposals: mtOutlineDocuments.reviewProposals,
+							proposals: mtOutlineExtractions.proposals,
+							inferenceCount: mtOutlineExtractions.inferenceCount
+						})
+						.from(mtOutlineDocuments)
+						.leftJoin(
+							mtOutlineExtractions,
+							eq(mtOutlineExtractions.documentSha256, mtOutlineDocuments.sha256)
+						)
+						.where(eq(mtOutlineDocuments.userId, id))
+						.orderBy(desc(mtOutlineDocuments.createdAt))
+				)
+			);
+		},
+
+		/** @param {{ userId: unknown, sha256: unknown, proposals: unknown }} input */
+		async saveOutlineReview(input) {
+			const userId = requiredUserId(input.userId);
+			const sha256 = requiredSha256(input.sha256);
+			const proposals = requiredJsonObject(input.proposals);
+			return redactUnexpected(async () => {
+				const updated = oneRow(
+					await transact((transaction) =>
+						transaction
+							.update(mtOutlineDocuments)
+							.set({ reviewProposals: proposals, updatedAt: new Date() })
+							.where(
+								and(eq(mtOutlineDocuments.userId, userId), eq(mtOutlineDocuments.sha256, sha256))
+							)
+							.returning()
+					)
+				);
+				return updated ?? notFound();
+			});
+		},
+
+		/** @param {{ userId: unknown, sha256: unknown }} input */
+		async deleteOutlineDocument(input) {
+			const userId = requiredUserId(input.userId);
+			const sha256 = requiredSha256(input.sha256);
+			return redactUnexpected(async () => {
+				const deleted = oneRow(
+					await transact((transaction) =>
+						transaction
+							.delete(mtOutlineDocuments)
+							.where(
+								and(eq(mtOutlineDocuments.userId, userId), eq(mtOutlineDocuments.sha256, sha256))
+							)
+							.returning()
+					)
+				);
+				return deleted ?? notFound();
+			});
+		},
+
+		/** @param {unknown} userId */
+		async getSavedSchedule(userId) {
+			const id = requiredUserId(userId);
+			return redactUnexpected(async () =>
+				oneRow(
+					await transact((transaction) =>
+						transaction.select().from(mtSavedSchedules).where(eq(mtSavedSchedules.userId, id))
+					)
+				)
+			);
+		},
+
+		/** @param {{ userId: unknown, paste: unknown }} input */
+		async saveSchedule(input) {
+			const userId = requiredUserId(input.userId);
+			if (typeof input.paste !== 'string' || !input.paste.trim() || input.paste.length > 100_000) {
+				return invalid();
+			}
+			const paste = input.paste;
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtSavedSchedules)
+							.where(eq(mtSavedSchedules.userId, userId))
+					);
+					let saved;
+					if (existing) {
+						saved = oneRow(
+							await transaction
+								.update(mtSavedSchedules)
+								.set({ paste, updatedAt: new Date() })
+								.where(eq(mtSavedSchedules.userId, userId))
+								.returning()
+						);
+					} else {
+						saved = await insertOrRecover(
+							transaction,
+							mtSavedSchedules,
+							{ userId, paste },
+							async () =>
+								oneRow(
+									await transaction
+										.select()
+										.from(mtSavedSchedules)
+										.where(eq(mtSavedSchedules.userId, userId))
+								)
+						);
+					}
+					await transaction
+						.update(mtProgrammingClubMemberships)
+						.set({ scheduleSharedAt: new Date(), updatedAt: new Date() })
+						.where(eq(mtProgrammingClubMemberships.userId, userId));
+					return saved;
+				})
 			);
 		},
 
@@ -877,7 +1612,32 @@ export function createMariToolsRepository({
 										)
 									);
 					const existing = oneRow(await lookup());
-					if (existing) return { extraction: existing, cacheHit: true };
+					if (existing) {
+						const existingNeeds = (() => {
+							const raw = existing.proposals;
+							if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return true;
+							const row = /** @type {Record<string, unknown>} */ (raw);
+							const courseCode = typeof row.courseCode === 'string' ? row.courseCode.trim() : '';
+							const title = typeof row.title === 'string' ? row.title.trim() : '';
+							return !courseCode && !title;
+						})();
+						const incomingHas =
+							typeof proposals.courseCode === 'string' &&
+							proposals.courseCode.trim() &&
+							typeof proposals.title === 'string' &&
+							proposals.title.trim();
+						if (existingNeeds && incomingHas) {
+							const updated = oneRow(
+								await transaction
+									.update(mtOutlineExtractions)
+									.set({ proposals, model, updatedAt: new Date() })
+									.where(eq(mtOutlineExtractions.id, existing.id))
+									.returning()
+							);
+							return { extraction: updated ?? existing, cacheHit: false };
+						}
+						return { extraction: existing, cacheHit: true };
+					}
 					try {
 						const created = oneRow(
 							await transaction
@@ -972,13 +1732,8 @@ export function createMariToolsRepository({
 						return { contribution: updated ?? unavailable(), conflict: true };
 					}
 
-					for (const row of liveOthers.filter((entry) => entry.status === 'published')) {
-						await transaction
-							.update(mtCatalogContributions)
-							.set({ status: 'conflict', updatedAt: new Date() })
-							.where(eq(mtCatalogContributions.id, row.id));
-					}
-
+					// Keep any already-published offering facts live for students.
+					// Later disagreeing uploads enter the staff conflict queue only.
 					const created = await insertOrRecover(
 						transaction,
 						mtCatalogContributions,
@@ -1043,6 +1798,7 @@ export function createMariToolsRepository({
 						transaction
 							.select({
 								id: mtCatalogContributions.id,
+								offeringId: mtCatalogContributions.offeringId,
 								courseId: mtCourses.id,
 								termId: mtCourseOfferings.termId,
 								courseCode: mtCourses.code,
@@ -1064,6 +1820,138 @@ export function createMariToolsRepository({
 				);
 				return termId ? rows.filter((row) => row.termId === termId) : rows;
 			});
+		},
+
+		/**
+		 * Published + conflict contributions for one course (public course page).
+		 * @param {unknown} courseId
+		 */
+		async listCatalogForCourse(courseId) {
+			const id = requiredUuid(courseId);
+			return redactUnexpected(async () => {
+				const rows = asRows(
+					await transact((transaction) =>
+						transaction
+							.select({
+								id: mtCatalogContributions.id,
+								offeringId: mtCatalogContributions.offeringId,
+								courseId: mtCourses.id,
+								termId: mtCourseOfferings.termId,
+								courseCode: mtCourses.code,
+								title: mtCourses.canonicalTitle,
+								section: mtCourseOfferings.section,
+								teacherName: mtCourseOfferings.teacherName,
+								structured: mtCatalogContributions.structured,
+								status: mtCatalogContributions.status,
+								createdAt: mtCatalogContributions.createdAt
+							})
+							.from(mtCatalogContributions)
+							.innerJoin(
+								mtCourseOfferings,
+								eq(mtCatalogContributions.offeringId, mtCourseOfferings.id)
+							)
+							.innerJoin(mtCourses, eq(mtCourseOfferings.courseId, mtCourses.id))
+							.where(
+								and(
+									eq(mtCourses.id, id),
+									inArray(mtCatalogContributions.status, ['published', 'conflict'])
+								)
+							)
+							.orderBy(asc(mtCourseOfferings.section), asc(mtCatalogContributions.createdAt))
+					)
+				);
+				return rows;
+			});
+		},
+
+		/**
+		 * Offerings with at least one conflict: return every live peer (published + conflict)
+		 * so staff can compare the catalog incumbent with later disagreeing uploads.
+		 */
+		async listConflictCatalog() {
+			return redactUnexpected(async () => {
+				const rows = asRows(
+					await transact((transaction) =>
+						transaction
+							.select({
+								id: mtCatalogContributions.id,
+								offeringId: mtCatalogContributions.offeringId,
+								documentSha256: mtCatalogContributions.documentSha256,
+								structured: mtCatalogContributions.structured,
+								contributorUserId: mtCatalogContributions.contributorUserId,
+								status: mtCatalogContributions.status,
+								createdAt: mtCatalogContributions.createdAt,
+								updatedAt: mtCatalogContributions.updatedAt,
+								termId: mtCourseOfferings.termId,
+								courseCode: mtCourses.code,
+								title: mtCourses.canonicalTitle,
+								section: mtCourseOfferings.section,
+								teacherName: mtCourseOfferings.teacherName
+							})
+							.from(mtCatalogContributions)
+							.innerJoin(
+								mtCourseOfferings,
+								eq(mtCatalogContributions.offeringId, mtCourseOfferings.id)
+							)
+							.innerJoin(mtCourses, eq(mtCourseOfferings.courseId, mtCourses.id))
+							.where(inArray(mtCatalogContributions.status, ['conflict', 'published']))
+							.orderBy(asc(mtCourses.code), asc(mtCatalogContributions.createdAt))
+					)
+				);
+				const conflictOfferingIds = new Set(
+					rows.filter((row) => row.status === 'conflict').map((row) => row.offeringId)
+				);
+				return rows.filter((row) => conflictOfferingIds.has(row.offeringId));
+			});
+		},
+
+		/**
+		 * Staff picks one peer as published; other live peers for that offering
+		 * become withdrawn so the public catalog can show a single fact set.
+		 * @param {unknown} contributionId
+		 */
+		async resolveCatalogConflict(contributionId) {
+			const id = requiredUuid(contributionId);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtCatalogContributions)
+							.where(eq(mtCatalogContributions.id, id))
+					);
+					if (!existing) return notFound();
+					if (existing.status !== 'conflict' && existing.status !== 'published') {
+						return invalid();
+					}
+
+					/** @type {any} */
+					let published = existing;
+					if (existing.status === 'conflict') {
+						published = oneRow(
+							await transaction
+								.update(mtCatalogContributions)
+								.set({ status: 'published', updatedAt: new Date() })
+								.where(eq(mtCatalogContributions.id, id))
+								.returning()
+						);
+						if (!published) return unavailable();
+					}
+
+					await transaction
+						.update(mtCatalogContributions)
+						.set({ status: 'withdrawn', updatedAt: new Date() })
+						.where(
+							and(
+								eq(mtCatalogContributions.offeringId, existing.offeringId),
+								ne(mtCatalogContributions.id, id),
+								inArray(mtCatalogContributions.status, ['conflict', 'published'])
+							)
+						);
+
+					return published;
+				})
+			);
 		},
 
 		/**
@@ -1110,6 +1998,23 @@ export function createMariToolsRepository({
 			);
 		},
 
+		/** @param {unknown} slug */
+		async getPublishedClubBySlug(slug) {
+			const normalized = typeof slug === 'string' ? slug.trim() : '';
+			if (!normalized || !SLUG_PATTERN.test(normalized)) return null;
+			return redactUnexpected(async () =>
+				oneRow(
+					await transact((transaction) =>
+						transaction
+							.select()
+							.from(mtClubs)
+							.where(and(eq(mtClubs.slug, normalized), eq(mtClubs.published, true)))
+							.limit(1)
+					)
+				)
+			);
+		},
+
 		/** @param {{ submitterUserId?: unknown, clubId?: unknown, payload: unknown }} input */
 		async submitClub(input) {
 			const submitterUserId = optionalUserId(input.submitterUserId);
@@ -1141,6 +2046,47 @@ export function createMariToolsRepository({
 				);
 				return status ? rows.filter((row) => row.status === status) : rows;
 			});
+		},
+
+		/** @param {unknown} id */
+		async getClubSubmission(id) {
+			const submissionId = requiredUuid(id);
+			return redactUnexpected(async () =>
+				oneRow(
+					await transact((transaction) =>
+						transaction
+							.select()
+							.from(mtClubSubmissions)
+							.where(eq(mtClubSubmissions.id, submissionId))
+							.limit(1)
+					)
+				)
+			);
+		},
+
+		/** @param {unknown} id @param {unknown} payload */
+		async updateClubSubmissionPayload(id, payload) {
+			const submissionId = requiredUuid(id);
+			const nextPayload = requiredJsonObject(payload);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtClubSubmissions)
+							.where(eq(mtClubSubmissions.id, submissionId))
+					);
+					if (!existing) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtClubSubmissions)
+							.set({ payload: nextPayload, updatedAt: new Date() })
+							.where(eq(mtClubSubmissions.id, submissionId))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
 		},
 
 		/** @param {unknown} id @param {unknown} status */
@@ -1191,12 +2137,13 @@ export function createMariToolsRepository({
 			const termId = optionalText(input.termId, 64);
 			return redactUnexpected(async () => {
 				const created = oneRow(
-					await transact((transaction) =>
-						transaction
+					await transact(async (transaction) => {
+						await assertPosterAllowed(transaction, authorUserId);
+						return transaction
 							.insert(mtForumThreads)
 							.values({ authorUserId, title, body, category, courseId, offeringId, termId })
-							.returning()
-					)
+							.returning();
+					})
 				);
 				return created ?? unavailable();
 			});
@@ -1247,6 +2194,7 @@ export function createMariToolsRepository({
 			const body = requiredText(input.body, 20_000);
 			return redactUnexpected(() =>
 				transact(async (transaction) => {
+					await assertPosterAllowed(transaction, authorUserId);
 					const thread = oneRow(
 						await transaction.select().from(mtForumThreads).where(eq(mtForumThreads.id, threadId))
 					);
@@ -1337,6 +2285,64 @@ export function createMariToolsRepository({
 						await transaction
 							.update(mtForumReplies)
 							.set({ removedAt: new Date(), updatedAt: new Date() })
+							.where(eq(mtForumReplies.id, replyId))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {unknown} id */
+		async getReply(id) {
+			const replyId = requiredUuid(id);
+			return redactUnexpected(async () =>
+				oneRow(
+					await transact((transaction) =>
+						transaction.select().from(mtForumReplies).where(eq(mtForumReplies.id, replyId))
+					)
+				)
+			);
+		},
+
+		/** @param {{ id: unknown, body: unknown }} input */
+		async updateThread(input) {
+			const threadId = requiredUuid(input.id);
+			const body = requiredText(input.body, 20_000);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction.select().from(mtForumThreads).where(eq(mtForumThreads.id, threadId))
+					);
+					if (!existing) return notFound();
+					if (existing.removedAt) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtForumThreads)
+							.set({ body, updatedAt: new Date() })
+							.where(eq(mtForumThreads.id, threadId))
+							.returning()
+					);
+					return updated ?? unavailable();
+				})
+			);
+		},
+
+		/** @param {{ id: unknown, body: unknown }} input */
+		async updateReply(input) {
+			const replyId = requiredUuid(input.id);
+			const body = requiredText(input.body, 20_000);
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction.select().from(mtForumReplies).where(eq(mtForumReplies.id, replyId))
+					);
+					if (!existing) return notFound();
+					if (existing.removedAt) return notFound();
+					const updated = oneRow(
+						await transaction
+							.update(mtForumReplies)
+							.set({ body, updatedAt: new Date() })
 							.where(eq(mtForumReplies.id, replyId))
 							.returning()
 					);

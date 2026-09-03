@@ -13,6 +13,7 @@ import {
 	fall2026TermSeed,
 	isUniqueViolation,
 	publicOutlineView,
+	publicProfileCard,
 	publicStudentView,
 	resolveCatalogContributionStatus,
 	sha256Hex,
@@ -48,6 +49,7 @@ function queuedRepo(queue) {
 			orderBy: () => chain,
 			limit: () => chain,
 			innerJoin: () => chain,
+			leftJoin: () => chain,
 			insert: () => chain,
 			values: () => chain,
 			returning: () => chain,
@@ -115,6 +117,44 @@ describe('maritools repository helpers', () => {
 		expect(JSON.stringify(view)).not.toContain('2530622');
 		expect(publicStudentView({ userId: 'u1', role: 'staff' }).displayName).toBe(null);
 		expect(() => publicStudentView(null)).toThrow(MariToolsValidationError);
+		expect(
+			publicProfileCard({
+				userId: 'u1',
+				displayName: 'Ada',
+				role: 'student',
+				studentId: '2530622',
+				bannedAt: new Date()
+			})
+		).toMatchObject({
+			userId: 'u1',
+			displayName: 'Ada',
+			role: 'student',
+			isRestricted: true,
+			isBanned: true,
+			bannedPermanent: true
+		});
+		expect(
+			publicProfileCard({
+				userId: 'u1',
+				displayName: 'Ada',
+				role: 'student',
+				bannedAt: new Date(),
+				bannedUntil: new Date(Date.now() + 86400000)
+			})
+		).toMatchObject({
+			isBanned: true,
+			bannedPermanent: false
+		});
+		expect(
+			JSON.stringify(
+				publicProfileCard({
+					userId: 'u1',
+					displayName: 'Ada',
+					role: 'student',
+					studentId: '2530622'
+				})
+			)
+		).not.toContain('2530622');
 		const outline = publicOutlineView({
 			id: 'd1',
 			userId: 'u1',
@@ -136,6 +176,73 @@ describe('maritools repository helpers', () => {
 		const all = committedTermSeeds();
 		expect(all.map((entry) => entry.term.id)).toEqual(['fall-2026', 'winter-2027']);
 		expect(() => committedTermSeeds([{ id: 'fall-2026' }], {})).toThrow(MariToolsUnavailableError);
+	});
+
+	it('updates member identity, enforces username ownership, and preserves an omitted avatar', async () => {
+		const existing = {
+			userId: USER,
+			studentId: '2530622',
+			username: 'old_name',
+			profileImageDataUrl: 'data:image/png;base64,b2xk'
+		};
+		const updated = {
+			...existing,
+			username: 'ada_codes',
+			displayName: 'ada_codes',
+			firstName: 'Ada',
+			lastName: 'Lovelace'
+		};
+
+		await expect(
+			queuedRepo([[existing], [], [updated]]).updateMemberProfile({
+				userId: USER,
+				username: 'ada_codes',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).resolves.toEqual(updated);
+		await expect(
+			queuedRepo([[existing], [{ userId: 'someone-else' }]]).updateMemberProfile({
+				userId: USER,
+				username: 'taken_name',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).rejects.toBeInstanceOf(MariToolsConflictError);
+		await expect(
+			queuedRepo([[existing], [{ userId: USER }], [{ ...updated, profileImageDataUrl: 'new' }]])
+				.updateMemberProfile({
+					userId: USER,
+					username: 'ada_codes',
+					firstName: 'Ada',
+					lastName: 'Lovelace',
+					profileImageDataUrl: 'new'
+				})
+		).resolves.toMatchObject({ profileImageDataUrl: 'new' });
+		await expect(
+			queuedRepo([[]]).updateMemberProfile({
+				userId: USER,
+				username: 'ada_codes',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([[existing], [], []]).updateMemberProfile({
+				userId: USER,
+				username: 'ada_codes',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(
+			queuedRepo([]).updateMemberProfile({
+				userId: USER,
+				username: 'bad name',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).rejects.toBeInstanceOf(MariToolsValidationError);
 	});
 
 	it('rejects invalid repository configuration', () => {
@@ -172,6 +279,12 @@ describe('createMariToolsRepository', () => {
 		).rejects.toBeInstanceOf(MariToolsValidationError);
 		await expect(
 			repository.saveOutlineDocument({ userId: USER, sha256: SHA, byteLength: 0 })
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.saveOutlineReview({ userId: USER, sha256: SHA, proposals: [] })
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			repository.deleteOutlineDocument({ userId: USER, sha256: 'bad' })
 		).rejects.toBeInstanceOf(MariToolsValidationError);
 		await expect(repository.findExtraction({})).rejects.toBeInstanceOf(MariToolsValidationError);
 		await expect(
@@ -232,6 +345,13 @@ describe('createMariToolsRepository', () => {
 		await expect(repository.submitClub({ payload: [] })).rejects.toBeInstanceOf(
 			MariToolsValidationError
 		);
+		await expect(repository.getClubSubmission('bad')).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(repository.updateClubSubmissionPayload('bad', { name: 'Chess' })).rejects.toBeInstanceOf(
+			MariToolsValidationError
+		);
+		await expect(repository.updateClubSubmissionPayload(SUBMISSION, [])).rejects.toBeInstanceOf(
+			MariToolsValidationError
+		);
 		await expect(repository.listClubSubmissions({ status: 'nope' })).rejects.toBeInstanceOf(
 			MariToolsValidationError
 		);
@@ -241,6 +361,8 @@ describe('createMariToolsRepository', () => {
 		await expect(repository.setClubSubmissionStatus(SUBMISSION, 'nope')).rejects.toBeInstanceOf(
 			MariToolsValidationError
 		);
+		expect(await repository.getPublishedClubBySlug(null)).toBeNull();
+		expect(await repository.getPublishedClubBySlug('Bad Slug')).toBeNull();
 		await expect(
 			repository.createThread({ authorUserId: USER, title: 'Hi', body: 'Hello', category: 'memes' })
 		).rejects.toBeInstanceOf(MariToolsValidationError);
@@ -283,6 +405,10 @@ describe('createMariToolsRepository', () => {
 			runTransaction: vi.fn().mockRejectedValue(new MariToolsValidationError())
 		});
 		await expect(validation.listPublishedClubs()).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(domain.getPublishedClubBySlug('robotics')).rejects.toBeInstanceOf(MariToolsConflictError);
+		await expect(validation.getPublishedClubBySlug('robotics')).rejects.toBeInstanceOf(
+			MariToolsValidationError
+		);
 	});
 
 	it('covers seed races, malformed rows, and offering recovery', async () => {
@@ -341,6 +467,8 @@ describe('createMariToolsRepository', () => {
 		await expect(
 			queuedRepo([[{ termId: 'x' }]]).getCalendarRules('fall-2026')
 		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(queuedRepo([[]]).getTerm('fall-2026')).resolves.toBeNull();
+		await expect(queuedRepo([[]]).getCalendarRules('fall-2026')).resolves.toBeNull();
 		await expect(
 			queuedRepo([
 				[
@@ -553,6 +681,45 @@ describe('createMariToolsRepository', () => {
 				extractedText: 'hello'
 			})
 		).resolves.toEqual(existingDoc);
+		await expect(
+			queuedRepo([[], [existingDoc]]).saveOutlineDocument({
+				userId: USER,
+				sha256: SHA,
+				byteLength: 12,
+				extractedText: '  hello from a real course outline PDF  '
+			})
+		).resolves.toEqual(existingDoc);
+		await expect(
+			createMariToolsRepository({
+				databaseUrl: 'postgresql://x',
+				runTransaction: vi.fn()
+			}).saveOutlineDocument({
+				userId: USER,
+				sha256: SHA,
+				byteLength: 12,
+				extractedText: '   '
+			})
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+
+		const savedOutline = {
+			sha256: SHA,
+			createdAt: new Date('2026-08-30T12:00:00.000Z'),
+			proposals: { courseCode: '203-SN3-RE', title: 'Modern Physics' },
+			inferenceCount: 1
+		};
+		await expect(queuedRepo([[savedOutline]]).listUserOutlines(USER)).resolves.toEqual([
+			savedOutline
+		]);
+
+		await expect(queuedRepo([[{ paste: '1\tCalculus\n' }]]).getSavedSchedule(USER)).resolves.toEqual({
+			paste: '1\tCalculus\n'
+		});
+		await expect(
+			queuedRepo([[], [{ paste: '1\tCalculus\n' }]]).saveSchedule({
+				userId: USER,
+				paste: '1\tCalculus\n'
+			})
+		).resolves.toEqual({ paste: '1\tCalculus\n' });
 
 		const extraction = { id: THREAD, documentSha256: SHA, offeringId: OFFERING };
 		await expect(
@@ -639,7 +806,6 @@ describe('createMariToolsRepository', () => {
 				[{ id: OFFERING }],
 				[],
 				[{ ...published, documentSha256: OTHER_SHA, status: 'published' }],
-				undefined,
 				[{ id: REPORT, status: 'conflict' }]
 			]).publishCatalogContribution({
 				offeringId: OFFERING,
@@ -674,11 +840,52 @@ describe('createMariToolsRepository', () => {
 			]).listPublishedCatalog({ termId: 'fall-2026' })
 		).resolves.toEqual([{ termId: 'fall-2026', slug: 'a' }]);
 		await expect(
+			queuedRepo([[{ status: 'conflict', courseCode: '420-NYA-05' }]]).listConflictCatalog()
+		).resolves.toEqual([{ status: 'conflict', courseCode: '420-NYA-05' }]);
+		const CONTRIB = '70000000-0000-4000-8000-000000000001';
+		await expect(queuedRepo([[]]).resolveCatalogConflict(CONTRIB)).rejects.toBeInstanceOf(
+			MariToolsNotFoundError
+		);
+		await expect(
+			queuedRepo([
+				[{ id: CONTRIB, offeringId: OFFERING, status: 'published' }],
+				[]
+			]).resolveCatalogConflict(CONTRIB)
+		).resolves.toMatchObject({ id: CONTRIB, status: 'published' });
+		await expect(
+			queuedRepo([[{ id: CONTRIB, offeringId: OFFERING, status: 'withdrawn' }]]).resolveCatalogConflict(
+				CONTRIB
+			)
+		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(
+			queuedRepo([
+				[{ id: CONTRIB, offeringId: OFFERING, status: 'conflict' }],
+				[{ id: CONTRIB, offeringId: OFFERING, status: 'published' }],
+				[]
+			]).resolveCatalogConflict(CONTRIB)
+		).resolves.toMatchObject({ id: CONTRIB, status: 'published' });
+		await expect(
 			queuedRepo([uniqueError()]).createClub({ name: 'Chess', slug: 'chess' })
 		).rejects.toBeInstanceOf(MariToolsConflictError);
 		await expect(
 			queuedRepo([[]]).submitClub({ payload: { name: 'Chess' } })
 		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(queuedRepo([[]]).getClubSubmission(SUBMISSION)).resolves.toBeNull();
+		await expect(
+			queuedRepo([[]]).updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })
+		).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([[{ id: SUBMISSION }], []]).updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(
+			queuedRepo([[{ id: SUBMISSION, payload: { name: 'Chess' } }]]).getClubSubmission(SUBMISSION)
+		).resolves.toMatchObject({ id: SUBMISSION });
+		await expect(
+			queuedRepo([
+				[{ id: SUBMISSION, payload: { name: 'Old' } }],
+				[{ id: SUBMISSION, payload: { name: 'Chess' } }]
+			]).updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })
+		).resolves.toMatchObject({ payload: { name: 'Chess' } });
 		await expect(
 			queuedRepo([[]]).setClubSubmissionStatus(SUBMISSION, 'published')
 		).rejects.toBeInstanceOf(MariToolsNotFoundError);
@@ -694,24 +901,24 @@ describe('createMariToolsRepository', () => {
 			})
 		).rejects.toBeInstanceOf(MariToolsUnavailableError);
 		await expect(
-			queuedRepo([[]]).createReply({ threadId: THREAD, authorUserId: USER, body: 'hi' })
+			queuedRepo([[], []]).createReply({ threadId: THREAD, authorUserId: USER, body: 'hi' })
 		).rejects.toBeInstanceOf(MariToolsNotFoundError);
 		await expect(
-			queuedRepo([[{ id: THREAD, removedAt: new Date() }]]).createReply({
+			queuedRepo([[], [{ id: THREAD, removedAt: new Date() }]]).createReply({
 				threadId: THREAD,
 				authorUserId: USER,
 				body: 'hi'
 			})
 		).rejects.toBeInstanceOf(MariToolsNotFoundError);
 		await expect(
-			queuedRepo([[{ id: THREAD, lockedAt: new Date(), removedAt: null }]]).createReply({
+			queuedRepo([[], [{ id: THREAD, lockedAt: new Date(), removedAt: null }]]).createReply({
 				threadId: THREAD,
 				authorUserId: USER,
 				body: 'hi'
 			})
 		).rejects.toBeInstanceOf(MariToolsConflictError);
 		await expect(
-			queuedRepo([[{ id: THREAD, lockedAt: null, removedAt: null }], []]).createReply({
+			queuedRepo([[], [{ id: THREAD, lockedAt: null, removedAt: null }], []]).createReply({
 				threadId: THREAD,
 				authorUserId: USER,
 				body: 'hi'
@@ -726,6 +933,44 @@ describe('createMariToolsRepository', () => {
 		await expect(
 			queuedRepo([[{ id: THREAD, lockedAt: null }], []]).lockThread(THREAD)
 		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		const until = new Date(Date.now() + 86400000);
+		await expect(queuedRepo([[]]).muteUser(USER, until)).rejects.toBeInstanceOf(
+			MariToolsNotFoundError
+		);
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student', studentId: '2530622' }],
+				[{ userId: USER, role: 'student', mutedUntil: until }]
+			]).muteUser(USER, until)
+		).resolves.toMatchObject({ userId: USER, mutedUntil: until });
+		await expect(queuedRepo([[]]).banUser(USER)).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student', studentId: '2530622' }],
+				[{ userId: USER, role: 'student', bannedAt: new Date(), bannedUntil: null }]
+			]).banUser(USER)
+		).resolves.toMatchObject({ userId: USER, bannedUntil: null });
+		const banUntil = new Date(Date.now() + 86400000);
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student', studentId: '2530622' }],
+				[{ userId: USER, role: 'student', bannedAt: new Date(), bannedUntil: banUntil }]
+			]).banUser(USER, { until: banUntil })
+		).resolves.toMatchObject({ userId: USER, bannedUntil: banUntil });
+		await expect(queuedRepo([[]]).unmuteUser(USER)).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student', mutedUntil: until }],
+				[{ userId: USER, role: 'student', mutedUntil: null }]
+			]).unmuteUser(USER)
+		).resolves.toMatchObject({ userId: USER, mutedUntil: null });
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student', bannedAt: new Date() }],
+				[{ userId: USER, role: 'student', bannedAt: null, bannedUntil: null }]
+			]).unbanUser(USER)
+		).resolves.toMatchObject({ userId: USER, bannedAt: null });
+		await expect(queuedRepo([[]]).listThreadsByAuthor(USER)).resolves.toEqual([]);
 		await expect(queuedRepo([[]]).removeThread(THREAD)).rejects.toBeInstanceOf(
 			MariToolsNotFoundError
 		);
@@ -743,6 +988,51 @@ describe('createMariToolsRepository', () => {
 		).resolves.toMatchObject({ id: REPLY });
 		await expect(
 			queuedRepo([[{ id: REPLY, removedAt: null }], []]).removeReply(REPLY)
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(
+			queuedRepo([
+				[{ id: THREAD, removedAt: null, body: 'old' }],
+				[{ id: THREAD, removedAt: null, body: 'Edited' }]
+			]).updateThread({ id: THREAD, body: 'Edited' })
+		).resolves.toMatchObject({ id: THREAD, body: 'Edited' });
+		await expect(
+			queuedRepo([
+				[{ id: REPLY, removedAt: null, body: 'old' }],
+				[{ id: REPLY, removedAt: null, body: 'Edited' }]
+			]).updateReply({ id: REPLY, body: 'Edited' })
+		).resolves.toMatchObject({ id: REPLY, body: 'Edited' });
+		await expect(queuedRepo([[{ id: REPLY }]]).getReply(REPLY)).resolves.toMatchObject({
+			id: REPLY
+		});
+		await expect(queuedRepo([[]]).updateThread({ id: THREAD, body: 'Edited' })).rejects.toBeInstanceOf(
+			MariToolsNotFoundError
+		);
+		await expect(
+			queuedRepo([[{ id: THREAD, removedAt: new Date() }]]).updateThread({
+				id: THREAD,
+				body: 'Edited'
+			})
+		).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([[{ id: THREAD, removedAt: null }], []]).updateThread({
+				id: THREAD,
+				body: 'Edited'
+			})
+		).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(queuedRepo([[]]).updateReply({ id: REPLY, body: 'Edited' })).rejects.toBeInstanceOf(
+			MariToolsNotFoundError
+		);
+		await expect(
+			queuedRepo([[{ id: REPLY, removedAt: new Date() }]]).updateReply({
+				id: REPLY,
+				body: 'Edited'
+			})
+		).rejects.toBeInstanceOf(MariToolsNotFoundError);
+		await expect(
+			queuedRepo([[{ id: REPLY, removedAt: null }], []]).updateReply({
+				id: REPLY,
+				body: 'Edited'
+			})
 		).rejects.toBeInstanceOf(MariToolsUnavailableError);
 		await expect(
 			queuedRepo([[]]).createReport({

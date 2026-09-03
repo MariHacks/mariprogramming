@@ -65,12 +65,17 @@ describe('events route', () => {
 		).not.toBeInTheDocument();
 	});
 
-	it('offers useful workshop and Discord alternatives without stale schedule leakage', () => {
+	it('offers useful alternatives without a second workshop exit or stale schedule leakage', () => {
 		const { container } = render(EventsPage);
 
-		expect(screen.getByRole('link', { name: 'Browse workshop archive' })).toHaveAttribute(
+		expect(screen.getByRole('link', { name: 'Browse workshops' })).toHaveAttribute(
 			'href',
 			'/our-workshops'
+		);
+		expect(screen.queryByRole('link', { name: 'Browse workshop archive' })).not.toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Browse resources' })).toHaveAttribute(
+			'href',
+			'/resources'
 		);
 		expect(screen.getByRole('link', { name: 'Join Discord' })).toHaveAttribute(
 			'href',

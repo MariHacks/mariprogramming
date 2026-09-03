@@ -1,4 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
+
+const privateEnv = vi.hoisted(() => ({ LIVE_E2E_MODE: undefined }));
+
+vi.mock('$env/dynamic/private', () => ({ env: privateEnv }));
+
 import {
 	createRequestPool,
 	createTransactionDatabase,
@@ -46,20 +51,33 @@ describe('request-scoped database transactions', () => {
 	});
 
 	it('uses direct PostgreSQL only for the explicit isolated local mode', async () => {
-		const previousMode = process.env.LIVE_E2E_MODE;
-		process.env.LIVE_E2E_MODE = 'isolated-local';
+		privateEnv.LIVE_E2E_MODE = 'isolated-local';
 		try {
 			const pool = createRequestPool('postgresql://local:secret@127.0.0.1:5432/app');
 			expect(pool.constructor.name).toBe('BoundPool');
 			expect(pool.options.connectionString).toBe('postgresql://local:secret@127.0.0.1:5432/app');
 			await pool.end();
 
-			const database = createTransactionDatabase(/** @type {any} */ ({}));
+			const database = createTransactionDatabase(
+				/** @type {any} */ ({}),
+				'postgresql://local:secret@127.0.0.1:5432/app'
+			);
 			expect(database.transaction).toEqual(expect.any(Function));
 		} finally {
-			if (previousMode === undefined) delete process.env.LIVE_E2E_MODE;
-			else process.env.LIVE_E2E_MODE = previousMode;
+			privateEnv.LIVE_E2E_MODE = undefined;
 		}
+	});
+
+	it('uses direct PostgreSQL for loopback database URLs during local development', async () => {
+		const pool = createRequestPool('postgresql://local:secret@127.0.0.1:5432/app');
+		expect(pool.constructor.name).toBe('BoundPool');
+		await pool.end();
+
+		const database = createTransactionDatabase(
+			/** @type {any} */ ({}),
+			'postgresql://local:secret@127.0.0.1:5432/app'
+		);
+		expect(database.transaction).toEqual(expect.any(Function));
 	});
 
 	it('uses one checked-out client for the callback, then releases and closes in order', async () => {
@@ -91,7 +109,7 @@ describe('request-scoped database transactions', () => {
 			'postgresql://runtime:secret@database.example/app'
 		);
 		expect(setup.connect).toHaveBeenCalledOnce();
-		expect(setup.createDatabase).toHaveBeenCalledWith(setup.client);
+		expect(setup.createDatabase).toHaveBeenCalledWith(setup.client, 'postgresql://runtime:secret@database.example/app');
 		expect(setup.transaction).toHaveBeenCalledOnce();
 		expect(operation).toHaveBeenCalledOnce();
 		expect(calls).toEqual(['operation', 'release', 'end']);
