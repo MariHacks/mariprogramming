@@ -1,8 +1,17 @@
+import { readFileSync } from 'node:fs';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CANONICAL_OMNIVOX_SCHEDULE } from '$lib/maritools/schedule/fixture.js';
 import { NIM_DISCLOSURE } from '$lib/server/maritools/community.js';
 import AccountPage from './+page.svelte';
+
+const accountPageSource = readFileSync('src/routes/tools/account/+page.svelte', 'utf8');
+
+/** @param {string} selector */
+function cssRulesFor(selector) {
+	const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return accountPageSource.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+}
 
 vi.mock('$lib/auth/staff-sign-out.js', () => ({
 	endStaffSession: vi.fn(async () => true)
@@ -253,6 +262,10 @@ describe('account page', () => {
 
 		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
 		expectActionRail('Join the club');
+
+		expect(cssRulesFor('.profile-form > form > .onboarding-panel')).toContain('min-height: 0;');
+		expect(cssRulesFor('.profile-form-action')).toContain('margin-top: 2rem;');
+		expect(cssRulesFor('.profile-form-action')).not.toContain('margin-top: auto;');
 	});
 
 	it('restores an unfinished signup draft and its active tab', async () => {
@@ -381,6 +394,9 @@ describe('account page', () => {
 		expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
 		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
 		expect(screen.getByRole('heading', { name: 'Complete the member form' })).toBeInTheDocument();
+		expect(
+			screen.queryByText('Open the required member form before joining.')
+		).not.toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Open required form' })).toHaveAttribute(
 			'href',
 			base.requiredFormUrl
@@ -419,6 +435,25 @@ describe('account page', () => {
 		const calendar = screen.getByLabelText('Weekly course schedule');
 		expect(calendar).toBeVisible();
 		expect(calendar).toHaveClass('weekday-only');
+		expect(accountPageSource).not.toMatch(
+			/\.schedule-onboarding-preview\s*\{[^}]*max-height:/gu
+		);
+		expect(cssRulesFor('.schedule-onboarding-preview')).toContain('overflow: visible;');
+		expect(cssRulesFor('.schedule-onboarding-preview :global(.schedule-calendar)')).toContain(
+			'overflow: visible;'
+		);
+		expect(
+			cssRulesFor(
+				'.schedule-onboarding-preview :global(.schedule-calendar .time-rail span:first-child)'
+			)
+		).toContain('top: 0;');
+		expect(
+			cssRulesFor(
+				'.schedule-onboarding-preview :global(.schedule-calendar .time-rail span:last-child)'
+			)
+		).toContain('bottom: 0;');
+		expect(screen.getByText('8 AM')).toBeInTheDocument();
+		expect(screen.getByText('6 PM')).toBeInTheDocument();
 		expect(screen.queryByText('Schedule preview')).not.toBeInTheDocument();
 		expect(screen.queryByText('Paste your courses to preview them')).not.toBeInTheDocument();
 		for (const weekday of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']) {

@@ -345,7 +345,7 @@
 		(schedulePaste.trim().length === 0 || parseOmnivox(schedulePaste).ok);
 	$: signupIsReady = informationIsValid && interestsAreValid && scheduleIsValid && memberFormOpened;
 	$: signupBlockedMessage = !memberFormOpened
-		? 'Open the required member form before joining.'
+		? ''
 		: !informationIsValid || !interestsAreValid
 			? 'Complete all required fields before joining.'
 			: !scheduleIsValid
@@ -816,7 +816,7 @@
 									on:click={() => (memberFormOpened = true)}>Open required form</a
 								>
 							</div>
-							{#if !signupIsReady}<p
+							{#if signupBlockedMessage}<p
 									id="signup-blocked-message"
 									class="signup-blocked-message"
 									role="status"
@@ -833,7 +833,7 @@
 									type="button"
 									class="dark-button"
 									disabled={!signupIsReady}
-									aria-describedby={signupIsReady ? undefined : 'signup-blocked-message'}
+									aria-describedby={signupBlockedMessage ? 'signup-blocked-message' : undefined}
 									on:click={submitSignup}>Join the club</button
 								>
 							</div>
@@ -1446,7 +1446,7 @@
 	.profile-form > form > .onboarding-panel {
 		display: flex;
 		flex-direction: column;
-		min-height: 34rem;
+		min-height: 0;
 	}
 
 	.member-form-intro {
@@ -1504,9 +1504,8 @@
 	}
 
 	.schedule-onboarding-preview {
-		max-height: 19rem;
 		border: 1px solid var(--line-dark);
-		overflow: auto;
+		overflow: visible;
 		background: white;
 	}
 
@@ -1515,7 +1514,16 @@
 		grid-template-rows: 2.5rem calc(var(--hour-h) * 10);
 		width: 100%;
 		min-width: 0;
-		overflow-x: hidden;
+		overflow: visible;
+	}
+
+	.schedule-onboarding-preview :global(.schedule-calendar .time-rail span:first-child) {
+		top: 0;
+	}
+
+	.schedule-onboarding-preview :global(.schedule-calendar .time-rail span:last-child) {
+		top: auto;
+		bottom: 0;
 	}
 
 	.schedule-onboarding-preview :global(.schedule-calendar .calendar-corner) {
@@ -1732,8 +1740,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-top: auto;
-		padding-top: 2rem;
+		margin-top: 2rem;
 		gap: 1rem;
 	}
 
@@ -1870,10 +1877,6 @@
 
 		.schedule-onboarding-workspace {
 			grid-template-columns: 1fr;
-		}
-
-		.schedule-onboarding-preview {
-			max-height: 22rem;
 		}
 
 		.member-form-intro > .primary-button {
