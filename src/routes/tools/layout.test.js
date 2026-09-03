@@ -168,4 +168,32 @@ describe('tools layout', () => {
 		unmount();
 		expect(document.body.style.overflow).toBe('');
 	});
+
+	it('dismisses an open drawer when onboarding hides the tools navigation', async () => {
+		window.matchMedia = vi.fn().mockImplementation((query) => ({
+			matches: query.includes('max-width'),
+			media: query,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn()
+		}));
+		testPage.set({
+			url: { pathname: '/tools/account', searchParams: new URLSearchParams() },
+			data: { onboardingPending: false }
+		});
+		const user = userEvent.setup();
+		const { container } = render(ToolsLayout);
+
+		await user.click(screen.getByRole('button', { name: 'Tools' }));
+		expect(document.body.style.overflow).toBe('hidden');
+
+		testPage.set({
+			url: { pathname: '/tools/account', searchParams: new URLSearchParams() },
+			data: { onboardingPending: true }
+		});
+		await Promise.resolve();
+
+		expect(container.querySelector('.sidebar-scrim')).not.toBeInTheDocument();
+		expect(screen.queryByRole('navigation', { name: 'MariTools' })).not.toBeInTheDocument();
+		expect(document.body.style.overflow).toBe('');
+	});
 });

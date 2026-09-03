@@ -36,7 +36,14 @@ describe('tools mobile layout contract', () => {
 	});
 
 	it('keeps the closed drawer noninteractive and sizes it to the dynamic viewport', () => {
+		expect(toolsLayout).toMatch(/min-height:\s*calc\(100vh[^;]*;[\s\S]*?min-height:\s*calc\(100dvh/s);
 		expect(toolsLayout).toMatch(/\.tools-sidebar\s*{[^}]*height:\s*calc\(100dvh[^}]*visibility:\s*hidden[^}]*pointer-events:\s*none/s);
 		expect(toolsLayout).toMatch(/\.tools-sidebar\[data-open='true'\]\s*{[^}]*visibility:\s*visible[^}]*pointer-events:\s*auto/s);
+		expect(toolsLayout).toMatch(
+			/@media \(max-width: 51\.999rem\)[\s\S]*?--tools-header-offset:\s*4\.5rem[\s\S]*?@media \(max-width: 43\.749rem\)[\s\S]*?--tools-header-offset:\s*4\.25rem/s
+		);
+		expect(toolsLayout).toMatch(
+			/\.tools-wordmark,[\s\S]*?\.sidebar-close,[\s\S]*?\.tools-menu,[\s\S]*?min-height:\s*2\.75rem/s
+		);
 	});
 });
