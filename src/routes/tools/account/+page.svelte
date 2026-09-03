@@ -1563,6 +1563,14 @@
 		font-weight: 600;
 	}
 
+	.profile-field--wide > select {
+		min-height: 2.75rem;
+	}
+
+	.profile-form-action button {
+		min-height: 2.75rem;
+	}
+
 	.profile-field--wide > span small {
 		font: inherit;
 		font-weight: 450;
@@ -1700,6 +1708,29 @@
 	}
 
 	@media (max-width: 44rem) {
+		.profile-enrollment,
+		.profile-form,
+		.onboarding-panel,
+		.schedule-onboarding-workspace {
+			min-width: 0;
+		}
+
+		.schedule-onboarding-preview {
+			min-width: 0;
+			overflow: hidden;
+		}
+
+		.profile-form {
+			padding: 1.25rem 1rem 2rem;
+		}
+
+		.onboarding-tabs button,
+		.schedule-tutorial-button,
+		.member-form-intro > .primary-button,
+		.profile-google {
+			min-height: 2.75rem;
+		}
+
 		.community-profile-hero {
 			min-height: 0;
 			align-items: flex-start;
@@ -1774,9 +1805,45 @@
 		}
 
 		.profile-hero--member {
-			grid-template-columns: 1fr;
-			align-items: start;
-			gap: 1.75rem;
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: center;
+			min-height: 0;
+			padding: 0.75rem 1rem;
+			gap: 0.5rem;
+		}
+
+		.profile-hero--member .profile-avatar {
+			width: 3rem;
+		}
+
+		.profile-hero--member .profile-identity {
+			gap: 0.625rem;
+		}
+
+		.profile-hero--member .profile-identity h1 {
+			font-size: clamp(1.35rem, 6vw, 1.75rem);
+			line-height: 1;
+		}
+
+		.profile-hero--member .profile-identity strong {
+			margin-top: 0.25rem;
+			font-size: 0.8rem;
+		}
+
+		.profile-hero--member .profile-identity p {
+			font-size: 0.72rem;
+			overflow-wrap: anywhere;
+		}
+
+		.profile-hero--member .profile-session {
+			width: auto;
+			padding: 0;
+		}
+
+		.profile-hero--member .profile-session button {
+			width: auto;
+			min-height: 2.75rem;
+			padding-inline: 0.75rem;
 		}
 
 		.profile-form > form > .onboarding-panel {
@@ -1793,6 +1860,47 @@
 
 		.schedule-onboarding-workspace {
 			grid-template-columns: 1fr;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar) {
+			grid-template-columns: 2.75rem repeat(5, minmax(0, 1fr));
+			width: 100%;
+			min-width: 0;
+			overflow: visible;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .calendar-corner) {
+			font-size: 0.5rem;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .time-rail span) {
+			right: 0.35rem;
+			font-size: 0.52rem;
+			white-space: nowrap;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .event) {
+			left: calc((100% / var(--lanes)) * var(--lane) + 1px);
+			width: calc(100% / var(--lanes) - 2px);
+			padding: 0.2rem;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .event strong) {
+			display: -webkit-box;
+			font-size: 0.58rem;
+			line-height: 1.05;
+			white-space: normal;
+			-webkit-box-orient: vertical;
+			-webkit-line-clamp: 2;
+			line-clamp: 2;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .event span) {
+			font-size: 0.5rem;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .event small) {
+			display: none;
 		}
 
 		.member-form-intro > .primary-button {

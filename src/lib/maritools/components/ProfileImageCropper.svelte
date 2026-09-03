@@ -37,6 +37,8 @@
 	let chooseButton;
 	/** @type {HTMLButtonElement | undefined} */
 	let useButton;
+	/** @type {HTMLElement | undefined} */
+	let cropDialog;
 	/** @type {number | null} */
 	let pointerId = null;
 	let pointerX = 0;
@@ -158,7 +160,8 @@
 				fileName: file.name
 			};
 			await tick();
-			useButton?.focus();
+			if (cropDialog) cropDialog.scrollTop = 0;
+			useButton?.focus({ preventScroll: true });
 		} catch {
 			URL.revokeObjectURL(sourceUrl);
 			error = 'That image could not be opened. Choose another one.';
@@ -330,7 +333,13 @@
 
 {#if draft}
 	<div class="dialog-backdrop" data-crop-dialog>
-		<div class="crop-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-crop-title`}>
+		<div
+			bind:this={cropDialog}
+			class="crop-dialog"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby={`${id}-crop-title`}
+		>
 			<header>
 				<div>
 					<p>Profile picture</p>
@@ -661,19 +670,66 @@
 	}
 
 	@media (max-width: 34rem) {
+		.dialog-backdrop {
+			place-items: stretch;
+			padding: 0;
+		}
+
+		.crop-dialog {
+			width: 100vw;
+			height: 100dvh;
+			max-height: none;
+			border: 0;
+		}
+
+		.crop-dialog header {
+			position: sticky;
+			z-index: 2;
+			top: 0;
+			min-height: 2.75rem;
+			background: white;
+		}
+
+		.crop-dialog footer {
+			position: sticky;
+			z-index: 2;
+			bottom: 0.125rem;
+			min-height: 2.75rem;
+			background: white;
+		}
+
+		.crop-dialog button,
+		.crop-dialog input {
+			min-height: 2.75rem;
+		}
+
+		.crop-preview-wrap {
+			padding: 1rem 1.25rem 0.65rem;
+		}
+
+		.crop-preview {
+			width: min(100%, 19rem);
+		}
+
 		.crop-controls label {
 			grid-template-columns: 1fr;
 			gap: 0.25rem;
 		}
 
 		.crop-dialog footer {
-			align-items: stretch;
-			flex-direction: column;
+			align-items: center;
+			flex-direction: row;
+			padding: 0.65rem 0.75rem;
+			gap: 0.5rem;
 		}
 
 		.crop-dialog footer > div {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
+			display: flex;
+			gap: 0.4rem;
+		}
+
+		.crop-dialog footer button {
+			padding-inline: 0.75rem;
 		}
 	}
 </style>

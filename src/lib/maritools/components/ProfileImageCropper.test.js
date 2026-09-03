@@ -1,6 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ProfileImageCropper from './ProfileImageCropper.svelte';
+import { readFileSync } from 'node:fs';
+
+const cropperSource = readFileSync('src/lib/maritools/components/ProfileImageCropper.svelte', 'utf8');
 
 /** @type {WeakMap<HTMLInputElement, FileList | null>} */
 let assignedFiles = new WeakMap();
@@ -78,6 +81,7 @@ afterEach(() => {
 
 describe('ProfileImageCropper', () => {
 	it('opens an accessible crop dialog and restores focus when cancelled', async () => {
+		const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
 		render(ProfileImageCropper, { props: { id: 'avatar', label: 'Profile picture' } });
 		const choose = screen.getByRole('button', { name: 'Choose image' });
 		const picker = screen.getByLabelText('Choose profile picture file');
@@ -87,6 +91,12 @@ describe('ProfileImageCropper', () => {
 		});
 
 		expect(await screen.findByRole('dialog', { name: 'Crop profile picture' })).toBeInTheDocument();
+		const usePhoto = screen.getByRole('button', { name: 'Use photo' });
+		expect(
+			focusSpy.mock.calls.some(
+				(call, index) => focusSpy.mock.contexts[index] === usePhoto && call[0]?.preventScroll === true
+			)
+		).toBe(true);
 		expect(picker).not.toBeVisible();
 		expect(screen.getByTestId('cropped-profile-image')).not.toBeVisible();
 		expect(screen.getByLabelText('Zoom')).toHaveValue('1');
@@ -102,6 +112,13 @@ describe('ProfileImageCropper', () => {
 		expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 		expect(choose).toHaveFocus();
 		expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:avatar');
+	});
+
+	it('uses a viewport-height mobile dialog with persistent header and actions', () => {
+		expect(cropperSource).toContain('height: 100dvh;');
+		expect(cropperSource).toMatch(/\.crop-dialog header\s*\{[^}]*position: sticky;/su);
+		expect(cropperSource).toMatch(/\.crop-dialog footer\s*\{[^}]*position: sticky;/su);
+		expect(cropperSource).toMatch(/\.crop-dialog footer\s*\{[^}]*flex-direction: row;/su);
 	});
 
 	it('creates a square WebP file and exposes it through the multipart field', async () => {

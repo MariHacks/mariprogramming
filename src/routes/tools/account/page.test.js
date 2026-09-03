@@ -12,6 +12,19 @@ function cssRulesFor(selector) {
 	return accountPageSource.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
 }
 
+/** @param {string} query @param {string} selector */
+function cssRulesForMedia(query, selector) {
+	const mediaStart = accountPageSource.indexOf(`@media (${query})`);
+	if (mediaStart < 0) return '';
+	const nextMedia = accountPageSource.indexOf('@media (', mediaStart + 1);
+	const mediaSource = accountPageSource.slice(
+		mediaStart,
+		nextMedia < 0 ? accountPageSource.length : nextMedia
+	);
+	const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return mediaSource.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+}
+
 vi.mock('$lib/auth/staff-sign-out.js', () => ({
 	endStaffSession: vi.fn(async () => true)
 }));
@@ -455,6 +468,43 @@ describe('account page', () => {
 		for (const weekday of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']) {
 			expect(screen.getByText(weekday)).toBeInTheDocument();
 		}
+	});
+
+	it('fits the five-day schedule and touch targets into a narrow signup viewport', () => {
+		expect(
+			cssRulesFor('.profile-field--wide > select')
+		).toContain('min-height: 2.75rem;');
+		expect(cssRulesFor('.profile-form-action button')).toContain('min-height: 2.75rem;');
+		expect(cssRulesForMedia('max-width: 44rem', '.profile-hero--member')).toContain(
+			'min-height: 0;'
+		);
+		expect(cssRulesForMedia('max-width: 44rem', '.profile-hero--member')).toContain(
+			'grid-template-columns: minmax(0, 1fr) auto;'
+		);
+		expect(cssRulesForMedia('max-width: 44rem', '.profile-hero--member')).toContain(
+			'padding: 0.75rem 1rem;'
+		);
+		expect(cssRulesForMedia('max-width: 44rem', '.schedule-onboarding-preview')).toContain(
+			'overflow: hidden;'
+		);
+		expect(
+			cssRulesForMedia(
+				'max-width: 44rem',
+				'.schedule-onboarding-preview :global(.schedule-calendar)'
+			)
+		).toContain('grid-template-columns: 2.75rem repeat(5, minmax(0, 1fr));');
+		expect(
+			cssRulesForMedia(
+				'max-width: 44rem',
+				'.schedule-onboarding-preview :global(.schedule-calendar .event strong)'
+			)
+		).toContain('font-size: 0.58rem;');
+		expect(
+			cssRulesForMedia(
+				'max-width: 44rem',
+				'.schedule-onboarding-preview :global(.schedule-calendar .event strong)'
+			)
+		).toContain('white-space: normal;');
 	});
 
 	it('previews a valid schedule immediately after it is pasted during signup', async () => {
