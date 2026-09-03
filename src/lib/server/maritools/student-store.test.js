@@ -78,6 +78,14 @@ function inner(overrides = {}) {
 }
 
 describe('createStudentStore', () => {
+	it('lists terms through the repository', async () => {
+		const listTerms = vi.fn(async () => [{ id: 'fall-2026', label: 'Fall 2026' }]);
+		const store = createStudentStore(inner({ listTerms }));
+
+		await expect(store.listTerms()).resolves.toEqual([{ id: 'fall-2026', label: 'Fall 2026' }]);
+		expect(listTerms).toHaveBeenCalledOnce();
+	});
+
 	it('completes a student profile without accepting outline analysis', async () => {
 		const repo = inner();
 		const store = createStudentStore(repo);
@@ -165,6 +173,37 @@ describe('createStudentStore', () => {
 			})
 		);
 		await expect(uncoded.listPublishedCatalog({ query: '203' })).resolves.toEqual([]);
+	});
+
+	it('maps every course catalog field and nullable relation', async () => {
+		const createdAt = new Date('2026-08-30T12:00:00.000Z');
+		const listCatalogForCourse = vi.fn(async () => [
+			{
+				...FLAT_ENTRY,
+				offeringId: 'off-1',
+				courseId: 'course-1',
+				createdAt
+			},
+			{ ...FLAT_ENTRY, id: 'c2' }
+		]);
+		const store = createStudentStore(inner({ listCatalogForCourse }));
+
+		await expect(store.listCatalogForCourse('course-1')).resolves.toEqual([
+			{
+				...FLAT_ENTRY,
+				offeringId: 'off-1',
+				courseId: 'course-1',
+				createdAt
+			},
+			{
+				...FLAT_ENTRY,
+				id: 'c2',
+				offeringId: null,
+				courseId: null,
+				createdAt: null
+			}
+		]);
+		expect(listCatalogForCourse).toHaveBeenCalledWith('course-1');
 	});
 
 	it('matches catalog query as case-insensitive substring on code, title, or teacher', async () => {
@@ -278,6 +317,10 @@ describe('createStudentStore', () => {
 		await store.saveSchedule({ userId: USER, paste: '2\tPhysics\n' });
 
 		expect(repo.saveSchedule).toHaveBeenCalledWith({ userId: USER, paste: '2\tPhysics\n' });
+	});
+
+	it('returns an empty schedule when none is saved', async () => {
+		await expect(createStudentStore(inner()).getSchedule(USER)).resolves.toBe('');
 	});
 
 	it('contributes through offering identity', async () => {
