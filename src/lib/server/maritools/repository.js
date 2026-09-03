@@ -415,6 +415,7 @@ function redactUnexpected(operation) {
 		) {
 			throw error;
 		}
+		if (isUniqueViolation(error)) throw new MariToolsConflictError();
 		throw new MariToolsUnavailableError();
 	});
 }
@@ -764,8 +765,9 @@ export function createMariToolsRepository({
 			if (typeof input.studentId !== 'string' || !isCompleteStudentId(input.studentId))
 				return invalid();
 			const studentId = input.studentId.trim();
-			const username = requiredText(input.username, 32).toLowerCase();
-			if (!/^[a-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const username = requiredText(input.username, 32);
+			if (!/^[A-Za-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const usernameKey = username.toLowerCase();
 			const firstName = requiredText(input.firstName, 80);
 			const lastName = requiredText(input.lastName, 80);
 			const displayName = username;
@@ -794,7 +796,7 @@ export function createMariToolsRepository({
 						await transaction
 							.select({ userId: mtStudentProfiles.userId })
 							.from(mtStudentProfiles)
-							.where(eq(mtStudentProfiles.username, username))
+							.where(sql`lower(${mtStudentProfiles.username}) = ${usernameKey}`)
 					);
 					if (usernameOwner && usernameOwner.userId !== userId) return conflict();
 					const profile = oneRow(
@@ -885,8 +887,9 @@ export function createMariToolsRepository({
 		 */
 		async updateMemberProfile(input) {
 			const userId = requiredUserId(input.userId);
-			const username = requiredText(input.username, 32).toLowerCase();
-			if (!/^[a-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const username = requiredText(input.username, 32);
+			if (!/^[A-Za-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const usernameKey = username.toLowerCase();
 			const firstName = requiredText(input.firstName, 80);
 			const lastName = requiredText(input.lastName, 80);
 			const hasProfileImage = Object.prototype.hasOwnProperty.call(input, 'profileImageDataUrl');
@@ -906,7 +909,7 @@ export function createMariToolsRepository({
 						await transaction
 							.select({ userId: mtStudentProfiles.userId })
 							.from(mtStudentProfiles)
-							.where(eq(mtStudentProfiles.username, username))
+							.where(sql`lower(${mtStudentProfiles.username}) = ${usernameKey}`)
 					);
 					if (usernameOwner && usernameOwner.userId !== userId) return conflict();
 					const updated = oneRow(

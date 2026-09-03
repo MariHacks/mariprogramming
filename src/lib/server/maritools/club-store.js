@@ -81,8 +81,8 @@ function optionalText(value, maximum) {
 
 /** @param {unknown} value */
 function username(value) {
-	const normalized = text(value, 32).toLowerCase();
-	if (!/^[a-z0-9_]{3,24}$/u.test(normalized)) throw new ClubInputError('invalid-username');
+	const normalized = text(value, 32);
+	if (!/^[A-Za-z0-9_]{3,24}$/u.test(normalized)) throw new ClubInputError('invalid-username');
 	return normalized;
 }
 

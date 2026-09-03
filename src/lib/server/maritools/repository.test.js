@@ -34,7 +34,7 @@ function uniqueError() {
 	return Object.assign(new Error('duplicate'), { code: '23505' });
 }
 
-function queuedRepo(queue) {
+function queuedRepo(queue, writes = []) {
 	let index = 0;
 	const runTransaction = vi.fn(async (operation) => {
 		const take = () => {
@@ -54,7 +54,10 @@ function queuedRepo(queue) {
 			values: () => chain,
 			returning: () => chain,
 			update: () => chain,
-			set: () => chain,
+			set: (values) => {
+				writes.push(values);
+				return chain;
+			},
 			execute: async () => [],
 			then(resolve, reject) {
 				return Promise.resolve().then(take).then(resolve, reject);
@@ -179,6 +182,7 @@ describe('maritools repository helpers', () => {
 	});
 
 	it('updates member identity, enforces username ownership, and preserves an omitted avatar', async () => {
+		const writes = [];
 		const existing = {
 			userId: USER,
 			studentId: '2530622',
@@ -194,17 +198,29 @@ describe('maritools repository helpers', () => {
 		};
 
 		await expect(
-			queuedRepo([[existing], [], [updated]]).updateMemberProfile({
+			queuedRepo(
+				[[existing], [], [{ ...updated, username: 'ZHiCh', displayName: 'ZHiCh' }]],
+				writes
+			).updateMemberProfile({
 				userId: USER,
-				username: 'ada_codes',
+				username: 'ZHiCh',
 				firstName: 'Ada',
 				lastName: 'Lovelace'
 			})
-		).resolves.toEqual(updated);
+		).resolves.toMatchObject({ username: 'ZHiCh', displayName: 'ZHiCh' });
+		expect(writes).toEqual([expect.objectContaining({ username: 'ZHiCh', displayName: 'ZHiCh' })]);
 		await expect(
 			queuedRepo([[existing], [{ userId: 'someone-else' }]]).updateMemberProfile({
 				userId: USER,
 				username: 'taken_name',
+				firstName: 'Ada',
+				lastName: 'Lovelace'
+			})
+		).rejects.toBeInstanceOf(MariToolsConflictError);
+		await expect(
+			queuedRepo([[existing], [], uniqueError()]).updateMemberProfile({
+				userId: USER,
+				username: 'RaceName',
 				firstName: 'Ada',
 				lastName: 'Lovelace'
 			})

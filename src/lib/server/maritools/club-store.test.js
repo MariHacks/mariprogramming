@@ -27,7 +27,7 @@ const joinInput = Object.freeze({
 	userId: 'user-1',
 	email: 'ada@example.com',
 	studentId: '2530622',
-	username: 'ada_codes',
+	username: 'Ada_Codes',
 	firstName: 'Ada',
 	lastName: 'Lovelace',
 	profileImageDataUrl: null,
@@ -52,13 +52,13 @@ describe('programming club store', () => {
 			})
 		).resolves.toMatchObject({
 			userId: 'user-1',
-			username: 'ada_codes',
+			username: 'Ada_Codes',
 			firstName: 'Ada',
 			lastName: 'Lovelace'
 		});
 		expect(inner.updateMemberProfile).toHaveBeenCalledWith({
 			userId: 'user-1',
-			username: 'ada_codes',
+			username: 'Ada_Codes',
 			firstName: 'Ada',
 			lastName: 'Lovelace'
 		});
