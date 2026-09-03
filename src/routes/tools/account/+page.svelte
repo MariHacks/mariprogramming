@@ -622,8 +622,10 @@
 										minlength="5"
 										maxlength="8"
 										required={data.club?.kind !== 'needs_required_form'}
-										placeholder={data.club?.kind === 'needs_required_form' ? 'Already saved' : ''}
 									/>
+									{#if data.club?.kind === 'needs_required_form'}
+										<small>Already saved</small>
+									{/if}
 								</label>
 								<label>
 									<span>Program</span>

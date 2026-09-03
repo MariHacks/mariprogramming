@@ -396,6 +396,8 @@ describe('account page', () => {
 				}
 			}
 		});
+		expect(screen.getByLabelText(/^Student number/)).not.toHaveAttribute('placeholder');
+		expect(screen.getByText('Already saved')).toBeInTheDocument();
 		expect(screen.getByRole('tab', { name: 'Schedule' })).not.toBeDisabled();
 		expect(screen.getByRole('tab', { name: 'Member form' })).not.toBeDisabled();
 		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
