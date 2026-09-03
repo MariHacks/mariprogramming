@@ -29,7 +29,6 @@
 	let interests = data.onboardingDraft?.interests ?? [];
 	let clubGoals = data.onboardingDraft?.clubGoals ?? '';
 	let interestError = false;
-	let memberFormOpened = false;
 	let draftReady = false;
 	const signupDraftKey = `programming-club-signup-draft:${data.view.email ?? 'signed-out'}`;
 
@@ -202,7 +201,6 @@
 			? draft.interests.filter((/** @type {unknown} */ interest) => typeof interest === 'string')
 			: [];
 		clubGoals = typeof draft.clubGoals === 'string' ? draft.clubGoals : '';
-		memberFormOpened = draft.memberFormOpened === true;
 	}
 
 	function tryPersistSignupDraft() {
@@ -220,8 +218,7 @@
 					yearLevel,
 					experienceLevel,
 					interests,
-					clubGoals,
-					memberFormOpened
+					clubGoals
 				})
 			);
 		} catch {
@@ -282,7 +279,6 @@
 		experienceLevel;
 		interests;
 		clubGoals;
-		memberFormOpened;
 		tryPersistSignupDraft();
 	}
 	$: informationIsValid =
@@ -303,12 +299,8 @@
 		interests.length > 0 &&
 		interests.every((/** @type {string} */ interest) => interestOptions.includes(interest)) &&
 		clubGoals.length <= 1000;
-	$: signupIsReady = informationIsValid && interestsAreValid && memberFormOpened;
-	$: signupBlockedMessage = !memberFormOpened
-		? ''
-		: !informationIsValid || !interestsAreValid
-			? 'Complete all required fields before joining.'
-			: '';
+	$: signupIsReady = informationIsValid && interestsAreValid;
+	$: signupBlockedMessage = signupIsReady ? '' : 'Complete all required fields before joining.';
 </script>
 
 <svelte:head>
@@ -684,10 +676,8 @@
 						>
 							<div class="member-form-intro">
 								<div>
-									<h2 id="required-form-title" aria-label="Complete the member form">
-										Complete your membership
-									</h2>
-									<p>Open the Marianopolis member form in a new tab, then return here to join.</p>
+									<h2 id="required-form-title">Fill out the Microsoft form later</h2>
+									<p class="member-form-later-note">This does not block your signup.</p>
 									<div class="member-form-club-note" role="note" aria-label="Club name">
 										<span>Choose</span>
 										<strong>The Programming Club</strong>
@@ -698,8 +688,7 @@
 									class="primary-button"
 									href={data.requiredFormUrl}
 									target="_blank"
-									rel="external noopener noreferrer"
-									on:click={() => (memberFormOpened = true)}>Open required form</a
+									rel="external noopener noreferrer">Open required form</a
 								>
 							</div>
 							{#if signupBlockedMessage}<p
@@ -1327,6 +1316,21 @@
 		grid-template-columns: minmax(0, 1fr) auto;
 		align-items: start;
 		gap: 2rem;
+	}
+
+	.member-form-intro h2 {
+		max-width: 13ch;
+		font-size: clamp(2.75rem, 6vw, 5.5rem);
+		font-weight: 850;
+		letter-spacing: -0.055em;
+		line-height: 0.94;
+	}
+
+	.member-form-later-note {
+		margin-top: 1rem;
+		color: var(--ink);
+		font-size: 1.05rem;
+		font-weight: 750;
 	}
 
 	.member-form-club-note {

@@ -161,7 +161,10 @@ describe('account page', () => {
 		expect(screen.queryByRole('button', { name: 'Join the club' })).not.toBeInTheDocument();
 
 		await fireEvent.click(memberFormTab);
-		expect(screen.getByRole('heading', { name: 'Complete the member form' })).toBeInTheDocument();
+		expect(
+			screen.getByRole('heading', { name: 'Fill out the Microsoft form later' })
+		).toBeInTheDocument();
+		expect(screen.getByText('This does not block your signup.')).toBeInTheDocument();
 		expect(screen.getByRole('note', { name: 'Club name' })).toHaveTextContent(
 			'The Programming Club'
 		);
@@ -198,7 +201,7 @@ describe('account page', () => {
 		).toHaveTextContent('Optional');
 	});
 
-	it('enables the final submission only after every required field is valid and the member form was opened', async () => {
+	it('enables final submission when required signup fields are valid without opening the member form', async () => {
 		render(AccountPage, {
 			props: { data: { ...base, view: { kind: 'incomplete', email: 'ada@gmail.com' } } }
 		});
@@ -207,37 +210,26 @@ describe('account page', () => {
 		const joinButton = screen.getByRole('button', { name: 'Join the club' });
 		expect(joinButton).toBeDisabled();
 
-		await fireEvent.click(screen.getByRole('link', { name: 'Open required form' }));
-		expect(screen.queryByText('Member form opened')).not.toBeInTheDocument();
-		expect(joinButton).toBeDisabled();
-
 		await fireEvent.click(screen.getByRole('tab', { name: 'Information' }));
 		await completeRequiredSignupFields();
 		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
 		await waitFor(() => expect(joinButton).toBeEnabled());
 	});
 
-	it('persists that the required member form was opened with the local signup draft', async () => {
+	it('does not store member-form opening state in the local signup draft', async () => {
 		const props = {
 			data: { ...base, view: { kind: 'incomplete', email: 'ada@gmail.com' } }
 		};
-		const firstRender = render(AccountPage, { props });
+		render(AccountPage, { props });
 		await completeRequiredSignupFields();
 		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
-		await fireEvent.click(screen.getByRole('link', { name: 'Open required form' }));
 		await waitFor(() =>
 			expect(screen.getByRole('button', { name: 'Join the club' })).toBeEnabled()
 		);
-		firstRender.unmount();
-
-		render(AccountPage, { props });
-		expect(screen.getByRole('tab', { name: 'Member form' })).toHaveAttribute(
-			'aria-selected',
-			'true'
+		const draft = JSON.parse(
+			localStorage.getItem('programming-club-signup-draft:ada@gmail.com') ?? '{}'
 		);
-		await waitFor(() =>
-			expect(screen.getByRole('button', { name: 'Join the club' })).toBeEnabled()
-		);
+		expect(draft).not.toHaveProperty('memberFormOpened');
 	});
 
 	it('uses one aligned action rail with Back on the left and Continue or Join on the right', async () => {
