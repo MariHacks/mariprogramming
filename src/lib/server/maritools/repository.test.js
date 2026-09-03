@@ -959,6 +959,9 @@ describe('createMariToolsRepository', () => {
 				[{ userId: USER, role: 'student', mutedUntil: until }]
 			]).muteUser(USER, until)
 		).resolves.toMatchObject({ userId: USER, mutedUntil: until });
+		await expect(
+			queuedRepo([[{ userId: USER, role: 'staff' }]]).muteUser(USER, until)
+		).rejects.toBeInstanceOf(MariToolsConflictError);
 		await expect(queuedRepo([[]]).banUser(USER)).rejects.toBeInstanceOf(MariToolsNotFoundError);
 		await expect(
 			queuedRepo([
@@ -966,6 +969,9 @@ describe('createMariToolsRepository', () => {
 				[{ userId: USER, role: 'student', bannedAt: new Date(), bannedUntil: null }]
 			]).banUser(USER)
 		).resolves.toMatchObject({ userId: USER, bannedUntil: null });
+		await expect(
+			queuedRepo([[{ userId: USER, role: 'staff' }]]).banUser(USER)
+		).rejects.toBeInstanceOf(MariToolsConflictError);
 		const banUntil = new Date(Date.now() + 86400000);
 		await expect(
 			queuedRepo([
@@ -981,11 +987,38 @@ describe('createMariToolsRepository', () => {
 			]).unmuteUser(USER)
 		).resolves.toMatchObject({ userId: USER, mutedUntil: null });
 		await expect(
+			queuedRepo([[{ userId: USER, role: 'staff' }]]).unmuteUser(USER)
+		).rejects.toBeInstanceOf(MariToolsConflictError);
+		await expect(
 			queuedRepo([
 				[{ userId: USER, role: 'student', bannedAt: new Date() }],
 				[{ userId: USER, role: 'student', bannedAt: null, bannedUntil: null }]
 			]).unbanUser(USER)
 		).resolves.toMatchObject({ userId: USER, bannedAt: null });
+		await expect(
+			queuedRepo([[{ userId: USER, role: 'staff' }]]).unbanUser(USER)
+		).rejects.toBeInstanceOf(MariToolsConflictError);
+		await expect(
+			queuedRepo([[{ userId: USER, role: 'student' }]]).setMemberRole(USER, 'student')
+		).resolves.toMatchObject({ userId: USER, role: 'student' });
+		await expect(
+			queuedRepo([
+				[{ userId: USER, role: 'student' }],
+				[{ userId: USER, role: 'moderator' }]
+			]).setMemberRole(USER, 'moderator')
+		).resolves.toMatchObject({ userId: USER, role: 'moderator' });
+		await expect(
+			queuedRepo([[{ userId: USER, role: 'student' }], []]).setMemberRole(USER, 'moderator')
+		).rejects.toBeInstanceOf(MariToolsConflictError);
+		await expect(
+			queuedRepo([[{ userId: USER, role: 'staff' }]]).setMemberRole(USER, 'student')
+		).rejects.toBeInstanceOf(MariToolsConflictError);
+		await expect(queuedRepo([[]]).setMemberRole(USER, 'moderator')).rejects.toBeInstanceOf(
+			MariToolsNotFoundError
+		);
+		await expect(queuedRepo([]).setMemberRole(USER, 'staff')).rejects.toBeInstanceOf(
+			MariToolsValidationError
+		);
 		await expect(queuedRepo([[]]).listThreadsByAuthor(USER)).resolves.toEqual([]);
 		await expect(queuedRepo([[]]).removeThread(THREAD)).rejects.toBeInstanceOf(
 			MariToolsNotFoundError

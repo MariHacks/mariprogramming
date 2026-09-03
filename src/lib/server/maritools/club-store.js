@@ -150,7 +150,7 @@ function key(weekday, time) {
 	return `${weekday}-${time}`;
 }
 
-/** @param {{ joinProgrammingClub: Function, updateMemberProfile: Function, getProgrammingClubMembership: Function, completeProgrammingClubOnboarding: Function, shareSavedScheduleWithClub: Function, stopSharingScheduleWithClub: Function, listStaffClubMembers: Function, getStaffClubMember: Function, listSharedClubSchedules: Function }} inner */
+/** @param {{ joinProgrammingClub: Function, updateMemberProfile: Function, getProgrammingClubMembership: Function, completeProgrammingClubOnboarding: Function, shareSavedScheduleWithClub: Function, stopSharingScheduleWithClub: Function, listStaffClubMembers: Function, getStaffClubMember: Function, listSharedClubSchedules: Function, muteUser: Function, banUser: Function, unmuteUser: Function, unbanUser: Function, setMemberRole: Function }} inner */
 export function createClubStore(inner) {
 	return Object.freeze({
 		/** @param {{ userId: string, email: string, studentId: string, username: string, firstName: string, lastName: string, profileImageDataUrl?: string | null, program: string, yearLevel: string, experienceLevel: string, interests: string[], clubGoals?: string }} input */
@@ -236,6 +236,41 @@ export function createClubStore(inner) {
 					scheduleInvalid: Boolean(member.schedulePaste && !parsed?.ok)
 				};
 			});
+		},
+
+		/** @param {string} id @param {Date} until */
+		muteMember(id, until) {
+			return wrap(() => inner.muteUser(userId(id), until));
+		},
+
+		/** @param {string} id @param {{ permanent?: boolean, until?: Date }} options */
+		banMember(id, options) {
+			return wrap(() =>
+				inner.banUser(
+					userId(id),
+					options.permanent === true ? { until: null } : { until: options.until }
+				)
+			);
+		},
+
+		/** @param {string} id */
+		unmuteMember(id) {
+			return wrap(() => inner.unmuteUser(userId(id)));
+		},
+
+		/** @param {string} id */
+		unbanMember(id) {
+			return wrap(() => inner.unbanUser(userId(id)));
+		},
+
+		/** @param {string} id */
+		promoteMember(id) {
+			return wrap(() => inner.setMemberRole(userId(id), 'moderator'));
+		},
+
+		/** @param {string} id */
+		demoteMember(id) {
+			return wrap(() => inner.setMemberRole(userId(id), 'student'));
 		},
 
 		async getStaffMeetingAvailability() {

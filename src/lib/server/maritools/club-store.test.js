@@ -19,6 +19,11 @@ function repository(overrides = {}) {
 		listStaffClubMembers: vi.fn(async () => ({ rows: [], totalCount: 0 })),
 		getStaffClubMember: vi.fn(async () => null),
 		listSharedClubSchedules: vi.fn(async () => []),
+		muteUser: vi.fn(async (userId, until) => ({ userId, mutedUntil: until })),
+		banUser: vi.fn(async (userId, options) => ({ userId, bannedUntil: options.until })),
+		unmuteUser: vi.fn(async (userId) => ({ userId, mutedUntil: null })),
+		unbanUser: vi.fn(async (userId) => ({ userId, bannedAt: null, bannedUntil: null })),
+		setMemberRole: vi.fn(async (userId, role) => ({ userId, role })),
 		...overrides
 	};
 }
@@ -184,5 +189,30 @@ describe('programming club store', () => {
 		expect(member.courses.length).toBeGreaterThan(0);
 		expect(member).not.toHaveProperty('schedulePaste');
 		expect(JSON.stringify(member)).not.toContain(CANONICAL_OMNIVOX_SCHEDULE);
+	});
+
+	it('applies member controls through fixed role values and moderation operations', async () => {
+		const inner = repository();
+		const store = createClubStore(inner);
+		const muteUntil = new Date('2026-09-09T12:00:00.000Z');
+		const banUntil = new Date('2026-10-02T12:00:00.000Z');
+
+		await expect(store.muteMember('user-1', muteUntil)).resolves.toMatchObject({
+			mutedUntil: muteUntil
+		});
+		await expect(store.banMember('user-1', { until: banUntil })).resolves.toMatchObject({
+			bannedUntil: banUntil
+		});
+		await store.unmuteMember('user-1');
+		await store.unbanMember('user-1');
+		await store.promoteMember('user-1');
+		await store.demoteMember('user-1');
+
+		expect(inner.muteUser).toHaveBeenCalledWith('user-1', muteUntil);
+		expect(inner.banUser).toHaveBeenCalledWith('user-1', { until: banUntil });
+		expect(inner.unmuteUser).toHaveBeenCalledWith('user-1');
+		expect(inner.unbanUser).toHaveBeenCalledWith('user-1');
+		expect(inner.setMemberRole).toHaveBeenNthCalledWith(1, 'user-1', 'moderator');
+		expect(inner.setMemberRole).toHaveBeenNthCalledWith(2, 'user-1', 'student');
 	});
 });

@@ -321,11 +321,22 @@ describe.sequential('MariTools repository against disposable PostgreSQL', () => 
 			displayName: 'ada_member',
 			firstName: 'Ada',
 			studentId: '2530622',
+			role: 'student',
+			isMuted: false,
+			isBanned: false,
 			yearLevel: 'second',
 			clubGoals: 'Project nights',
 			schedulePaste: '1\tPhysics\n'
 		});
 		expect(await repo.getStaffClubMember(USER_B)).toMatchObject({ clubGoals: null });
+		await expect(repo.setMemberRole(USER_A, 'moderator')).resolves.toMatchObject({
+			role: 'moderator'
+		});
+		await expect(repo.setMemberRole(USER_A, 'moderator')).resolves.toMatchObject({
+			role: 'moderator'
+		});
+		expect(await repo.getStaffClubMember(USER_A)).toMatchObject({ role: 'moderator' });
+		await repo.setMemberRole(USER_A, 'student');
 		expect(await repo.listSharedClubSchedules()).toEqual([
 			expect.objectContaining({ userId: USER_A, paste: '1\tPhysics\n' })
 		]);

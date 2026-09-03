@@ -22,7 +22,7 @@
 	/** @type {(() => void) | undefined} */
 	export let onCancel = undefined;
 
-	/** @type {(() => any) | undefined} */
+	/** @type {((node: HTMLFormElement) => { destroy?: () => void } | void) | undefined} */
 	export let enhance = undefined;
 
 	function cancel() {
