@@ -1,9 +1,21 @@
-import { cleanup, render, screen } from '@testing-library/svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import MemberPage from './+page.svelte';
 
-afterEach(cleanup);
+const enhanceHarness = vi.hoisted(() => ({ submit: null }));
+
+vi.mock('$app/forms', () => ({
+	enhance: vi.fn((_node, submit) => {
+		if (submit) enhanceHarness.submit = submit;
+		return { destroy() {} };
+	})
+}));
+
+afterEach(() => {
+	cleanup();
+	enhanceHarness.submit = null;
+});
 
 describe('staff member detail page', () => {
 	it('shows account, signup, and parsed schedule information to staff', () => {
@@ -90,6 +102,40 @@ describe('staff member detail page', () => {
 			'formaction',
 			'?/mute'
 		);
+	});
+
+	it('closes the duration dialog after a successful action', async () => {
+		const user = userEvent.setup();
+		render(MemberPage, {
+			props: {
+				data: {
+					unavailable: false,
+					member: {
+						userId: 'member-1',
+						displayName: 'Ada Member',
+						firstName: 'Ada',
+						lastName: 'Member',
+						role: 'student',
+						isMuted: false,
+						isBanned: false,
+						interests: [],
+						courses: []
+					}
+				}
+			}
+		});
+
+		await user.click(screen.getByRole('button', { name: 'Mute' }));
+		expect(screen.getByRole('dialog', { name: 'Mute duration' })).toBeInTheDocument();
+		expect(enhanceHarness.submit).toBeTypeOf('function');
+		const update = vi.fn(async () => {});
+		const complete = enhanceHarness.submit();
+		await complete({ result: { type: 'success' }, update });
+
+		await waitFor(() => {
+			expect(screen.queryByRole('dialog', { name: 'Mute duration' })).not.toBeInTheDocument();
+		});
+		expect(update).toHaveBeenCalledOnce();
 	});
 
 	it('does not render controls for a protected account', () => {

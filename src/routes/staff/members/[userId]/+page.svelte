@@ -40,7 +40,10 @@
 
 	/** @param {HTMLFormElement} node */
 	function enhanceDurationForm(node) {
-		return enhance(node);
+		return enhance(node, () => async ({ result, update }) => {
+			await update();
+			if (result.type === 'success') durationPrompt = null;
+		});
 	}
 </script>
 
