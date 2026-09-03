@@ -9,7 +9,7 @@ const SUBMISSION = {
 	status: 'pending',
 	submitterRole: 'officer',
 	name: 'Chess',
-	category: 'games',
+	category: 'Games and recreation',
 	description: 'Play',
 	links: [{ label: 'Site', url: 'https://example.com' }]
 };
@@ -27,9 +27,9 @@ describe('club submission page', () => {
 				}
 			}
 		});
-		expect(screen.getByTestId('submitter-role')).toHaveTextContent('Officer or organizer');
+		expect(screen.getByRole('combobox', { name: 'Your role' })).toHaveValue('officer');
 		expect(screen.getByTestId('club-edit-name')).toHaveValue('Chess');
-		expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Save listing' })).toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Reject' })).not.toBeInTheDocument();
 	});
@@ -53,7 +53,7 @@ describe('club submission page', () => {
 			'formaction',
 			'?/reject'
 		);
-		expect(screen.getByText('Saved.')).toBeInTheDocument();
+		expect(screen.getByText('Changes saved.')).toBeInTheDocument();
 	});
 
 	it('lets staff reject from the read-only review surface', () => {

@@ -224,7 +224,10 @@ export const mtClubs = pgTable(
 		slug: varchar('slug', { length: 120 }).notNull(),
 		category: varchar('category', { length: 80 }),
 		description: text('description'),
-		links: jsonb('links').$type<Array<{ label: string; url: string }>>().default([]).notNull(),
+		links: jsonb('links')
+			.$type<Array<{ type?: string; label: string; url: string }>>()
+			.default([])
+			.notNull(),
 		published: boolean('published').default(false).notNull(),
 		version: version(),
 		createdAt: createdAt(),

@@ -31,16 +31,14 @@ describe('clubs page', () => {
 		expect(screen.getByRole('heading', { name: 'Clubs' })).toBeInTheDocument();
 		expect(screen.getByText(/Campus clubs and how to reach them/)).toBeInTheDocument();
 		expect(screen.getByText('No published clubs yet.')).toBeInTheDocument();
-		expect(
-			screen.getByText(/Browse stays open while we review listings/)
-		).toBeInTheDocument();
+		expect(screen.getByText(/Browse stays open while we review listings/)).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Sign in with Google' })).toHaveAttribute(
 			'href',
 			'/tools/account'
 		);
 	});
 
-	it('points signed-in students at the short intake when the directory is empty', () => {
+	it('offers one clear listing entry point without inline fields', () => {
 		render(ClubsPage, {
 			props: {
 				data: {
@@ -56,10 +54,14 @@ describe('clubs page', () => {
 		});
 		expect(screen.getByText('No published clubs yet.')).toBeInTheDocument();
 		expect(
-			screen.getByText(/Use the form below to submit a listing for review/)
+			screen.getByText('Create a listing and we’ll review it before it goes live.')
 		).toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Continue to listing' })).toBeInTheDocument();
-		expect(screen.getByTestId('submitter-role')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Create listing' })).toHaveAttribute(
+			'href',
+			'/tools/clubs/new'
+		);
+		expect(screen.queryByRole('textbox', { name: /Club name/ })).not.toBeInTheDocument();
+		expect(screen.queryByTestId('submitter-role')).not.toBeInTheDocument();
 	});
 
 	it('explains when filters match nothing', () => {
@@ -103,7 +105,10 @@ describe('clubs page', () => {
 			'href',
 			'/tools/clubs/robotics'
 		);
-		expect(screen.getByRole('button', { name: 'Continue to listing' })).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Create listing' })).toHaveAttribute(
+			'href',
+			'/tools/clubs/new'
+		);
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
 	});
 
@@ -178,6 +183,8 @@ describe('clubs page', () => {
 			}
 		});
 		expect(screen.getByText('Clubs are unavailable right now. Try again.')).toBeInTheDocument();
-		expect(screen.getByText('Club submissions are unavailable right now. Try again later.')).toBeInTheDocument();
+		expect(
+			screen.getByText('Club submissions are unavailable right now. Try again later.')
+		).toBeInTheDocument();
 	});
 });

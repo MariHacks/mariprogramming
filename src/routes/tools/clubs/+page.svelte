@@ -1,6 +1,6 @@
 <script>
+	import { resolve } from '$app/paths';
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
-	import { CLUB_SUBMITTER_ROLES } from '$lib/maritools/club-listing.js';
 	import { initialsFromClubName } from '$lib/maritools/club-initials.js';
 
 	export let data;
@@ -9,10 +9,7 @@
 
 <svelte:head>
 	<title>Clubs | {MARITOOLS_NAME}</title>
-	<meta
-		name="description"
-		content="Campus clubs and how to reach them."
-	/>
+	<meta name="description" content="Campus clubs and how to reach them." />
 </svelte:head>
 
 <div class="mt-preview">
@@ -44,7 +41,7 @@
 		{#if data.staff}
 			<aside class="submit-club staff-pending" data-testid="staff-pending-clubs">
 				<div>
-					<strong>Review queue</strong>
+					<strong>Review</strong>
 					<h2>Pending listings</h2>
 				</div>
 				{#if data.pending.length === 0}
@@ -62,9 +59,9 @@
 								{/if}
 								<a
 									class="primary-button"
-									href="/tools/clubs/submissions/{submission.id}"
-									data-testid="review-submission"
-								>Review listing</a>
+									href={resolve('/tools/clubs/submissions/[id]', { id: submission.id })}
+									data-testid="review-submission">Review listing</a
+								>
 							</article>
 						{/each}
 					</div>
@@ -79,10 +76,10 @@
 				{#if data.query || data.category}
 					<strong>No clubs match those filters.</strong>
 					<p>Clear the search or choose All categories to see every published listing.</p>
-					<a href="/tools/clubs">Reset filters</a>
+					<a href={resolve('/tools/clubs', {})}>Reset filters</a>
 				{:else if data.signedIn}
 					<strong>No published clubs yet.</strong>
-					<p>Use the form below to submit a listing for review.</p>
+					<p>Create a listing and we’ll review it before it appears here.</p>
 				{:else}
 					<strong>No published clubs yet.</strong>
 					<p>Browse stays open while we review listings. Sign in to submit one.</p>
@@ -94,7 +91,7 @@
 					<span>Organization</span><span>Focus</span><span>Listing</span>
 				</div>
 				{#each data.clubs as club (club.id)}
-					<a class="club-row" href="/tools/clubs/{club.slug}">
+					<a class="club-row" href={resolve('/tools/clubs/[slug]', { slug: club.slug })}>
 						<div>
 							<span class="club-initials">{initialsFromClubName(club.name)}</span>
 							<div>
@@ -111,43 +108,24 @@
 			</div>
 		{/if}
 
-		<aside class="submit-club">
+		<aside class="submit-club listing-entry">
 			<div>
 				<strong>Missing a group?</strong>
-				<h2>Start a club listing</h2>
+				<h2>Create a club listing</h2>
 			</div>
 			{#if data.unavailable}
 				<p>Club submissions are unavailable right now. Try again later.</p>
 			{:else if data.signedIn}
-				<p>Tell us your role and the club name. You will finish the listing on the next page.</p>
-				<form method="POST" action="?/submit">
-					<label>
-						<span>Your role in this club</span>
-						<select name="submitterRole" required data-testid="submitter-role">
-							<option value="">Choose one</option>
-							{#each CLUB_SUBMITTER_ROLES as role (role.value)}
-								<option value={role.value}>{role.label}</option>
-							{/each}
-						</select>
-					</label>
-					<label>
-						<span>Club name</span>
-						<input name="name" required maxlength="160" />
-					</label>
-					<label>
-						<span>Category</span>
-						<input name="category" maxlength="80" />
-					</label>
-					<button type="submit" class="primary-button">Continue to listing</button>
-				</form>
+				<p>Create a listing and we’ll review it before it goes live.</p>
+				<a href={resolve('/tools/clubs/new', {})} class="primary-button listing-entry-action"
+					>Create listing</a
+				>
 				{#if form?.error}
 					<p class="field-error" role="alert">{form.error}</p>
 				{/if}
 			{:else}
-				<p>
-					Sign in to add or update a listing. We review it before it goes live.
-				</p>
-				<a class="primary-button" href="/tools/account">Sign in with Google</a>
+				<p>Sign in to create or update a listing. We’ll review it before it goes live.</p>
+				<a class="primary-button" href={resolve('/tools/account', {})}>Sign in with Google</a>
 			{/if}
 		</aside>
 	</section>

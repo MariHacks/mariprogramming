@@ -1,13 +1,6 @@
-import { fail, redirect } from '@sveltejs/kit';
 import {
-	buildClubSubmissionPayload,
-	normalizeSubmitterRole
-} from '$lib/maritools/club-listing.js';
-import {
-	MaritoolsInputError,
 	MaritoolsUnavailableError,
-	openCommunityStore,
-	slugFromName
+	openCommunityStore
 } from '$lib/server/maritools/community-store.js';
 
 export const prerender = false;
@@ -19,7 +12,8 @@ function filterClubs(clubs, query, category) {
 	return clubs.filter((club) => {
 		if (wanted && String(club.category ?? '').toLowerCase() !== wanted) return false;
 		if (!needle) return true;
-		const haystack = `${club.name} ${club.slug ?? ''} ${club.category ?? ''} ${club.description ?? ''}`.toLowerCase();
+		const haystack =
+			`${club.name} ${club.slug ?? ''} ${club.category ?? ''} ${club.description ?? ''}`.toLowerCase();
 		return haystack.includes(needle);
 	});
 }
@@ -53,11 +47,7 @@ export function _createHandlers(dependencies = {}) {
 			staff = identity.staff;
 			const listed = await store.listClubs();
 			const categories = [
-				...new Set(
-					listed
-						.map((club) => String(club.category ?? '').trim())
-						.filter(Boolean)
-				)
+				...new Set(listed.map((club) => String(club.category ?? '').trim()).filter(Boolean))
 			].sort();
 			const clubs = filterClubs(listed, query, category);
 			const pending = identity.staff ? await store.listPendingClubSubmissions() : [];
@@ -88,43 +78,8 @@ export function _createHandlers(dependencies = {}) {
 	}
 
 	/** @param {any} event */
-	async function submit(event) {
-		const session = event.locals.maritools;
-		if (!session) return fail(401, { error: 'Sign in with Google first.' });
-		const data = await event.request.formData();
-		const name = String(data.get('name') ?? '').trim();
-		if (!name) return fail(400, { error: 'Enter the club name.' });
-		const submitterRole = normalizeSubmitterRole(data.get('submitterRole'));
-		if (!submitterRole) return fail(400, { error: 'Pick your role in this club.' });
-		const category = String(data.get('category') ?? '').trim();
-		const slug = slugFromName(name);
-		if (!slug) return fail(400, { error: 'Enter a club name we can turn into a page slug.' });
-		try {
-			const submission = await createStore().submitClub({
-				submitterUserId: session.userId,
-				payload: buildClubSubmissionPayload(null, {
-					name,
-					slug,
-					category,
-					submitterRole
-				})
-			});
-			if (!submission?.id) return fail(503, { error: 'Sending a club is unavailable. Try again.' });
-			redirect(303, `/tools/clubs/submissions/${submission.id}`);
-		} catch (error) {
-			if (error instanceof MaritoolsInputError) {
-				return fail(400, { error: 'Check the club details and try again.' });
-			}
-			if (error instanceof MaritoolsUnavailableError) {
-				return fail(503, { error: 'Sending a club is unavailable. Try again.' });
-			}
-			throw error;
-		}
-	}
-
-	return { load, actions: { submit } };
+	return { load };
 }
 
 const handlers = _createHandlers();
 export const load = handlers.load;
-export const actions = handlers.actions;

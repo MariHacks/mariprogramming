@@ -8,7 +8,10 @@ const CLUB = {
 	name: 'Robotics',
 	category: 'stem',
 	description: 'Builds robots',
-	links: [{ label: 'Discord', url: 'https://example.com' }]
+	links: [
+		{ type: 'discord', label: 'Discord', url: 'https://example.com' },
+		{ type: 'email', label: 'Email', url: 'mailto:robotics@example.com' }
+	]
 };
 
 describe('ClubListingDetail', () => {
@@ -29,8 +32,12 @@ describe('ClubListingDetail', () => {
 		expect(screen.getByTestId('club-edit-name')).toHaveValue('Robotics');
 		expect(screen.getByTestId('club-edit-category')).toHaveValue('stem');
 		expect(screen.getByTestId('club-edit-description')).toHaveValue('Builds robots');
-		expect(screen.getByTestId('club-edit-link-label')).toHaveValue('Discord');
-		expect(screen.getByTestId('club-edit-link-url')).toHaveValue('https://example.com');
+		expect(screen.getByRole('combobox', { name: 'Your role' })).toBeInTheDocument();
+		expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('stem');
+		expect(screen.getAllByRole('combobox', { name: 'Contact type' })).toHaveLength(2);
+		expect(screen.getByDisplayValue('https://example.com')).toBeInTheDocument();
+		expect(screen.getByDisplayValue('robotics@example.com')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Add contact method' })).toBeInTheDocument();
 		expect(screen.getByTestId('club-listing-detail')).toHaveAttribute('data-mode', 'edit');
 	});
 

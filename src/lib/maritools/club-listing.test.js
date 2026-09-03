@@ -6,6 +6,7 @@ import {
 	buildClubSubmissionPayload,
 	clubListingFromPayload,
 	clubSubmissionView,
+	contactValueForInput,
 	formatClubLinkLabel,
 	joinLinkFromClub,
 	normalizeSubmitterRole
@@ -98,5 +99,34 @@ describe('club listing helpers', () => {
 			links: [{ label: 'Site', url: 'https://example.com' }],
 			submitterRole: 'officer'
 		});
+	});
+
+	it('keeps several typed contact methods and drops empty rows', () => {
+		expect(
+			buildClubSubmissionPayload(
+				{ name: 'Chess', submitterRole: 'member' },
+				{
+					links: [
+						{ type: 'email', label: 'Email', url: 'mailto:chess@example.com' },
+						{ type: 'discord', label: 'Discord', url: 'https://discord.gg/chess' },
+						{ type: 'custom', label: 'Linktree', url: 'https://linktr.ee/chess' },
+						{ type: 'website', label: 'Website', url: '' }
+					]
+				}
+			)
+		).toMatchObject({
+			links: [
+				{ type: 'email', label: 'Email', url: 'mailto:chess@example.com' },
+				{ type: 'discord', label: 'Discord', url: 'https://discord.gg/chess' },
+				{ type: 'custom', label: 'Linktree', url: 'https://linktr.ee/chess' }
+			]
+		});
+	});
+
+	it('only removes mailto from address-based contact inputs', () => {
+		expect(contactValueForInput('mailto:club@example.com', 'email')).toBe('club@example.com');
+		expect(contactValueForInput('mailto:club@example.com', 'custom')).toBe(
+			'mailto:club@example.com'
+		);
 	});
 });

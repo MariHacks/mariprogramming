@@ -1690,6 +1690,277 @@
 		text-decoration: none;
 	}
 
+	.listing-entry {
+		grid-template-columns: minmax(14rem, 0.75fr) minmax(16rem, 1fr) auto;
+		min-height: 9rem;
+		padding: 1.75rem 0;
+	}
+
+	.listing-entry h2 {
+		margin-top: 0.2rem;
+		font-size: clamp(1.5rem, 2vw, 2rem);
+	}
+
+	.listing-entry .listing-entry-action {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 10rem;
+		min-height: 3.25rem;
+		font-size: 0.875rem;
+		text-decoration: none;
+	}
+
+	.club-submission-bar {
+		display: flex;
+		min-height: 4.75rem;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin: 0 clamp(1.25rem, 3vw, 3rem);
+		border-bottom: 1px solid var(--line-dark);
+	}
+
+	.club-submission-bar > div {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.club-submission-bar span {
+		padding: 0.3rem 0.6rem;
+		border: 1px solid var(--line-dark);
+		color: var(--steel);
+		font-size: 0.6875rem;
+		font-weight: 700;
+		text-transform: uppercase;
+	}
+
+	.club-submission-bar p {
+		margin: 0;
+	}
+
+	.club-editor-hero {
+		padding: 2.25rem 0 2rem;
+	}
+
+	.club-editor-hero > div {
+		margin-top: 1.5rem;
+		gap: 1.25rem;
+	}
+
+	.club-editor-hero .club-initials {
+		width: clamp(5rem, 8vw, 7rem);
+		height: clamp(5rem, 8vw, 7rem);
+	}
+
+	.club-editor-eyebrow {
+		display: block;
+		margin-bottom: 0.35rem;
+		color: var(--blue);
+		font-size: 0.6875rem;
+		font-weight: 750;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.club-editor-hero h1 {
+		margin: 0;
+		font-size: clamp(2.5rem, 5vw, 4.5rem);
+		letter-spacing: -0.055em;
+		line-height: 0.95;
+	}
+
+	.club-editor-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1.1fr) minmax(20rem, 0.9fr);
+		margin: 0 clamp(1.25rem, 3vw, 3rem);
+		border-bottom: 1px solid var(--line-dark);
+	}
+
+	.club-editor-section {
+		padding: 2rem 2rem 2.5rem 0;
+	}
+
+	.club-editor-contacts {
+		padding-right: 0;
+		padding-left: 2rem;
+		border-left: 1px solid var(--line-dark);
+	}
+
+	.club-editor-section-heading {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.875rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.club-editor-section-heading > span {
+		display: grid;
+		width: 2rem;
+		height: 2rem;
+		place-items: center;
+		background: var(--ink);
+		color: white;
+	}
+
+	.club-editor-section-heading h2 {
+		margin: 0 0 0.25rem;
+		font-size: 1.5rem;
+	}
+
+	.club-editor-section-heading p,
+	.club-submission-actions > div span {
+		margin: 0;
+		color: var(--steel);
+		font-size: 0.75rem;
+	}
+
+	.club-editor-fields {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem;
+	}
+
+	.club-editor-field {
+		display: grid;
+		gap: 0.45rem;
+		min-width: 0;
+		color: var(--steel);
+		font-size: 0.6875rem;
+		font-weight: 700;
+	}
+
+	.club-editor-field-wide {
+		grid-column: 1 / -1;
+	}
+
+	.club-editor-field input,
+	.club-editor-field select,
+	.club-editor-field textarea {
+		width: 100%;
+		margin: 0;
+		border: 1px solid var(--line-dark);
+		border-radius: 0;
+		background: white;
+		color: var(--ink);
+		font: inherit;
+		font-size: 0.875rem;
+		font-weight: 500;
+	}
+
+	.club-editor-field input,
+	.club-editor-field select {
+		height: 3rem;
+		padding: 0 0.8rem;
+	}
+
+	.club-editor-field textarea {
+		min-height: 10rem;
+		padding: 0.8rem;
+		line-height: 1.5;
+		resize: vertical;
+	}
+
+	.club-contact-list {
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.club-contact-card {
+		display: grid;
+		grid-template-columns: minmax(7rem, 0.7fr) minmax(0, 1.3fr) 2.75rem;
+		align-items: end;
+		gap: 0.625rem;
+		padding: 0.875rem;
+		border: 1px solid var(--line);
+		background: var(--mist, #f5f7fa);
+	}
+
+	.club-contact-remove,
+	.club-contact-add {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		border: 1px solid var(--line-dark);
+		background: white;
+		color: var(--ink);
+		font: inherit;
+		font-size: 0.75rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.club-contact-remove {
+		width: 2.75rem;
+		height: 3rem;
+	}
+
+	.club-contact-add {
+		min-height: 2.75rem;
+		margin-top: 0.875rem;
+		padding: 0 1rem;
+	}
+
+	.club-contact-remove svg,
+	.club-contact-add svg {
+		width: 1.1rem;
+		height: 1.1rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+	}
+
+	.club-submission-edit .club-submission-actions {
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.75rem;
+		padding: 1.5rem 0;
+	}
+
+	.club-submission-actions > div {
+		display: grid;
+		gap: 0.2rem;
+		margin-right: auto;
+	}
+
+	@media (max-width: 920px) {
+		.club-editor-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.club-editor-contacts {
+			padding-left: 0;
+			border-top: 1px solid var(--line-dark);
+			border-left: 0;
+		}
+	}
+
+	@media (max-width: 700px) {
+		.listing-entry,
+		.club-editor-fields,
+		.club-contact-card {
+			grid-template-columns: 1fr;
+		}
+
+		.listing-entry .listing-entry-action,
+		.club-contact-remove {
+			width: 100%;
+		}
+
+		.club-submission-bar,
+		.club-submission-edit .club-submission-actions {
+			align-items: stretch;
+			flex-direction: column;
+		}
+
+		.club-submission-actions > div {
+			margin-right: 0;
+		}
+	}
+
 	.forum-titlebar {
 		display: flex;
 		min-height: 6.5rem;

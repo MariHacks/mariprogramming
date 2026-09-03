@@ -1,7 +1,10 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
-import { MaritoolsInputError, MaritoolsUnavailableError } from '$lib/server/maritools/student-store.js';
+import {
+	MaritoolsInputError,
+	MaritoolsUnavailableError
+} from '$lib/server/maritools/student-store.js';
 import { prerender, _createHandlers } from './+page.server.js';
 
 const SESSION = {
@@ -19,7 +22,7 @@ const SUBMISSION = {
 	submitterRole: 'officer',
 	name: 'Chess',
 	slug: 'chess',
-	category: 'games',
+	category: 'Games and recreation',
 	description: 'Play',
 	links: [{ label: 'Site', url: 'https://example.com' }]
 };
@@ -43,9 +46,10 @@ function handlers(overrides = {}) {
 	};
 }
 
-function event({ locals = {}, form = {}, id = SUBMISSION.id } = {}) {
+function event({ locals = {}, form = {}, entries = [], id = SUBMISSION.id } = {}) {
 	const data = new FormData();
 	for (const [key, value] of Object.entries(form)) data.set(key, String(value));
+	for (const [key, value] of entries) data.append(key, String(value));
 	return {
 		locals,
 		params: { id },
@@ -111,9 +115,10 @@ describe('club submission page server', () => {
 				isStaff: vi.fn((_email, role) => role === 'staff')
 			}
 		});
-		await expect(
-			current.load(event({ locals: { maritools: SESSION } }))
-		).resolves.toMatchObject({ canPublish: true, staff: true });
+		await expect(current.load(event({ locals: { maritools: SESSION } }))).resolves.toMatchObject({
+			canPublish: true,
+			staff: true
+		});
 	});
 
 	it('rethrows unexpected profile errors', async () => {
@@ -124,7 +129,9 @@ describe('club submission page server', () => {
 				})
 			}
 		});
-		await expect(current.load(event({ locals: { maritools: STAFF } }))).rejects.toThrow('profile boom');
+		await expect(current.load(event({ locals: { maritools: STAFF } }))).rejects.toThrow(
+			'profile boom'
+		);
 	});
 
 	it('returns unavailable when the store is down', async () => {
@@ -149,7 +156,9 @@ describe('club submission page server', () => {
 				})
 			}
 		});
-		await expect(current.load(event({ locals: { maritools: SESSION } }))).rejects.toThrow('load boom');
+		await expect(current.load(event({ locals: { maritools: SESSION } }))).rejects.toThrow(
+			'load boom'
+		);
 	});
 
 	it('hides submissions from unrelated students', async () => {
@@ -166,7 +175,7 @@ describe('club submission page server', () => {
 				locals: { maritools: SESSION },
 				form: {
 					name: 'Chess Club',
-					category: 'games',
+					category: 'Games and recreation',
 					description: 'Weekly play',
 					linkLabel: 'Discord',
 					linkUrl: 'https://example.com/discord'
@@ -180,7 +189,42 @@ describe('club submission page server', () => {
 				name: 'Chess Club',
 				slug: 'chess-club',
 				submitterRole: 'officer',
-				links: [{ label: 'Discord', url: 'https://example.com/discord' }]
+				links: [{ type: 'custom', label: 'Discord', url: 'https://example.com/discord' }]
+			})
+		);
+	});
+
+	it('saves role, category, and multiple selected contact methods', async () => {
+		const current = handlers();
+		const result = await current.actions.save(
+			event({
+				locals: { maritools: SESSION },
+				form: {
+					name: 'Chess Club',
+					category: 'Academic',
+					submitterRole: 'member',
+					description: 'Weekly play'
+				},
+				entries: [
+					['contactType', 'email'],
+					['contactLabel', ''],
+					['contactValue', 'chess@example.com'],
+					['contactType', 'instagram'],
+					['contactLabel', ''],
+					['contactValue', 'https://instagram.com/chess']
+				]
+			})
+		);
+		expect(result).toEqual({ saved: true });
+		expect(current.store.updateClubSubmissionPayload).toHaveBeenCalledWith(
+			SUBMISSION.id,
+			expect.objectContaining({
+				submitterRole: 'member',
+				category: 'Academic',
+				links: [
+					{ type: 'email', label: 'Email', url: 'mailto:chess@example.com' },
+					{ type: 'instagram', label: 'Instagram', url: 'https://instagram.com/chess' }
+				]
 			})
 		);
 	});
@@ -197,6 +241,8 @@ describe('club submission page server', () => {
 		});
 		const data = new FormData();
 		data.set('name', '!!!');
+		data.set('submitterRole', 'member');
+		data.set('category', 'Games and recreation');
 		const result = await current.actions.save({
 			locals: { maritools: SESSION },
 			params: { id: SUBMISSION.id },
@@ -301,11 +347,8 @@ describe('club submission page server', () => {
 			}
 		});
 		expect(
-			(
-				await down.actions.save(
-					event({ locals: { maritools: SESSION }, form: { name: 'Chess' } })
-				)
-			).status
+			(await down.actions.save(event({ locals: { maritools: SESSION }, form: { name: 'Chess' } })))
+				.status
 		).toBe(503);
 		const invalidSave = handlers({
 			store: {
@@ -328,7 +371,9 @@ describe('club submission page server', () => {
 				})
 			}
 		});
-		expect((await invalid.actions.publish(event({ locals: { maritools: STAFF } }))).status).toBe(400);
+		expect((await invalid.actions.publish(event({ locals: { maritools: STAFF } }))).status).toBe(
+			400
+		);
 		const publishDown = handlers({
 			store: {
 				publishPendingClub: vi.fn(async () => {
@@ -389,8 +434,8 @@ describe('club submission page server', () => {
 				})
 			}
 		});
-		await expect(rejectBoom.actions.reject(event({ locals: { maritools: STAFF } }))).rejects.toThrow(
-			'reject boom'
-		);
+		await expect(
+			rejectBoom.actions.reject(event({ locals: { maritools: STAFF } }))
+		).rejects.toThrow('reject boom');
 	});
 });
