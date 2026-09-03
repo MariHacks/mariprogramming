@@ -1,6 +1,7 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import OmnivoxTutorialOverlay from '$lib/maritools/components/OmnivoxTutorialOverlay.svelte';
+	import ProfileEmptyState from '$lib/maritools/components/ProfileEmptyState.svelte';
 	import ScheduleCalendar from '$lib/maritools/components/ScheduleCalendar.svelte';
 	import { initialsFromDisplayName } from '$lib/maritools/header-account.js';
 	import { mondayOfWeek, weekGridForTermWeek } from '$lib/maritools/schedule/academicWeekView.js';
@@ -885,7 +886,11 @@
 							{/each}
 						</div>
 					{:else}
-						<p class="community-empty">No posts yet.</p>
+						<ProfileEmptyState
+							kind="posts"
+							title="No posts yet"
+							description="Your forum posts will appear here after you start a discussion."
+						/>
 					{/if}
 				</section>
 
@@ -913,7 +918,11 @@
 							{/each}
 						</ol>
 					{:else}
-						<p class="community-empty">No course outlines yet.</p>
+						<ProfileEmptyState
+							kind="outlines"
+							title="No outlines yet"
+							description="Course outlines you contribute will appear here."
+						/>
 					{/if}
 				</section>
 			</div>
@@ -1429,14 +1438,6 @@
 		font-size: 1.05rem;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-
-	.community-empty {
-		margin: 0;
-		padding: 1.25rem 0;
-		border-bottom: 1px solid var(--line);
-		color: var(--steel);
-		font-size: 0.78rem;
 	}
 
 	.profile-section-head h2,

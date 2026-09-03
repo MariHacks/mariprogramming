@@ -727,8 +727,18 @@ describe('account page', () => {
 				}
 			}
 		});
-		expect(screen.getByText('No posts yet.')).toBeInTheDocument();
-		expect(screen.getByText('No course outlines yet.')).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'No posts yet' })).toBeInTheDocument();
+		expect(
+			screen.getByText('Your forum posts will appear here after you start a discussion.')
+		).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'No outlines yet' })).toBeInTheDocument();
+		expect(
+			screen.getByText('Course outlines you contribute will appear here.')
+		).toBeInTheDocument();
+		expect(document.querySelectorAll('.profile-empty-state')).toHaveLength(2);
+		expect(document.querySelectorAll('.profile-empty-state svg[aria-hidden="true"]')).toHaveLength(2);
+		expect(document.querySelector('.profile-empty-state--posts')).toBeInTheDocument();
+		expect(document.querySelector('.profile-empty-state--outlines')).toBeInTheDocument();
 		expect(screen.queryByRole('link', { name: /upload outline/i })).not.toBeInTheDocument();
 		expect(document.querySelector('.profile-alerts')).not.toBeInTheDocument();
 	});
