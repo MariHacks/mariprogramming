@@ -181,6 +181,22 @@ describe('account page', () => {
 		expect(screen.queryByText('2530622')).not.toBeInTheDocument();
 	});
 
+	it('prefills username from the profile display name when none was saved', () => {
+		render(AccountPage, {
+			props: {
+				data: {
+					...base,
+					view: {
+						kind: 'incomplete',
+						email: 'ada@gmail.com',
+						displayName: 'Ada Lovelace'
+					}
+				}
+			}
+		});
+		expect(screen.getByLabelText('Username')).toHaveValue('Ada_Lovelace');
+	});
+
 	it('keeps schedule import out of signup and clearly labels optional fields', async () => {
 		render(AccountPage, {
 			props: { data: { ...base, view: { kind: 'incomplete', email: 'ada@gmail.com' } } }
@@ -209,6 +225,10 @@ describe('account page', () => {
 		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
 		const joinButton = screen.getByRole('button', { name: 'Join the club' });
 		expect(joinButton).toBeDisabled();
+		expect(screen.getByRole('status')).toHaveTextContent(
+			'Join is blocked until required fields are complete in Information and Interests and experience.'
+		);
+		expect(screen.getByRole('status')).toHaveClass('field-error');
 
 		await fireEvent.click(screen.getByRole('tab', { name: 'Information' }));
 		await completeRequiredSignupFields();

@@ -19,7 +19,7 @@
 	let signOutFailed = false;
 	let editingProfile = false;
 	let profileTab = 'information';
-	let username = data.onboardingDraft?.username ?? data.view.username ?? '';
+	let username = initialSignupUsername();
 	let firstName = data.onboardingDraft?.firstName ?? data.view.firstName ?? '';
 	let lastName = data.onboardingDraft?.lastName ?? data.view.lastName ?? '';
 	let studentId = data.onboardingDraft?.studentId ?? '';
@@ -66,6 +66,35 @@
 		second: 'Second year',
 		third: 'Third year'
 	};
+
+	/** @param {string} raw */
+	function suggestedUsername(raw) {
+		const normalized = String(raw ?? '')
+			.trim()
+			.replace(/[^A-Za-z0-9_]/gu, '_')
+			.replace(/_+/gu, '_')
+			.replace(/^_|_$/gu, '');
+		return normalized.slice(0, 24);
+	}
+
+	/** @returns {string} */
+	function initialSignupUsername() {
+		if (typeof data.onboardingDraft?.username === 'string') {
+			const draftUsername = data.onboardingDraft.username.trim();
+			if (draftUsername.length > 0) return draftUsername;
+		}
+		if (typeof data.view?.username === 'string' && data.view.username.trim().length > 0) {
+			return data.view.username.trim();
+		}
+		const fullName = [data.view?.firstName, data.view?.lastName]
+			.filter((part) => typeof part === 'string' && part.trim().length > 0)
+			.join(' ');
+		const fallbackName =
+			(typeof data.view?.displayName === 'string' && data.view.displayName.trim().length > 0
+				? data.view.displayName
+				: fullName) || '';
+		return suggestedUsername(fallbackName);
+	}
 
 	/** @param {string} email */
 	function labelFromEmail(email) {
@@ -190,7 +219,9 @@
 		if (['information', 'interests', 'member-form'].includes(String(draft.profileTab))) {
 			profileTab = String(draft.profileTab);
 		}
-		username = typeof draft.username === 'string' ? draft.username : '';
+		if (typeof draft.username === 'string' && draft.username.trim().length > 0) {
+			username = draft.username;
+		}
 		firstName = typeof draft.firstName === 'string' ? draft.firstName : '';
 		lastName = typeof draft.lastName === 'string' ? draft.lastName : '';
 		studentId = typeof draft.studentId === 'string' ? draft.studentId : '';
@@ -300,7 +331,15 @@
 		interests.every((/** @type {string} */ interest) => interestOptions.includes(interest)) &&
 		clubGoals.length <= 1000;
 	$: signupIsReady = informationIsValid && interestsAreValid;
-	$: signupBlockedMessage = signupIsReady ? '' : 'Complete all required fields before joining.';
+	$: signupBlockedMessage = (() => {
+		if (signupIsReady) return '';
+		const sections = [
+			!informationIsValid ? 'Information' : null,
+			!interestsAreValid ? 'Interests and experience' : null
+		].filter(Boolean);
+		if (sections.length === 0) return '';
+		return `Join is blocked until required fields are complete in ${sections.join(' and ')}.`;
+	})();
 </script>
 
 <svelte:head>
@@ -693,7 +732,7 @@
 							</div>
 							{#if signupBlockedMessage}<p
 									id="signup-blocked-message"
-									class="signup-blocked-message"
+									class="signup-blocked-message field-error"
 									role="status"
 								>
 									{signupBlockedMessage}
@@ -1505,7 +1544,7 @@
 	.signup-blocked-message {
 		max-width: 34rem;
 		margin: auto 0 -1.35rem auto;
-		color: var(--steel);
+		color: var(--red);
 		font-size: 0.76rem;
 		line-height: 1.45;
 		text-align: right;
