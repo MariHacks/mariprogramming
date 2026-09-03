@@ -96,7 +96,7 @@
 </script>
 
 <svelte:head>
-	<title>Reports | Programming Club Staff</title>
+	<title>Reports | Programming Club Team</title>
 </svelte:head>
 
 <section class="reports-workspace">

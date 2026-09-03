@@ -44,7 +44,7 @@
 		{#if data.staff}
 			<aside class="submit-club staff-pending" data-testid="staff-pending-clubs">
 				<div>
-					<strong>Staff</strong>
+					<strong>Review queue</strong>
 					<h2>Pending listings</h2>
 				</div>
 				{#if data.pending.length === 0}
@@ -82,10 +82,10 @@
 					<a href="/tools/clubs">Reset filters</a>
 				{:else if data.signedIn}
 					<strong>No published clubs yet.</strong>
-					<p>Use the form below to start a listing for staff review.</p>
+					<p>Use the form below to submit a listing for review.</p>
 				{:else}
 					<strong>No published clubs yet.</strong>
-					<p>Browse stays open while staff review listings. Sign in to submit one.</p>
+					<p>Browse stays open while we review listings. Sign in to submit one.</p>
 				{/if}
 			</div>
 		{:else}
@@ -145,7 +145,7 @@
 				{/if}
 			{:else}
 				<p>
-					Sign in to add or update a listing. Staff check it before it goes live.
+					Sign in to add or update a listing. We review it before it goes live.
 				</p>
 				<a class="primary-button" href="/tools/account">Sign in with Google</a>
 			{/if}

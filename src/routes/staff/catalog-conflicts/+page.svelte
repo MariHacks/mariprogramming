@@ -23,7 +23,7 @@
 </script>
 
 <svelte:head>
-	<title>Catalog conflicts | Programming Club Staff</title>
+	<title>Catalog conflicts | Programming Club Team</title>
 </svelte:head>
 
 <section class="conflicts-workspace">
@@ -50,7 +50,7 @@
 	{:else}
 		<p class="queue-count">
 			{data.groups.length}
-			{data.groups.length === 1 ? 'offering' : 'offerings'} need a staff decision
+			{data.groups.length === 1 ? 'offering' : 'offerings'} need review
 		</p>
 		<ol class="conflict-list">
 			{#each data.groups as group (group.offeringId)}

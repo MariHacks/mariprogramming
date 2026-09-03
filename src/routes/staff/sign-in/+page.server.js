@@ -4,7 +4,7 @@ import { readStaffSignInEnvironment } from '$lib/server/config/environment.js';
 function recoveryMessageFor(state) {
 	if (state === 'unavailable') return "We couldn't complete sign-in. Try again.";
 	if (state === 'reauthenticate') {
-		return 'Your staff session is no longer active. Sign in again.';
+		return 'Your team session is no longer active. Sign in again.';
 	}
 	return null;
 }

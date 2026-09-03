@@ -32,7 +32,7 @@ describe('clubs page', () => {
 		expect(screen.getByText(/Campus clubs and how to reach them/)).toBeInTheDocument();
 		expect(screen.getByText('No published clubs yet.')).toBeInTheDocument();
 		expect(
-			screen.getByText(/Browse stays open while staff review listings/)
+			screen.getByText(/Browse stays open while we review listings/)
 		).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Sign in with Google' })).toHaveAttribute(
 			'href',
@@ -56,7 +56,7 @@ describe('clubs page', () => {
 		});
 		expect(screen.getByText('No published clubs yet.')).toBeInTheDocument();
 		expect(
-			screen.getByText(/Use the form below to start a listing for staff review/)
+			screen.getByText(/Use the form below to submit a listing for review/)
 		).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Continue to listing' })).toBeInTheDocument();
 		expect(screen.getByTestId('submitter-role')).toBeInTheDocument();

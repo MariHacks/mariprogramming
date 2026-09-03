@@ -325,7 +325,7 @@
 
 				{#if data.staff}
 					<section class="reply-editor">
-						<strong>Staff moderation</strong>
+						<strong>Moderation</strong>
 						<form method="POST" action="?/moderate" class="staff-mod-form">
 							<button type="submit" name="moderation" value="lock" class="danger-button"
 								>Lock thread</button

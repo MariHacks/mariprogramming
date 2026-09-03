@@ -47,7 +47,7 @@ describe('club submission page', () => {
 				form: { saved: true }
 			}
 		});
-		expect(screen.getByText('Staff review')).toBeInTheDocument();
+		expect(screen.getByText('Review')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Publish' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Reject' })).toHaveAttribute(
 			'formaction',

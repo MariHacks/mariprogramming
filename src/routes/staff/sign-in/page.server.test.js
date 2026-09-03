@@ -15,7 +15,7 @@ describe('staff sign-in server data', () => {
 
 	it.each([
 		['unavailable', "We couldn't complete sign-in. Try again."],
-		['reauthenticate', 'Your staff session is no longer active. Sign in again.']
+		['reauthenticate', 'Your team session is no longer active. Sign in again.']
 	])('maps the fixed %s state to a generic recovery message', (state, recoveryMessage) => {
 		const load = _createLoad({
 			readEnvironment: () => ({ appOrigin: 'https://club.example.com' })

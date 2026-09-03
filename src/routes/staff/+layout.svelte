@@ -43,13 +43,13 @@
 			<a
 				class="staff-brand"
 				href={resolve('/staff', {})}
-				aria-label="Programming Club Staff orders"
+				aria-label="Programming Club Team orders"
 			>
 				<img class="brand-mark" src="/logo-icon.svg" alt="" width="28" height="30" />
-				<span>Programming Club Staff</span>
+				<span>Programming Club Team</span>
 			</a>
 
-			<nav aria-label="Staff operations">
+			<nav aria-label="Team operations">
 				<a
 					class:active={ordersActive}
 					aria-current={ordersActive ? 'page' : undefined}

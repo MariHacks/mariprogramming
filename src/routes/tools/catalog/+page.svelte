@@ -53,10 +53,6 @@
 
 <svelte:head>
 	<title>Course catalog | {MARITOOLS_NAME}</title>
-	<meta
-		name="description"
-		content="Assessments and books students have shared. Books are reference only."
-	/>
 </svelte:head>
 
 <div class="mt-preview">
@@ -66,7 +62,6 @@
 				<span class="catalog-eyebrow">Courses</span>
 				<h1>Course catalog</h1>
 			</div>
-			<p>Assessments and books students have shared. Books are reference only.</p>
 		</header>
 
 		<form method="GET" class="index-filters">

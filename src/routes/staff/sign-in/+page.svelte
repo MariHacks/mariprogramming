@@ -21,13 +21,13 @@
 </script>
 
 <svelte:head>
-	<title>Staff access | Marianopolis Programming Club</title>
+	<title>Team access | Marianopolis Programming Club</title>
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <section class="staff-sign-in">
 	<div class="sign-in-frame">
-		<h1>Staff access</h1>
+		<h1>Team access</h1>
 		<p>Sign in with the <strong>team@marihacks.com</strong> Google account.</p>
 		{#if data.recoveryMessage}<p class="error" role="alert">{data.recoveryMessage}</p>{/if}
 

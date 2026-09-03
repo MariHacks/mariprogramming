@@ -22,7 +22,7 @@ describe('staff sign-in route', () => {
 				recoveryMessage: null
 			}
 		});
-		expect(screen.getByRole('heading', { level: 1, name: 'Staff access' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { level: 1, name: 'Team access' })).toBeInTheDocument();
 		expect(screen.queryByText('Book Delivery operations')).not.toBeInTheDocument();
 		expect(screen.getByText(/team@marihacks.com/)).toBeInTheDocument();
 		expect(screen.getByText(/Sign in with the/i)).toBeInTheDocument();
@@ -42,11 +42,11 @@ describe('staff sign-in route', () => {
 				staff: null,
 				pathname: '/staff/sign-in',
 				callbackURL: 'https://club.example.com/staff',
-				recoveryMessage: 'Your staff session is no longer active. Sign in again.'
+				recoveryMessage: 'Your team session is no longer active. Sign in again.'
 			}
 		});
 		expect(screen.getByRole('alert')).toHaveTextContent(
-			'Your staff session is no longer active. Sign in again.'
+			'Your team session is no longer active. Sign in again.'
 		);
 		expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Back to the club site' })).toHaveAttribute(

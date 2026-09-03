@@ -5,7 +5,7 @@
 	export let form;
 </script>
 
-<svelte:head><title>Book work | Programming Club Staff</title></svelte:head>
+<svelte:head><title>Book work | Programming Club Team</title></svelte:head>
 
 <section class="workspace">
 	<header>

@@ -167,7 +167,7 @@
 </script>
 
 <svelte:head>
-	<title>Orders | Programming Club Staff</title>
+	<title>Orders | Programming Club Team</title>
 </svelte:head>
 
 <section class="orders-workspace">

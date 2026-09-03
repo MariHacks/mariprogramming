@@ -65,7 +65,7 @@ export function _createPublicProfileHandlers(dependencies = {}) {
 			async mute(event) {
 				const store = createStore();
 				const identity = await staffContext(event, store);
-				if (!identity.staff) return fail(403, { error: 'Staff only.' });
+				if (!identity.staff) return fail(403, { error: 'This action requires team access.' });
 				const userId = String(event.params.userId ?? '').trim();
 				const data = await event.request.formData();
 				try {
@@ -86,7 +86,7 @@ export function _createPublicProfileHandlers(dependencies = {}) {
 			async ban(event) {
 				const store = createStore();
 				const identity = await staffContext(event, store);
-				if (!identity.staff) return fail(403, { error: 'Staff only.' });
+				if (!identity.staff) return fail(403, { error: 'This action requires team access.' });
 				const userId = String(event.params.userId ?? '').trim();
 				const data = await event.request.formData();
 				try {
@@ -110,7 +110,7 @@ export function _createPublicProfileHandlers(dependencies = {}) {
 			async unmute(event) {
 				const store = createStore();
 				const identity = await staffContext(event, store);
-				if (!identity.staff) return fail(403, { error: 'Staff only.' });
+				if (!identity.staff) return fail(403, { error: 'This action requires team access.' });
 				const userId = String(event.params.userId ?? '').trim();
 				try {
 					await store.unmuteUser(userId);
@@ -129,7 +129,7 @@ export function _createPublicProfileHandlers(dependencies = {}) {
 			async unban(event) {
 				const store = createStore();
 				const identity = await staffContext(event, store);
-				if (!identity.staff) return fail(403, { error: 'Staff only.' });
+				if (!identity.staff) return fail(403, { error: 'This action requires team access.' });
 				const userId = String(event.params.userId ?? '').trim();
 				try {
 					await store.unbanUser(userId);

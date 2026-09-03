@@ -39,7 +39,7 @@ describe('public profile page', () => {
 			`/tools/forum/${THREAD}`
 		);
 		expect(screen.queryByText(USER)).not.toBeInTheDocument();
-		expect(screen.queryByRole('heading', { name: 'Staff moderation' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('heading', { name: 'Moderation' })).not.toBeInTheDocument();
 	});
 
 	it('shows remaining mute time and staff mute/ban buttons', () => {
@@ -62,7 +62,7 @@ describe('public profile page', () => {
 			}
 		});
 		expect(screen.getByText(/Muted ·/)).toBeInTheDocument();
-		expect(screen.getByRole('heading', { name: 'Staff moderation' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Moderation' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Unmute' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Ban' })).toBeInTheDocument();
 		expect(screen.queryByLabelText('Ban for')).not.toBeInTheDocument();

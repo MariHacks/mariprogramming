@@ -22,13 +22,13 @@
 	}
 </script>
 
-<svelte:head><title>Members | Programming Club Staff</title></svelte:head>
+<svelte:head><title>Members | Programming Club Team</title></svelte:head>
 
 <section class="members-workspace">
 	<header class="page-heading">
 		<p class="eyebrow">Programming Club</p>
 		<h1>Members</h1>
-		<p>Only club staff can view member details and imported schedules.</p>
+		<p>Member details and imported schedules are visible only in this console.</p>
 	</header>
 	{#if data.unavailable}
 		<p role="alert">Member records are unavailable right now.</p>

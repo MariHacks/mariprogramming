@@ -77,7 +77,7 @@
 				<h1>{displayName(data.profile.displayName)}</h1>
 				<p class="heading-note">
 					{data.profile.role === 'staff' || data.profile.role === 'moderator'
-						? 'Club staff'
+						? 'Club team'
 						: 'MariTools student'}
 					{#if note}
 						· {note}
@@ -91,7 +91,7 @@
 		{#if data.viewerIsStaff}
 			<section class="staff-mod" aria-labelledby="staff-mod-title">
 				<header class="section-heading">
-					<h2 id="staff-mod-title">Staff moderation</h2>
+					<h2 id="staff-mod-title">Moderation</h2>
 				</header>
 				{#if form?.error}
 					<p class="message message-error" role="alert">{form.error}</p>

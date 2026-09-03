@@ -29,7 +29,7 @@
 		{:else if data.submission}
 			<aside class="submit-club" data-testid="club-submission-meta">
 				<div>
-					<strong>{data.staff ? 'Staff review' : 'Your submission'}</strong>
+					<strong>{data.staff ? 'Review' : 'Your submission'}</strong>
 					<h2>{data.submission.status === 'pending' ? 'Pending listing' : 'Listing'}</h2>
 				</div>
 				<p>

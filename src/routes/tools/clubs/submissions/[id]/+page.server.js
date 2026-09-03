@@ -120,7 +120,7 @@ export function _createHandlers(dependencies = {}) {
 		try {
 			const store = createStore();
 			const identity = await staffContext(event, store);
-			if (!identity.staff) return fail(403, { error: 'Publishing is limited to staff.' });
+			if (!identity.staff) return fail(403, { error: 'Publishing requires team access.' });
 			const submissionId = event.params.id;
 			await store.publishPendingClub(submissionId);
 			redirect(303, '/tools/clubs');
@@ -142,7 +142,7 @@ export function _createHandlers(dependencies = {}) {
 		try {
 			const store = createStore();
 			const identity = await staffContext(event, store);
-			if (!identity.staff) return fail(403, { error: 'Rejecting is limited to staff.' });
+			if (!identity.staff) return fail(403, { error: 'Rejecting requires team access.' });
 			const submissionId = event.params.id;
 			await store.rejectPendingClub(submissionId);
 			redirect(303, '/tools/clubs');

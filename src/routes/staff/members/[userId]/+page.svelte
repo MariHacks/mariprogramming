@@ -7,7 +7,7 @@
 		data.member?.displayName;
 </script>
 
-<svelte:head><title>Member | Programming Club Staff</title></svelte:head>
+<svelte:head><title>Member | Programming Club Team</title></svelte:head>
 {#if data.unavailable}<p role="alert">Member details are unavailable right now.</p>
 {:else if data.member}
 	<section class="member-detail">
