@@ -58,7 +58,7 @@ test('release responses expose CSP and private route policies', async ({ request
 	expect(staffResponse.status()).toBe(200);
 	expect(staffResponse.headers()['cache-control']).toBe('private, no-store');
 	expect(staffResponse.headers()['pragma']).toBe('no-cache');
-	expect(staffResponse.headers()['referrer-policy']).toBe('no-referrer');
+	expect(staffResponse.headers()['referrer-policy']).toBe('same-origin');
 	expect(staffResponse.headers()['x-robots-tag']).toBe('noindex, nofollow');
 	expect(staffResponse.headers()['content-security-policy']).toContain("frame-ancestors 'none'");
 
@@ -67,6 +67,30 @@ test('release responses expose CSP and private route policies', async ({ request
 	expect(cronResponse.headers()['cache-control']).toBe('private, no-store');
 	expect(cronResponse.headers()['x-robots-tag']).toBe('noindex, nofollow');
 	expect(await cronResponse.json()).toEqual({ error: 'Scheduled work is unavailable' });
+});
+
+test('private pages preserve the origin required by native same-site form submissions', async ({
+	page
+}) => {
+	await page.goto('/tools/account');
+	const responsePromise = page.waitForResponse(
+		(response) =>
+			response.request().method() === 'POST' &&
+			new URL(response.url()).pathname === '/tools/account'
+	);
+
+	await page.evaluate(() => {
+		const form = document.createElement('form');
+		form.method = 'POST';
+		form.enctype = 'multipart/form-data';
+		form.action = '/tools/account?/finishOnboarding';
+		document.body.append(form);
+		form.submit();
+	});
+
+	const response = await responsePromise;
+	expect(response.request().headers()['origin']).toBe(new URL(page.url()).origin);
+	expect(await response.text()).not.toContain('Cross-site POST form submissions are forbidden');
 });
 
 test('production CSP permits only the framework styles required for the application shell', async ({

@@ -80,7 +80,7 @@ describe('server authentication hook', () => {
 		const response = await setup.handle({ event: event(path), resolve: setup.resolve });
 		expect(response.headers.get('cache-control')).toBe('private, no-store');
 		expect(response.headers.get('x-robots-tag')).toBe('noindex, nofollow');
-		expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+		expect(response.headers.get('referrer-policy')).toBe('same-origin');
 		expect(response.headers.get('pragma')).toBe('no-cache');
 	});
 
