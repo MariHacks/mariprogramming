@@ -46,7 +46,8 @@
 		selectedSha = formSha;
 	}
 	$: if (!selectedSha && savedOutlines.length) selectedSha = String(savedOutlines[0].sha256);
-	$: selectedOutline = savedOutlines.find((/** @type {any} */ outline) => outline.sha256 === selectedSha) ?? null;
+	$: selectedOutline =
+		savedOutlines.find((/** @type {any} */ outline) => outline.sha256 === selectedSha) ?? null;
 	$: savedExtraction = selectedOutline?.extraction
 		? { ok: true, reason: null, sha256: selectedOutline.sha256, ...selectedOutline.extraction }
 		: null;
@@ -57,7 +58,8 @@
 
 	onMount(() => {
 		const timer = setInterval(() => {
-			if (savedOutlines.some((/** @type {any} */ outline) => !outline.extraction)) void invalidateAll();
+			if (savedOutlines.some((/** @type {any} */ outline) => !outline.extraction))
+				void invalidateAll();
 		}, 2000);
 		return () => clearInterval(timer);
 	});
@@ -146,11 +148,8 @@
 	$: gateStack =
 		gateKind === 'need-profile'
 			? { status: 'Finish account to upload', action: 'Finish account to add an outline' }
-			: gateKind === 'need-disclosure'
-				? {
-						status: 'Confirm disclosure to upload',
-						action: 'Confirm disclosure to add an outline'
-					}
+			: gateKind === 'need-analysis-confirmation'
+				? { status: 'Confirmation needed', action: '' }
 				: { status: 'Sign in to upload', action: 'Sign in to add an outline' };
 
 	function addAssessment() {
@@ -199,7 +198,7 @@
 			}
 			updateUpload(id, {
 				status: 'error',
-				error: String((/** @type {any} */ (resultData))?.error ?? 'Could not process this PDF.')
+				error: String(/** @type {any} */ (resultData)?.error ?? 'Could not process this PDF.')
 			});
 		} catch {
 			updateUpload(id, { status: 'error', error: 'Could not process this PDF.' });
@@ -273,9 +272,11 @@
 							<strong>{termName}</strong>
 							<span>{gateStack.status}</span>
 						</div>
-						<a class="quiet-button add-outline--gate" href={resolve('/tools/account', {})}>
-							{gateStack.action}
-						</a>
+						{#if gateKind !== 'need-analysis-confirmation'}
+							<a class="quiet-button add-outline--gate" href={resolve('/tools/account', {})}>
+								{gateStack.action}
+							</a>
+						{/if}
 					</div>
 				{/if}
 
@@ -302,7 +303,8 @@
 							on:click={() => selectOutline(outline.sha256)}
 						>
 							<span>{textField(outline.extraction.proposals?.courseCode) || 'Course'}</span>
-							<strong>{textField(outline.extraction.proposals?.title) || 'Untitled outline'}</strong>
+							<strong>{textField(outline.extraction.proposals?.title) || 'Untitled outline'}</strong
+							>
 							<small>Saved to your account</small>
 						</button>
 					{:else}
@@ -368,19 +370,22 @@
 						</div>
 						<a class="primary-button" href={resolve('/tools/account', {})}>Open account</a>
 					</div>
-				{:else if gateKind === 'need-disclosure'}
+				{:else if gateKind === 'need-analysis-confirmation'}
 					<div class="sheet-empty">
 						<div class="sheet-head">
 							<div>
-								<span>Semester</span>
-								<h2>Confirm the NVIDIA disclosure</h2>
+								<h2>Before you upload an outline</h2>
 								<p>
-									Confirm the disclosure on your account page before outline text is sent for
-									automatic analysis. You can still edit everything before sharing.
+									We use the text to find course details, assessments, dates, and books. You can
+									review and edit everything before sharing it.
 								</p>
 							</div>
 						</div>
-						<a class="primary-button" href={resolve('/tools/account', {})}>Open account</a>
+						<form method="POST">
+							<button class="primary-button" type="submit" formaction="?/confirmAnalysis">
+								Continue to Semester
+							</button>
+						</form>
 					</div>
 				{:else if selectedPending || selectedIsProcessing}
 					<div
@@ -400,7 +405,11 @@
 							<span class="outline-loader__progress"><span></span></span>
 						</div>
 						<div class="processing-copy">
-							<h2>{selectedPending?.status === 'error' ? 'Could not process this outline' : 'Extracting your outline'}</h2>
+							<h2>
+								{selectedPending?.status === 'error'
+									? 'Could not process this outline'
+									: 'Extracting your outline'}
+							</h2>
 							<p>{selectedPending?.name || selectedFileName || 'Course outline PDF'}</p>
 							<small
 								>{selectedPending?.error ??
@@ -454,7 +463,11 @@
 							<div>
 								<span>Outline review</span>
 								<h2>Review extracted details</h2>
-								<p>{fieldsDisabled ? 'Saved privately to your account.' : 'Review carefully. Saving shares these course facts.'}</p>
+								<p>
+									{fieldsDisabled
+										? 'Saved privately to your account.'
+										: 'Review carefully. Saving shares these course facts.'}
+								</p>
 							</div>
 							<div class="review-course-ref">
 								<strong>{title || 'Untitled outline'}</strong>
@@ -472,7 +485,12 @@
 							<div class="review-fields">
 								<label>
 									<span>Course code</span>
-									<input name="courseCode" bind:value={courseCode} required disabled={fieldsDisabled} />
+									<input
+										name="courseCode"
+										bind:value={courseCode}
+										required
+										disabled={fieldsDisabled}
+									/>
 								</label>
 								<label>
 									<span>Title</span>
@@ -484,7 +502,12 @@
 								</label>
 								<label>
 									<span>Teacher</span>
-									<input name="teacherName" bind:value={teacherName} required disabled={fieldsDisabled} />
+									<input
+										name="teacherName"
+										bind:value={teacherName}
+										required
+										disabled={fieldsDisabled}
+									/>
 								</label>
 							</div>
 						</section>
@@ -504,14 +527,22 @@
 										class:warned={!String(assessment.date ?? '').trim() &&
 											String(assessment.title ?? '').trim()}
 									>
-										<input bind:value={assessment.title} aria-label="Assessment" disabled={fieldsDisabled} />
+										<input
+											bind:value={assessment.title}
+											aria-label="Assessment"
+											disabled={fieldsDisabled}
+										/>
 										<input
 											bind:value={assessment.date}
 											aria-label="Date"
 											placeholder="Date or schedule"
 											disabled={fieldsDisabled}
 										/>
-										<input bind:value={assessment.weightLabel} aria-label="Weight" disabled={fieldsDisabled} />
+										<input
+											bind:value={assessment.weightLabel}
+											aria-label="Weight"
+											disabled={fieldsDisabled}
+										/>
 										<button
 											type="button"
 											disabled={fieldsDisabled}
@@ -524,8 +555,11 @@
 							{#if missingDates}
 								<p class="field-error">Add a date for each named assessment before sharing.</p>
 							{/if}
-							<button class="add-row" type="button" disabled={fieldsDisabled} on:click={addAssessment}
-								>+ Add assessment</button
+							<button
+								class="add-row"
+								type="button"
+								disabled={fieldsDisabled}
+								on:click={addAssessment}>+ Add assessment</button
 							>
 						</section>
 
@@ -546,8 +580,18 @@
 											placeholder="Book title"
 											disabled={fieldsDisabled}
 										/>
-										<input bind:value={book.author} aria-label="Author" placeholder="Author" disabled={fieldsDisabled} />
-										<input bind:value={book.isbn} aria-label="ISBN" placeholder="ISBN" disabled={fieldsDisabled} />
+										<input
+											bind:value={book.author}
+											aria-label="Author"
+											placeholder="Author"
+											disabled={fieldsDisabled}
+										/>
+										<input
+											bind:value={book.isbn}
+											aria-label="ISBN"
+											placeholder="ISBN"
+											disabled={fieldsDisabled}
+										/>
 										<span></span>
 									</div>
 								{/each}
@@ -560,12 +604,21 @@
 									? `${missingDates} assessment date${missingDates === 1 ? '' : 's'} missing`
 									: identityFilled < 4
 										? `${identityFilled}/4 identity fields filled`
-										: fieldsDisabled ? 'Saved privately.' : 'Save shares these facts to the catalog.'}</span
+										: fieldsDisabled
+											? 'Saved privately.'
+											: 'Save shares these facts to the catalog.'}</span
 							>
 							<div class="course-actions">
-								<button type="submit" class="danger-button" formaction="?/deleteOutline" formnovalidate>Delete</button>
+								<button
+									type="submit"
+									class="danger-button"
+									formaction="?/deleteOutline"
+									formnovalidate>Delete</button
+								>
 								{#if fieldsDisabled}
-									<button type="button" class="quiet-button" on:click={() => (editing = true)}>Edit</button>
+									<button type="button" class="quiet-button" on:click={() => (editing = true)}
+										>Edit</button
+									>
 								{:else}
 									<button type="submit" class="primary-button">Save</button>
 								{/if}

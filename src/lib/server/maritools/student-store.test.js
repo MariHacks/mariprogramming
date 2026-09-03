@@ -78,20 +78,19 @@ function inner(overrides = {}) {
 }
 
 describe('createStudentStore', () => {
-	it('completes a student profile after disclosure', async () => {
+	it('completes a student profile without accepting outline analysis', async () => {
 		const repo = inner();
 		const store = createStudentStore(repo);
 		const profile = await store.completeProfile({
 			userId: USER,
 			email: 'ada@gmail.com',
 			studentId: '2530622',
-			displayName: 'Ada',
-			nimAccepted: true
+			displayName: 'Ada'
 		});
 		expect(profile).not.toHaveProperty('studentId');
 		expect(JSON.stringify(profile)).not.toContain('2530622');
 		expect(profile.displayName).toBe('Ada');
-		expect(repo.acceptNimDisclosure).toHaveBeenCalledWith(USER);
+		expect(repo.acceptNimDisclosure).not.toHaveBeenCalled();
 		expect(repo.upsertStudentProfile).toHaveBeenCalledWith(
 			expect.objectContaining({ role: 'student', displayName: 'Ada' })
 		);
@@ -104,8 +103,7 @@ describe('createStudentStore', () => {
 			userId: USER,
 			email: 'team@marihacks.com',
 			studentId: '2530622',
-			displayName: '',
-			nimAccepted: true
+			displayName: ''
 		});
 		expect(repo.upsertStudentProfile).toHaveBeenCalledWith(
 			expect.objectContaining({ role: 'staff', displayName: null })
@@ -119,27 +117,32 @@ describe('createStudentStore', () => {
 		expect(profile.displayName).toBe('Ada');
 		const missing = createStudentStore(inner({ getStudentProfile: vi.fn(async () => null) }));
 		await expect(missing.getProfile(USER)).resolves.toBeNull();
-		await expect(missing.completeProfile({
-			userId: USER,
-			email: 'ada@gmail.com',
-			studentId: '2530622',
-			nimAccepted: true
-		})).resolves.toBeNull();
+		await expect(
+			missing.completeProfile({
+				userId: USER,
+				email: 'ada@gmail.com',
+				studentId: '2530622'
+			})
+		).resolves.toBeNull();
 	});
 
-	it.each([
-		['12', true, 'invalid-student-id'],
-		['2530622', false, 'nim-required']
-	])('rejects invalid completion %#', async (studentId, nimAccepted, code) => {
+	it('rejects an invalid student number', async () => {
 		const store = createStudentStore(inner());
 		await expect(
 			store.completeProfile({
 				userId: USER,
 				email: 'ada@gmail.com',
-				studentId,
-				nimAccepted
+				studentId: '12'
 			})
-		).rejects.toMatchObject({ name: 'MaritoolsInputError', code });
+		).rejects.toMatchObject({ name: 'MaritoolsInputError', code: 'invalid-student-id' });
+	});
+
+	it('records the one-time Semester analysis confirmation', async () => {
+		const repo = inner();
+		const store = createStudentStore(repo);
+
+		await expect(store.acceptOutlineAnalysis(USER)).resolves.toBeUndefined();
+		expect(repo.acceptNimDisclosure).toHaveBeenCalledWith(USER);
 	});
 
 	it('maps published catalog rows and nested repository rows', async () => {

@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CANONICAL_OMNIVOX_SCHEDULE } from '$lib/maritools/schedule/fixture.js';
-import { NIM_DISCLOSURE } from '$lib/server/maritools/community.js';
 import AccountPage from './+page.svelte';
 
 const accountPageSource = readFileSync('src/routes/tools/account/+page.svelte', 'utf8');
@@ -27,7 +26,6 @@ afterEach(() => {
 const base = {
 	callbackURL: 'https://club.example.com/tools/account',
 	recoveryMessage: null,
-	nimDisclosure: NIM_DISCLOSURE,
 	googleSignInConfigured: true,
 	requiredFormUrl: 'https://forms.cloud.microsoft/pages/responsepage.aspx?id=form&route=shorturl'
 };
@@ -144,7 +142,7 @@ describe('account page', () => {
 			screen.getByRole('option', { name: 'Science, Pure and Applied Science' })
 		).toBeInTheDocument();
 		expect(screen.getByLabelText('Current year')).toHaveTextContent('First year');
-		expect(screen.queryByText(NIM_DISCLOSURE)).not.toBeInTheDocument();
+		expect(screen.queryByText(/NVIDIA outline analysis/i)).not.toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Join the Programming Club' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Finish your club profile' })).toBeInTheDocument();
 		expect(screen.queryByText(/club staff can view my Google email/i)).not.toBeInTheDocument();
@@ -756,14 +754,14 @@ describe('account page', () => {
 						nimAccepted: false
 					}
 				},
-				form: { error: 'Confirm the NVIDIA disclosure before saving.' }
+				form: { error: 'Could not save your account. Try again.' }
 			}
 		});
 		expect(screen.getByText('We could not finish sign-in. Try again.')).toBeInTheDocument();
 		expect(
 			screen.getByText('Account details are unavailable right now. Try again.')
 		).toBeInTheDocument();
-		expect(screen.getByText('Confirm the NVIDIA disclosure before saving.')).toBeInTheDocument();
+		expect(screen.getByText('Could not save your account. Try again.')).toBeInTheDocument();
 		expect(screen.queryByText('Not accepted yet')).not.toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
 	});

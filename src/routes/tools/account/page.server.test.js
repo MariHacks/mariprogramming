@@ -2,7 +2,6 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { ServerConfigurationError } from '$lib/server/config/environment.js';
-import { NIM_DISCLOSURE } from '$lib/server/maritools/community.js';
 import { CANONICAL_OMNIVOX_SCHEDULE } from '$lib/maritools/schedule/fixture.js';
 import {
 	MaritoolsInputError,
@@ -64,7 +63,6 @@ describe('account page server', () => {
 			view: { kind: 'guest' },
 			callbackURL: `${ORIGIN}/tools/account`,
 			recoveryMessage: null,
-			nimDisclosure: NIM_DISCLOSURE,
 			googleSignInConfigured: true,
 			onboardingPending: true,
 			club: { kind: 'signed_out' },
@@ -166,8 +164,7 @@ describe('account page server', () => {
 			username: null,
 			firstName: null,
 			lastName: null,
-			profileImageDataUrl: null,
-			nimAccepted: true
+			profileImageDataUrl: null
 		});
 		expect(data.club).toEqual({ kind: 'needs_club_details' });
 		expect(getMyClubOnboarding).toHaveBeenCalledWith(SESSION.userId);
@@ -389,7 +386,7 @@ describe('account page server', () => {
 		const result = await current.actions.complete(
 			event({
 				locals: { maritools: SESSION },
-				form: { studentId: '2530622', displayName: 'Ada', nimAccepted: 'on' }
+				form: { studentId: '2530622', displayName: 'Ada' }
 			})
 		);
 		expect(result).toMatchObject({ success: true });
@@ -398,8 +395,7 @@ describe('account page server', () => {
 			userId: SESSION.userId,
 			email: SESSION.email,
 			studentId: '2530622',
-			displayName: 'Ada',
-			nimAccepted: true
+			displayName: 'Ada'
 		});
 	});
 
@@ -756,24 +752,6 @@ describe('account page server', () => {
 		);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toMatch(/student number/i);
-	});
-
-	it('requires the NVIDIA disclosure', async () => {
-		const current = handlers({
-			repository: {
-				completeProfile: vi.fn(async () => {
-					throw new MaritoolsInputError('nim-required');
-				})
-			}
-		});
-		const result = await current.actions.complete(
-			event({
-				locals: { maritools: SESSION },
-				form: { studentId: '2530622' }
-			})
-		);
-		expect(result.status).toBe(400);
-		expect(result.data.error).toMatch(/NVIDIA/i);
 	});
 
 	it('rethrows unexpected completion failures', async () => {

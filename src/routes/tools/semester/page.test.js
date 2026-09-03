@@ -88,7 +88,10 @@ describe('semester page', () => {
 	});
 
 	it('shows an honest processing state immediately after a PDF is chosen', async () => {
-		vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(() => new Promise(() => {}))
+		);
 		const user = userEvent.setup();
 		render(SemesterPage, { props: { data: { view: { kind: 'ready' } } } });
 		const input = screen.getByLabelText('Choose outline PDFs');
@@ -114,19 +117,23 @@ describe('semester page', () => {
 			'/tools/account'
 		);
 		expect(screen.queryByLabelText('Add outline PDF')).not.toBeInTheDocument();
-		cleanup();
-		render(SemesterPage, { props: { data: { view: { kind: 'need-disclosure' } } } });
+	});
+
+	it('asks for outline analysis confirmation inside the Semester workspace', () => {
+		render(SemesterPage, {
+			props: { data: { view: { kind: 'need-analysis-confirmation' } } }
+		});
+
 		expect(
-			screen.getByRole('heading', { name: 'Confirm the NVIDIA disclosure' })
+			screen.getByRole('heading', { name: 'Before you upload an outline' })
 		).toBeInTheDocument();
-		expect(screen.getByRole('link', { name: 'Open account' })).toHaveAttribute(
-			'href',
-			'/tools/account'
+		expect(screen.getByText(/use the text to find course details/i)).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Continue to Semester' })).toHaveAttribute(
+			'formaction',
+			'?/confirmAnalysis'
 		);
-		expect(screen.getByText('Confirm disclosure to upload')).toBeInTheDocument();
-		expect(
-			screen.getByRole('link', { name: 'Confirm disclosure to add an outline' })
-		).toHaveAttribute('href', '/tools/account');
+		expect(screen.queryByRole('link', { name: 'Open account' })).not.toBeInTheDocument();
+		expect(screen.queryByText(/NVIDIA/i)).not.toBeInTheDocument();
 		expect(screen.queryByLabelText('Add outline PDF')).not.toBeInTheDocument();
 	});
 

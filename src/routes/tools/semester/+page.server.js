@@ -29,10 +29,8 @@ export function _createHandlers(dependencies = {}) {
 	const getNimKey =
 		dependencies.getNimKey ?? (() => String(privateEnv.NVIDIA_NIM_API_KEY ?? '').trim());
 	const getNimModel =
-		dependencies.getNimModel ??
-		(() => privateEnv.NVIDIA_NIM_MODEL || 'qwen/qwen3.5-122b-a10b');
-	const getToday =
-		dependencies.getToday ?? (() => new Date().toISOString().slice(0, 10));
+		dependencies.getNimModel ?? (() => privateEnv.NVIDIA_NIM_MODEL || 'qwen/qwen3.5-122b-a10b');
+	const getToday = dependencies.getToday ?? (() => new Date().toISOString().slice(0, 10));
 	const createProvider =
 		dependencies.createProvider ??
 		(() => createOutlineExtractionProvider({ getKey: getNimKey, getModel: getNimModel }));
@@ -75,7 +73,28 @@ export function _createHandlers(dependencies = {}) {
 		if (view.kind === 'need-profile') {
 			return fail(400, { error: 'Finish your account before uploading an outline.' });
 		}
-		return fail(400, { error: 'Confirm the NVIDIA disclosure on your account page first.' });
+		return fail(400, { error: 'Confirm outline analysis before uploading an outline.' });
+	}
+
+	/** @param {any} event */
+	async function confirmAnalysis(event) {
+		const session = event.locals.maritools;
+		if (!session) return fail(401, { error: 'Sign in with Google first.' });
+		try {
+			const repository = createRepository();
+			const profile = await repository.getProfile(session.userId);
+			if (!profile) return fail(400, { error: 'Finish your account before continuing.' });
+			await repository.acceptOutlineAnalysis(session.userId);
+			return { confirmed: true };
+		} catch (error) {
+			if (error instanceof MaritoolsInputError) {
+				return fail(400, { error: 'Could not confirm outline analysis. Try again.' });
+			}
+			if (error instanceof MaritoolsUnavailableError) {
+				return fail(503, { error: 'Semester tools are unavailable. Try again.' });
+			}
+			throw error;
+		}
 	}
 
 	/** @param {any} event */
@@ -126,7 +145,8 @@ export function _createHandlers(dependencies = {}) {
 		const text = String(extracted.text ?? '').trim();
 		if (needsTextPdf(text, extracted.byteLength)) {
 			return fail(400, {
-				error: 'This looks like a scanned PDF. Export a text PDF from the original document and upload that.'
+				error:
+					'This looks like a scanned PDF. Export a text PDF from the original document and upload that.'
 			});
 		}
 		try {
@@ -245,7 +265,9 @@ export function _createHandlers(dependencies = {}) {
 			return { contributed: true };
 		} catch (error) {
 			if (error instanceof MaritoolsInputError) {
-				return fail(400, { error: 'Add the course code, section, teacher, and term before sharing.' });
+				return fail(400, {
+					error: 'Add the course code, section, teacher, and term before sharing.'
+				});
 			}
 			if (error instanceof MaritoolsUnavailableError) {
 				return fail(503, { error: 'Sharing to the catalog is unavailable. Try again.' });
@@ -274,7 +296,7 @@ export function _createHandlers(dependencies = {}) {
 		}
 	}
 
-	return { load, actions: { extract, contribute, deleteOutline } };
+	return { load, actions: { confirmAnalysis, extract, contribute, deleteOutline } };
 }
 
 const handlers = _createHandlers();
