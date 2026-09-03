@@ -300,7 +300,7 @@ export function createBetterAuthOptions({
 	const secureCookies = new URL(environment.appOrigin).protocol === 'https:';
 
 	return {
-		appName: 'Marianopolis Programming Club Staff',
+		appName: 'Marianopolis Programming Club Team',
 		baseURL: environment.betterAuthOrigin,
 		basePath: '/api/auth',
 		secret: environment.betterAuthSecret,

@@ -52,7 +52,7 @@ describe('Discord notification sink', () => {
 		expect(embed.url).toBe('https://club.example.com/staff/book-work');
 		expect(embed.color).toBe(0xdf5b48);
 		expect(embed.timestamp).toBe('2026-08-20T18:15:00.000Z');
-		expect(embed.footer).toEqual({ text: 'Open staff book work · no student names or emails' });
+		expect(embed.footer).toEqual({ text: 'Open book work. No student names or emails.' });
 		expect(embed.fields).toEqual([
 			{ name: 'Reference', value: '`REQ-ABCDEFGHJKM2`', inline: true },
 			{ name: 'Copies', value: '2 copies', inline: true },
@@ -67,7 +67,7 @@ describe('Discord notification sink', () => {
 		expect(JSON.stringify(posted)).not.toContain('book request submitted');
 	});
 
-	it('names fulfillment, payment, assignment, and pickup in staff language', async () => {
+	it('names fulfillment, payment, assignment, and pickup in clear language', async () => {
 		/** @param {Record<string, unknown>} fact */
 		async function embedFor(fact) {
 			const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
@@ -119,7 +119,7 @@ describe('Discord notification sink', () => {
 			bookstores: ['Independent bookstore']
 		});
 		expect(assigned.title).toBe('Request assigned');
-		expect(assigned.description).toBe('Staff assigned this request to a bookstore.');
+		expect(assigned.description).toBe('We assigned this request to a bookstore.');
 		expect(assigned.color).toBe(0x3d6b99);
 
 		const pickup = await embedFor({

@@ -10,6 +10,7 @@ import migrationSql0014 from '../../../../drizzle/0014_outline_reviews.sql?raw';
 import migrationSql0015 from '../../../../drizzle/0015_programming_club_memberships.sql?raw';
 import migrationSql0016 from '../../../../drizzle/0016_required_club_form.sql?raw';
 import migrationSql0017 from '../../../../drizzle/0017_member_onboarding_profile.sql?raw';
+import migrationSql0019 from '../../../../drizzle/0019_case_preserved_usernames.sql?raw';
 import { readRuntimeEnvironment } from '../config/environment.js';
 import { createMariToolsRepository } from './repository.js';
 
@@ -118,6 +119,11 @@ const INCREMENTAL_MIGRATIONS = [
 		sentinel: 'mt_programming_club_memberships',
 		column: 'year_level',
 		sql: migrationSql0017,
+		grantTables: []
+	},
+	{
+		sentinel: 'mt_student_profiles_username_lower_unique_idx',
+		sql: migrationSql0019,
 		grantTables: []
 	}
 ];

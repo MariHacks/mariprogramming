@@ -10,6 +10,7 @@ import {
 } from './repository.js';
 
 export class MaritoolsInputError extends Error {
+	/** @param {string} code */
 	constructor(code) {
 		super(code);
 		this.name = 'MaritoolsInputError';
@@ -60,21 +61,22 @@ export function createStudentStore(inner) {
 			});
 		},
 
+		/** @param {string} userId */
+		acceptOutlineAnalysis(userId) {
+			return wrap(() => inner.acceptNimDisclosure(userId));
+		},
+
 		/**
 		 * @param {{
 		 *   userId: string,
 		 *   email: string,
 		 *   studentId: string,
-		 *   displayName?: string | null,
-		 *   nimAccepted: boolean
+		 *   displayName?: string | null
 		 * }} input
 		 */
 		async completeProfile(input) {
 			if (!isCompleteStudentId(input.studentId)) {
 				throw new MaritoolsInputError('invalid-student-id');
-			}
-			if (!input.nimAccepted) {
-				throw new MaritoolsInputError('nim-required');
 			}
 			return wrap(async () => {
 				await inner.upsertStudentProfile({
@@ -83,7 +85,6 @@ export function createStudentStore(inner) {
 					displayName: input.displayName ? String(input.displayName).trim().slice(0, 120) : null,
 					role: isStaffAccount(input.email) ? 'staff' : 'student'
 				});
-				await inner.acceptNimDisclosure(input.userId);
 				const row = await inner.getStudentProfile(input.userId);
 				return row ? publicStudentView(row) : null;
 			});
@@ -156,15 +157,16 @@ export function createStudentStore(inner) {
 		listOutlines(userId) {
 			return wrap(async () => {
 				const rows = await inner.listUserOutlines(userId);
-				return rows.map((row) => ({
+				return rows.map((/** @type {any} */ row) => ({
 					sha256: row.sha256,
 					createdAt: row.createdAt,
-					extraction: row.reviewProposals ?? row.proposals
-						? {
-								proposals: row.reviewProposals ?? row.proposals,
-								inferenceCount: row.inferenceCount
-							}
-						: null
+					extraction:
+						(row.reviewProposals ?? row.proposals)
+							? {
+									proposals: row.reviewProposals ?? row.proposals,
+									inferenceCount: row.inferenceCount
+								}
+							: null
 				}));
 			});
 		},

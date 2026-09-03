@@ -44,4 +44,32 @@ describe('staff members page', () => {
 			'/staff/members/member-1'
 		);
 	});
+
+	it('links to adjacent roster pages while preserving the search query', () => {
+		render(MembersPage, {
+			props: {
+				data: {
+					unavailable: false,
+					availability: { denominator: 0, invalidScheduleCount: 0, cells: [] },
+					listing: {
+						rows: [{ userId: 'member-26', displayName: 'Ada', program: 'Science' }],
+						totalCount: 70,
+						query: 'Ada Lovelace',
+						page: 2,
+						pageSize: 25
+					}
+				}
+			}
+		});
+
+		expect(screen.getByText('Page 2 of 3')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: 'Previous' })).toHaveAttribute(
+			'href',
+			'/staff/members?q=Ada+Lovelace&page=1'
+		);
+		expect(screen.getByRole('link', { name: 'Next' })).toHaveAttribute(
+			'href',
+			'/staff/members?q=Ada+Lovelace&page=3'
+		);
+	});
 });

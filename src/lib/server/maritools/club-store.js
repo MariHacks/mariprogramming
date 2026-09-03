@@ -81,8 +81,8 @@ function optionalText(value, maximum) {
 
 /** @param {unknown} value */
 function username(value) {
-	const normalized = text(value, 32).toLowerCase();
-	if (!/^[a-z0-9_]{3,24}$/u.test(normalized)) throw new ClubInputError('invalid-username');
+	const normalized = text(value, 32);
+	if (!/^[A-Za-z0-9_]{3,24}$/u.test(normalized)) throw new ClubInputError('invalid-username');
 	return normalized;
 }
 
@@ -150,7 +150,7 @@ function key(weekday, time) {
 	return `${weekday}-${time}`;
 }
 
-/** @param {{ joinProgrammingClub: Function, updateMemberProfile: Function, getProgrammingClubMembership: Function, completeProgrammingClubOnboarding: Function, shareSavedScheduleWithClub: Function, stopSharingScheduleWithClub: Function, listStaffClubMembers: Function, getStaffClubMember: Function, listSharedClubSchedules: Function }} inner */
+/** @param {{ joinProgrammingClub: Function, updateMemberProfile: Function, getProgrammingClubMembership: Function, completeProgrammingClubOnboarding: Function, shareSavedScheduleWithClub: Function, stopSharingScheduleWithClub: Function, listStaffClubMembers: Function, getStaffClubMember: Function, listSharedClubSchedules: Function, muteUser: Function, banUser: Function, unmuteUser: Function, unbanUser: Function, setMemberRole: Function }} inner */
 export function createClubStore(inner) {
 	return Object.freeze({
 		/** @param {{ userId: string, email: string, studentId: string, username: string, firstName: string, lastName: string, profileImageDataUrl?: string | null, program: string, yearLevel: string, experienceLevel: string, interests: string[], clubGoals?: string }} input */
@@ -238,11 +238,46 @@ export function createClubStore(inner) {
 			});
 		},
 
+		/** @param {string} id @param {Date} until */
+		muteMember(id, until) {
+			return wrap(() => inner.muteUser(userId(id), until));
+		},
+
+		/** @param {string} id @param {{ permanent?: boolean, until?: Date }} options */
+		banMember(id, options) {
+			return wrap(() =>
+				inner.banUser(
+					userId(id),
+					options.permanent === true ? { until: null } : { until: options.until }
+				)
+			);
+		},
+
+		/** @param {string} id */
+		unmuteMember(id) {
+			return wrap(() => inner.unmuteUser(userId(id)));
+		},
+
+		/** @param {string} id */
+		unbanMember(id) {
+			return wrap(() => inner.unbanUser(userId(id)));
+		},
+
+		/** @param {string} id */
+		promoteMember(id) {
+			return wrap(() => inner.setMemberRole(userId(id), 'moderator'));
+		},
+
+		/** @param {string} id */
+		demoteMember(id) {
+			return wrap(() => inner.setMemberRole(userId(id), 'student'));
+		},
+
 		async getStaffMeetingAvailability() {
 			return wrap(async () => {
 				const rows = await inner.listSharedClubSchedules();
 				const cells = weeklyCells();
-				const counts = new Map(cells.map((cell) => [key(cell.weekday, cell.time), 0]));
+				const cellsByKey = new Map(cells.map((cell) => [key(cell.weekday, cell.time), cell]));
 				let denominator = 0;
 				let invalidScheduleCount = 0;
 				for (const row of rows) {
@@ -253,16 +288,14 @@ export function createClubStore(inner) {
 					}
 					denominator += 1;
 					for (const free of freeCellsFromCourses(parsed.courses)) {
-						if (counts.has(free)) counts.set(free, (counts.get(free) ?? 0) + 1);
+						const cell = cellsByKey.get(free);
+						if (cell) cell.freeCount += 1;
 					}
 				}
 				return {
 					denominator,
 					invalidScheduleCount,
-					cells: cells.map((cell) => ({
-						...cell,
-						freeCount: counts.get(key(cell.weekday, cell.time)) ?? 0
-					}))
+					cells
 				};
 			});
 		}

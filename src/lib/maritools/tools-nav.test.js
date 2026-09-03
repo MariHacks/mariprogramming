@@ -27,7 +27,7 @@ describe('TOOL_SECTIONS', () => {
 			'Paste your Omnivox list into a weekly calendar.',
 			'Make a board and see when people overlap without an account.',
 			'Upload an outline and check the dates.',
-			'Browse assessments and books students have shared.',
+			'Compare course outlines by code, term, and section.',
 			'What a club does and how to reach it.',
 			'Read threads or post with a course tag.'
 		]);

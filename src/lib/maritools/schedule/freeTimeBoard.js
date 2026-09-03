@@ -113,15 +113,6 @@ export function filterPaintableCells(cells, dayColumns) {
 }
 
 /**
- * @param {unknown} free
- * @returns {Set<string>}
- */
-function cellsFromFreeList(free) {
-	if (!Array.isArray(free)) return new Set();
-	return new Set(free.filter((cell) => typeof cell === 'string' && cell.length > 0));
-}
-
-/**
  * @param {unknown} availability
  * @returns {{ byWeek: Record<string, string[]>, legacyFree: string[] | null }}
  */
@@ -157,11 +148,8 @@ export function freeCellsFromAvailability(availability, weekStartIso) {
 		typeof weekStartIso === 'string' && ISO_DATE.test(weekStartIso) ? weekStartIso : '';
 	if (!week) return new Set();
 	const { byWeek, legacyFree } = readAvailabilityShape(availability);
-	if (Object.keys(byWeek).length > 0) {
-		return cellsFromFreeList(byWeek[week] ?? []);
-	}
-	if (legacyFree) return cellsFromFreeList(legacyFree);
-	return new Set();
+	const free = Object.keys(byWeek).length > 0 ? (byWeek[week] ?? []) : (legacyFree ?? []);
+	return new Set(free.filter((cell) => typeof cell === 'string' && cell.length > 0));
 }
 
 /**

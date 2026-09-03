@@ -5,11 +5,12 @@ import {
 	SCHEDULE_PASTE_STORAGE_KEY
 } from './persistPaste.js';
 
+/** @returns {Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>} */
 function memoryStorage() {
 	/** @type {Map<string, string>} */
 	const map = new Map();
 	return {
-		getItem: (key) => (map.has(key) ? map.get(key) : null),
+		getItem: (key) => map.get(key) ?? null,
 		setItem: (key, value) => {
 			map.set(key, value);
 		},
@@ -33,5 +34,11 @@ describe('schedule paste persistence', () => {
 		saveSchedulePaste(storage, '   ');
 		expect(loadSchedulePaste(storage)).toBe('');
 		expect(storage.getItem(SCHEDULE_PASTE_STORAGE_KEY)).toBeNull();
+	});
+
+	it('normalizes nullish paste values before clearing them', () => {
+		const storage = memoryStorage();
+		Reflect.apply(saveSchedulePaste, undefined, [storage, null]);
+		expect(loadSchedulePaste(storage)).toBe('');
 	});
 });

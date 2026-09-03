@@ -29,7 +29,7 @@ export const TOOL_SECTIONS = [
 			{
 				href: '/tools/catalog',
 				label: 'Course catalog',
-				summary: 'Browse assessments and books students have shared.'
+				summary: 'Compare course outlines by code, term, and section.'
 			}
 		]
 	},

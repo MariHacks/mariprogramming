@@ -21,6 +21,30 @@ describe('structuredFactsView', () => {
 			books: [{ title: 'SICP', author: 'Abelson', isbn: '', required: true }]
 		});
 	});
+
+	it('normalizes malformed facts without leaking source values', () => {
+		expect(
+			structuredFactsView({
+				assessments: [null, { title: '  Quiz  ', weight: false, date: '' }],
+				books: [42, { title: null, author: 7, isbn: '  123  ', required: 0 }]
+			})
+		).toEqual({
+			assessments: [
+				{ title: '', weight: '', date: '' },
+				{ title: 'Quiz', weight: 'false', date: '' }
+			],
+			books: [
+				{ title: '', author: '', isbn: '', required: false },
+				{ title: '', author: '7', isbn: '123', required: false }
+			]
+		});
+		expect(structuredFactsView(null)).toEqual({ assessments: [], books: [] });
+		expect(structuredFactsView([])).toEqual({ assessments: [], books: [] });
+		expect(structuredFactsView({ assessments: 'none', books: 'none' })).toEqual({
+			assessments: [],
+			books: []
+		});
+	});
 });
 
 describe('buildCatalogConflictGroups', () => {
@@ -117,5 +141,61 @@ describe('buildCatalogConflictGroups', () => {
 
 	it('returns an empty list when there are no conflict rows', () => {
 		expect(buildCatalogConflictGroups([])).toEqual([]);
+	});
+
+	it('skips rows without an offering and defaults missing fields', () => {
+		const groups = buildCatalogConflictGroups(
+			[
+				{ offeringId: null },
+				{
+					offeringId: OFFERING_A,
+					contributorUserId: 42,
+					status: null,
+					structured: null,
+					createdAt: null,
+					updatedAt: 17
+				}
+			],
+			/** @type {any} */ (null)
+		);
+
+		expect(groups).toEqual([
+			expect.objectContaining({
+				offeringId: OFFERING_A,
+				courseCode: '',
+				title: '',
+				section: '',
+				teacherName: '',
+				termId: '',
+				contributions: [
+					expect.objectContaining({
+						id: '',
+						status: 'conflict',
+						createdAt: '',
+						updatedAt: '17',
+						contributorDisplayName: 'Student'
+					})
+				]
+			})
+		]);
+	});
+
+	it('accepts a display-name map and falls back for blank names', () => {
+		const groups = buildCatalogConflictGroups(
+			[
+				{
+					id: CONTRIB_A,
+					offeringId: OFFERING_A,
+					contributorUserId: 'user-a',
+					status: 'conflict',
+					structured: {},
+					createdAt: '',
+					updatedAt: ''
+				}
+			],
+			new Map([['user-a', '   ']])
+		);
+
+		expect(groups[0].contributions[0].contributorDisplayName).toBe('Student');
 	});
 });

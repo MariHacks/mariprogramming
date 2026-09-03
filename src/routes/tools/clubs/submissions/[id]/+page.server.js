@@ -1,10 +1,9 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { buildClubSubmissionPayload } from '$lib/maritools/club-listing.js';
+import { clubListingDraft, clubListingInput } from '$lib/server/maritools/club-listing-input.js';
 import {
 	MaritoolsInputError,
 	MaritoolsUnavailableError,
-	openCommunityStore,
-	slugFromName
+	openCommunityStore
 } from '$lib/server/maritools/community-store.js';
 
 export const prerender = false;
@@ -35,13 +34,25 @@ export function _createHandlers(dependencies = {}) {
 			const identity = await staffContext(event, store);
 			const submission = await store.getClubSubmission(submissionId);
 			if (!submission) {
-				return { submission: null, notFound: true, canEdit: false, canPublish: false, staff: false };
+				return {
+					submission: null,
+					notFound: true,
+					canEdit: false,
+					canPublish: false,
+					staff: false
+				};
 			}
 			const isOwner = Boolean(
 				identity.session?.userId && identity.session.userId === submission.submitterUserId
 			);
 			if (!identity.staff && !isOwner) {
-				return { submission: null, notFound: true, canEdit: false, canPublish: false, staff: false };
+				return {
+					submission: null,
+					notFound: true,
+					canEdit: false,
+					canPublish: false,
+					staff: false
+				};
 			}
 			const pending = submission.status === 'pending';
 			return {
@@ -71,6 +82,7 @@ export function _createHandlers(dependencies = {}) {
 		const session = event.locals.maritools;
 		if (!session) return fail(401, { error: 'Sign in with Google first.' });
 		const submissionId = event.params.id;
+		let values = null;
 		try {
 			const store = createStore();
 			const identity = await staffContext(event, store);
@@ -82,34 +94,27 @@ export function _createHandlers(dependencies = {}) {
 				return fail(400, { error: 'Only pending listings can be edited.' });
 			}
 			const data = await event.request.formData();
-			const name = String(data.get('name') ?? '').trim();
-			if (!name) return fail(400, { error: 'Enter the club name.' });
-			const payload = buildClubSubmissionPayload(
-				{
-					name: existing.name,
-					slug: existing.slug,
-					category: existing.category,
-					description: existing.description,
-					links: existing.links,
-					submitterRole: existing.submitterRole ?? undefined
-				},
-				{
-					name,
-					slug: slugFromName(name) || existing.slug,
-					category: String(data.get('category') ?? '').trim(),
-					description: String(data.get('description') ?? '').trim(),
-					linkLabel: String(data.get('linkLabel') ?? '').trim(),
-					linkUrl: String(data.get('linkUrl') ?? '').trim()
-				}
-			);
-			await store.updateClubSubmissionPayload(submissionId, payload);
+			values = clubListingDraft(data);
+			const parsed = clubListingInput(data, {
+				slug: existing.slug,
+				category: existing.category,
+				submitterRole: existing.submitterRole
+			});
+			if (!parsed.payload) return fail(400, { error: parsed.error, values });
+			await store.updateClubSubmissionPayload(submissionId, parsed.payload);
 			return { saved: true };
 		} catch (error) {
 			if (error instanceof MaritoolsInputError) {
-				return fail(400, { error: 'Check the club details and try again.' });
+				return fail(400, {
+					error: 'Check the club details and try again.',
+					...(values ? { values } : {})
+				});
 			}
 			if (error instanceof MaritoolsUnavailableError) {
-				return fail(503, { error: 'Saving is unavailable. Try again.' });
+				return fail(503, {
+					error: 'Saving is unavailable. Try again.',
+					...(values ? { values } : {})
+				});
 			}
 			throw error;
 		}
@@ -120,7 +125,8 @@ export function _createHandlers(dependencies = {}) {
 		try {
 			const store = createStore();
 			const identity = await staffContext(event, store);
-			if (!identity.staff) return fail(403, { error: 'Publishing is limited to staff.' });
+			if (!identity.staff)
+				return fail(403, { error: 'Publishing is only available during review.' });
 			const submissionId = event.params.id;
 			await store.publishPendingClub(submissionId);
 			redirect(303, '/tools/clubs');
@@ -142,7 +148,8 @@ export function _createHandlers(dependencies = {}) {
 		try {
 			const store = createStore();
 			const identity = await staffContext(event, store);
-			if (!identity.staff) return fail(403, { error: 'Rejecting is limited to staff.' });
+			if (!identity.staff)
+				return fail(403, { error: 'Rejecting is only available during review.' });
 			const submissionId = event.params.id;
 			await store.rejectPendingClub(submissionId);
 			redirect(303, '/tools/clubs');

@@ -6,7 +6,7 @@ import {
 	isGoogleOAuthConfigured,
 	readStaffSignInEnvironment
 } from '$lib/server/config/environment.js';
-import { NIM_DISCLOSURE, accountPageView } from '$lib/server/maritools/community.js';
+import { accountPageView } from '$lib/server/maritools/community.js';
 import { openCommunityStore } from '$lib/server/maritools/community-store.js';
 import {
 	MaritoolsInputError,
@@ -81,7 +81,6 @@ export function _createHandlers(dependencies = {}) {
 					view: accountPageView(session, null),
 					callbackURL: `${event.url.origin}/tools/account`,
 					recoveryMessage: recoveryMessageFor(event.url.searchParams.get('state')),
-					nimDisclosure: NIM_DISCLOSURE,
 					googleSignInConfigured: signInConfigured,
 					onboardingPending: true,
 					requiredFormUrl: REQUIRED_MEMBERSHIP_FORM_URL,
@@ -172,7 +171,6 @@ export function _createHandlers(dependencies = {}) {
 			view: accountPageView(session, profile),
 			callbackURL: `${appOrigin}/tools/account`,
 			recoveryMessage: recoveryMessageFor(event.url.searchParams.get('state')),
-			nimDisclosure: NIM_DISCLOSURE,
 			googleSignInConfigured: signInConfigured,
 			onboardingPending:
 				!session || club.kind === 'needs_club_details' || club.kind === 'needs_required_form',
@@ -197,15 +195,11 @@ export function _createHandlers(dependencies = {}) {
 				userId: session.userId,
 				email: session.email,
 				studentId: String(data.get('studentId') ?? ''),
-				displayName: String(data.get('displayName') ?? ''),
-				nimAccepted: data.get('nimAccepted') === 'on'
+				displayName: String(data.get('displayName') ?? '')
 			});
 			return { success: true };
 		} catch (error) {
 			if (error instanceof MaritoolsInputError) {
-				if (error.code === 'nim-required') {
-					return fail(400, { error: 'Confirm the NVIDIA disclosure before saving.' });
-				}
 				return fail(400, { error: 'Enter your student number as 5 to 8 digits.' });
 			}
 			if (error instanceof MaritoolsUnavailableError) {

@@ -99,6 +99,7 @@ describe('staff reports page', () => {
 		render(ReportsPage, {
 			data: { statusFilter: 'open', unavailable: false, reports: [openReport] }
 		});
+		const enhancedFormsBeforeDialog = formMocks.enhance.mock.calls.length;
 		await fireEvent.click(screen.getByRole('button', { name: 'Mute' }));
 		expect(screen.getByRole('dialog', { name: 'Mute duration' })).toBeInTheDocument();
 		expect(screen.getByLabelText('Mute for')).toBeInTheDocument();
@@ -106,6 +107,11 @@ describe('staff reports page', () => {
 		expect(screen.getByRole('button', { name: 'Confirm mute' })).toHaveAttribute(
 			'formaction',
 			'?/muteAuthor'
+		);
+		expect(formMocks.enhance).toHaveBeenCalledTimes(enhancedFormsBeforeDialog + 1);
+		expect(formMocks.enhance).toHaveBeenLastCalledWith(
+			screen.getByRole('button', { name: 'Confirm mute' }).closest('form'),
+			expect.any(Function)
 		);
 	});
 

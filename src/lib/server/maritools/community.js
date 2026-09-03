@@ -38,12 +38,9 @@ export function isCompleteStudentId(studentId) {
 	return /^\d{5,8}$/.test(String(studentId ?? '').trim());
 }
 
-export const NIM_DISCLOSURE =
-	'When you upload a course outline, we send the extracted text to NVIDIA for analysis. NVIDIA trial terms may use that text to improve models. We do not publish the PDF. Sharing structured fields with the catalog is a separate step.';
-
 /**
  * @param {{ email: string } | null | undefined} session
- * @param {{ displayName?: string | null, username?: string | null, firstName?: string | null, lastName?: string | null, profileImageDataUrl?: string | null, nimDisclosureAcceptedAt?: Date | string | null } | null | undefined} profile
+ * @param {{ displayName?: string | null, username?: string | null, firstName?: string | null, lastName?: string | null, profileImageDataUrl?: string | null } | null | undefined} profile
  */
 export function accountPageView(session, profile) {
 	if (!session) return { kind: 'guest' };
@@ -55,8 +52,7 @@ export function accountPageView(session, profile) {
 		username: profile.username ?? null,
 		firstName: profile.firstName ?? null,
 		lastName: profile.lastName ?? null,
-		profileImageDataUrl: profile.profileImageDataUrl ?? null,
-		nimAccepted: Boolean(profile.nimDisclosureAcceptedAt)
+		profileImageDataUrl: profile.profileImageDataUrl ?? null
 	};
 }
 
@@ -67,6 +63,6 @@ export function accountPageView(session, profile) {
 export function semesterPageView(session, profile) {
 	if (!session) return { kind: 'need-sign-in' };
 	if (!profile) return { kind: 'need-profile' };
-	if (!profile.nimDisclosureAcceptedAt) return { kind: 'need-disclosure' };
+	if (!profile.nimDisclosureAcceptedAt) return { kind: 'need-analysis-confirmation' };
 	return { kind: 'ready' };
 }

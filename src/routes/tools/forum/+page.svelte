@@ -99,7 +99,15 @@
 				{/if}
 			</div>
 		{:else}
-			<div class="topic-list">
+			<p class="index-scroll-cue" id="forum-scroll-cue">Swipe sideways to see all topic details.</p>
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex (keyboard access for the scrollable region) -->
+			<div
+				class="topic-list"
+				role="region"
+				aria-label="Forum topics"
+				aria-describedby="forum-scroll-cue"
+				tabindex="0"
+			>
 				<div class="topic-head">
 					<span>Topic</span><span>Category</span><span>Course</span><span>Latest</span>
 				</div>
@@ -131,11 +139,11 @@
 				</div>
 				<form method="POST" action="?/create">
 					<div class="composer-fields">
-						<label>
-							<span>Title</span>
-							<input name="title" required maxlength="240" placeholder="What do you want to ask or share?" />
-						</label>
-						<div class="composer-meta">
+						<div class="composer-primary">
+							<label>
+								<span>Title</span>
+								<input name="title" required maxlength="240" placeholder="What do you want to ask or share?" />
+							</label>
 							<label>
 								<span>Category</span>
 								<select name="category" required>

@@ -53,10 +53,6 @@
 
 <svelte:head>
 	<title>Course catalog | {MARITOOLS_NAME}</title>
-	<meta
-		name="description"
-		content="Assessments and books students have shared. Books are reference only."
-	/>
 </svelte:head>
 
 <div class="mt-preview">
@@ -66,7 +62,6 @@
 				<span class="catalog-eyebrow">Courses</span>
 				<h1>Course catalog</h1>
 			</div>
-			<p>Assessments and books students have shared. Books are reference only.</p>
 		</header>
 
 		<form method="GET" class="index-filters">
@@ -130,7 +125,15 @@
 					Sort by course code {sortAscending ? '↓' : '↑'}
 				</button>
 			</div>
-			<div class="catalog-index">
+			<p class="index-scroll-cue" id="catalog-scroll-cue">Swipe sideways to see all course details.</p>
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex (keyboard access for the scrollable region) -->
+			<div
+				class="catalog-index"
+				role="region"
+				aria-label="Course catalog results"
+				aria-describedby="catalog-scroll-cue"
+				tabindex="0"
+			>
 				<div class="catalog-head">
 					<span>Code</span><span>Course</span><span>Category</span><span>Section / teacher</span
 					><span>Term</span><span></span>

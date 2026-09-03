@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
 	buildGoogleCalendarAuthorizeUrl,
+	formatClock,
 	googleCalendarEventBody,
-	insertOccurrencesIntoGoogleCalendar
+	insertOccurrencesIntoGoogleCalendar,
+	noSchoolDatesInWindow,
+	occurrenceWindow
 } from './googleCalendar.js';
 
 describe('buildGoogleCalendarAuthorizeUrl', () => {
@@ -13,6 +16,30 @@ describe('buildGoogleCalendarAuthorizeUrl', () => {
 		expect(url.searchParams.get('scope')).toBe('https://www.googleapis.com/auth/calendar.events');
 		expect(url.searchParams.get('access_type')).toBe('offline');
 		expect(url.searchParams.get('prompt')).toBe('consent');
+	});
+});
+
+describe('calendar value helpers', () => {
+	it('formats clock boundary and malformed inputs', () => {
+		expect(formatClock('12')).toBe('12:00 PM');
+		expect(formatClock('00:05')).toBe('12:05 AM');
+		expect(formatClock('13:07')).toBe('1:07 PM');
+		expect(formatClock('bad')).toBe('bad');
+	});
+
+	it('builds and filters date windows at empty boundaries', () => {
+		expect(occurrenceWindow([])).toBeNull();
+		expect(occurrenceWindow([], ['', '2026-09-08'])).toEqual({
+			timeMin: '2026-09-08T00:00:00-04:00',
+			timeMax: '2026-09-08T23:59:59-04:00'
+		});
+		expect(noSchoolDatesInWindow(['', '2026-09-08', '2026-09-08'], null)).toEqual(['2026-09-08']);
+		expect(
+			noSchoolDatesInWindow(['2026-09-07', '2026-09-08', '2026-09-10'], {
+				timeMin: '2026-09-08T00:00:00-04:00',
+				timeMax: '2026-09-09T23:59:59-04:00'
+			})
+		).toEqual(['2026-09-08']);
 	});
 });
 
@@ -111,13 +138,59 @@ describe('insertOccurrencesIntoGoogleCalendar', () => {
 			insertOccurrencesIntoGoogleCalendar([occurrence], fetchImpl, 'access-token')
 		).rejects.toThrow(/Google Calendar insert failed/);
 	});
+
+	it('ignores malformed list payloads and empty event ids', async () => {
+		const fetchImpl = vi
+			.fn()
+			.mockResolvedValueOnce(new Response(JSON.stringify({ items: {} }), { status: 200 }))
+			.mockResolvedValueOnce(new Response('{}', { status: 200 }));
+		await expect(
+			insertOccurrencesIntoGoogleCalendar([occurrence], fetchImpl, 'access-token')
+		).resolves.toEqual({ inserted: 1, deleted: 0, noSchool: 0 });
+
+		const withEmptyId = vi
+			.fn()
+			.mockResolvedValueOnce(new Response(JSON.stringify({ items: [null, {}] }), { status: 200 }))
+			.mockResolvedValueOnce(new Response('{}', { status: 200 }));
+		await insertOccurrencesIntoGoogleCalendar([occurrence], withEmptyId, 'access-token');
+		expect(withEmptyId).toHaveBeenCalledTimes(2);
+	});
+
+	it('counts already-gone events and rejects no-school inserts', async () => {
+		const gone = vi
+			.fn()
+			.mockResolvedValueOnce(
+				new Response(JSON.stringify({ items: [{ id: 'gone' }] }), { status: 200 })
+			)
+			.mockResolvedValueOnce(new Response(null, { status: 410 }))
+			.mockResolvedValueOnce(new Response('{}', { status: 200 }));
+		await expect(insertOccurrencesIntoGoogleCalendar([occurrence], gone, 'token')).resolves.toEqual(
+			{
+				inserted: 1,
+				deleted: 1,
+				noSchool: 0
+			}
+		);
+
+		const noSchoolFailure = vi
+			.fn()
+			.mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }))
+			.mockResolvedValueOnce(new Response('denied', { status: 403 }));
+		await expect(
+			insertOccurrencesIntoGoogleCalendar([], noSchoolFailure, 'token', {
+				noSchoolDates: ['2026-09-07']
+			})
+		).rejects.toThrow('Google Calendar no-school insert failed');
+	});
 });
 
 describe('exchangeGoogleCalendarCode', () => {
 	it('returns the token payload', async () => {
-		const fetchImpl = vi.fn().mockResolvedValue(
-			new Response(JSON.stringify({ access_token: 'a', refresh_token: 'r' }), { status: 200 })
-		);
+		const fetchImpl = vi
+			.fn()
+			.mockResolvedValue(
+				new Response(JSON.stringify({ access_token: 'a', refresh_token: 'r' }), { status: 200 })
+			);
 		const { exchangeGoogleCalendarCode } = await import('./googleCalendar.js');
 		await expect(
 			exchangeGoogleCalendarCode('id', 'secret', 'https://example.com/cb', 'code', fetchImpl)
@@ -146,7 +219,9 @@ describe('refreshGoogleCalendarAccessToken', () => {
 				'id',
 				'secret',
 				'refresh',
-				vi.fn().mockResolvedValue(new Response(JSON.stringify({ access_token: 'n' }), { status: 200 }))
+				vi
+					.fn()
+					.mockResolvedValue(new Response(JSON.stringify({ access_token: 'n' }), { status: 200 }))
 			)
 		).resolves.toMatchObject({ access_token: 'n' });
 	});

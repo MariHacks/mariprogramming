@@ -1,8 +1,21 @@
-import { cleanup, render, screen } from '@testing-library/svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import MemberPage from './+page.svelte';
 
-afterEach(cleanup);
+const enhanceHarness = vi.hoisted(() => ({ submit: null }));
+
+vi.mock('$app/forms', () => ({
+	enhance: vi.fn((_node, submit) => {
+		if (submit) enhanceHarness.submit = submit;
+		return { destroy() {} };
+	})
+}));
+
+afterEach(() => {
+	cleanup();
+	enhanceHarness.submit = null;
+});
 
 describe('staff member detail page', () => {
 	it('shows account, signup, and parsed schedule information to staff', () => {
@@ -23,6 +36,11 @@ describe('staff member detail page', () => {
 						experienceLevel: 'learning',
 						interests: ['web'],
 						clubGoals: 'Project nights',
+						role: 'moderator',
+						isMuted: true,
+						mutedUntil: new Date(Date.now() + 3_600_000),
+						isBanned: false,
+						bannedPermanent: false,
 						scheduleSharedAt: new Date(),
 						scheduleInvalid: false,
 						courses: [
@@ -49,5 +67,110 @@ describe('staff member detail page', () => {
 		);
 		expect(screen.getByText('420-101: Programming')).toBeInTheDocument();
 		expect(screen.getByText('Mon, 09:00 to 10:30')).toBeInTheDocument();
+		expect(screen.getAllByText('Executive')).toHaveLength(2);
+		expect(screen.getByRole('button', { name: 'Demote to member' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Unmute' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Ban' })).toBeInTheDocument();
+	});
+
+	it('opens duration dialogs and exposes promotion for a member', async () => {
+		const user = userEvent.setup();
+		render(MemberPage, {
+			props: {
+				data: {
+					unavailable: false,
+					member: {
+						userId: 'member-1',
+						displayName: 'Ada Member',
+						firstName: 'Ada',
+						lastName: 'Member',
+						role: 'student',
+						isMuted: false,
+						isBanned: false,
+						interests: [],
+						courses: []
+					}
+				}
+			}
+		});
+
+		expect(screen.getAllByText('Member').length).toBeGreaterThan(0);
+		expect(screen.getByRole('button', { name: 'Promote to executive' })).toBeInTheDocument();
+		const muteButton = screen.getByRole('button', { name: 'Mute' });
+		await user.click(muteButton);
+		expect(screen.getByRole('dialog', { name: 'Mute duration' })).toBeInTheDocument();
+		await waitFor(() => expect(screen.getByLabelText('Mute for')).toHaveFocus());
+		expect(document.body.style.overflow).toBe('hidden');
+		expect(screen.getByRole('button', { name: 'Confirm mute' })).toHaveAttribute(
+			'formaction',
+			'?/mute'
+		);
+
+		screen.getByRole('button', { name: 'Confirm mute' }).focus();
+		await user.tab();
+		expect(screen.getByLabelText('Mute for')).toHaveFocus();
+		await user.tab({ shift: true });
+		expect(screen.getByRole('button', { name: 'Confirm mute' })).toHaveFocus();
+		await user.keyboard('{Escape}');
+		expect(screen.queryByRole('dialog', { name: 'Mute duration' })).not.toBeInTheDocument();
+		expect(document.body.style.overflow).toBe('');
+		expect(muteButton).toHaveFocus();
+	});
+
+	it('closes the duration dialog after a successful action', async () => {
+		const user = userEvent.setup();
+		render(MemberPage, {
+			props: {
+				data: {
+					unavailable: false,
+					member: {
+						userId: 'member-1',
+						displayName: 'Ada Member',
+						firstName: 'Ada',
+						lastName: 'Member',
+						role: 'student',
+						isMuted: false,
+						isBanned: false,
+						interests: [],
+						courses: []
+					}
+				}
+			}
+		});
+
+		await user.click(screen.getByRole('button', { name: 'Mute' }));
+		expect(screen.getByRole('dialog', { name: 'Mute duration' })).toBeInTheDocument();
+		expect(enhanceHarness.submit).toBeTypeOf('function');
+		const update = vi.fn(async () => {});
+		const complete = enhanceHarness.submit();
+		await complete({ result: { type: 'success' }, update });
+
+		await waitFor(() => {
+			expect(screen.queryByRole('dialog', { name: 'Mute duration' })).not.toBeInTheDocument();
+		});
+		expect(update).toHaveBeenCalledOnce();
+	});
+
+	it('does not render controls for a protected account', () => {
+		render(MemberPage, {
+			props: {
+				data: {
+					unavailable: false,
+					member: {
+						displayName: 'Protected Account',
+						firstName: 'Protected',
+						lastName: 'Account',
+						role: 'staff',
+						interests: [],
+						courses: []
+					}
+				}
+			}
+		});
+
+		expect(screen.getByText('This protected account cannot be changed.')).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Mute' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Ban' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: /executive/iu })).not.toBeInTheDocument();
 	});
 });

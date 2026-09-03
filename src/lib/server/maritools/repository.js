@@ -206,15 +206,16 @@ export function publicStudentView(profile) {
 }
 
 /** Public profile card: no student number, no staff-only internals beyond restriction flags. */
-/** @param {any} profile */
-export function publicProfileCard(profile) {
+/** @param {any} profile @param {any} [membership] */
+export function publicProfileCard(profile, membership = null) {
 	const view = publicStudentView(profile);
 	return {
 		userId: view.userId,
 		displayName: view.displayName,
 		username: view.username,
 		profileImageDataUrl: view.profileImageDataUrl,
-		role: view.role === 'staff' || view.role === 'moderator' ? view.role : 'student',
+		role: ['executive', 'staff', 'moderator'].includes(view.role) ? view.role : 'student',
+		joinedAt: membership?.createdAt ?? null,
 		isRestricted: view.isMuted || view.isBanned,
 		isMuted: view.isMuted,
 		isBanned: view.isBanned,
@@ -415,6 +416,7 @@ function redactUnexpected(operation) {
 		) {
 			throw error;
 		}
+		if (isUniqueViolation(error)) throw new MariToolsConflictError();
 		throw new MariToolsUnavailableError();
 	});
 }
@@ -764,8 +766,9 @@ export function createMariToolsRepository({
 			if (typeof input.studentId !== 'string' || !isCompleteStudentId(input.studentId))
 				return invalid();
 			const studentId = input.studentId.trim();
-			const username = requiredText(input.username, 32).toLowerCase();
-			if (!/^[a-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const username = requiredText(input.username, 32);
+			if (!/^[A-Za-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const usernameKey = username.toLowerCase();
 			const firstName = requiredText(input.firstName, 80);
 			const lastName = requiredText(input.lastName, 80);
 			const displayName = username;
@@ -794,7 +797,7 @@ export function createMariToolsRepository({
 						await transaction
 							.select({ userId: mtStudentProfiles.userId })
 							.from(mtStudentProfiles)
-							.where(eq(mtStudentProfiles.username, username))
+							.where(sql`lower(${mtStudentProfiles.username}) = ${usernameKey}`)
 					);
 					if (usernameOwner && usernameOwner.userId !== userId) return conflict();
 					const profile = oneRow(
@@ -885,8 +888,9 @@ export function createMariToolsRepository({
 		 */
 		async updateMemberProfile(input) {
 			const userId = requiredUserId(input.userId);
-			const username = requiredText(input.username, 32).toLowerCase();
-			if (!/^[a-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const username = requiredText(input.username, 32);
+			if (!/^[A-Za-z0-9_]{3,24}$/u.test(username)) return invalid();
+			const usernameKey = username.toLowerCase();
 			const firstName = requiredText(input.firstName, 80);
 			const lastName = requiredText(input.lastName, 80);
 			const hasProfileImage = Object.prototype.hasOwnProperty.call(input, 'profileImageDataUrl');
@@ -906,7 +910,7 @@ export function createMariToolsRepository({
 						await transaction
 							.select({ userId: mtStudentProfiles.userId })
 							.from(mtStudentProfiles)
-							.where(eq(mtStudentProfiles.username, username))
+							.where(sql`lower(${mtStudentProfiles.username}) = ${usernameKey}`)
 					);
 					if (usernameOwner && usernameOwner.userId !== userId) return conflict();
 					const updated = oneRow(
@@ -1121,6 +1125,15 @@ export function createMariToolsRepository({
 					experienceLevel: row.membership.experienceLevel,
 					interests: row.membership.interests,
 					clubGoals: row.membership.clubGoals,
+					role: row.profile.role,
+					mutedUntil: row.profile.mutedUntil ?? null,
+					bannedAt: row.profile.bannedAt ?? null,
+					bannedUntil: row.profile.bannedUntil ?? null,
+					isMuted: isMuteActive(row.profile),
+					isBanned: isBanActive(row.profile),
+					bannedPermanent: Boolean(
+						isBanActive(row.profile) && row.profile.bannedAt && !row.profile.bannedUntil
+					),
 					staffVisibilityAcceptedAt: row.membership.staffVisibilityAcceptedAt,
 					requiredFormCompletedAt: row.membership.requiredFormCompletedAt,
 					scheduleSharedAt: row.membership.scheduleSharedAt,
@@ -1179,14 +1192,15 @@ export function createMariToolsRepository({
 							.where(eq(mtStudentProfiles.userId, id))
 					);
 					if (!existing) return notFound();
+					if (existing.role === 'staff') return conflict();
 					const updated = oneRow(
 						await transaction
 							.update(mtStudentProfiles)
 							.set({ mutedUntil: until, updatedAt: new Date() })
-							.where(eq(mtStudentProfiles.userId, id))
+							.where(and(eq(mtStudentProfiles.userId, id), ne(mtStudentProfiles.role, 'staff')))
 							.returning()
 					);
-					return updated ?? unavailable();
+					return updated ?? conflict();
 				})
 			);
 		},
@@ -1211,6 +1225,7 @@ export function createMariToolsRepository({
 							.where(eq(mtStudentProfiles.userId, id))
 					);
 					if (!existing) return notFound();
+					if (existing.role === 'staff') return conflict();
 					const updated = oneRow(
 						await transaction
 							.update(mtStudentProfiles)
@@ -1219,10 +1234,10 @@ export function createMariToolsRepository({
 								bannedUntil: until,
 								updatedAt: new Date()
 							})
-							.where(eq(mtStudentProfiles.userId, id))
+							.where(and(eq(mtStudentProfiles.userId, id), ne(mtStudentProfiles.role, 'staff')))
 							.returning()
 					);
-					return updated ?? unavailable();
+					return updated ?? conflict();
 				})
 			);
 		},
@@ -1239,14 +1254,15 @@ export function createMariToolsRepository({
 							.where(eq(mtStudentProfiles.userId, id))
 					);
 					if (!existing) return notFound();
+					if (existing.role === 'staff') return conflict();
 					const updated = oneRow(
 						await transaction
 							.update(mtStudentProfiles)
 							.set({ mutedUntil: null, updatedAt: new Date() })
-							.where(eq(mtStudentProfiles.userId, id))
+							.where(and(eq(mtStudentProfiles.userId, id), ne(mtStudentProfiles.role, 'staff')))
 							.returning()
 					);
-					return updated ?? unavailable();
+					return updated ?? conflict();
 				})
 			);
 		},
@@ -1263,14 +1279,45 @@ export function createMariToolsRepository({
 							.where(eq(mtStudentProfiles.userId, id))
 					);
 					if (!existing) return notFound();
+					if (existing.role === 'staff') return conflict();
 					const updated = oneRow(
 						await transaction
 							.update(mtStudentProfiles)
 							.set({ bannedAt: null, bannedUntil: null, updatedAt: new Date() })
-							.where(eq(mtStudentProfiles.userId, id))
+							.where(and(eq(mtStudentProfiles.userId, id), ne(mtStudentProfiles.role, 'staff')))
 							.returning()
 					);
-					return updated ?? unavailable();
+					return updated ?? conflict();
+				})
+			);
+		},
+
+		/**
+		 * @param {unknown} userId
+		 * @param {unknown} role
+		 */
+		async setMemberRole(userId, role) {
+			const id = requiredUserId(userId);
+			if (role !== 'student' && role !== 'moderator') return invalid();
+			return redactUnexpected(() =>
+				transact(async (transaction) => {
+					const existing = oneRow(
+						await transaction
+							.select()
+							.from(mtStudentProfiles)
+							.where(eq(mtStudentProfiles.userId, id))
+					);
+					if (!existing) return notFound();
+					if (existing.role === 'staff') return conflict();
+					if (existing.role === role) return existing;
+					const updated = oneRow(
+						await transaction
+							.update(mtStudentProfiles)
+							.set({ role, updatedAt: new Date() })
+							.where(and(eq(mtStudentProfiles.userId, id), ne(mtStudentProfiles.role, 'staff')))
+							.returning()
+					);
+					return updated ?? conflict();
 				})
 			);
 		},

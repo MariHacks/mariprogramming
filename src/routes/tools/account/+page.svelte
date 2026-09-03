@@ -1,6 +1,8 @@
 <script>
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import OmnivoxTutorialOverlay from '$lib/maritools/components/OmnivoxTutorialOverlay.svelte';
+	import ProfileEmptyState from '$lib/maritools/components/ProfileEmptyState.svelte';
+	import ProfileImageCropper from '$lib/maritools/components/ProfileImageCropper.svelte';
 	import ScheduleCalendar from '$lib/maritools/components/ScheduleCalendar.svelte';
 	import { initialsFromDisplayName } from '$lib/maritools/header-account.js';
 	import { mondayOfWeek, weekGridForTermWeek } from '$lib/maritools/schedule/academicWeekView.js';
@@ -23,7 +25,6 @@
 	let signOutFailed = false;
 	let editingProfile = false;
 	let profileTab = 'information';
-	let profileImageName = '';
 	let username = data.onboardingDraft?.username ?? data.view.username ?? '';
 	let firstName = data.onboardingDraft?.firstName ?? data.view.firstName ?? '';
 	let lastName = data.onboardingDraft?.lastName ?? data.view.lastName ?? '';
@@ -86,7 +87,7 @@
 		if (URL.canParse(callbackURL)) {
 			const host = new URL(callbackURL).hostname;
 			if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1') {
-				return 'Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local to a real Google Cloud OAuth web client, then restart the dev server.';
+				return 'Google sign-in is not configured for local development. Check the server OAuth settings, then restart the dev server.';
 			}
 		}
 		return 'Google sign-in is not configured on this site.';
@@ -124,18 +125,10 @@
 		}
 	}
 
-	/** @param {Event} event */
-	function chooseProfileImage(event) {
-		const input = event.currentTarget;
-		if (!(input instanceof HTMLInputElement)) return;
-		profileImageName = input.files?.[0]?.name ?? '';
-	}
-
 	function beginProfileEdit() {
 		username = data.view.username ?? '';
 		firstName = data.view.firstName ?? '';
 		lastName = data.view.lastName ?? '';
-		profileImageName = '';
 		editingProfile = true;
 	}
 
@@ -143,7 +136,6 @@
 		username = data.view.username ?? '';
 		firstName = data.view.firstName ?? '';
 		lastName = data.view.lastName ?? '';
-		profileImageName = '';
 		editingProfile = false;
 	}
 
@@ -167,7 +159,7 @@
 
 	function membershipLine() {
 		const since = monthYear(data.communityProfile?.joinedAt);
-		return since ? `${membershipRole()} since ${since}` : membershipRole();
+		return since ? `Member since ${since}` : 'Member';
 	}
 
 	/** @param {string | Date | null | undefined} value */
@@ -443,24 +435,12 @@
 						enctype="multipart/form-data"
 						aria-label="Edit profile"
 					>
-						<label class="community-avatar community-avatar--editable">
-							<span class="community-avatar__image">
-								{#if data.view.profileImageDataUrl}
-									<img src={data.view.profileImageDataUrl} alt="" />
-								{:else}
-									{initialsFromDisplayName(fullName())}
-								{/if}
-							</span>
-							<span class="community-avatar__action">Change photo</span>
-							<input
-								type="file"
-								name="profileImage"
-								accept="image/jpeg,image/png,image/webp,image/gif"
-								aria-label="Change profile picture"
-								on:change={chooseProfileImage}
-							/>
-							{#if profileImageName}<small>{profileImageName}</small>{/if}
-						</label>
+						<ProfileImageCropper
+							id="profile-image-edit"
+							variant="avatar"
+							existingSrc={data.view.profileImageDataUrl ?? ''}
+							initials={initialsFromDisplayName(fullName())}
+						/>
 						<div class="community-edit-fields">
 							<label>
 								<span>Username</span>
@@ -502,7 +482,21 @@
 						<div>
 							<h1>{profileUsername()}</h1>
 							<p class="community-full-name">{fullName()}</p>
-							<p class="community-membership">{membershipLine()}</p>
+							<div class="community-profile-meta">
+								<span>
+									<svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+										<path d="M10 2.5 16 5v4.5c0 3.7-2.5 6.4-6 8-3.5-1.6-6-4.3-6-8V5l6-2.5Z" />
+										<path d="m7.5 10 1.6 1.6 3.5-3.7" />
+									</svg>
+									{membershipRole()}
+								</span>
+								<span>
+									<svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+										<path d="M4 5.5h12v11H4zM6.5 3v4M13.5 3v4M4 8.5h12" />
+									</svg>
+									{membershipLine()}
+								</span>
+							</div>
 						</div>
 					</div>
 					<div class="community-profile-actions">
@@ -628,8 +622,10 @@
 										minlength="5"
 										maxlength="8"
 										required={data.club?.kind !== 'needs_required_form'}
-										placeholder={data.club?.kind === 'needs_required_form' ? 'Already saved' : ''}
 									/>
+									{#if data.club?.kind === 'needs_required_form'}
+										<small>Already saved</small>
+									{/if}
 								</label>
 								<label>
 									<span>Program</span>
@@ -650,25 +646,7 @@
 									</select>
 								</label>
 								<div class="profile-field--wide">
-									<label class="profile-field-label" for="profile-image"
-										>Profile picture <small>Optional</small></label
-									>
-									<label class="profile-upload" for="profile-image">
-										<span class="profile-upload__action">Choose image</span>
-										<span
-											class:profile-upload__name--selected={profileImageName}
-											class="profile-upload__name">{profileImageName || 'No image selected'}</span
-										>
-										<input
-											id="profile-image"
-											class="profile-upload__input"
-											name="profileImage"
-											type="file"
-											accept="image/png,image/jpeg,image/webp,image/gif"
-											on:change={chooseProfileImage}
-										/>
-									</label>
-									<small>Shown on your account and forum posts. Maximum 512 KB.</small>
+									<ProfileImageCropper id="profile-image" />
 								</div>
 							</div>
 							<div class="profile-form-action profile-form-action--split">
@@ -746,8 +724,7 @@
 							<div class="schedule-onboarding-head">
 								<h2 id="schedule-title">Add your schedule</h2>
 								<p>
-									Optional. Your class times help staff find meeting times that work for more
-									members.
+									Optional. Your class times help us find meeting times that work for more members.
 								</p>
 							</div>
 							<div class="schedule-onboarding-workspace">
@@ -854,17 +831,29 @@
 									class="community-post"
 									href={resolve('/tools/forum/[threadId]', { threadId: post.id })}
 								>
-									<div>
+									<span class="community-post__icon" aria-hidden="true">
+										<svg viewBox="0 0 24 24" fill="none">
+											<path d="M5 5.5h14v10H9l-4 3v-13Z" />
+											<path d="M8.5 9h7M8.5 12h4.5" />
+										</svg>
+									</span>
+									<div class="community-post__copy">
 										<h3>{post.title}</h3>
 										<p>{post.body}</p>
 									</div>
-									<span>{post.courseCode ?? categoryLabel(post.category)}</span>
+									<span class="community-post__category"
+										>{post.courseCode ?? categoryLabel(post.category)}</span
+									>
 									<time datetime={String(post.createdAt ?? '')}>{shortDate(post.createdAt)}</time>
 								</a>
 							{/each}
 						</div>
 					{:else}
-						<p class="community-empty">No posts yet.</p>
+						<ProfileEmptyState
+							kind="posts"
+							title="No posts yet"
+							description="Your forum posts will appear here after you start a discussion."
+						/>
 					{/if}
 				</section>
 
@@ -875,8 +864,13 @@
 					{#if data.courseOutlines?.length}
 						<ol class="community-outline-list">
 							{#each data.courseOutlines as outline (outline.sha256)}
-								<li>
-									<div>
+								<li class="community-outline-entry">
+									<span class="community-outline-entry__icon" aria-hidden="true">
+										<svg viewBox="0 0 24 24" fill="none">
+											<path d="M6 3.5h8l4 4v13H6zM14 3.5v4h4M9 12h6M9 15.5h6" />
+										</svg>
+									</span>
+									<div class="community-outline-entry__copy">
 										<span>{outlineCode(outline)}</span>
 										<strong>{outlineTitle(outline)}</strong>
 									</div>
@@ -887,7 +881,11 @@
 							{/each}
 						</ol>
 					{:else}
-						<p class="community-empty">No course outlines yet.</p>
+						<ProfileEmptyState
+							kind="outlines"
+							title="No outlines yet"
+							description="Course outlines you contribute will appear here."
+						/>
 					{/if}
 				</section>
 			</div>
@@ -1039,25 +1037,25 @@
 
 	.community-profile-hero {
 		display: flex;
-		min-height: 13.5rem;
-		align-items: flex-end;
+		min-height: 17rem;
+		align-items: center;
 		justify-content: space-between;
-		padding: clamp(2.25rem, 5vw, 4.75rem) clamp(1.5rem, 5vw, 4.5rem) 2.5rem;
+		padding: clamp(2.5rem, 5vw, 4.5rem) clamp(1.5rem, 5vw, 4.5rem);
 		border-bottom: 1px solid var(--ink);
 		background: white;
-		gap: 2rem;
+		gap: clamp(2rem, 4vw, 4rem);
 	}
 
 	.community-profile-identity {
 		display: grid;
 		grid-template-columns: auto minmax(0, 1fr);
-		align-items: end;
-		gap: clamp(1.25rem, 2.5vw, 2.25rem);
+		align-items: center;
+		gap: clamp(1.5rem, 3vw, 2.75rem);
 	}
 
 	.community-avatar {
 		display: grid;
-		width: clamp(6.5rem, 11vw, 9rem);
+		width: clamp(9rem, 13vw, 10.5rem);
 		aspect-ratio: 1;
 		place-items: center;
 		overflow: hidden;
@@ -1070,35 +1068,53 @@
 		letter-spacing: -0.02em;
 	}
 
-	.community-avatar img,
-	.community-avatar__image img {
+	.community-avatar img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
 	}
 
 	.community-profile-identity h1 {
-		max-width: 16ch;
+		max-width: 14ch;
 		margin: 0;
 		font-family: var(--font-display);
-		font-size: clamp(2.75rem, 4vw, 4rem);
+		font-size: clamp(3.25rem, 5vw, 4.8rem);
 		font-weight: 700;
 		letter-spacing: -0.04em;
-		line-height: 0.9;
+		line-height: 0.92;
 		overflow-wrap: break-word;
 	}
 
 	.community-full-name {
-		margin: 1rem 0 0;
-		font-size: clamp(1rem, 1.6vw, 1.3rem);
+		margin: 0.85rem 0 0;
+		font-size: clamp(1.2rem, 1.8vw, 1.55rem);
 		font-weight: 650;
 	}
 
-	.community-membership {
-		margin: 0.65rem 0 0;
+	.community-profile-meta {
+		display: flex;
+		flex-wrap: wrap;
+		margin-top: 0.85rem;
+		gap: 0.65rem 1.25rem;
+	}
+
+	.community-profile-meta > span {
+		display: inline-flex;
+		align-items: center;
 		color: var(--steel);
-		font-size: 0.76rem;
+		font-size: 0.88rem;
 		font-variant-numeric: tabular-nums;
+		font-weight: 550;
+		gap: 0.4rem;
+	}
+
+	.community-profile-meta svg {
+		width: 1.05rem;
+		height: 1.05rem;
+		stroke: currentColor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.5;
 	}
 
 	.community-profile-actions {
@@ -1112,13 +1128,15 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.5rem;
-		min-height: 3.25rem;
+		gap: 0.7rem;
+		min-height: 3.75rem;
+		padding-inline: 1.5rem;
+		font-size: 1rem;
 	}
 
 	.community-profile-actions svg {
-		width: 1rem;
-		height: 1rem;
+		width: 1.25rem;
+		height: 1.25rem;
 		stroke: currentColor;
 		stroke-linecap: round;
 		stroke-linejoin: round;
@@ -1126,11 +1144,11 @@
 	}
 
 	.community-profile-actions > .primary-button {
-		min-width: 10.25rem;
+		min-width: 11.5rem;
 	}
 
 	.community-profile-actions > .quiet-button {
-		min-width: 8rem;
+		min-width: 9rem;
 	}
 
 	.community-profile-edit {
@@ -1139,68 +1157,6 @@
 		width: 100%;
 		align-items: end;
 		gap: clamp(1.25rem, 2.5vw, 2.25rem);
-	}
-
-	.community-avatar--editable {
-		position: relative;
-		display: grid;
-		align-content: start;
-		overflow: visible;
-		background: white;
-		color: var(--ink);
-		cursor: pointer;
-	}
-
-	.community-avatar__image {
-		display: grid;
-		width: 100%;
-		aspect-ratio: 1;
-		place-items: center;
-		overflow: hidden;
-		background: var(--ink);
-		color: white;
-	}
-
-	.community-avatar__action {
-		position: absolute;
-		right: 0;
-		bottom: 0;
-		left: 0;
-		padding: 0.55rem;
-		background: rgb(5 26 51 / 88%);
-		color: white;
-		font-family: var(--font-sans);
-		font-size: 0.7rem;
-		font-weight: 650;
-		text-align: center;
-	}
-
-	.community-avatar--editable input {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
-		clip-path: inset(50%);
-	}
-
-	.community-avatar--editable small {
-		position: absolute;
-		top: calc(100% + 0.45rem);
-		left: 0;
-		width: 100%;
-		overflow: hidden;
-		color: var(--steel);
-		font-family: var(--font-sans);
-		font-size: 0.68rem;
-		font-weight: 500;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.community-avatar--editable:focus-within {
-		outline: 3px solid rgb(20 87 217 / 18%);
-		outline-offset: 3px;
 	}
 
 	.community-edit-fields,
@@ -1243,7 +1199,7 @@
 		display: grid;
 		flex: 1 1 auto;
 		grid-template-columns: minmax(0, 1.4fr) minmax(19rem, 1fr);
-		min-height: 28rem;
+		min-height: 32rem;
 		background: white;
 	}
 
@@ -1275,10 +1231,10 @@
 
 	.community-post {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 7rem 4rem;
+		grid-template-columns: 3.25rem minmax(0, 1fr) 7rem 4rem;
 		align-items: center;
-		min-height: 6rem;
-		padding: 1rem 0;
+		min-height: 7rem;
+		padding: 1.1rem 0;
 		border-bottom: 1px solid var(--line);
 		color: inherit;
 		column-gap: 1rem;
@@ -1289,14 +1245,35 @@
 		background: var(--paper-blue);
 	}
 
-	.community-post > div {
+	.community-post__icon,
+	.community-outline-entry__icon {
+		display: grid;
+		width: 2.75rem;
+		aspect-ratio: 1;
+		place-items: center;
+		border: 1px solid var(--line-dark);
+		background: var(--paper-blue);
+		color: var(--blue);
+	}
+
+	.community-post__icon svg,
+	.community-outline-entry__icon svg {
+		width: 1.35rem;
+		height: 1.35rem;
+		stroke: currentColor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.5;
+	}
+
+	.community-post__copy {
 		min-width: 0;
 	}
 
 	.community-post h3 {
 		margin: 0;
 		font-family: var(--font-display);
-		font-size: 1.05rem;
+		font-size: 1.15rem;
 		letter-spacing: -0.015em;
 	}
 
@@ -1305,18 +1282,18 @@
 		margin: 0.35rem 0 0;
 		overflow: hidden;
 		color: var(--steel);
-		font-size: 0.72rem;
+		font-size: 0.82rem;
 		line-height: 1.45;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
 	}
 
-	.community-post > span,
+	.community-post__category,
 	.community-post time,
 	.community-outline-list time {
 		color: var(--steel);
-		font-size: 0.68rem;
+		font-size: 0.76rem;
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -1333,15 +1310,15 @@
 
 	.community-outline-list li {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-columns: 3.25rem minmax(0, 1fr) auto;
 		align-items: center;
-		min-height: 5rem;
-		padding: 0.85rem 0;
+		min-height: 6.25rem;
+		padding: 1rem 0;
 		border-bottom: 1px solid var(--line);
 		gap: 1rem;
 	}
 
-	.community-outline-list li > div {
+	.community-outline-entry__copy {
 		display: grid;
 		min-width: 0;
 		gap: 0.25rem;
@@ -1349,7 +1326,7 @@
 
 	.community-outline-list li span {
 		color: var(--blue);
-		font-size: 0.67rem;
+		font-size: 0.75rem;
 		font-variant-numeric: tabular-nums;
 		font-weight: 700;
 		letter-spacing: 0.04em;
@@ -1358,17 +1335,9 @@
 	.community-outline-list li strong {
 		overflow: hidden;
 		font-family: var(--font-display);
-		font-size: 0.92rem;
+		font-size: 1.05rem;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-
-	.community-empty {
-		margin: 0;
-		padding: 1.25rem 0;
-		border-bottom: 1px solid var(--line);
-		color: var(--steel);
-		font-size: 0.78rem;
 	}
 
 	.profile-section-head h2,
@@ -1596,6 +1565,14 @@
 		font-weight: 600;
 	}
 
+	.profile-field--wide > select {
+		min-height: 2.75rem;
+	}
+
+	.profile-form-action button {
+		min-height: 2.75rem;
+	}
+
 	.profile-field--wide > span small {
 		font: inherit;
 		font-weight: 450;
@@ -1603,86 +1580,6 @@
 
 	.profile-club-goals {
 		margin-top: 1.5rem;
-	}
-
-	.profile-field-label {
-		color: var(--steel);
-		font-size: 0.72rem;
-		font-weight: 600;
-	}
-
-	.profile-field-label small {
-		font: inherit;
-		font-weight: 450;
-	}
-
-	.profile-upload {
-		position: relative;
-		display: grid;
-		grid-template-columns: auto minmax(0, 1fr);
-		align-items: center;
-		min-height: 3.25rem;
-		border: 1px solid var(--line-dark);
-		background: white;
-		cursor: pointer;
-		transition:
-			border-color 140ms ease,
-			background 140ms ease;
-	}
-
-	.profile-upload:hover {
-		border-color: var(--ink);
-		background: var(--paper);
-	}
-
-	.profile-upload:focus-within {
-		border-color: var(--blue);
-		outline: 3px solid rgb(20 87 217 / 16%);
-		outline-offset: 1px;
-	}
-
-	.profile-upload__action {
-		align-self: stretch;
-		display: grid;
-		min-width: 8.5rem;
-		padding: 0.75rem 1rem;
-		background: var(--ink);
-		color: white;
-		font-size: 0.78rem;
-		font-weight: 650;
-		place-items: center;
-	}
-
-	.profile-upload__name {
-		min-width: 0;
-		padding: 0.75rem 1rem;
-		overflow: hidden;
-		color: var(--steel);
-		font-size: 0.8rem;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.profile-upload__name--selected {
-		color: var(--ink);
-		font-weight: 600;
-	}
-
-	.profile-upload__input {
-		position: absolute;
-		width: 1px !important;
-		height: 1px !important;
-		padding: 0 !important;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
-		clip-path: inset(50%);
-		white-space: nowrap;
-	}
-
-	.profile-field--wide > small {
-		color: var(--steel);
-		font-size: 0.72rem;
-		line-height: 1.45;
 	}
 
 	.profile-field--wide textarea {
@@ -1799,6 +1696,11 @@
 			grid-column: 2;
 			justify-content: flex-start;
 		}
+
+		.community-profile-hero:not(:has(.community-profile-edit)) {
+			align-items: flex-start;
+			flex-direction: column;
+		}
 	}
 
 	@media (max-width: 42rem) {
@@ -1808,6 +1710,29 @@
 	}
 
 	@media (max-width: 44rem) {
+		.profile-enrollment,
+		.profile-form,
+		.onboarding-panel,
+		.schedule-onboarding-workspace {
+			min-width: 0;
+		}
+
+		.schedule-onboarding-preview {
+			min-width: 0;
+			overflow: hidden;
+		}
+
+		.profile-form {
+			padding: 1.25rem 1rem 2rem;
+		}
+
+		.onboarding-tabs button,
+		.schedule-tutorial-button,
+		.member-form-intro > .primary-button,
+		.profile-google {
+			min-height: 2.75rem;
+		}
+
 		.community-profile-hero {
 			min-height: 0;
 			align-items: flex-start;
@@ -1820,16 +1745,31 @@
 		}
 
 		.community-avatar {
-			width: 5.25rem;
+			width: 7rem;
 		}
 
 		.community-profile-identity h1 {
-			font-size: clamp(2rem, 9.5vw, 2.6rem);
+			font-size: clamp(2.5rem, 12vw, 3.4rem);
 			line-height: 0.95;
 		}
 
+		.community-full-name {
+			font-size: 1.1rem;
+		}
+
+		.community-profile-meta {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
 		.community-profile-actions {
+			width: 100%;
 			justify-content: flex-start;
+		}
+
+		.community-profile-actions > button {
+			flex: 1 1 0;
+			min-width: 0;
 		}
 
 		.community-profile-edit {
@@ -1850,17 +1790,62 @@
 		}
 
 		.community-post {
-			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-columns: 2.75rem minmax(0, 1fr) auto;
 		}
 
-		.community-post > span {
+		.community-post__category {
 			display: none;
 		}
 
+		.community-post__icon,
+		.community-outline-entry__icon {
+			width: 2.35rem;
+		}
+
+		.community-outline-list li {
+			grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+		}
+
 		.profile-hero--member {
-			grid-template-columns: 1fr;
-			align-items: start;
-			gap: 1.75rem;
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: center;
+			min-height: 0;
+			padding: 0.75rem 1rem;
+			gap: 0.5rem;
+		}
+
+		.profile-hero--member .profile-avatar {
+			width: 3rem;
+		}
+
+		.profile-hero--member .profile-identity {
+			gap: 0.625rem;
+		}
+
+		.profile-hero--member .profile-identity h1 {
+			font-size: clamp(1.35rem, 6vw, 1.75rem);
+			line-height: 1;
+		}
+
+		.profile-hero--member .profile-identity strong {
+			margin-top: 0.25rem;
+			font-size: 0.8rem;
+		}
+
+		.profile-hero--member .profile-identity p {
+			font-size: 0.72rem;
+			overflow-wrap: anywhere;
+		}
+
+		.profile-hero--member .profile-session {
+			width: auto;
+			padding: 0;
+		}
+
+		.profile-hero--member .profile-session button {
+			width: auto;
+			min-height: 2.75rem;
+			padding-inline: 0.75rem;
 		}
 
 		.profile-form > form > .onboarding-panel {
@@ -1877,6 +1862,47 @@
 
 		.schedule-onboarding-workspace {
 			grid-template-columns: 1fr;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar) {
+			grid-template-columns: 2.75rem repeat(5, minmax(0, 1fr));
+			width: 100%;
+			min-width: 0;
+			overflow: visible;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .calendar-corner) {
+			font-size: 0.5rem;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .time-rail span) {
+			right: 0.35rem;
+			font-size: 0.52rem;
+			white-space: nowrap;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .event) {
+			left: calc((100% / var(--lanes)) * var(--lane) + 1px);
+			width: calc(100% / var(--lanes) - 2px);
+			padding: 0.2rem;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .event strong) {
+			display: -webkit-box;
+			font-size: 0.58rem;
+			line-height: 1.05;
+			white-space: normal;
+			-webkit-box-orient: vertical;
+			-webkit-line-clamp: 2;
+			line-clamp: 2;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .event span) {
+			font-size: 0.5rem;
+		}
+
+		.schedule-onboarding-preview :global(.schedule-calendar .event small) {
+			display: none;
 		}
 
 		.member-form-intro > .primary-button {

@@ -8,6 +8,11 @@ describe('tools home', () => {
 	it('names MariTools and the six tools', () => {
 		render(ToolsHome);
 		expect(screen.getByRole('heading', { level: 1, name: 'MariTools' })).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				'Plan your schedule, compare free time, browse course outlines, and connect with clubs and classmates.'
+			)
+		).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Schedule' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Courses' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Student life' })).toBeInTheDocument();

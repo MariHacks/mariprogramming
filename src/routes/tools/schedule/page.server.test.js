@@ -153,6 +153,24 @@ describe('schedule form action', () => {
 		).rejects.toThrow('boom');
 	});
 
+	it('rethrows unexpected saved-schedule lookup failures', async () => {
+		const { load } = _createHandlers({
+			openStore: () => ({ hasGrant: vi.fn(async () => false) }),
+			openStudentStore: () => ({
+				getSchedule: vi.fn(async () => {
+					throw new Error('schedule read failed');
+				})
+			})
+		});
+
+		await expect(
+			load({
+				locals: { maritools: { userId: 'user-1' } },
+				url: new URL('https://example.com/tools/schedule')
+			})
+		).rejects.toThrow('schedule read failed');
+	});
+
 	it('validates paste and term before pushing', async () => {
 		const { actions } = _createHandlers({
 			readEnvironment: () => ({

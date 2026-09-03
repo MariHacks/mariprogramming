@@ -110,6 +110,14 @@ describe('staff authorization', () => {
 		expect(() => requireStaff({ staff: null })).toThrowError(
 			expect.objectContaining({ status: 303, location: '/staff/sign-in?state=reauthenticate' })
 		);
+		expect(() =>
+			requireStaff(/** @type {any} */ ({
+				staff: null,
+				maritools: { userId: 'executive-1', email: 'executive@example.com', role: 'moderator' }
+			}))
+		).toThrowError(
+			expect.objectContaining({ status: 303, location: '/staff/sign-in?state=reauthenticate' })
+		);
 	});
 
 	it('returns only server-established staff locals', () => {

@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
-import { MaritoolsInputError, MaritoolsUnavailableError } from '$lib/server/maritools/student-store.js';
+import { MaritoolsUnavailableError } from '$lib/server/maritools/student-store.js';
 import { prerender, _createHandlers } from './+page.server.js';
 
 const SESSION = {
@@ -76,10 +76,9 @@ describe('clubs page server', () => {
 	it('filters clubs by search and category', async () => {
 		const current = handlers();
 		expect((await current.load(event({ search: '?q=robot&category=stem' }))).clubs).toEqual([CLUB]);
-		expect((await current.load(event({ search: '?q=robot' }))).clubs.map((club) => club.id)).toEqual([
-			'club-1',
-			'club-2'
-		]);
+		expect(
+			(await current.load(event({ search: '?q=robot' }))).clubs.map((club) => club.id)
+		).toEqual(['club-1', 'club-2']);
 		expect((await current.load(event({ search: '?category=stem' }))).clubs).toEqual([CLUB]);
 		expect((await current.load(event({ search: '?q=chess&category=arts' }))).clubs).toEqual([]);
 	});
@@ -164,104 +163,5 @@ describe('clubs page server', () => {
 			}
 		});
 		await expect(current.load(event())).rejects.toThrow('boom');
-	});
-
-	it('starts a pending submission and redirects to the editable detail', async () => {
-		const current = handlers();
-		await expect(
-			current.actions.submit(
-				event({
-					locals: { maritools: SESSION },
-					form: {
-						name: 'Chess Club',
-						category: 'games',
-						submitterRole: 'officer'
-					}
-				})
-			)
-		).rejects.toMatchObject({
-			status: 303,
-			location: `/tools/clubs/submissions/${PENDING.id}`
-		});
-		expect(current.store.submitClub).toHaveBeenCalledWith({
-			submitterUserId: SESSION.userId,
-			payload: expect.objectContaining({
-				name: 'Chess Club',
-				slug: 'chess-club',
-				category: 'games',
-				submitterRole: 'officer'
-			})
-		});
-		expect(current.store.submitClub.mock.calls[0][0].payload).not.toHaveProperty('description');
-	});
-
-	it('rejects submit without a session, name, role, or usable slug', async () => {
-		expect((await handlers().actions.submit(event({ form: { name: 'Chess' } }))).status).toBe(401);
-		expect(
-			(await handlers().actions.submit(event({ locals: { maritools: SESSION } }))).status
-		).toBe(400);
-		expect(
-			(
-				await handlers().actions.submit(
-					event({ locals: { maritools: SESSION }, form: { name: 'Chess', submitterRole: 'nope' } })
-				)
-			).status
-		).toBe(400);
-		expect(
-			(
-				await handlers().actions.submit(
-					event({ locals: { maritools: SESSION }, form: { name: '!!!', submitterRole: 'member' } })
-				)
-			).status
-		).toBe(400);
-	});
-
-	it('returns bounded submit errors', async () => {
-		const invalid = handlers({
-			store: {
-				submitClub: vi.fn(async () => {
-					throw new MaritoolsInputError('invalid-club');
-				})
-			}
-		});
-		expect(
-			(
-				await invalid.actions.submit(
-					event({
-						locals: { maritools: SESSION },
-						form: { name: 'Chess', submitterRole: 'member' }
-					})
-				)
-			).status
-		).toBe(400);
-		const down = handlers({
-			store: {
-				submitClub: vi.fn(async () => {
-					throw new MaritoolsUnavailableError();
-				})
-			}
-		});
-		expect(
-			(
-				await down.actions.submit(
-					event({
-						locals: { maritools: SESSION },
-						form: { name: 'Chess', submitterRole: 'member' }
-					})
-				)
-			).status
-		).toBe(503);
-		const boom = handlers({
-			store: {
-				submitClub: vi.fn(async () => {
-					throw new Error('boom');
-				})
-			}
-		});
-		await expect(
-			boom.actions.submit(
-				event({ locals: { maritools: SESSION }, form: { name: 'Chess', submitterRole: 'member' } })
-			)
-		).rejects.toThrow('boom');
 	});
 });

@@ -76,7 +76,15 @@
 		{#if data.unavailable}
 			<p class="field-error" role="alert">Boards are unavailable right now. Try again.</p>
 		{:else if data.boards?.length}
-			<div class="boards-index">
+			<p class="index-scroll-cue" id="boards-scroll-cue">Swipe sideways to see all board details.</p>
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex (keyboard access for the scrollable region) -->
+			<div
+				class="boards-index"
+				role="region"
+				aria-label="Free-time boards"
+				aria-describedby="boards-scroll-cue"
+				tabindex="0"
+			>
 				<div class="boards-head">
 					<span>Board</span><span>Members</span><span>Your response</span><span>Updated</span><span></span>
 				</div>

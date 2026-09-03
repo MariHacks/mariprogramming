@@ -22,7 +22,7 @@ afterEach(() => {
 describe('protected staff shell', () => {
 	it('uses Programming Club identity and a compact factual operations nav', () => {
 		render(StaffLayout, { data: { staff: STAFF, pathname: '/staff' } });
-		expect(screen.getByRole('banner')).toHaveTextContent('Programming Club Staff');
+		expect(screen.getByRole('banner')).toHaveTextContent('Programming Club Team');
 		expect(screen.getByRole('presentation')).toHaveAttribute('src', '/logo-icon.svg');
 		expect(screen.getByRole('presentation')).toHaveClass('brand-mark');
 		expect(screen.getByRole('link', { name: 'Catalogue' })).toHaveAttribute(

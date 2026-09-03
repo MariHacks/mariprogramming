@@ -13,6 +13,10 @@ const BOARD = {
 	members: []
 };
 
+/**
+ * @param {any} [overrides]
+ * @returns {any}
+ */
 function handlers(overrides = {}) {
 	const store = {
 		getBoardBySlug: vi.fn(async () => BOARD),
@@ -40,10 +44,19 @@ function handlers(overrides = {}) {
 	};
 }
 
+/**
+ * @param {any} [options]
+ * @returns {any}
+ */
 function event({ params = { slug: 'study-group' }, locals = { maritools: null } } = {}) {
 	return { params, locals };
 }
 
+/**
+ * @param {any} fields
+ * @param {any} [params]
+ * @returns {any}
+ */
 function saveEvent(fields, params = { slug: 'study-group' }) {
 	return {
 		params,
@@ -109,6 +122,47 @@ describe('free-time board page server', () => {
 				event({ locals: { maritools: { email: 'nick.zhicheng@gmail.com', userId: 'u1' } } })
 			)
 		).resolves.toMatchObject({ signedInDisplayName: 'nick.zhicheng' });
+	});
+
+	it('keeps account lookup failures from blocking a signed-in board', async () => {
+		const rejectedLookups = handlers({
+			students: {
+				getProfile: vi.fn(async () => {
+					throw new Error('profile unavailable');
+				}),
+				getSchedule: vi.fn(async () => {
+					throw new Error('schedule unavailable');
+				})
+			}
+		});
+		await expect(
+			rejectedLookups.load(
+				event({ locals: { maritools: { email: '@example.com', userId: 'u1' } } })
+			)
+		).resolves.toMatchObject({ signedInDisplayName: null, savedSchedulePaste: '' });
+
+		const nullSchedule = handlers({
+			students: {
+				getProfile: vi.fn(async () => ({ displayName: '   ' })),
+				getSchedule: vi.fn(async () => null)
+			}
+		});
+		await expect(
+			nullSchedule.load(
+				event({ locals: { maritools: { email: 'ada@example.com', userId: 'u1' } } })
+			)
+		).resolves.toMatchObject({ signedInDisplayName: 'ada', savedSchedulePaste: '' });
+
+		const unavailableStudentStore = handlers({
+			createStudentStore: vi.fn(() => {
+				throw new Error('student store unavailable');
+			})
+		});
+		await expect(
+			unavailableStudentStore.load(
+				event({ locals: { maritools: { email: 'ada@example.com', userId: 'u1' } } })
+			)
+		).resolves.toMatchObject({ signedInDisplayName: 'ada', savedSchedulePaste: '' });
 	});
 
 	it('returns not found for a missing board', async () => {

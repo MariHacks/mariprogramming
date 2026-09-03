@@ -111,6 +111,59 @@ describe('staff catalog conflicts load', () => {
 			unavailable: true
 		});
 	});
+
+	it('keeps the queue available when a contributor profile cannot be read', async () => {
+		const { handlers } = setup({
+			store: {
+				getProfile: vi.fn(async (id) => {
+					if (id === 'user-a') throw new Error('missing profile');
+					return null;
+				})
+			}
+		});
+
+		const result = await handlers.load({ locals: { staff: STAFF } });
+		expect(result.unavailable).toBe(false);
+		expect(result.groups[0].contributions.map((row) => row.contributorDisplayName)).toEqual([
+			'Student',
+			'Student'
+		]);
+	});
+
+	it('ignores non-string contributor ids', async () => {
+		const { handlers, store } = setup({
+			store: {
+				listConflictCatalog: vi.fn(async () => [
+					{
+						id: CONTRIB_A,
+						offeringId: OFFERING,
+						contributorUserId: 42,
+						status: 'conflict',
+						structured: {},
+						createdAt: null,
+						updatedAt: null
+					}
+				])
+			}
+		});
+
+		const result = await handlers.load({ locals: { staff: STAFF } });
+		expect(store.getProfile).not.toHaveBeenCalled();
+		expect(result.groups[0].contributions[0].contributorDisplayName).toBe('Student');
+	});
+
+	it('rethrows unexpected load failures', async () => {
+		const failure = new Error('boom');
+		const { handlers } = setup({
+			store: {
+				listConflictCatalog: vi.fn(async () => {
+					throw failure;
+				})
+			}
+		});
+
+		await expect(handlers.load({ locals: { staff: STAFF } })).rejects.toBe(failure);
+	});
 });
 
 describe('staff catalog conflicts resolve', () => {
@@ -157,5 +210,20 @@ describe('staff catalog conflicts resolve', () => {
 		await expect(
 			handlers.actions.resolve(actionEvent({ form: { contributionId: CONTRIB_A } }))
 		).resolves.toMatchObject({ status: 503 });
+	});
+
+	it('rethrows unexpected resolve failures', async () => {
+		const failure = new Error('boom');
+		const { handlers } = setup({
+			store: {
+				resolveCatalogConflict: vi.fn(async () => {
+					throw failure;
+				})
+			}
+		});
+
+		await expect(
+			handlers.actions.resolve(actionEvent({ form: { contributionId: CONTRIB_A } }))
+		).rejects.toBe(failure);
 	});
 });

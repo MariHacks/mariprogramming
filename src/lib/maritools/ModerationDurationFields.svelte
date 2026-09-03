@@ -82,7 +82,7 @@
 
 	.mod-duration select,
 	.mod-duration input[type='number'] {
-		min-height: 2rem;
+		min-height: 2.75rem;
 		padding: 0.2rem 0.4rem;
 		border: var(--rule, 1px solid #c9d2dc);
 		background: white;
@@ -93,7 +93,28 @@
 	}
 
 	.mod-duration input[type='number'] {
-		width: 3.5rem;
+		width: 4rem;
+	}
+
+	@media (max-width: 28rem) {
+		.mod-duration,
+		.mod-duration label,
+		.mod-duration select {
+			width: 100%;
+		}
+
+		.mod-duration-preset {
+			justify-content: space-between;
+		}
+
+		.mod-duration-custom,
+		.mod-duration-unit {
+			flex: 1;
+		}
+
+		.mod-duration input[type='number'] {
+			width: 100%;
+		}
 	}
 
 	.visually-hidden {

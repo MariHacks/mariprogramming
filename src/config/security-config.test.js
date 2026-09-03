@@ -16,7 +16,7 @@ describe('production security configuration', () => {
 				'style-src': ['self'],
 				'style-src-attr': ['unsafe-hashes', 'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo='],
 				'font-src': ['self'],
-				'img-src': ['self', 'data:', 'https:'],
+				'img-src': ['self', 'data:', 'blob:', 'https:'],
 				'connect-src': ['self'],
 				'form-action': ['self'],
 				'frame-src': ['self', 'https://www.google.com'],

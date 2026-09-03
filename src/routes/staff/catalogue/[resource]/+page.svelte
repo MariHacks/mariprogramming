@@ -246,7 +246,7 @@
 </script>
 
 <svelte:head>
-	<title>{resourceLabel.plural} | Programming Club Staff</title>
+	<title>{resourceLabel.plural} | Programming Club Team</title>
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 

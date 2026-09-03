@@ -36,6 +36,7 @@ const NESTED_ENTRY = {
 	course: { code: '203-SN3-RE', canonicalTitle: 'Modern Physics' }
 };
 
+/** @param {any} row */
 function flatFromNested(row) {
 	if (!row?.contribution) return row;
 	return {
@@ -51,6 +52,10 @@ function flatFromNested(row) {
 	};
 }
 
+/**
+ * @param {any} [overrides]
+ * @returns {any}
+ */
 function inner(overrides = {}) {
 	return {
 		getStudentProfile: vi.fn(async () => ({
@@ -78,20 +83,27 @@ function inner(overrides = {}) {
 }
 
 describe('createStudentStore', () => {
-	it('completes a student profile after disclosure', async () => {
+	it('lists terms through the repository', async () => {
+		const listTerms = vi.fn(async () => [{ id: 'fall-2026', label: 'Fall 2026' }]);
+		const store = createStudentStore(inner({ listTerms }));
+
+		await expect(store.listTerms()).resolves.toEqual([{ id: 'fall-2026', label: 'Fall 2026' }]);
+		expect(listTerms).toHaveBeenCalledOnce();
+	});
+
+	it('completes a student profile without accepting outline analysis', async () => {
 		const repo = inner();
 		const store = createStudentStore(repo);
 		const profile = await store.completeProfile({
 			userId: USER,
 			email: 'ada@gmail.com',
 			studentId: '2530622',
-			displayName: 'Ada',
-			nimAccepted: true
+			displayName: 'Ada'
 		});
 		expect(profile).not.toHaveProperty('studentId');
 		expect(JSON.stringify(profile)).not.toContain('2530622');
 		expect(profile.displayName).toBe('Ada');
-		expect(repo.acceptNimDisclosure).toHaveBeenCalledWith(USER);
+		expect(repo.acceptNimDisclosure).not.toHaveBeenCalled();
 		expect(repo.upsertStudentProfile).toHaveBeenCalledWith(
 			expect.objectContaining({ role: 'student', displayName: 'Ada' })
 		);
@@ -104,8 +116,7 @@ describe('createStudentStore', () => {
 			userId: USER,
 			email: 'team@marihacks.com',
 			studentId: '2530622',
-			displayName: '',
-			nimAccepted: true
+			displayName: ''
 		});
 		expect(repo.upsertStudentProfile).toHaveBeenCalledWith(
 			expect.objectContaining({ role: 'staff', displayName: null })
@@ -119,27 +130,32 @@ describe('createStudentStore', () => {
 		expect(profile.displayName).toBe('Ada');
 		const missing = createStudentStore(inner({ getStudentProfile: vi.fn(async () => null) }));
 		await expect(missing.getProfile(USER)).resolves.toBeNull();
-		await expect(missing.completeProfile({
-			userId: USER,
-			email: 'ada@gmail.com',
-			studentId: '2530622',
-			nimAccepted: true
-		})).resolves.toBeNull();
+		await expect(
+			missing.completeProfile({
+				userId: USER,
+				email: 'ada@gmail.com',
+				studentId: '2530622'
+			})
+		).resolves.toBeNull();
 	});
 
-	it.each([
-		['12', true, 'invalid-student-id'],
-		['2530622', false, 'nim-required']
-	])('rejects invalid completion %#', async (studentId, nimAccepted, code) => {
+	it('rejects an invalid student number', async () => {
 		const store = createStudentStore(inner());
 		await expect(
 			store.completeProfile({
 				userId: USER,
 				email: 'ada@gmail.com',
-				studentId,
-				nimAccepted
+				studentId: '12'
 			})
-		).rejects.toMatchObject({ name: 'MaritoolsInputError', code });
+		).rejects.toMatchObject({ name: 'MaritoolsInputError', code: 'invalid-student-id' });
+	});
+
+	it('records the one-time Semester analysis confirmation', async () => {
+		const repo = inner();
+		const store = createStudentStore(repo);
+
+		await expect(store.acceptOutlineAnalysis(USER)).resolves.toBeUndefined();
+		expect(repo.acceptNimDisclosure).toHaveBeenCalledWith(USER);
 	});
 
 	it('maps published catalog rows and nested repository rows', async () => {
@@ -162,6 +178,37 @@ describe('createStudentStore', () => {
 			})
 		);
 		await expect(uncoded.listPublishedCatalog({ query: '203' })).resolves.toEqual([]);
+	});
+
+	it('maps every course catalog field and nullable relation', async () => {
+		const createdAt = new Date('2026-08-30T12:00:00.000Z');
+		const listCatalogForCourse = vi.fn(async () => [
+			{
+				...FLAT_ENTRY,
+				offeringId: 'off-1',
+				courseId: 'course-1',
+				createdAt
+			},
+			{ ...FLAT_ENTRY, id: 'c2' }
+		]);
+		const store = createStudentStore(inner({ listCatalogForCourse }));
+
+		await expect(store.listCatalogForCourse('course-1')).resolves.toEqual([
+			{
+				...FLAT_ENTRY,
+				offeringId: 'off-1',
+				courseId: 'course-1',
+				createdAt
+			},
+			{
+				...FLAT_ENTRY,
+				id: 'c2',
+				offeringId: null,
+				courseId: null,
+				createdAt: null
+			}
+		]);
+		expect(listCatalogForCourse).toHaveBeenCalledWith('course-1');
 	});
 
 	it('matches catalog query as case-insensitive substring on code, title, or teacher', async () => {
@@ -277,6 +324,10 @@ describe('createStudentStore', () => {
 		expect(repo.saveSchedule).toHaveBeenCalledWith({ userId: USER, paste: '2\tPhysics\n' });
 	});
 
+	it('returns an empty schedule when none is saved', async () => {
+		await expect(createStudentStore(inner()).getSchedule(USER)).resolves.toBe('');
+	});
+
 	it('contributes through offering identity', async () => {
 		const repo = inner();
 		const store = createStudentStore(repo);
@@ -313,11 +364,11 @@ describe('createStudentStore', () => {
 	it('rejects a contribute payload without identity fields', async () => {
 		const store = createStudentStore(inner());
 		await expect(
-			store.contribute({
+			store.contribute(/** @type {any} */ ({
 				contributorUserId: USER,
 				documentSha256: 'ab'.repeat(32),
 				structured: {}
-			})
+			}))
 		).rejects.toBeInstanceOf(MaritoolsInputError);
 	});
 
@@ -344,7 +395,7 @@ describe('createStudentStore', () => {
 			inner({
 				getStudentProfile: vi.fn(async () => {
 					const error = new MariToolsValidationError();
-					error.code = undefined;
+					/** @type {any} */ (error).code = undefined;
 					throw error;
 				})
 			})
@@ -426,9 +477,9 @@ describe('openStudentStore', () => {
 	afterEach(() => vi.restoreAllMocks());
 
 	it('builds a store from the runtime database url', () => {
-		vi.spyOn(environment, 'readRuntimeEnvironment').mockReturnValue({
+		vi.spyOn(environment, 'readRuntimeEnvironment').mockReturnValue(/** @type {any} */ ({
 			databaseUrl: 'postgresql://runtime:secret@db.example/club'
-		});
+		}));
 		const store = openStudentStore();
 		expect(typeof store.getProfile).toBe('function');
 	});

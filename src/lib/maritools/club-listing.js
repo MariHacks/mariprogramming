@@ -1,4 +1,4 @@
-/** @typedef {{ label?: string, url?: string }} ClubLink */
+/** @typedef {{ type?: string, label?: string, url?: string }} ClubLink */
 /** @typedef {{ name?: string, slug?: string, category?: string | null, description?: string | null, links?: ClubLink[], submitterRole?: string }} ClubListingPayload */
 
 export const CLUB_SUBMITTER_ROLES = [
@@ -8,7 +8,70 @@ export const CLUB_SUBMITTER_ROLES = [
 	{ value: 'correction', label: 'Correcting an existing listing' }
 ];
 
+export const CLUB_CATEGORIES = [
+	'Academic',
+	'Arts and culture',
+	'Community service',
+	'Games and recreation',
+	'Health and wellness',
+	'Sports',
+	'Technology',
+	'Other'
+];
+
+export const CLUB_CONTACT_TYPES = [
+	{ value: 'email', label: 'Email' },
+	{ value: 'website', label: 'Website' },
+	{ value: 'mio', label: 'MIO' },
+	{ value: 'discord', label: 'Discord' },
+	{ value: 'instagram', label: 'Instagram' },
+	{ value: 'custom', label: 'Custom' }
+];
+
 const ROLE_VALUES = new Set(CLUB_SUBMITTER_ROLES.map((role) => role.value));
+const CONTACT_TYPE_VALUES = new Set(CLUB_CONTACT_TYPES.map((type) => type.value));
+
+/** @param {unknown} value */
+export function normalizeContactType(value) {
+	const type = String(value ?? '')
+		.trim()
+		.toLowerCase();
+	return CONTACT_TYPE_VALUES.has(type) ? type : 'custom';
+}
+
+/** @param {unknown} value @param {unknown} type */
+export function contactValueForInput(value, type) {
+	const text = String(value ?? '');
+	return normalizeContactType(type) === 'email' || normalizeContactType(type) === 'mio'
+		? text.replace(/^mailto:/i, '')
+		: text;
+}
+
+/** @param {ClubLink} link */
+export function normalizeClubLink(link) {
+	const type = normalizeContactType(link.type);
+	const rawUrl = String(link.url ?? '').trim();
+	if (!rawUrl) return null;
+	const defaultLabel = CLUB_CONTACT_TYPES.find((option) => option.value === type)?.label ?? 'Link';
+	const label = String(link.label ?? '').trim() || defaultLabel;
+	if (type === 'email' || type === 'mio') {
+		return { type, label, url: /^mailto:/i.test(rawUrl) ? rawUrl : `mailto:${rawUrl}` };
+	}
+	const url = /^[a-z][a-z\d+.-]*:/i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+	if (!/^https?:\/\//i.test(url)) return null;
+	return { type, label, url };
+}
+
+/** @param {ClubLink[]} links @returns {ClubLink[]} */
+function normalizeClubLinks(links) {
+	/** @type {ClubLink[]} */
+	const normalizedLinks = [];
+	for (const link of links) {
+		const normalized = normalizeClubLink(link);
+		if (normalized) normalizedLinks.push(normalized);
+	}
+	return normalizedLinks;
+}
 
 /** @param {unknown} value */
 export function normalizeSubmitterRole(value) {
@@ -67,7 +130,7 @@ export function joinLinkFromClub(club) {
 
 /**
  * @param {ClubListingPayload | null | undefined} existing
- * @param {{ name?: string, slug?: string, category?: string, description?: string, linkLabel?: string, linkUrl?: string, submitterRole?: string | null }} patch
+ * @param {{ name?: string, slug?: string, category?: string, description?: string, links?: ClubLink[], linkLabel?: string, linkUrl?: string, submitterRole?: string | null }} patch
  */
 export function buildClubSubmissionPayload(existing, patch) {
 	const base = clubListingFromPayload(existing);
@@ -76,12 +139,19 @@ export function buildClubSubmissionPayload(existing, patch) {
 	const category = patch.category !== undefined ? String(patch.category).trim() : base.category;
 	const description =
 		patch.description !== undefined ? String(patch.description).trim() : base.description;
-	const linkUrl =
-		patch.linkUrl !== undefined ? String(patch.linkUrl).trim() : (base.links[0]?.url ?? '');
-	const linkLabel =
-		patch.linkLabel !== undefined
-			? String(patch.linkLabel).trim()
-			: (base.links[0]?.label ?? '');
+	const links =
+		patch.links !== undefined
+			? normalizeClubLinks(patch.links)
+			: patch.linkUrl !== undefined
+				? String(patch.linkUrl).trim()
+					? [
+							{
+								label: String(patch.linkLabel ?? '').trim() || 'Website',
+								url: String(patch.linkUrl).trim()
+							}
+						]
+					: []
+				: base.links;
 	const role =
 		patch.submitterRole !== undefined
 			? normalizeSubmitterRole(patch.submitterRole)
@@ -93,7 +163,7 @@ export function buildClubSubmissionPayload(existing, patch) {
 		...(slug ? { slug } : {}),
 		...(category ? { category } : {}),
 		...(description ? { description } : {}),
-		...(linkUrl ? { links: [{ label: linkLabel || 'Website', url: linkUrl }] } : { links: [] }),
+		links,
 		...(role ? { submitterRole: role } : {})
 	};
 	return payload;

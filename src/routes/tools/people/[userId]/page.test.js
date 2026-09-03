@@ -10,7 +10,7 @@ const USER = 'user-1';
 const THREAD = '20000000-0000-4000-8000-000000000001';
 
 describe('public profile page', () => {
-	it('shows display name and recent threads', () => {
+	it('shows the case-preserved username, full name, profile picture, tenure, and recent posts', () => {
 		render(ProfilePage, {
 			data: {
 				unavailable: false,
@@ -18,8 +18,11 @@ describe('public profile page', () => {
 				viewerIsStaff: false,
 				profile: {
 					userId: USER,
+					username: 'AdaCodes',
 					displayName: 'Ada Lovelace',
-					role: 'student',
+					profileImageDataUrl: 'data:image/png;base64,YXZhdGFy',
+					role: 'executive',
+					joinedAt: '2025-09-01T12:00:00.000Z',
 					isRestricted: false,
 					isMuted: false,
 					isBanned: false
@@ -33,13 +36,84 @@ describe('public profile page', () => {
 				]
 			}
 		});
-		expect(screen.getByRole('heading', { name: 'Ada Lovelace' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'AdaCodes' })).toBeInTheDocument();
+		expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
+		expect(screen.getByRole('img', { name: 'Ada Lovelace profile picture' })).toHaveAttribute(
+			'src',
+			'data:image/png;base64,YXZhdGFy'
+		);
+		expect(screen.getByText('Executive since Sep 2025')).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Recent posts' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Course outlines' })).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: /Quiet study hall/i })).toHaveAttribute(
 			'href',
 			`/tools/forum/${THREAD}`
 		);
 		expect(screen.queryByText(USER)).not.toBeInTheDocument();
-		expect(screen.queryByRole('heading', { name: 'Staff moderation' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('heading', { name: 'Moderation' })).not.toBeInTheDocument();
+	});
+
+	it('uses initials and polished empty states without exposing restrictions to visitors', () => {
+		render(ProfilePage, {
+			data: {
+				unavailable: false,
+				viewerSignedIn: false,
+				viewerIsStaff: false,
+				profile: {
+					userId: USER,
+					username: 'GraceH',
+					displayName: 'Grace Hopper',
+					profileImageDataUrl: null,
+					role: 'student',
+					joinedAt: null,
+					isRestricted: true,
+					isMuted: true,
+					isBanned: false
+				},
+				threads: [],
+				courseOutlines: []
+			}
+		});
+
+		expect(screen.getByText('GH')).toBeInTheDocument();
+		expect(screen.getByText('Member')).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'No posts yet' })).toBeInTheDocument();
+		expect(screen.getByText('This member has not started a discussion yet.')).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'No outlines yet' })).toBeInTheDocument();
+		expect(screen.getByText('This member has not shared any course outlines yet.')).toBeInTheDocument();
+		expect(screen.queryByText(/Muted|Restricted|Banned/)).not.toBeInTheDocument();
+	});
+
+	it('renders shared course outlines when the public data includes them', () => {
+		render(ProfilePage, {
+			data: {
+				unavailable: false,
+				viewerSignedIn: false,
+				viewerIsStaff: false,
+				profile: {
+					userId: USER,
+					username: 'AdaCodes',
+					displayName: 'Ada Lovelace',
+					role: 'student',
+					isRestricted: false,
+					isMuted: false,
+					isBanned: false
+				},
+				threads: [],
+				courseOutlines: [
+					{
+						sha256: 'ab'.repeat(32),
+						courseCode: '420-201-RE',
+						title: 'Programming II',
+						createdAt: '2026-08-28T16:00:00.000Z'
+					}
+				]
+			}
+		});
+
+		expect(screen.getByText('420-201-RE')).toBeInTheDocument();
+		expect(screen.getByText('Programming II')).toBeInTheDocument();
+		expect(screen.getByText('Aug 28')).toBeInTheDocument();
 	});
 
 	it('shows remaining mute time and staff mute/ban buttons', () => {
@@ -61,8 +135,8 @@ describe('public profile page', () => {
 				threads: []
 			}
 		});
-		expect(screen.getByText(/Muted ·/)).toBeInTheDocument();
-		expect(screen.getByRole('heading', { name: 'Staff moderation' })).toBeInTheDocument();
+		expect(screen.getByText(/Muted,/)).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Moderation' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Unmute' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Ban' })).toBeInTheDocument();
 		expect(screen.queryByLabelText('Ban for')).not.toBeInTheDocument();

@@ -133,7 +133,7 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 		const migrations = (await readdir(MIGRATIONS_DIRECTORY))
 			.filter((name) => name.endsWith('.sql'))
 			.sort();
-		expect(migrations).toHaveLength(19);
+		expect(migrations).toHaveLength(20);
 		const migrationSql = [];
 		for (const migrationName of migrations) {
 			const migration = await readFile(join(MIGRATIONS_DIRECTORY, migrationName), 'utf8');
@@ -155,6 +155,7 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 		expect(combinedMigration).toContain('orders_staff_ledger_idx');
 		expect(combinedMigration).toContain('orders_staff_email_created_idx');
 		expect(combinedMigration).toContain('mt_catalog_contributions_status_valid');
+		expect(combinedMigration).toContain('mt_student_profiles_username_lower_unique_idx');
 	}, 30000);
 
 	afterAll(async () => {
@@ -170,6 +171,11 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 		).toBe('38');
 		expect(query("SELECT count(*) FROM pg_constraint WHERE contype IN ('c', 'f')")).toBe('143');
 		expect(query("SELECT count(*) FROM pg_indexes WHERE schemaname = 'public'")).toBe('122');
+		expect(
+			query(
+				"SELECT indexdef FROM pg_indexes WHERE indexname = 'mt_student_profiles_username_lower_unique_idx'"
+			)
+		).toContain('lower((username)::text)');
 		expect(
 			query(
 				"SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'event_deliveries_sink_valid'"

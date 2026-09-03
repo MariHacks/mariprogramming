@@ -345,7 +345,13 @@
 						aria-controls="account-menu"
 						on:click={toggleAccountMenu}
 					>
-						<span>{headerAccount.initials}</span><b>{headerAccount.displayName}</b
+						<span class="identity-avatar">
+							{#if headerAccount.profileImageDataUrl}
+								<img src={headerAccount.profileImageDataUrl} alt="" />
+							{:else}
+								{headerAccount.initials}
+							{/if}
+						</span><b>{headerAccount.displayName}</b
 						><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m2.5 4.5 3.5 3 3.5-3" /></svg>
 					</button>
 					<div class="account-menu" id="account-menu" hidden={!accountMenuOpen}>
@@ -604,16 +610,24 @@
 		cursor: pointer;
 	}
 
-	.identity-button span {
+	.identity-avatar {
 		display: grid;
 		width: 1.65rem;
 		height: 1.65rem;
+		overflow: hidden;
 		border-radius: 999px;
 		background: var(--mist);
 		color: var(--midnight);
 		font-size: 0.625rem;
 		font-weight: 700;
 		place-items: center;
+	}
+
+	.identity-avatar img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
 	}
 
 	.identity-button svg {

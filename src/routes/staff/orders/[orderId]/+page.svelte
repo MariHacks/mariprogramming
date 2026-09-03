@@ -46,7 +46,7 @@
 	});
 	const actorLabels = Object.freeze({
 		customer: 'Customer',
-		staff: 'Staff',
+		staff: 'Team',
 		stripe: 'Stripe',
 		system: 'System',
 		maintenance: 'Maintenance'
@@ -189,7 +189,7 @@
 </script>
 
 <svelte:head>
-	<title>{order ? `${order.publicReference} | Programming Club Staff` : 'Order unavailable'}</title>
+	<title>{order ? `${order.publicReference} | Programming Club Team` : 'Order unavailable'}</title>
 </svelte:head>
 
 <section class="order-detail">

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-	NIM_DISCLOSURE,
 	accountPageView,
 	isCompleteStudentId,
 	isStaffAccount,
@@ -45,19 +44,18 @@ describe('community identity', () => {
 			{ displayName: 'Ada', nimDisclosureAcceptedAt: new Date() }
 		);
 		expect(complete.kind).toBe('complete');
-		expect(complete.nimAccepted).toBe(true);
+		expect(complete).not.toHaveProperty('nimAccepted');
 		const unnamed = accountPageView({ email: 'a@gmail.com' }, { nimDisclosureAcceptedAt: null });
 		expect(unnamed.kind).toBe('complete');
 		expect(unnamed.displayName).toBe(null);
-		expect(unnamed.nimAccepted).toBe(false);
+		expect(unnamed).not.toHaveProperty('nimAccepted');
 		expect(semesterPageView(null, null).kind).toBe('need-sign-in');
 		expect(semesterPageView({ email: 'a@gmail.com' }, null).kind).toBe('need-profile');
-		expect(
-			semesterPageView({ email: 'a@gmail.com' }, { nimDisclosureAcceptedAt: null }).kind
-		).toBe('need-disclosure');
+		expect(semesterPageView({ email: 'a@gmail.com' }, { nimDisclosureAcceptedAt: null }).kind).toBe(
+			'need-analysis-confirmation'
+		);
 		expect(
 			semesterPageView({ email: 'a@gmail.com' }, { nimDisclosureAcceptedAt: new Date() }).kind
 		).toBe('ready');
-		expect(NIM_DISCLOSURE).toMatch(/NVIDIA/);
 	});
 });

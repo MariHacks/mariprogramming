@@ -92,7 +92,10 @@ describe('request-scoped Better Auth runtime', () => {
 		expect(setup.readEnvironment).toHaveBeenCalledOnce();
 		expect(setup.createPool).toHaveBeenCalledWith(setup.environment.databaseUrl);
 		expect(setup.connect).toHaveBeenCalledOnce();
-		expect(setup.createDatabase).toHaveBeenCalledWith(setup.client);
+		expect(setup.createDatabase).toHaveBeenCalledWith(
+			setup.client,
+			setup.environment.databaseUrl
+		);
 		expect(setup.createAdapter).toHaveBeenCalledWith(setup.database, {
 			provider: 'pg',
 			schema: expect.objectContaining({ account: expect.anything(), session: expect.anything() })

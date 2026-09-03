@@ -90,5 +90,5 @@ export function formatRemaining(until, now = Date.now()) {
 	const hours = Math.ceil(ms / HOUR_MS);
 	if (hours < 48) return `${hours} hour${hours === 1 ? '' : 's'} left`;
 	const days = Math.ceil(ms / DAY_MS);
-	return `${days} day${days === 1 ? '' : 's'} left`;
+	return `${days} days left`;
 }

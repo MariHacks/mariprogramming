@@ -49,9 +49,9 @@ function normalizeAuthorDisplayName(value) {
 async function withAuthorDisplayNames(inner, rows) {
 	const ids = [
 		...new Set(
-			rows
-				.map((row) => (typeof row?.authorUserId === 'string' ? row.authorUserId : null))
-				.filter(Boolean)
+			rows.flatMap((row) =>
+				typeof row?.authorUserId === 'string' ? [row.authorUserId] : []
+			)
 		)
 	];
 	/** @type {Map<string, { displayName: string | null, profileImageDataUrl: string | null }>} */
@@ -157,6 +157,11 @@ export function publicClubView(club) {
  * @param {ReturnType<typeof createMariToolsRepository>} inner
  */
 export function createCommunityStore(inner) {
+	/**
+	 * @template Result
+	 * @param {() => Promise<Result>} operation
+	 * @returns {Promise<Result>}
+	 */
 	async function wrap(operation) {
 		try {
 			return await operation();
@@ -358,7 +363,7 @@ export function createCommunityStore(inner) {
 			});
 		},
 
-		/** @param {Record<string, unknown>} input */
+		/** @param {{ authorUserId: unknown, title: unknown, body: unknown, category: unknown, courseId?: unknown, offeringId?: unknown, termId?: unknown }} input */
 		createThread(input) {
 			return wrap(async () => {
 				const created = await inner.createThread(input);
@@ -367,7 +372,7 @@ export function createCommunityStore(inner) {
 			});
 		},
 
-		/** @param {Record<string, unknown>} input */
+		/** @param {{ threadId: unknown, authorUserId: unknown, body: unknown }} input */
 		createReply(input) {
 			return wrap(async () => {
 				const created = await inner.createReply(input);
@@ -394,7 +399,7 @@ export function createCommunityStore(inner) {
 			});
 		},
 
-		/** @param {Record<string, unknown>} input */
+		/** @param {{ targetKind: unknown, targetId: unknown, reporterUserId: unknown, reason: unknown }} input */
 		createReport(input) {
 			return wrap(() => inner.createReport(input));
 		},
@@ -419,14 +424,17 @@ export function createCommunityStore(inner) {
 			});
 		},
 
+		/** @param {string} id */
 		lockThread(id) {
 			return wrap(async () => publicThreadView(await inner.lockThread(id)));
 		},
 
+		/** @param {string} id */
 		removeThread(id) {
 			return wrap(async () => publicThreadView(await inner.removeThread(id)));
 		},
 
+		/** @param {string} id */
 		removeReply(id) {
 			return wrap(async () => publicReplyView(await inner.removeReply(id)));
 		},
@@ -494,8 +502,29 @@ export function createCommunityStore(inner) {
 		/** @param {string} userId */
 		getPublicProfile(userId) {
 			return wrap(async () => {
-				const row = await inner.getStudentProfile(userId);
-				return row ? publicProfileCard(row) : null;
+				const [row, membership] = await Promise.all([
+					inner.getStudentProfile(userId),
+					inner.getProgrammingClubMembership(userId)
+				]);
+				return row
+					? publicProfileCard(row, membership?.requiredFormCompletedAt ? membership : null)
+					: null;
+			});
+		},
+
+		/** Safe outline summaries for a public member profile. */
+		/** @param {string} userId */
+		listOutlinesByAuthor(userId) {
+			return wrap(async () => {
+				const rows = await inner.listUserOutlines(userId);
+				return rows.map((row) => {
+					const proposals = row.reviewProposals ?? row.proposals;
+					return {
+						sha256: row.sha256,
+						createdAt: row.createdAt ?? null,
+						extraction: proposals ? { proposals } : null
+					};
+				});
 			});
 		},
 

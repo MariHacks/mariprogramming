@@ -23,6 +23,8 @@ const POSTGRES_BIN = '/Applications/Postgres.app/Contents/Versions/latest/bin';
 const MIGRATIONS_DIRECTORY = resolve('drizzle');
 const USER_A = 'mt-user-a';
 const USER_B = 'mt-user-b';
+const USER_C = 'mt-user-c';
+const USER_D = 'mt-user-d';
 const SHA_A = sha256Hex('outline-a');
 const SHA_B = sha256Hex('outline-b');
 
@@ -129,7 +131,9 @@ describe.sequential('MariTools repository against disposable PostgreSQL', () => 
 			INSERT INTO "user" (id, name, email, email_verified, created_at, updated_at)
 			VALUES
 				('${USER_A}', 'Student A', 'a@gmail.com', true, now(), now()),
-				('${USER_B}', 'Student B', 'b@gmail.com', true, now(), now())
+				('${USER_B}', 'Student B', 'b@gmail.com', true, now(), now()),
+				('${USER_C}', 'Student C', 'c@gmail.com', true, now(), now()),
+				('${USER_D}', 'Student D', 'd@gmail.com', true, now(), now())
 			`
 		]);
 	}, 30000);
@@ -317,11 +321,22 @@ describe.sequential('MariTools repository against disposable PostgreSQL', () => 
 			displayName: 'ada_member',
 			firstName: 'Ada',
 			studentId: '2530622',
+			role: 'student',
+			isMuted: false,
+			isBanned: false,
 			yearLevel: 'second',
 			clubGoals: 'Project nights',
 			schedulePaste: '1\tPhysics\n'
 		});
 		expect(await repo.getStaffClubMember(USER_B)).toMatchObject({ clubGoals: null });
+		await expect(repo.setMemberRole(USER_A, 'moderator')).resolves.toMatchObject({
+			role: 'moderator'
+		});
+		await expect(repo.setMemberRole(USER_A, 'moderator')).resolves.toMatchObject({
+			role: 'moderator'
+		});
+		expect(await repo.getStaffClubMember(USER_A)).toMatchObject({ role: 'moderator' });
+		await repo.setMemberRole(USER_A, 'student');
 		expect(await repo.listSharedClubSchedules()).toEqual([
 			expect.objectContaining({ userId: USER_A, paste: '1\tPhysics\n' })
 		]);
@@ -334,6 +349,55 @@ describe.sequential('MariTools repository against disposable PostgreSQL', () => 
 		expect(await repo.getProgrammingClubMembership(USER_A)).toMatchObject({
 			requiredFormCompletedAt: expect.any(Date)
 		});
+	});
+
+	it('preserves username casing while enforcing case-insensitive ownership', async () => {
+		const repo = repository();
+		const join = (userId, studentId, username, firstName) =>
+			repo.joinProgrammingClub({
+				userId,
+				studentId,
+				username,
+				firstName,
+				lastName: 'Member',
+				program: 'Science, Pure and Applied Science',
+				yearLevel: 'first',
+				experienceLevel: 'new',
+				interests: ['web'],
+				staffVisibilityAccepted: true
+			});
+		await join(USER_C, '2530624', 'ZHiCh', 'Case');
+		expect(await repo.getStaffClubMember(USER_C)).toMatchObject({
+			username: 'ZHiCh',
+			displayName: 'ZHiCh'
+		});
+
+		await expect(join(USER_D, '2530625', 'zhich', 'Other')).rejects.toBeInstanceOf(
+			MariToolsConflictError
+		);
+		await join(USER_D, '2530625', 'other_member', 'Other');
+		const client = new Client({ connectionString: databaseUrl });
+		await client.connect();
+		try {
+			await expect(
+				client.query('UPDATE mt_student_profiles SET username = $1 WHERE user_id = $2', [
+					'zhich',
+					USER_D
+				])
+			).rejects.toMatchObject({ code: '23505' });
+		} finally {
+			await client.end();
+		}
+
+		await expect(
+			repo.updateMemberProfile({
+				userId: USER_C,
+				username: 'zHiCh',
+				firstName: 'Case',
+				lastName: 'Member'
+			})
+		).resolves.toMatchObject({ username: 'zHiCh', displayName: 'zHiCh' });
+		expect(await repo.getStaffClubMember(USER_C)).toMatchObject({ username: 'zHiCh' });
 	});
 
 	it('persists a private reviewed outline and deletes only that account copy', async () => {

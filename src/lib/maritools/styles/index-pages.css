@@ -1,6 +1,6 @@
 .mt-index-page {
 	display: grid;
-	margin-inline: calc(-1 * clamp(1.25rem, 3vw, 3rem));
+	margin-inline: 0;
 	background: var(--surface-raised);
 }
 

@@ -155,7 +155,7 @@ describe('Better Auth configuration', () => {
 		const options = createOptions({ database });
 
 		expect(options).toMatchObject({
-			appName: 'Marianopolis Programming Club Staff',
+			appName: 'Marianopolis Programming Club Team',
 			baseURL: productionEnvironment.appOrigin,
 			basePath: '/api/auth',
 			secret: productionEnvironment.betterAuthSecret,

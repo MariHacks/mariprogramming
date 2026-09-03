@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CANONICAL_OMNIVOX_SCHEDULE } from '$lib/maritools/schedule/fixture.js';
-import { NIM_DISCLOSURE } from '$lib/server/maritools/community.js';
 import AccountPage from './+page.svelte';
 
 const accountPageSource = readFileSync('src/routes/tools/account/+page.svelte', 'utf8');
@@ -11,6 +10,19 @@ const accountPageSource = readFileSync('src/routes/tools/account/+page.svelte', 
 function cssRulesFor(selector) {
 	const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	return accountPageSource.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+}
+
+/** @param {string} query @param {string} selector */
+function cssRulesForMedia(query, selector) {
+	const mediaStart = accountPageSource.indexOf(`@media (${query})`);
+	if (mediaStart < 0) return '';
+	const nextMedia = accountPageSource.indexOf('@media (', mediaStart + 1);
+	const mediaSource = accountPageSource.slice(
+		mediaStart,
+		nextMedia < 0 ? accountPageSource.length : nextMedia
+	);
+	const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return mediaSource.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
 }
 
 vi.mock('$lib/auth/staff-sign-out.js', () => ({
@@ -27,7 +39,6 @@ afterEach(() => {
 const base = {
 	callbackURL: 'https://club.example.com/tools/account',
 	recoveryMessage: null,
-	nimDisclosure: NIM_DISCLOSURE,
 	googleSignInConfigured: true,
 	requiredFormUrl: 'https://forms.cloud.microsoft/pages/responsepage.aspx?id=form&route=shorturl'
 };
@@ -100,7 +111,7 @@ describe('account page', () => {
 		});
 		expect(
 			screen.getByText(
-				'Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local to a real Google Cloud OAuth web client, then restart the dev server.'
+				'Google sign-in is not configured for local development. Check the server OAuth settings, then restart the dev server.'
 			)
 		).toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Continue with Google' })).not.toBeInTheDocument();
@@ -133,19 +144,18 @@ describe('account page', () => {
 		expect(screen.getByLabelText('First name')).toBeInTheDocument();
 		expect(screen.getByLabelText('Last name')).toBeInTheDocument();
 		expect(screen.getByLabelText('Student number')).toBeInTheDocument();
-		expect(screen.getByLabelText(/Profile picture/)).not.toBeRequired();
-		expect(screen.getByText('Choose image')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Choose image' })).toBeInTheDocument();
 		expect(screen.getByText('No image selected')).toBeInTheDocument();
-		await fireEvent.change(screen.getByLabelText(/Profile picture/), {
-			target: { files: [new File(['avatar'], 'ada.png', { type: 'image/png' })] }
-		});
-		expect(screen.getByText('ada.png')).toBeInTheDocument();
+		expect(screen.getByLabelText('Choose profile picture file')).toHaveAttribute(
+			'accept',
+			'image/jpeg,image/png,image/webp'
+		);
 		expect(screen.getByRole('option', { name: 'Arts and Sciences' })).toBeInTheDocument();
 		expect(
 			screen.getByRole('option', { name: 'Science, Pure and Applied Science' })
 		).toBeInTheDocument();
 		expect(screen.getByLabelText('Current year')).toHaveTextContent('First year');
-		expect(screen.queryByText(NIM_DISCLOSURE)).not.toBeInTheDocument();
+		expect(screen.queryByText(/NVIDIA outline analysis/i)).not.toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Join the Programming Club' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { name: 'Finish your club profile' })).toBeInTheDocument();
 		expect(screen.queryByText(/club staff can view my Google email/i)).not.toBeInTheDocument();
@@ -386,10 +396,13 @@ describe('account page', () => {
 				}
 			}
 		});
+		expect(screen.getByLabelText(/^Student number/)).not.toHaveAttribute('placeholder');
+		expect(screen.getByText('Already saved')).toBeInTheDocument();
 		expect(screen.getByRole('tab', { name: 'Schedule' })).not.toBeDisabled();
 		expect(screen.getByRole('tab', { name: 'Member form' })).not.toBeDisabled();
 		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
 		expect(screen.getByRole('heading', { name: 'Add your schedule' })).toBeInTheDocument();
+		expect(screen.getByText(/Your class times help us find meeting times/)).toBeInTheDocument();
 		expect(screen.getByLabelText('Omnivox course list')).not.toBeRequired();
 		expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
 		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
@@ -435,9 +448,7 @@ describe('account page', () => {
 		const calendar = screen.getByLabelText('Weekly course schedule');
 		expect(calendar).toBeVisible();
 		expect(calendar).toHaveClass('weekday-only');
-		expect(accountPageSource).not.toMatch(
-			/\.schedule-onboarding-preview\s*\{[^}]*max-height:/gu
-		);
+		expect(accountPageSource).not.toMatch(/\.schedule-onboarding-preview\s*\{[^}]*max-height:/gu);
 		expect(cssRulesFor('.schedule-onboarding-preview')).toContain('overflow: visible;');
 		expect(cssRulesFor('.schedule-onboarding-preview :global(.schedule-calendar)')).toContain(
 			'overflow: visible;'
@@ -459,6 +470,43 @@ describe('account page', () => {
 		for (const weekday of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']) {
 			expect(screen.getByText(weekday)).toBeInTheDocument();
 		}
+	});
+
+	it('fits the five-day schedule and touch targets into a narrow signup viewport', () => {
+		expect(
+			cssRulesFor('.profile-field--wide > select')
+		).toContain('min-height: 2.75rem;');
+		expect(cssRulesFor('.profile-form-action button')).toContain('min-height: 2.75rem;');
+		expect(cssRulesForMedia('max-width: 44rem', '.profile-hero--member')).toContain(
+			'min-height: 0;'
+		);
+		expect(cssRulesForMedia('max-width: 44rem', '.profile-hero--member')).toContain(
+			'grid-template-columns: minmax(0, 1fr) auto;'
+		);
+		expect(cssRulesForMedia('max-width: 44rem', '.profile-hero--member')).toContain(
+			'padding: 0.75rem 1rem;'
+		);
+		expect(cssRulesForMedia('max-width: 44rem', '.schedule-onboarding-preview')).toContain(
+			'overflow: hidden;'
+		);
+		expect(
+			cssRulesForMedia(
+				'max-width: 44rem',
+				'.schedule-onboarding-preview :global(.schedule-calendar)'
+			)
+		).toContain('grid-template-columns: 2.75rem repeat(5, minmax(0, 1fr));');
+		expect(
+			cssRulesForMedia(
+				'max-width: 44rem',
+				'.schedule-onboarding-preview :global(.schedule-calendar .event strong)'
+			)
+		).toContain('font-size: 0.58rem;');
+		expect(
+			cssRulesForMedia(
+				'max-width: 44rem',
+				'.schedule-onboarding-preview :global(.schedule-calendar .event strong)'
+			)
+		).toContain('white-space: normal;');
 	});
 
 	it('previews a valid schedule immediately after it is pasted during signup', async () => {
@@ -610,7 +658,7 @@ describe('account page', () => {
 						kind: 'complete',
 						email: 'ada@gmail.com',
 						displayName: 'Ada Lovelace',
-						username: 'ada_codes',
+						username: 'Ada_Codes',
 						firstName: 'Ada',
 						lastName: 'Lovelace',
 						profileImageDataUrl: 'data:image/png;base64,YQ==',
@@ -619,9 +667,13 @@ describe('account page', () => {
 				}
 			}
 		});
-		expect(screen.getByRole('heading', { name: 'ada_codes' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Ada_Codes' })).toBeInTheDocument();
 		expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
-		expect(screen.getByText(/Member since Sep 2025/)).toBeInTheDocument();
+		expect(screen.getByText('Member')).toBeInTheDocument();
+		expect(screen.getByText('Member since Sep 2025')).toBeInTheDocument();
+		expect(
+			document.querySelectorAll('.community-profile-meta svg[aria-hidden="true"]')
+		).toHaveLength(2);
 		expect(screen.getByRole('img', { name: 'Ada Lovelace profile picture' })).toHaveAttribute(
 			'src',
 			'data:image/png;base64,YQ=='
@@ -634,9 +686,15 @@ describe('account page', () => {
 		expect(
 			screen.getByText('Looking for a small project to build this semester.')
 		).toBeInTheDocument();
+		expect(
+			screen
+				.getByRole('link', { name: /Good first projects/ })
+				.querySelector('.community-post__icon')
+		).not.toBeNull();
 		expect(screen.getByRole('heading', { name: 'Course outlines' })).toBeInTheDocument();
 		expect(screen.getByText('420-201')).toBeInTheDocument();
 		expect(screen.getByText('Data Structures')).toBeInTheDocument();
+		expect(screen.getByText('420-201').closest('li')).toHaveClass('community-outline-entry');
 		expect(
 			screen.getByRole('button', { name: 'Edit profile' }).querySelector('svg[aria-hidden="true"]')
 		).not.toBeNull();
@@ -649,6 +707,10 @@ describe('account page', () => {
 		expect(screen.queryByText('Student data')).not.toBeInTheDocument();
 		expect(screen.queryByText('Who can see what')).not.toBeInTheDocument();
 		expect(screen.queryByText('2530622')).not.toBeInTheDocument();
+		expect(cssRulesFor('.community-profile-hero')).toContain('min-height: 17rem;');
+		expect(cssRulesFor('.community-avatar')).toContain('10.5rem');
+		expect(cssRulesFor('.community-profile-actions > button')).toContain('font-size: 1rem;');
+		expect(cssRulesFor('.community-profile-actions svg')).toContain('width: 1.25rem;');
 	});
 
 	it('edits identity details and uses the avatar as the image picker', async () => {
@@ -680,12 +742,14 @@ describe('account page', () => {
 		expect(screen.getByLabelText('Username')).toHaveValue('ada_codes');
 		expect(screen.getByLabelText('First name')).toHaveValue('Ada');
 		expect(screen.getByLabelText('Last name')).toHaveValue('Lovelace');
-		const image = screen.getByLabelText('Change profile picture');
-		expect(image).toHaveAttribute('type', 'file');
-		await fireEvent.change(image, {
-			target: { files: [new File(['new avatar'], 'new-ada.png', { type: 'image/png' })] }
-		});
-		expect(screen.getByText('new-ada.png')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Change profile picture' })).toHaveAttribute(
+			'type',
+			'button'
+		);
+		expect(screen.getByLabelText('Choose profile picture file')).toHaveAttribute(
+			'accept',
+			'image/jpeg,image/png,image/webp'
+		);
 		expect(screen.getByRole('button', { name: 'Save profile' })).toHaveAttribute('type', 'submit');
 		await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 		expect(screen.queryByRole('form', { name: 'Edit profile' })).not.toBeInTheDocument();
@@ -712,8 +776,18 @@ describe('account page', () => {
 				}
 			}
 		});
-		expect(screen.getByText('No posts yet.')).toBeInTheDocument();
-		expect(screen.getByText('No course outlines yet.')).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'No posts yet' })).toBeInTheDocument();
+		expect(
+			screen.getByText('Your forum posts will appear here after you start a discussion.')
+		).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'No outlines yet' })).toBeInTheDocument();
+		expect(
+			screen.getByText('Course outlines you contribute will appear here.')
+		).toBeInTheDocument();
+		expect(document.querySelectorAll('.profile-empty-state')).toHaveLength(2);
+		expect(document.querySelectorAll('.profile-empty-state svg[aria-hidden="true"]')).toHaveLength(2);
+		expect(document.querySelector('.profile-empty-state--posts')).toBeInTheDocument();
+		expect(document.querySelector('.profile-empty-state--outlines')).toBeInTheDocument();
 		expect(screen.queryByRole('link', { name: /upload outline/i })).not.toBeInTheDocument();
 		expect(document.querySelector('.profile-alerts')).not.toBeInTheDocument();
 	});
@@ -732,14 +806,14 @@ describe('account page', () => {
 						nimAccepted: false
 					}
 				},
-				form: { error: 'Confirm the NVIDIA disclosure before saving.' }
+				form: { error: 'Could not save your account. Try again.' }
 			}
 		});
 		expect(screen.getByText('We could not finish sign-in. Try again.')).toBeInTheDocument();
 		expect(
 			screen.getByText('Account details are unavailable right now. Try again.')
 		).toBeInTheDocument();
-		expect(screen.getByText('Confirm the NVIDIA disclosure before saving.')).toBeInTheDocument();
+		expect(screen.getByText('Could not save your account. Try again.')).toBeInTheDocument();
 		expect(screen.queryByText('Not accepted yet')).not.toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
 	});

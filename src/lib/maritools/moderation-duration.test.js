@@ -54,4 +54,43 @@ describe('moderation duration helpers', () => {
 		expect(formatRemaining(null)).toBeNull();
 		expect(formatRemaining(new Date(Date.now() - 1000))).toBe('expired');
 	});
+
+	it('covers invalid, capped, and combined duration boundaries', () => {
+		const now = Date.UTC(2026, 0, 1);
+		expect(untilFromDuration({}, now).getTime()).toBe(now + 7 * 24 * 60 * 60 * 1000);
+		expect(untilFromDuration({ hours: 1, days: 1 }, now).getTime()).toBe(now + 25 * 60 * 60 * 1000);
+		expect(untilFromDuration({ days: 999 }, now).getTime()).toBe(now + 366 * 24 * 60 * 60 * 1000);
+	});
+
+	it('parses FormData and custom fallback boundaries', () => {
+		const form = new FormData();
+		form.set('mutePreset', 'custom');
+		form.set('muteCustomAmount', '1');
+		form.set('muteCustomUnit', 'hours');
+		expect(parseModerationDuration(form, 'mute').label).toBe('1 hour');
+		expect(
+			parseModerationDuration(
+				{ banPreset: 'custom', banCustomAmount: '1', banCustomUnit: 'days' },
+				'ban'
+			).label
+		).toBe('1 day');
+		expect(parseModerationDuration({ mutePreset: 'unknown' }, 'mute').preset).toBe('7d');
+		expect(parseModerationDuration({ mutePreset: ' ' }, 'mute').preset).toBe('7d');
+		expect(
+			parseModerationDuration({ mutePreset: 'custom', muteCustomAmount: '' }, 'mute').label
+		).toBe('1 day');
+		expect(
+			parseModerationDuration({ mutePreset: 'custom', muteCustomAmount: '999' }, 'mute').label
+		).toBe('366 days');
+		expect(
+			parseModerationDuration({ mutePreset: 'custom', muteCustomAmount: '-4' }, 'mute').label
+		).toBe('1 day');
+	});
+
+	it('formats invalid, singular hour, and day ranges', () => {
+		const now = Date.UTC(2026, 0, 1);
+		expect(formatRemaining('not-a-date', now)).toBe('expired');
+		expect(formatRemaining(new Date(now + 60 * 60 * 1000), now)).toBe('1 hour left');
+		expect(formatRemaining(new Date(now + 48 * 60 * 60 * 1000), now)).toBe('2 days left');
+	});
 });

@@ -21,7 +21,7 @@ const KIND_COPY = Object.freeze({
 	}),
 	book_request_assigned: Object.freeze({
 		title: 'Request assigned',
-		description: 'Staff assigned this request to a bookstore.',
+		description: 'We assigned this request to a bookstore.',
 		color: 0x3d6b99
 	})
 });
@@ -88,7 +88,7 @@ export function buildDiscordPayload(fact, appOrigin, now) {
 				url: `${appOrigin}/staff/book-work`,
 				color: copy.color,
 				timestamp: now.toISOString(),
-				footer: { text: 'Open staff book work · no student names or emails' },
+				footer: { text: 'Open book work. No student names or emails.' },
 				fields
 			}
 		]

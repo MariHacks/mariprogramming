@@ -222,7 +222,7 @@ export function _createHandlers(dependencies = {}) {
 		try {
 			const store = createStore();
 			const identity = await staffContext(event, store);
-			if (!identity.staff) return fail(403, { error: 'Staff only.' });
+			if (!identity.staff) return fail(403, { error: 'This action requires team access.' });
 			const data = await event.request.formData();
 			const action = String(data.get('moderation') ?? '').trim();
 			const threadId = event.params.threadId;

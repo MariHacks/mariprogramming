@@ -134,6 +134,13 @@
 			"when": 1788408088000,
 			"tag": "0018_maritools_runtime_grants",
 			"breakpoints": true
+		},
+		{
+			"idx": 19,
+			"version": "7",
+			"when": 1788411600000,
+			"tag": "0019_case_preserved_usernames",
+			"breakpoints": true
 		}
 	]
 }

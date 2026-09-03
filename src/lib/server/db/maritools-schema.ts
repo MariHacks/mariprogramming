@@ -124,7 +124,7 @@ export const mtStudentProfiles = pgTable(
 	},
 	(table) => [
 		uniqueIndex('mt_student_profiles_student_id_unique_idx').on(table.studentId),
-		uniqueIndex('mt_student_profiles_username_unique_idx').on(table.username),
+		uniqueIndex('mt_student_profiles_username_lower_unique_idx').on(sql`lower(${table.username})`),
 		check(
 			'mt_student_profiles_role_valid',
 			sql`${table.role} IN ('student', 'moderator', 'staff')`
@@ -224,7 +224,10 @@ export const mtClubs = pgTable(
 		slug: varchar('slug', { length: 120 }).notNull(),
 		category: varchar('category', { length: 80 }),
 		description: text('description'),
-		links: jsonb('links').$type<Array<{ label: string; url: string }>>().default([]).notNull(),
+		links: jsonb('links')
+			.$type<Array<{ type?: string; label: string; url: string }>>()
+			.default([])
+			.notNull(),
 		published: boolean('published').default(false).notNull(),
 		version: version(),
 		createdAt: createdAt(),

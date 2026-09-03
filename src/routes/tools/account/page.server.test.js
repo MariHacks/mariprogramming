@@ -2,7 +2,6 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { ServerConfigurationError } from '$lib/server/config/environment.js';
-import { NIM_DISCLOSURE } from '$lib/server/maritools/community.js';
 import { CANONICAL_OMNIVOX_SCHEDULE } from '$lib/maritools/schedule/fixture.js';
 import {
 	MaritoolsInputError,
@@ -20,6 +19,10 @@ const SESSION = {
 	expiresAt: new Date('2030-01-01T00:00:00.000Z')
 };
 
+/**
+ * @param {any} [overrides]
+ * @returns {any}
+ */
 function handlers(overrides = {}) {
 	const repository = {
 		getProfile: vi.fn(async () => null),
@@ -43,6 +46,10 @@ function handlers(overrides = {}) {
 	};
 }
 
+/**
+ * @param {any} [options]
+ * @returns {any}
+ */
 function event({ locals = {}, form = {} } = {}) {
 	const data = new FormData();
 	for (const [key, value] of Object.entries(form)) data.set(key, String(value));
@@ -64,7 +71,6 @@ describe('account page server', () => {
 			view: { kind: 'guest' },
 			callbackURL: `${ORIGIN}/tools/account`,
 			recoveryMessage: null,
-			nimDisclosure: NIM_DISCLOSURE,
 			googleSignInConfigured: true,
 			onboardingPending: true,
 			club: { kind: 'signed_out' },
@@ -166,8 +172,7 @@ describe('account page server', () => {
 			username: null,
 			firstName: null,
 			lastName: null,
-			profileImageDataUrl: null,
-			nimAccepted: true
+			profileImageDataUrl: null
 		});
 		expect(data.club).toEqual({ kind: 'needs_club_details' });
 		expect(getMyClubOnboarding).toHaveBeenCalledWith(SESSION.userId);
@@ -389,7 +394,7 @@ describe('account page server', () => {
 		const result = await current.actions.complete(
 			event({
 				locals: { maritools: SESSION },
-				form: { studentId: '2530622', displayName: 'Ada', nimAccepted: 'on' }
+				form: { studentId: '2530622', displayName: 'Ada' }
 			})
 		);
 		expect(result).toMatchObject({ success: true });
@@ -398,8 +403,7 @@ describe('account page server', () => {
 			userId: SESSION.userId,
 			email: SESSION.email,
 			studentId: '2530622',
-			displayName: 'Ada',
-			nimAccepted: true
+			displayName: 'Ada'
 		});
 	});
 
@@ -472,7 +476,7 @@ describe('account page server', () => {
 			data.set('profileImage', new File(['text'], 'avatar.txt', { type: 'text/plain' }));
 			return data;
 		};
-		const result = await current.actions.updateProfile(updateEvent);
+		const result = /** @type {any} */ (await current.actions.updateProfile(updateEvent));
 		expect(result.status).toBe(400);
 		expect(result.data.error).toMatch(/JPG/);
 		expect(updateMemberProfile).not.toHaveBeenCalled();
@@ -491,12 +495,12 @@ describe('account page server', () => {
 			createClubRepository: vi.fn(() => ({ updateMemberProfile })),
 			isGoogleSignInConfigured: vi.fn(() => true)
 		});
-		const result = await current.actions.updateProfile(
+		const result = /** @type {any} */ (await current.actions.updateProfile(
 			event({
 				locals: session ? { maritools: session } : {},
 				form: { username: 'ada_codes', firstName: 'Ada', lastName: 'Lovelace' }
 			})
-		);
+		));
 		expect(result.status).toBe(status);
 	});
 
@@ -699,7 +703,7 @@ describe('account page server', () => {
 			isGoogleSignInConfigured: vi.fn(() => true)
 		});
 
-		const result = await current.actions.finishOnboarding(
+		const result = /** @type {any} */ (await current.actions.finishOnboarding(
 			event({
 				locals: { maritools: SESSION },
 				form: {
@@ -713,7 +717,7 @@ describe('account page server', () => {
 					interests: 'web'
 				}
 			})
-		);
+		));
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('Check each required signup field.');
 		expect(saveSchedule).not.toHaveBeenCalled();
@@ -758,24 +762,6 @@ describe('account page server', () => {
 		expect(result.data.error).toMatch(/student number/i);
 	});
 
-	it('requires the NVIDIA disclosure', async () => {
-		const current = handlers({
-			repository: {
-				completeProfile: vi.fn(async () => {
-					throw new MaritoolsInputError('nim-required');
-				})
-			}
-		});
-		const result = await current.actions.complete(
-			event({
-				locals: { maritools: SESSION },
-				form: { studentId: '2530622' }
-			})
-		);
-		expect(result.status).toBe(400);
-		expect(result.data.error).toMatch(/NVIDIA/i);
-	});
-
 	it('rethrows unexpected completion failures', async () => {
 		const current = handlers({
 			repository: {
@@ -809,5 +795,329 @@ describe('account page server', () => {
 			})
 		);
 		expect(result.status).toBe(503);
+	});
+
+	it('uses the default Google configuration check', async () => {
+		const current = _createHandlers({
+			readEnvironment: vi.fn(() => ({ appOrigin: ORIGIN }))
+		});
+
+		const data = await current.load(event());
+		expect(data.googleSignInConfigured).toBeTypeOf('boolean');
+	});
+
+	it('rethrows unexpected environment failures', async () => {
+		const current = handlers({
+			readEnvironment: vi.fn(() => {
+				throw new TypeError('bad environment');
+			})
+		});
+
+		await expect(current.load(event())).rejects.toThrow('bad environment');
+	});
+
+	it('loads saved schedule text and normalizes nullable community fields', async () => {
+		const getSchedule = vi.fn(async () => CANONICAL_OMNIVOX_SCHEDULE);
+		const current = handlers({
+			repository: {
+				getProfile: vi.fn(async () => ({ username: 'Ada' })),
+				getSchedule,
+				listOutlines: vi.fn(async () => [
+					{ sha256: 'ab'.repeat(32), createdAt: null, extraction: null }
+				])
+			},
+			createClubRepository: vi.fn(() => ({
+				getMyClubOnboarding: vi.fn(async () => ({ requiredFormCompletedAt: new Date() }))
+			})),
+			createCommunityRepository: vi.fn(() => ({
+				listThreadsByAuthor: vi.fn(async () => [])
+			}))
+		});
+
+		const data = await current.load(event({ locals: { maritools: SESSION } }));
+		expect(getSchedule).toHaveBeenCalledWith(SESSION.userId);
+		expect(data.onboardingDraft.paste).toBe(CANONICAL_OMNIVOX_SCHEDULE);
+		expect(data.communityProfile).toEqual({ joinedAt: null, role: 'student' });
+		expect(data.courseOutlines).toEqual([
+			{ sha256: 'ab'.repeat(32), createdAt: null, extraction: null }
+		]);
+	});
+
+	it('covers join authorization, defaults, and mapped failures', async () => {
+		const noSession = await handlers().actions.join(event());
+		expect(noSession.status).toBe(401);
+
+		const joinProgrammingClub = vi.fn(async () => ({}));
+		const current = handlers({
+			createClubRepository: vi.fn(() => ({ joinProgrammingClub }))
+		});
+		await expect(current.actions.join(event({ locals: { maritools: SESSION } }))).resolves.toEqual({
+			joined: true
+		});
+		expect(joinProgrammingClub).toHaveBeenCalledWith({
+			userId: SESSION.userId,
+			email: SESSION.email,
+			studentId: '',
+			username: '',
+			firstName: '',
+			lastName: '',
+			profileImageDataUrl: null,
+			program: '',
+			yearLevel: '',
+			experienceLevel: '',
+			interests: [],
+			clubGoals: ''
+		});
+
+		for (const [failure, status] of [
+			[new ClubInputError('invalid-program'), 400],
+			[new ClubUnavailableError(), 503]
+		]) {
+			const failed = handlers({
+				createClubRepository: vi.fn(() => ({
+					joinProgrammingClub: vi.fn(async () => {
+						throw failure;
+					})
+				}))
+			});
+			expect((await failed.actions.join(event({ locals: { maritools: SESSION } }))).status).toBe(
+				status
+			);
+		}
+	});
+
+	it('maps invalid join images and rethrows unexpected join failures', async () => {
+		const invalidImage = handlers({
+			createClubRepository: vi.fn(() => ({ joinProgrammingClub: vi.fn() }))
+		});
+		const imageEvent = event({ locals: { maritools: SESSION } });
+		imageEvent.request.formData = async () => {
+			const data = new FormData();
+			data.set('profileImage', new File(['text'], 'avatar.txt', { type: 'text/plain' }));
+			return data;
+		};
+		const invalidResult = await invalidImage.actions.join(imageEvent);
+		expect(invalidResult.status).toBe(400);
+		expect(invalidResult.data.error).toMatch(/JPG/);
+
+		const unexpected = handlers({
+			createClubRepository: vi.fn(() => ({
+				joinProgrammingClub: vi.fn(async () => {
+					throw new Error('join failed');
+				})
+			}))
+		});
+		await expect(
+			unexpected.actions.join(event({ locals: { maritools: SESSION } }))
+		).rejects.toThrow('join failed');
+	});
+
+	it('rethrows unexpected profile update failures with empty form defaults', async () => {
+		const current = handlers({
+			createClubRepository: vi.fn(() => ({
+				updateMemberProfile: vi.fn(async (input) => {
+					expect(input).toEqual({
+						userId: SESSION.userId,
+						username: '',
+						firstName: '',
+						lastName: ''
+					});
+					throw new Error('update failed');
+				})
+			}))
+		});
+
+		await expect(
+			current.actions.updateProfile(event({ locals: { maritools: SESSION } }))
+		).rejects.toThrow('update failed');
+	});
+
+	it('covers onboarding schedule authorization, validation, and failures', async () => {
+		expect((await handlers().actions.saveOnboardingSchedule(event())).status).toBe(401);
+
+		const invalid = await handlers().actions.saveOnboardingSchedule(
+			event({ locals: { maritools: SESSION } })
+		);
+		expect(invalid.status).toBe(400);
+
+		const unavailable = handlers({
+			repository: {
+				saveSchedule: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}
+		});
+		expect(
+			(
+				await unavailable.actions.saveOnboardingSchedule(
+					event({ locals: { maritools: SESSION }, form: { paste: CANONICAL_OMNIVOX_SCHEDULE } })
+				)
+			).status
+		).toBe(503);
+
+		const unexpected = handlers({
+			repository: {
+				saveSchedule: vi.fn(async () => {
+					throw new Error('schedule failed');
+				})
+			}
+		});
+		await expect(
+			unexpected.actions.saveOnboardingSchedule(
+				event({ locals: { maritools: SESSION }, form: { paste: CANONICAL_OMNIVOX_SCHEDULE } })
+			)
+		).rejects.toThrow('schedule failed');
+	});
+
+	it('blocks unauthorized and invalid final onboarding submissions', async () => {
+		expect((await handlers().actions.finishOnboarding(event())).status).toBe(401);
+		const invalid = await handlers().actions.finishOnboarding(
+			event({ locals: { maritools: SESSION }, form: { paste: 'not an Omnivox schedule' } })
+		);
+		expect(invalid.status).toBe(400);
+		expect(invalid.data.invalidTab).toBe('schedule');
+	});
+
+	it('uses empty final onboarding defaults and accepts an empty profile image', async () => {
+		const joinProgrammingClub = vi.fn(async () => ({}));
+		const completeRequiredForm = vi.fn(async () => ({}));
+		const current = handlers({
+			createClubRepository: vi.fn(() => ({
+				getMyClubOnboarding: vi.fn(async () => null),
+				joinProgrammingClub,
+				completeRequiredForm
+			}))
+		});
+		const finishEvent = event({ locals: { maritools: SESSION } });
+		finishEvent.request.formData = async () => {
+			const data = new FormData();
+			data.set('profileImage', new File([], 'avatar.png', { type: 'image/png' }));
+			return data;
+		};
+
+		await expect(current.actions.finishOnboarding(finishEvent)).resolves.toEqual({
+			onboardingComplete: true
+		});
+		expect(joinProgrammingClub).toHaveBeenCalledWith({
+			userId: SESSION.userId,
+			email: SESSION.email,
+			studentId: '',
+			username: '',
+			firstName: '',
+			lastName: '',
+			profileImageDataUrl: null,
+			program: '',
+			yearLevel: '',
+			experienceLevel: '',
+			interests: [],
+			clubGoals: ''
+		});
+	});
+
+	it('rejoins when a blank student number has no saved membership', async () => {
+		const joinProgrammingClub = vi.fn(async () => ({}));
+		const completeRequiredForm = vi.fn(async () => ({}));
+		const current = handlers({
+			createClubRepository: vi.fn(() => ({
+				getMyClubOnboarding: vi.fn(async () => null),
+				joinProgrammingClub,
+				completeRequiredForm
+			}))
+		});
+
+		await expect(
+			current.actions.finishOnboarding(
+				event({ locals: { maritools: SESSION }, form: { studentId: '' } })
+			)
+		).resolves.toEqual({ onboardingComplete: true });
+		expect(joinProgrammingClub).toHaveBeenCalledOnce();
+	});
+
+	it('maps final onboarding failures to their owning step', async () => {
+		const invalidImage = handlers({
+			createClubRepository: vi.fn(() => ({
+				getMyClubOnboarding: vi.fn(async () => null),
+				joinProgrammingClub: vi.fn()
+			}))
+		});
+		const imageEvent = event({ locals: { maritools: SESSION } });
+		imageEvent.request.formData = async () => {
+			const data = new FormData();
+			data.set('profileImage', new File(['text'], 'avatar.txt', { type: 'text/plain' }));
+			return data;
+		};
+		const imageResult = await invalidImage.actions.finishOnboarding(imageEvent);
+		expect(imageResult.status).toBe(400);
+		expect(imageResult.data.invalidTab).toBe('information');
+
+		const memberFormInput = handlers({
+			createClubRepository: vi.fn(() => ({
+				completeRequiredForm: vi.fn(async () => {
+					throw new ClubInputError('missing-club-details');
+				})
+			}))
+		});
+		const memberFormResult = await memberFormInput.actions.finishOnboarding(
+			event({ locals: { maritools: SESSION } })
+		);
+		expect(memberFormResult.status).toBe(400);
+		expect(memberFormResult.data.invalidTab).toBe('member-form');
+
+		const clubUnavailable = handlers({
+			createClubRepository: vi.fn(() => ({
+				completeRequiredForm: vi.fn(async () => {
+					throw new ClubUnavailableError();
+				})
+			}))
+		});
+		expect(
+			(await clubUnavailable.actions.finishOnboarding(event({ locals: { maritools: SESSION } })))
+				.status
+		).toBe(503);
+	});
+
+	it('distinguishes member-form and schedule storage failures', async () => {
+		const memberFormUnavailable = handlers({
+			createClubRepository: vi.fn(() => ({
+				completeRequiredForm: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			}))
+		});
+		expect(
+			(
+				await memberFormUnavailable.actions.finishOnboarding(
+					event({ locals: { maritools: SESSION } })
+				)
+			).status
+		).toBe(503);
+
+		const scheduleUnavailable = handlers({
+			repository: {
+				saveSchedule: vi.fn(async () => {
+					throw new MaritoolsUnavailableError();
+				})
+			},
+			createClubRepository: vi.fn(() => ({ completeRequiredForm: vi.fn() }))
+		});
+		const result = await scheduleUnavailable.actions.finishOnboarding(
+			event({ locals: { maritools: SESSION }, form: { paste: CANONICAL_OMNIVOX_SCHEDULE } })
+		);
+		expect(result.status).toBe(503);
+		expect(result.data.invalidTab).toBe('schedule');
+	});
+
+	it('rethrows unexpected final onboarding failures', async () => {
+		const current = handlers({
+			createClubRepository: vi.fn(() => ({
+				completeRequiredForm: vi.fn(async () => {
+					throw new Error('finish failed');
+				})
+			}))
+		});
+
+		await expect(
+			current.actions.finishOnboarding(event({ locals: { maritools: SESSION } }))
+		).rejects.toThrow('finish failed');
 	});
 });

@@ -8,7 +8,9 @@ describe('catalog page', () => {
 	it('explains that browsing does not need an account', () => {
 		render(CatalogPage, { props: { data: { entries: [], termId: '', query: '', discipline: '', disciplines: [] } } });
 		expect(screen.getByRole('heading', { name: 'Course catalog' })).toBeInTheDocument();
-		expect(screen.getByText(/Books are reference only/)).toBeInTheDocument();
+		expect(
+			screen.queryByText('Assessments and books students have shared. Books are reference only.')
+		).not.toBeInTheDocument();
 		expect(screen.getByText('No published courses yet')).toBeInTheDocument();
 		expect(screen.getByText(/Shared outlines will show up here/)).toBeInTheDocument();
 		expect(screen.getByLabelText('Discipline')).toBeInTheDocument();
@@ -65,6 +67,13 @@ describe('catalog page', () => {
 		expect(screen.getByText(/Midterm/)).toBeInTheDocument();
 		expect(screen.getByText(/University Physics/)).toBeInTheDocument();
 		expect(screen.queryByText(/2530622/)).not.toBeInTheDocument();
+		const index = screen.getByRole('region', { name: 'Course catalog results' });
+		expect(index).toHaveAttribute('tabindex', '0');
+		expect(index).toHaveAttribute('aria-describedby', 'catalog-scroll-cue');
+		expect(screen.getByText('Swipe sideways to see all course details.')).toHaveAttribute(
+			'id',
+			'catalog-scroll-cue'
+		);
 		fireEvent.click(screen.getByRole('button', { name: /Sort by course code/ }));
 		fireEvent.click(screen.getByRole('button', { name: /Collapse 203-SN3-RE/ }));
 	});

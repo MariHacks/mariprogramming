@@ -119,12 +119,15 @@ describe('ensureMariToolsSchema', () => {
 			.mockResolvedValueOnce({ rows: [{ ok: 1 }] })
 			.mockResolvedValueOnce({ rows: [{ table_name: 'mt_programming_club_memberships' }] })
 			.mockResolvedValueOnce({ rows: [{ ok: 1 }] })
-			.mockResolvedValueOnce({ rows: [{ ok: 1 }] });
+			.mockResolvedValueOnce({ rows: [{ ok: 1 }] })
+			.mockResolvedValueOnce({
+				rows: [{ table_name: 'mt_student_profiles_username_lower_unique_idx' }]
+			});
 		const client = { query, release: vi.fn() };
 		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
-		expect(query).toHaveBeenCalledTimes(10);
+		expect(query).toHaveBeenCalledTimes(11);
 	});
 
 	it('builds a default pg pool', async () => {
@@ -375,5 +378,35 @@ describe('ensureMariToolsBootstrap', () => {
 		vi.doMock('pg', () => ({ default: { Pool: FakePool } }));
 		const { ensureMariToolsSchema } = await import('./bootstrap.js');
 		await expect(ensureMariToolsSchema('postgresql://x')).rejects.toThrow('no real database');
+	});
+
+	it('replaces the case-sensitive username index when its lowercase index is missing', async () => {
+		const query = vi.fn(async (sql) => {
+			const text = String(sql);
+			if (text.includes('information_schema.columns')) return { rows: [{ ok: 1 }] };
+			if (text.includes("to_regclass('public.mt_student_profiles_username_lower_unique_idx')")) {
+				return { rows: [{ table_name: null }] };
+			}
+			if (text.includes('to_regclass')) return { rows: [{ table_name: 'present' }] };
+			return { rows: [] };
+		});
+		const client = { query, release: vi.fn() };
+		const pool = { connect: vi.fn(async () => client), end: vi.fn(async () => undefined) };
+		const { ensureMariToolsSchema } = await import('./bootstrap.js');
+
+		await ensureMariToolsSchema('postgresql://x', { createPool: () => /** @type {any} */ (pool) });
+
+		expect(
+			query.mock.calls.some((call) =>
+				String(call[0]).includes(
+					'CREATE UNIQUE INDEX IF NOT EXISTS "mt_student_profiles_username_lower_unique_idx"'
+				)
+			)
+		).toBe(true);
+		expect(
+			query.mock.calls.some((call) =>
+				String(call[0]).includes('DROP INDEX IF EXISTS "mt_student_profiles_username_unique_idx"')
+			)
+		).toBe(true);
 	});
 });
