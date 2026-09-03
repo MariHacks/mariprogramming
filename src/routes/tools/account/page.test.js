@@ -390,6 +390,7 @@ describe('account page', () => {
 		expect(screen.getByRole('tab', { name: 'Member form' })).not.toBeDisabled();
 		await fireEvent.click(screen.getByRole('tab', { name: 'Schedule' }));
 		expect(screen.getByRole('heading', { name: 'Add your schedule' })).toBeInTheDocument();
+		expect(screen.getByText(/Your class times help us find meeting times/)).toBeInTheDocument();
 		expect(screen.getByLabelText('Omnivox course list')).not.toBeRequired();
 		expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
 		await fireEvent.click(screen.getByRole('tab', { name: 'Member form' }));
@@ -610,7 +611,7 @@ describe('account page', () => {
 						kind: 'complete',
 						email: 'ada@gmail.com',
 						displayName: 'Ada Lovelace',
-						username: 'ada_codes',
+						username: 'Ada_Codes',
 						firstName: 'Ada',
 						lastName: 'Lovelace',
 						profileImageDataUrl: 'data:image/png;base64,YQ==',
@@ -619,9 +620,13 @@ describe('account page', () => {
 				}
 			}
 		});
-		expect(screen.getByRole('heading', { name: 'ada_codes' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Ada_Codes' })).toBeInTheDocument();
 		expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
-		expect(screen.getByText(/Member since Sep 2025/)).toBeInTheDocument();
+		expect(screen.getByText('Member')).toBeInTheDocument();
+		expect(screen.getByText('Member since Sep 2025')).toBeInTheDocument();
+		expect(
+			document.querySelectorAll('.community-profile-meta svg[aria-hidden="true"]')
+		).toHaveLength(2);
 		expect(screen.getByRole('img', { name: 'Ada Lovelace profile picture' })).toHaveAttribute(
 			'src',
 			'data:image/png;base64,YQ=='
@@ -634,9 +639,15 @@ describe('account page', () => {
 		expect(
 			screen.getByText('Looking for a small project to build this semester.')
 		).toBeInTheDocument();
+		expect(
+			screen
+				.getByRole('link', { name: /Good first projects/ })
+				.querySelector('.community-post__icon')
+		).not.toBeNull();
 		expect(screen.getByRole('heading', { name: 'Course outlines' })).toBeInTheDocument();
 		expect(screen.getByText('420-201')).toBeInTheDocument();
 		expect(screen.getByText('Data Structures')).toBeInTheDocument();
+		expect(screen.getByText('420-201').closest('li')).toHaveClass('community-outline-entry');
 		expect(
 			screen.getByRole('button', { name: 'Edit profile' }).querySelector('svg[aria-hidden="true"]')
 		).not.toBeNull();
@@ -649,6 +660,10 @@ describe('account page', () => {
 		expect(screen.queryByText('Student data')).not.toBeInTheDocument();
 		expect(screen.queryByText('Who can see what')).not.toBeInTheDocument();
 		expect(screen.queryByText('2530622')).not.toBeInTheDocument();
+		expect(cssRulesFor('.community-profile-hero')).toContain('min-height: 17rem;');
+		expect(cssRulesFor('.community-avatar')).toContain('10.5rem');
+		expect(cssRulesFor('.community-profile-actions > button')).toContain('font-size: 1rem;');
+		expect(cssRulesFor('.community-profile-actions svg')).toContain('width: 1.25rem;');
 	});
 
 	it('edits identity details and uses the avatar as the image picker', async () => {

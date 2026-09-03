@@ -167,7 +167,7 @@
 
 	function membershipLine() {
 		const since = monthYear(data.communityProfile?.joinedAt);
-		return since ? `${membershipRole()} since ${since}` : membershipRole();
+		return since ? `Member since ${since}` : 'Member';
 	}
 
 	/** @param {string | Date | null | undefined} value */
@@ -502,7 +502,21 @@
 						<div>
 							<h1>{profileUsername()}</h1>
 							<p class="community-full-name">{fullName()}</p>
-							<p class="community-membership">{membershipLine()}</p>
+							<div class="community-profile-meta">
+								<span>
+									<svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+										<path d="M10 2.5 16 5v4.5c0 3.7-2.5 6.4-6 8-3.5-1.6-6-4.3-6-8V5l6-2.5Z" />
+										<path d="m7.5 10 1.6 1.6 3.5-3.7" />
+									</svg>
+									{membershipRole()}
+								</span>
+								<span>
+									<svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+										<path d="M4 5.5h12v11H4zM6.5 3v4M13.5 3v4M4 8.5h12" />
+									</svg>
+									{membershipLine()}
+								</span>
+							</div>
 						</div>
 					</div>
 					<div class="community-profile-actions">
@@ -746,8 +760,7 @@
 							<div class="schedule-onboarding-head">
 								<h2 id="schedule-title">Add your schedule</h2>
 								<p>
-									Optional. Your class times help staff find meeting times that work for more
-									members.
+									Optional. Your class times help us find meeting times that work for more members.
 								</p>
 							</div>
 							<div class="schedule-onboarding-workspace">
@@ -854,11 +867,19 @@
 									class="community-post"
 									href={resolve('/tools/forum/[threadId]', { threadId: post.id })}
 								>
-									<div>
+									<span class="community-post__icon" aria-hidden="true">
+										<svg viewBox="0 0 24 24" fill="none">
+											<path d="M5 5.5h14v10H9l-4 3v-13Z" />
+											<path d="M8.5 9h7M8.5 12h4.5" />
+										</svg>
+									</span>
+									<div class="community-post__copy">
 										<h3>{post.title}</h3>
 										<p>{post.body}</p>
 									</div>
-									<span>{post.courseCode ?? categoryLabel(post.category)}</span>
+									<span class="community-post__category"
+										>{post.courseCode ?? categoryLabel(post.category)}</span
+									>
 									<time datetime={String(post.createdAt ?? '')}>{shortDate(post.createdAt)}</time>
 								</a>
 							{/each}
@@ -875,8 +896,13 @@
 					{#if data.courseOutlines?.length}
 						<ol class="community-outline-list">
 							{#each data.courseOutlines as outline (outline.sha256)}
-								<li>
-									<div>
+								<li class="community-outline-entry">
+									<span class="community-outline-entry__icon" aria-hidden="true">
+										<svg viewBox="0 0 24 24" fill="none">
+											<path d="M6 3.5h8l4 4v13H6zM14 3.5v4h4M9 12h6M9 15.5h6" />
+										</svg>
+									</span>
+									<div class="community-outline-entry__copy">
 										<span>{outlineCode(outline)}</span>
 										<strong>{outlineTitle(outline)}</strong>
 									</div>
@@ -1039,25 +1065,25 @@
 
 	.community-profile-hero {
 		display: flex;
-		min-height: 13.5rem;
-		align-items: flex-end;
+		min-height: 17rem;
+		align-items: center;
 		justify-content: space-between;
-		padding: clamp(2.25rem, 5vw, 4.75rem) clamp(1.5rem, 5vw, 4.5rem) 2.5rem;
+		padding: clamp(2.5rem, 5vw, 4.5rem) clamp(1.5rem, 5vw, 4.5rem);
 		border-bottom: 1px solid var(--ink);
 		background: white;
-		gap: 2rem;
+		gap: clamp(2rem, 4vw, 4rem);
 	}
 
 	.community-profile-identity {
 		display: grid;
 		grid-template-columns: auto minmax(0, 1fr);
-		align-items: end;
-		gap: clamp(1.25rem, 2.5vw, 2.25rem);
+		align-items: center;
+		gap: clamp(1.5rem, 3vw, 2.75rem);
 	}
 
 	.community-avatar {
 		display: grid;
-		width: clamp(6.5rem, 11vw, 9rem);
+		width: clamp(9rem, 13vw, 10.5rem);
 		aspect-ratio: 1;
 		place-items: center;
 		overflow: hidden;
@@ -1078,27 +1104,46 @@
 	}
 
 	.community-profile-identity h1 {
-		max-width: 16ch;
+		max-width: 14ch;
 		margin: 0;
 		font-family: var(--font-display);
-		font-size: clamp(2.75rem, 4vw, 4rem);
+		font-size: clamp(3.25rem, 5vw, 4.8rem);
 		font-weight: 700;
 		letter-spacing: -0.04em;
-		line-height: 0.9;
+		line-height: 0.92;
 		overflow-wrap: break-word;
 	}
 
 	.community-full-name {
-		margin: 1rem 0 0;
-		font-size: clamp(1rem, 1.6vw, 1.3rem);
+		margin: 0.85rem 0 0;
+		font-size: clamp(1.2rem, 1.8vw, 1.55rem);
 		font-weight: 650;
 	}
 
-	.community-membership {
-		margin: 0.65rem 0 0;
+	.community-profile-meta {
+		display: flex;
+		flex-wrap: wrap;
+		margin-top: 0.85rem;
+		gap: 0.65rem 1.25rem;
+	}
+
+	.community-profile-meta > span {
+		display: inline-flex;
+		align-items: center;
 		color: var(--steel);
-		font-size: 0.76rem;
+		font-size: 0.88rem;
 		font-variant-numeric: tabular-nums;
+		font-weight: 550;
+		gap: 0.4rem;
+	}
+
+	.community-profile-meta svg {
+		width: 1.05rem;
+		height: 1.05rem;
+		stroke: currentColor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.5;
 	}
 
 	.community-profile-actions {
@@ -1112,13 +1157,15 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.5rem;
-		min-height: 3.25rem;
+		gap: 0.7rem;
+		min-height: 3.75rem;
+		padding-inline: 1.5rem;
+		font-size: 1rem;
 	}
 
 	.community-profile-actions svg {
-		width: 1rem;
-		height: 1rem;
+		width: 1.25rem;
+		height: 1.25rem;
 		stroke: currentColor;
 		stroke-linecap: round;
 		stroke-linejoin: round;
@@ -1126,11 +1173,11 @@
 	}
 
 	.community-profile-actions > .primary-button {
-		min-width: 10.25rem;
+		min-width: 11.5rem;
 	}
 
 	.community-profile-actions > .quiet-button {
-		min-width: 8rem;
+		min-width: 9rem;
 	}
 
 	.community-profile-edit {
@@ -1243,7 +1290,7 @@
 		display: grid;
 		flex: 1 1 auto;
 		grid-template-columns: minmax(0, 1.4fr) minmax(19rem, 1fr);
-		min-height: 28rem;
+		min-height: 32rem;
 		background: white;
 	}
 
@@ -1275,10 +1322,10 @@
 
 	.community-post {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 7rem 4rem;
+		grid-template-columns: 3.25rem minmax(0, 1fr) 7rem 4rem;
 		align-items: center;
-		min-height: 6rem;
-		padding: 1rem 0;
+		min-height: 7rem;
+		padding: 1.1rem 0;
 		border-bottom: 1px solid var(--line);
 		color: inherit;
 		column-gap: 1rem;
@@ -1289,14 +1336,35 @@
 		background: var(--paper-blue);
 	}
 
-	.community-post > div {
+	.community-post__icon,
+	.community-outline-entry__icon {
+		display: grid;
+		width: 2.75rem;
+		aspect-ratio: 1;
+		place-items: center;
+		border: 1px solid var(--line-dark);
+		background: var(--paper-blue);
+		color: var(--blue);
+	}
+
+	.community-post__icon svg,
+	.community-outline-entry__icon svg {
+		width: 1.35rem;
+		height: 1.35rem;
+		stroke: currentColor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.5;
+	}
+
+	.community-post__copy {
 		min-width: 0;
 	}
 
 	.community-post h3 {
 		margin: 0;
 		font-family: var(--font-display);
-		font-size: 1.05rem;
+		font-size: 1.15rem;
 		letter-spacing: -0.015em;
 	}
 
@@ -1305,18 +1373,18 @@
 		margin: 0.35rem 0 0;
 		overflow: hidden;
 		color: var(--steel);
-		font-size: 0.72rem;
+		font-size: 0.82rem;
 		line-height: 1.45;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
 	}
 
-	.community-post > span,
+	.community-post__category,
 	.community-post time,
 	.community-outline-list time {
 		color: var(--steel);
-		font-size: 0.68rem;
+		font-size: 0.76rem;
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -1333,15 +1401,15 @@
 
 	.community-outline-list li {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-columns: 3.25rem minmax(0, 1fr) auto;
 		align-items: center;
-		min-height: 5rem;
-		padding: 0.85rem 0;
+		min-height: 6.25rem;
+		padding: 1rem 0;
 		border-bottom: 1px solid var(--line);
 		gap: 1rem;
 	}
 
-	.community-outline-list li > div {
+	.community-outline-entry__copy {
 		display: grid;
 		min-width: 0;
 		gap: 0.25rem;
@@ -1349,7 +1417,7 @@
 
 	.community-outline-list li span {
 		color: var(--blue);
-		font-size: 0.67rem;
+		font-size: 0.75rem;
 		font-variant-numeric: tabular-nums;
 		font-weight: 700;
 		letter-spacing: 0.04em;
@@ -1358,7 +1426,7 @@
 	.community-outline-list li strong {
 		overflow: hidden;
 		font-family: var(--font-display);
-		font-size: 0.92rem;
+		font-size: 1.05rem;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
@@ -1799,6 +1867,11 @@
 			grid-column: 2;
 			justify-content: flex-start;
 		}
+
+		.community-profile-hero:not(:has(.community-profile-edit)) {
+			align-items: flex-start;
+			flex-direction: column;
+		}
 	}
 
 	@media (max-width: 42rem) {
@@ -1820,16 +1893,31 @@
 		}
 
 		.community-avatar {
-			width: 5.25rem;
+			width: 7rem;
 		}
 
 		.community-profile-identity h1 {
-			font-size: clamp(2rem, 9.5vw, 2.6rem);
+			font-size: clamp(2.5rem, 12vw, 3.4rem);
 			line-height: 0.95;
 		}
 
+		.community-full-name {
+			font-size: 1.1rem;
+		}
+
+		.community-profile-meta {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
 		.community-profile-actions {
+			width: 100%;
 			justify-content: flex-start;
+		}
+
+		.community-profile-actions > button {
+			flex: 1 1 0;
+			min-width: 0;
 		}
 
 		.community-profile-edit {
@@ -1850,11 +1938,20 @@
 		}
 
 		.community-post {
-			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-columns: 2.75rem minmax(0, 1fr) auto;
 		}
 
-		.community-post > span {
+		.community-post__category {
 			display: none;
+		}
+
+		.community-post__icon,
+		.community-outline-entry__icon {
+			width: 2.35rem;
+		}
+
+		.community-outline-list li {
+			grid-template-columns: 2.75rem minmax(0, 1fr) auto;
 		}
 
 		.profile-hero--member {

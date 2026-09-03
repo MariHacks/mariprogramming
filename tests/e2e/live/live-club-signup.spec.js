@@ -353,7 +353,8 @@ test('joins the club with a saved draft and exposes the member to staff', async 
 	await joinButton.click();
 	await expect(page.getByRole('heading', { name: 'ada_member' })).toBeVisible();
 	await expect(page.getByText('Ada Member', { exact: true })).toBeVisible();
-	await expect(page.getByText(/^Executive since /u)).toBeVisible();
+	await expect(page.getByText('Executive', { exact: true })).toBeVisible();
+	await expect(page.getByText(/^Member since /u)).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'Recent posts' })).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'Course outlines' })).toBeVisible();
 	for (const removedHeading of [
