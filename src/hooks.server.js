@@ -21,7 +21,7 @@ const PRIVATE_PAGE_PATHS = [
 const PRIVATE_HEADERS = Object.freeze({
 	'cache-control': 'private, no-store',
 	'pragma': 'no-cache',
-	'referrer-policy': 'no-referrer',
+	'referrer-policy': 'same-origin',
 	'x-robots-tag': 'noindex, nofollow'
 });
 
