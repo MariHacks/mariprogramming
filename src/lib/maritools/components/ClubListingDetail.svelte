@@ -74,13 +74,6 @@
 		return CLUB_CONTACT_TYPES.find((option) => option.value === type)?.label ?? 'Link';
 	}
 
-	/** @param {string} type */
-	function contactPlaceholder(type) {
-		if (type === 'email' || type === 'mio') return 'Email address';
-		if (type === 'discord') return 'Invite link';
-		if (type === 'instagram') return 'Profile link';
-		return 'https://';
-	}
 </script>
 
 <header class:club-editor-hero={mode === 'edit'} class="club-detail-header">
@@ -199,7 +192,6 @@
 								type={contact.type === 'email' || contact.type === 'mio' ? 'email' : 'text'}
 								bind:value={contact.value}
 								maxlength="500"
-								placeholder={contactPlaceholder(contact.type)}
 							/>
 						</label>
 						<button

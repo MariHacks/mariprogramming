@@ -65,10 +65,9 @@ describe('ClubListingDetail', () => {
 		);
 	});
 
-	it('uses descriptive contact hints instead of fake domains', () => {
+	it('does not ship fake contact values as input placeholders', () => {
 		render(ClubListingDetail, { props: { mode: 'edit', club: { name: 'Chess', links: [] } } });
 		const contactInput = screen.getByRole('textbox', { name: 'Link' });
-		expect(contactInput).toHaveAttribute('placeholder', 'https://');
-		expect(contactInput.getAttribute('placeholder')).not.toContain('example');
+		expect(contactInput).not.toHaveAttribute('placeholder');
 	});
 });
