@@ -1,8 +1,20 @@
 // @vitest-environment node
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CANONICAL_OMNIVOX_SCHEDULE } from '$lib/maritools/schedule/fixture.js';
-import { createClubStore, ClubInputError } from './club-store.js';
+import * as environment from '../config/environment.js';
+import {
+	MariToolsConflictError,
+	MariToolsNotFoundError,
+	MariToolsUnavailableError,
+	MariToolsValidationError
+} from './repository.js';
+import {
+	createClubStore,
+	ClubInputError,
+	ClubUnavailableError,
+	openClubStore
+} from './club-store.js';
 
 const joinedAt = new Date('2026-09-02T12:00:00.000Z');
 
@@ -115,11 +127,50 @@ describe('programming club store', () => {
 		await expect(
 			store.joinProgrammingClub({ ...joinInput, interests: ['unknown'] })
 		).rejects.toBeInstanceOf(ClubInputError);
-		await expect(store.joinProgrammingClub({ ...joinInput, yearLevel: 'fourth' })).rejects.toBeInstanceOf(
-			ClubInputError
-		);
-		await expect(store.joinProgrammingClub({ ...joinInput, username: 'a b' })).rejects.toBeInstanceOf(
-			ClubInputError
+		await expect(
+			store.joinProgrammingClub({ ...joinInput, yearLevel: 'fourth' })
+		).rejects.toBeInstanceOf(ClubInputError);
+		await expect(
+			store.joinProgrammingClub({ ...joinInput, username: 'a b' })
+		).rejects.toBeInstanceOf(ClubInputError);
+	});
+
+	it('rejects every malformed signup field and accepts a team account', async () => {
+		const store = createClubStore(repository());
+		const invalidInputs = [
+			{ userId: null },
+			{ userId: '' },
+			{ studentId: '123' },
+			{ experienceLevel: 'expert' },
+			{ program: 'Unknown Program' },
+			{ yearLevel: 'fourth' },
+			{ email: null },
+			{ username: 'ab' },
+			{ firstName: '' },
+			{ lastName: 'x'.repeat(81) },
+			{ profileImageDataUrl: 42 },
+			{ profileImageDataUrl: `data:image/png;base64,${'A'.repeat(750_001)}` },
+			{ interests: null },
+			{ interests: [] },
+			{ interests: ['web', 'web'] },
+			{ interests: ['web', 'unknown'] },
+			{ clubGoals: 42 }
+		];
+		for (const override of invalidInputs) {
+			await expect(store.joinProgrammingClub({ ...joinInput, ...override })).rejects.toBeInstanceOf(
+				ClubInputError
+			);
+		}
+
+		const inner = repository();
+		await createClubStore(inner).joinProgrammingClub({
+			...joinInput,
+			email: 'team@marihacks.com',
+			profileImageDataUrl: '',
+			clubGoals: null
+		});
+		expect(inner.joinProgrammingClub).toHaveBeenCalledWith(
+			expect.objectContaining({ role: 'staff', profileImageDataUrl: null, clubGoals: null })
 		);
 	});
 
@@ -132,7 +183,9 @@ describe('programming club store', () => {
 		await expect(store.joinProgrammingClub(withoutGoals)).resolves.toMatchObject({
 			clubGoals: null
 		});
-		await expect(store.joinProgrammingClub({ ...joinInput, clubGoals: '   ' })).resolves.toMatchObject({
+		await expect(
+			store.joinProgrammingClub({ ...joinInput, clubGoals: '   ' })
+		).resolves.toMatchObject({
 			clubGoals: null
 		});
 		await expect(
@@ -191,6 +244,24 @@ describe('programming club store', () => {
 		expect(JSON.stringify(member)).not.toContain(CANONICAL_OMNIVOX_SCHEDULE);
 	});
 
+	it('returns null or an empty course list when a member has no usable schedule', async () => {
+		await expect(createClubStore(repository()).getStaffClubMember('ada')).resolves.toBeNull();
+		await expect(
+			createClubStore(
+				repository({
+					getStaffClubMember: vi.fn(async () => ({ userId: 'ada', schedulePaste: null }))
+				})
+			).getStaffClubMember('ada')
+		).resolves.toMatchObject({ courses: [], scheduleInvalid: false });
+		await expect(
+			createClubStore(
+				repository({
+					getStaffClubMember: vi.fn(async () => ({ userId: 'ada', schedulePaste: 'invalid' }))
+				})
+			).getStaffClubMember('ada')
+		).resolves.toMatchObject({ courses: [], scheduleInvalid: true });
+	});
+
 	it('applies member controls through fixed role values and moderation operations', async () => {
 		const inner = repository();
 		const store = createClubStore(inner);
@@ -214,5 +285,86 @@ describe('programming club store', () => {
 		expect(inner.unbanUser).toHaveBeenCalledWith('user-1');
 		expect(inner.setMemberRole).toHaveBeenNthCalledWith(1, 'user-1', 'moderator');
 		expect(inner.setMemberRole).toHaveBeenNthCalledWith(2, 'user-1', 'student');
+	});
+
+	it('delegates onboarding lookup, member listing, and permanent bans', async () => {
+		const inner = repository({
+			getProgrammingClubMembership: vi.fn(async () => ({ userId: 'user-1' })),
+			listStaffClubMembers: vi.fn(async (filter) => ({ rows: [], filter }))
+		});
+		const store = createClubStore(inner);
+		await expect(store.getMyClubOnboarding('user-1')).resolves.toMatchObject({ userId: 'user-1' });
+		await expect(store.listStaffClubMembers()).resolves.toMatchObject({ rows: [] });
+		await expect(store.listStaffClubMembers({ query: 'Ada', page: 2 })).resolves.toMatchObject({
+			filter: { query: 'Ada', page: 2 }
+		});
+		await store.banMember('user-1', { permanent: true });
+		expect(inner.banUser).toHaveBeenLastCalledWith('user-1', { until: null });
+	});
+
+	it('maps repository failures without hiding unexpected errors', async () => {
+		const cases = [
+			[new ClubInputError('local'), ClubInputError],
+			[new ClubUnavailableError(), ClubUnavailableError],
+			[new MariToolsValidationError(), ClubInputError],
+			[new MariToolsConflictError(), ClubInputError],
+			[new MariToolsNotFoundError(), ClubUnavailableError],
+			[new MariToolsUnavailableError(), ClubUnavailableError]
+		];
+		for (const [error, Expected] of cases) {
+			const store = createClubStore(
+				repository({
+					getProgrammingClubMembership: vi.fn(async () => {
+						throw error;
+					})
+				})
+			);
+			await expect(store.getMyClubOnboarding('user-1')).rejects.toBeInstanceOf(Expected);
+		}
+
+		const noCode = new MariToolsValidationError();
+		noCode.code = null;
+		await expect(
+			createClubStore(
+				repository({
+					getProgrammingClubMembership: vi.fn(async () => {
+						throw noCode;
+					})
+				})
+			).getMyClubOnboarding('user-1')
+		).rejects.toMatchObject({ code: 'invalid' });
+
+		const unexpected = new Error('unexpected');
+		await expect(
+			createClubStore(
+				repository({
+					getProgrammingClubMembership: vi.fn(async () => {
+						throw unexpected;
+					})
+				})
+			).getMyClubOnboarding('user-1')
+		).rejects.toBe(unexpected);
+	});
+});
+
+describe('openClubStore', () => {
+	afterEach(() => vi.restoreAllMocks());
+
+	it('builds a store from runtime configuration', () => {
+		vi.spyOn(environment, 'readRuntimeEnvironment').mockReturnValue({
+			databaseUrl: 'postgresql://runtime:secret@db.example/club'
+		});
+		expect(typeof openClubStore().joinProgrammingClub).toBe('function');
+	});
+
+	it('maps missing configuration and preserves local unavailable errors', () => {
+		vi.spyOn(environment, 'readRuntimeEnvironment').mockImplementation(() => {
+			throw new Error('missing');
+		});
+		expect(() => openClubStore()).toThrow(ClubUnavailableError);
+		vi.mocked(environment.readRuntimeEnvironment).mockImplementation(() => {
+			throw new ClubUnavailableError();
+		});
+		expect(() => openClubStore()).toThrow(ClubUnavailableError);
 	});
 });

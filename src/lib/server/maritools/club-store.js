@@ -277,7 +277,7 @@ export function createClubStore(inner) {
 			return wrap(async () => {
 				const rows = await inner.listSharedClubSchedules();
 				const cells = weeklyCells();
-				const counts = new Map(cells.map((cell) => [key(cell.weekday, cell.time), 0]));
+				const cellsByKey = new Map(cells.map((cell) => [key(cell.weekday, cell.time), cell]));
 				let denominator = 0;
 				let invalidScheduleCount = 0;
 				for (const row of rows) {
@@ -288,16 +288,14 @@ export function createClubStore(inner) {
 					}
 					denominator += 1;
 					for (const free of freeCellsFromCourses(parsed.courses)) {
-						if (counts.has(free)) counts.set(free, (counts.get(free) ?? 0) + 1);
+						const cell = cellsByKey.get(free);
+						if (cell) cell.freeCount += 1;
 					}
 				}
 				return {
 					denominator,
 					invalidScheduleCount,
-					cells: cells.map((cell) => ({
-						...cell,
-						freeCount: counts.get(key(cell.weekday, cell.time)) ?? 0
-					}))
+					cells
 				};
 			});
 		}

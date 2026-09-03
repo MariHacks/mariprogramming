@@ -28,11 +28,25 @@ const SUBMISSION = '60000000-0000-4000-8000-000000000001';
 function inner(overrides = {}) {
 	return {
 		listPublishedClubs: vi.fn(async () => [
-			{ id: 'c1', name: 'Robotics', slug: 'robotics', category: 'stem', description: 'Bots', links: [] }
+			{
+				id: 'c1',
+				name: 'Robotics',
+				slug: 'robotics',
+				category: 'stem',
+				description: 'Bots',
+				links: []
+			}
 		]),
 		getPublishedClubBySlug: vi.fn(async (slug) =>
 			slug === 'robotics'
-				? { id: 'c1', name: 'Robotics', slug: 'robotics', category: 'stem', description: 'Bots', links: [] }
+				? {
+						id: 'c1',
+						name: 'Robotics',
+						slug: 'robotics',
+						category: 'stem',
+						description: 'Bots',
+						links: []
+					}
 				: null
 		),
 		submitClub: vi.fn(async () => ({ id: SUBMISSION, status: 'pending' })),
@@ -89,7 +103,14 @@ function inner(overrides = {}) {
 			{ courseCode: 'NO-ID', title: 'Skipped' }
 		]),
 		listThreads: vi.fn(async () => [
-			{ id: THREAD, title: 'Hi', body: 'Hello', category: 'courses', courseId: COURSE, authorUserId: USER }
+			{
+				id: THREAD,
+				title: 'Hi',
+				body: 'Hello',
+				category: 'courses',
+				courseId: COURSE,
+				authorUserId: USER
+			}
 		]),
 		getThread: vi.fn(async () => ({
 			id: THREAD,
@@ -98,7 +119,9 @@ function inner(overrides = {}) {
 			category: 'courses',
 			authorUserId: USER
 		})),
-		listReplies: vi.fn(async () => [{ id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: USER }]),
+		listReplies: vi.fn(async () => [
+			{ id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: USER }
+		]),
 		createThread: vi.fn(async () => ({
 			id: THREAD,
 			title: 'Hi',
@@ -128,7 +151,12 @@ function inner(overrides = {}) {
 			status,
 			resolvedAt: new Date('2026-08-28T19:00:00.000Z')
 		})),
-		getReply: vi.fn(async () => ({ id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: USER })),
+		getReply: vi.fn(async () => ({
+			id: 'r1',
+			threadId: THREAD,
+			body: 'Thanks',
+			authorUserId: USER
+		})),
 		lockThread: vi.fn(async () => ({ id: THREAD, lockedAt: new Date() })),
 		removeThread: vi.fn(async () => ({ id: THREAD, removedAt: new Date() })),
 		removeReply: vi.fn(async () => ({ id: 'r1', removedAt: new Date() })),
@@ -187,7 +215,9 @@ describe('community views', () => {
 		expect(publicThreadView(null)).toBeNull();
 		expect(publicReplyView(undefined)).toBeNull();
 		expect(publicClubView(null)).toBeNull();
-		expect(publicClubView({ id: '1', name: 'Chess', slug: 'chess', links: 'nope' }).links).toEqual([]);
+		expect(publicClubView({ id: '1', name: 'Chess', slug: 'chess', links: 'nope' }).links).toEqual(
+			[]
+		);
 		expect(canManagePost(USER, null)).toBe(false);
 		expect(canManagePost(USER, { userId: USER })).toBe(true);
 		expect(canManagePost(USER, { userId: 'other', staff: true })).toBe(true);
@@ -303,7 +333,9 @@ describe('createCommunityStore', () => {
 		).resolves.toMatchObject({ name: 'Chess Club', description: 'Play weekly' });
 		expect(repo.updateClubSubmissionPayload).toHaveBeenCalled();
 		const missing = createCommunityStore(inner({ getClubSubmission: vi.fn(async () => null) }));
-		await expect(missing.updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })).rejects.toMatchObject({
+		await expect(
+			missing.updateClubSubmissionPayload(SUBMISSION, { name: 'Chess' })
+		).rejects.toMatchObject({
 			code: 'missing-submission'
 		});
 		const published = createCommunityStore(
@@ -387,7 +419,9 @@ describe('createCommunityStore', () => {
 				}))
 			})
 		);
-		await expect(nameless.publishPendingClub(SUBMISSION)).rejects.toMatchObject({ code: 'invalid-club' });
+		await expect(nameless.publishPendingClub(SUBMISSION)).rejects.toMatchObject({
+			code: 'invalid-club'
+		});
 		const repo = inner({
 			getClubSubmission: vi.fn(async () => ({
 				id: SUBMISSION,
@@ -409,7 +443,9 @@ describe('createCommunityStore', () => {
 			}),
 			listPublishedClubs: vi.fn(async () => [{ id: 'c1', name: 'Chess', slug: 'chess' }])
 		});
-		await expect(createCommunityStore(existing).publishPendingClub(SUBMISSION)).resolves.toMatchObject({
+		await expect(
+			createCommunityStore(existing).publishPendingClub(SUBMISSION)
+		).resolves.toMatchObject({
 			slug: 'chess'
 		});
 		const failedCreate = inner({
@@ -417,9 +453,9 @@ describe('createCommunityStore', () => {
 				throw new Error('insert failed');
 			})
 		});
-		await expect(createCommunityStore(failedCreate).publishPendingClub(SUBMISSION)).rejects.toBeInstanceOf(
-			MaritoolsUnavailableError
-		);
+		await expect(
+			createCommunityStore(failedCreate).publishPendingClub(SUBMISSION)
+		).rejects.toBeInstanceOf(MaritoolsUnavailableError);
 	});
 
 	it('submits clubs and lists public threads', async () => {
@@ -432,7 +468,10 @@ describe('createCommunityStore', () => {
 			payload: { name: 'Chess' }
 		});
 		const threads = await store.listThreads({ category: 'courses', courseId: COURSE });
-		expect(threads[0]).toMatchObject({ authorUserId: USER, authorProfileHref: `/tools/people/${USER}` });
+		expect(threads[0]).toMatchObject({
+			authorUserId: USER,
+			authorProfileHref: `/tools/people/${USER}`
+		});
 		await store.listThreads();
 		expect(await store.getThread(THREAD)).toMatchObject({
 			id: THREAD,
@@ -462,7 +501,10 @@ describe('createCommunityStore', () => {
 					category: 'courses',
 					authorUserId: null
 				})),
-				listReplies: vi.fn(async () => [null, { id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: 42 }])
+				listReplies: vi.fn(async () => [
+					null,
+					{ id: 'r1', threadId: THREAD, body: 'Thanks', authorUserId: 42 }
+				])
 			})
 		);
 		await expect(anonymous.getThread(THREAD)).resolves.toMatchObject({
@@ -472,6 +514,38 @@ describe('createCommunityStore', () => {
 		await expect(anonymous.listReplies(THREAD)).resolves.toEqual([
 			expect.objectContaining({ id: 'r1', authorDisplayName: null })
 		]);
+		const pictured = createCommunityStore(
+			inner({
+				getStudentProfile: vi.fn(async () => ({
+					userId: USER,
+					displayName: 'Ada',
+					profileImageDataUrl: 'data:image/png;base64,YQ=='
+				}))
+			})
+		);
+		await expect(pictured.getThread(THREAD)).resolves.toMatchObject({
+			authorProfileImageDataUrl: 'data:image/png;base64,YQ=='
+		});
+		await expect(pictured.listReplies(THREAD)).resolves.toEqual([
+			expect.objectContaining({ authorProfileImageDataUrl: 'data:image/png;base64,YQ==' })
+		]);
+		expect(
+			publicThreadView({
+				id: THREAD,
+				title: 'Hi',
+				body: 'Hello',
+				category: 'courses',
+				authorProfileImageDataUrl: 'data:image/png;base64,YQ=='
+			}).authorProfileImageDataUrl
+		).toBe('data:image/png;base64,YQ==');
+		expect(
+			publicReplyView({
+				id: 'r1',
+				threadId: THREAD,
+				body: 'Thanks',
+				authorProfileImageDataUrl: 'data:image/png;base64,YQ=='
+			}).authorProfileImageDataUrl
+		).toBe('data:image/png;base64,YQ==');
 	});
 
 	it('reports manage rights and updates bodies without leaking authors', async () => {
@@ -545,7 +619,12 @@ describe('createCommunityStore', () => {
 	it('creates threads, replies, and reports', async () => {
 		const store = createCommunityStore(inner());
 		await expect(
-			store.createThread({ authorUserId: USER, title: 'Hi', body: 'Hello', category: 'student-life' })
+			store.createThread({
+				authorUserId: USER,
+				title: 'Hi',
+				body: 'Hello',
+				category: 'student-life'
+			})
 		).resolves.toMatchObject({ id: THREAD, authorDisplayName: 'Ada' });
 		await expect(
 			store.createReply({ threadId: THREAD, authorUserId: USER, body: 'Thanks' })
@@ -615,7 +694,19 @@ describe('createCommunityStore', () => {
 			userId: USER,
 			isBanned: true
 		});
-		expect(repo.banUser).toHaveBeenCalledWith(USER, expect.objectContaining({ until: expect.any(Date) }));
+		expect(repo.banUser).toHaveBeenCalledWith(
+			USER,
+			expect.objectContaining({ until: expect.any(Date) })
+		);
+		const explicitUntil = new Date('2026-10-02T12:00:00.000Z');
+		await store.muteUser(USER, { until: explicitUntil });
+		expect(repo.muteUser).toHaveBeenLastCalledWith(USER, explicitUntil);
+		await store.banUser(USER, { until: explicitUntil });
+		expect(repo.banUser).toHaveBeenLastCalledWith(USER, { until: explicitUntil });
+		await store.banUser(USER, { until: null });
+		expect(repo.banUser).toHaveBeenLastCalledWith(USER, { until: null });
+		await store.banUser(USER);
+		expect(repo.banUser).toHaveBeenLastCalledWith(USER, { until: null });
 		await expect(store.banUser(USER, { permanent: true })).resolves.toMatchObject({
 			userId: USER,
 			isBanned: true
@@ -640,6 +731,7 @@ describe('createCommunityStore', () => {
 		expect(store.isStaff('team@marihacks.com')).toBe(true);
 		const missing = createCommunityStore(inner({ getStudentProfile: vi.fn(async () => null) }));
 		await expect(missing.getProfile(USER)).resolves.toBeNull();
+		await expect(missing.getPublicProfile(USER)).resolves.toBeNull();
 	});
 
 	it('maps repository domain errors', async () => {
