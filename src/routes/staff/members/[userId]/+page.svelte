@@ -191,6 +191,7 @@
 		max-width: 72rem;
 		margin: 0 auto;
 		padding: 3rem var(--page-gutter) 5rem;
+		min-width: 0;
 	}
 	.back-link {
 		display: inline-block;
@@ -212,12 +213,16 @@
 		font-size: clamp(2.75rem, 7vw, 6rem);
 		line-height: 0.9;
 		letter-spacing: -0.055em;
+		overflow-wrap: anywhere;
 	}
 	.member-heading {
 		display: flex;
 		align-items: end;
 		gap: 1.5rem;
 		margin-bottom: 2rem;
+	}
+	.member-heading > div {
+		min-width: 0;
 	}
 	.profile-picture {
 		width: clamp(6rem, 12vw, 9rem);
@@ -266,6 +271,8 @@
 	}
 	dd {
 		font-weight: 650;
+		min-width: 0;
+		overflow-wrap: anywhere;
 	}
 	h2 {
 		margin-top: 0;
@@ -329,9 +336,48 @@
 		color: #9d2936;
 	}
 	@media (max-width: 40rem) {
+		.member-detail {
+			padding-block: 1.5rem 3rem;
+		}
+		.back-link {
+			display: inline-flex;
+			align-items: center;
+			min-height: 2.75rem;
+			margin-bottom: 1rem;
+		}
+		.member-heading {
+			align-items: flex-start;
+			gap: 1rem;
+			margin-bottom: 1.5rem;
+		}
+		.profile-picture {
+			width: 5.5rem;
+			flex: 0 0 auto;
+		}
+		h1 {
+			font-size: clamp(2.25rem, 12vw, 3.75rem);
+		}
 		.control-group {
 			align-items: flex-start;
 			flex-direction: column;
+			gap: 1rem;
+			padding: 1rem;
+		}
+		.control-group form,
+		.control-group button {
+			width: 100%;
+		}
+	}
+	@media (max-width: 30rem) {
+		dl {
+			grid-template-columns: 1fr;
+		}
+		dt {
+			padding-bottom: 0.2rem;
+			border-bottom: 0;
+		}
+		dd {
+			padding-top: 0.2rem;
 		}
 	}
 	.course-list {

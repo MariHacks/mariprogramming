@@ -40,11 +40,7 @@
 {#if data.staff}
 	<div class="staff-shell">
 		<header class="staff-header">
-			<a
-				class="staff-brand"
-				href={resolve('/staff', {})}
-				aria-label="Programming Club Team orders"
-			>
+			<a class="staff-brand" href={resolve('/staff', {})} aria-label="Programming Club Team orders">
 				<img class="brand-mark" src="/logo-icon.svg" alt="" width="28" height="30" />
 				<span>Programming Club Team</span>
 			</a>
@@ -114,6 +110,7 @@
 		padding: 0 var(--page-gutter);
 		border-bottom: var(--rule-strong);
 		background: #fff;
+		min-width: 0;
 	}
 
 	.staff-brand,
@@ -141,6 +138,7 @@
 	.staff-header nav {
 		align-self: stretch;
 		gap: 0.25rem;
+		min-width: 0;
 	}
 
 	.staff-header nav a,
@@ -239,7 +237,16 @@
 			grid-row: 2;
 			grid-column: 1 / -1;
 			justify-content: flex-start;
+			max-width: 100%;
+			overflow-x: auto;
+			overscroll-behavior-inline: contain;
 			border-top: var(--rule);
+			scrollbar-width: thin;
+		}
+
+		.staff-header nav a {
+			flex: 0 0 auto;
+			white-space: nowrap;
 		}
 
 		.staff-email {
@@ -259,6 +266,10 @@
 
 		.staff-account {
 			gap: 0.25rem;
+		}
+
+		.staff-header nav a {
+			padding-inline: 0.75rem;
 		}
 	}
 

@@ -96,12 +96,25 @@ describe('staff member detail page', () => {
 
 		expect(screen.getAllByText('Member').length).toBeGreaterThan(0);
 		expect(screen.getByRole('button', { name: 'Promote to executive' })).toBeInTheDocument();
-		await user.click(screen.getByRole('button', { name: 'Mute' }));
+		const muteButton = screen.getByRole('button', { name: 'Mute' });
+		await user.click(muteButton);
 		expect(screen.getByRole('dialog', { name: 'Mute duration' })).toBeInTheDocument();
+		await waitFor(() => expect(screen.getByLabelText('Mute for')).toHaveFocus());
+		expect(document.body.style.overflow).toBe('hidden');
 		expect(screen.getByRole('button', { name: 'Confirm mute' })).toHaveAttribute(
 			'formaction',
 			'?/mute'
 		);
+
+		screen.getByRole('button', { name: 'Confirm mute' }).focus();
+		await user.tab();
+		expect(screen.getByLabelText('Mute for')).toHaveFocus();
+		await user.tab({ shift: true });
+		expect(screen.getByRole('button', { name: 'Confirm mute' })).toHaveFocus();
+		await user.keyboard('{Escape}');
+		expect(screen.queryByRole('dialog', { name: 'Mute duration' })).not.toBeInTheDocument();
+		expect(document.body.style.overflow).toBe('');
+		expect(muteButton).toHaveFocus();
 	});
 
 	it('closes the duration dialog after a successful action', async () => {
