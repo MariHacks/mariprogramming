@@ -72,6 +72,12 @@ Assessments follow.`;
 		});
 	});
 
+	it('reads an instructor name from the following line', () => {
+		expect(guessOutlineIdentity('INSTRUCTOR:\nAda Lovelace')).toMatchObject({
+			teacherName: 'Ada Lovelace'
+		});
+	});
+
 	it('returns null identity fields when malformed text has no candidates', () => {
 		expect(Reflect.apply(guessOutlineIdentity, undefined, [null])).toEqual({
 			courseCode: null,
