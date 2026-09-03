@@ -2,6 +2,7 @@
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import OmnivoxTutorialOverlay from '$lib/maritools/components/OmnivoxTutorialOverlay.svelte';
 	import ProfileEmptyState from '$lib/maritools/components/ProfileEmptyState.svelte';
+	import ProfileImageCropper from '$lib/maritools/components/ProfileImageCropper.svelte';
 	import ScheduleCalendar from '$lib/maritools/components/ScheduleCalendar.svelte';
 	import { initialsFromDisplayName } from '$lib/maritools/header-account.js';
 	import { mondayOfWeek, weekGridForTermWeek } from '$lib/maritools/schedule/academicWeekView.js';
@@ -24,7 +25,6 @@
 	let signOutFailed = false;
 	let editingProfile = false;
 	let profileTab = 'information';
-	let profileImageName = '';
 	let username = data.onboardingDraft?.username ?? data.view.username ?? '';
 	let firstName = data.onboardingDraft?.firstName ?? data.view.firstName ?? '';
 	let lastName = data.onboardingDraft?.lastName ?? data.view.lastName ?? '';
@@ -125,18 +125,10 @@
 		}
 	}
 
-	/** @param {Event} event */
-	function chooseProfileImage(event) {
-		const input = event.currentTarget;
-		if (!(input instanceof HTMLInputElement)) return;
-		profileImageName = input.files?.[0]?.name ?? '';
-	}
-
 	function beginProfileEdit() {
 		username = data.view.username ?? '';
 		firstName = data.view.firstName ?? '';
 		lastName = data.view.lastName ?? '';
-		profileImageName = '';
 		editingProfile = true;
 	}
 
@@ -144,7 +136,6 @@
 		username = data.view.username ?? '';
 		firstName = data.view.firstName ?? '';
 		lastName = data.view.lastName ?? '';
-		profileImageName = '';
 		editingProfile = false;
 	}
 
@@ -444,24 +435,12 @@
 						enctype="multipart/form-data"
 						aria-label="Edit profile"
 					>
-						<label class="community-avatar community-avatar--editable">
-							<span class="community-avatar__image">
-								{#if data.view.profileImageDataUrl}
-									<img src={data.view.profileImageDataUrl} alt="" />
-								{:else}
-									{initialsFromDisplayName(fullName())}
-								{/if}
-							</span>
-							<span class="community-avatar__action">Change photo</span>
-							<input
-								type="file"
-								name="profileImage"
-								accept="image/jpeg,image/png,image/webp,image/gif"
-								aria-label="Change profile picture"
-								on:change={chooseProfileImage}
-							/>
-							{#if profileImageName}<small>{profileImageName}</small>{/if}
-						</label>
+						<ProfileImageCropper
+							id="profile-image-edit"
+							variant="avatar"
+							existingSrc={data.view.profileImageDataUrl ?? ''}
+							initials={initialsFromDisplayName(fullName())}
+						/>
 						<div class="community-edit-fields">
 							<label>
 								<span>Username</span>
@@ -665,25 +644,7 @@
 									</select>
 								</label>
 								<div class="profile-field--wide">
-									<label class="profile-field-label" for="profile-image"
-										>Profile picture <small>Optional</small></label
-									>
-									<label class="profile-upload" for="profile-image">
-										<span class="profile-upload__action">Choose image</span>
-										<span
-											class:profile-upload__name--selected={profileImageName}
-											class="profile-upload__name">{profileImageName || 'No image selected'}</span
-										>
-										<input
-											id="profile-image"
-											class="profile-upload__input"
-											name="profileImage"
-											type="file"
-											accept="image/png,image/jpeg,image/webp,image/gif"
-											on:change={chooseProfileImage}
-										/>
-									</label>
-									<small>Shown on your account and forum posts. Maximum 512 KB.</small>
+									<ProfileImageCropper id="profile-image" />
 								</div>
 							</div>
 							<div class="profile-form-action profile-form-action--split">
@@ -1105,8 +1066,7 @@
 		letter-spacing: -0.02em;
 	}
 
-	.community-avatar img,
-	.community-avatar__image img {
+	.community-avatar img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
@@ -1195,68 +1155,6 @@
 		width: 100%;
 		align-items: end;
 		gap: clamp(1.25rem, 2.5vw, 2.25rem);
-	}
-
-	.community-avatar--editable {
-		position: relative;
-		display: grid;
-		align-content: start;
-		overflow: visible;
-		background: white;
-		color: var(--ink);
-		cursor: pointer;
-	}
-
-	.community-avatar__image {
-		display: grid;
-		width: 100%;
-		aspect-ratio: 1;
-		place-items: center;
-		overflow: hidden;
-		background: var(--ink);
-		color: white;
-	}
-
-	.community-avatar__action {
-		position: absolute;
-		right: 0;
-		bottom: 0;
-		left: 0;
-		padding: 0.55rem;
-		background: rgb(5 26 51 / 88%);
-		color: white;
-		font-family: var(--font-sans);
-		font-size: 0.7rem;
-		font-weight: 650;
-		text-align: center;
-	}
-
-	.community-avatar--editable input {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
-		clip-path: inset(50%);
-	}
-
-	.community-avatar--editable small {
-		position: absolute;
-		top: calc(100% + 0.45rem);
-		left: 0;
-		width: 100%;
-		overflow: hidden;
-		color: var(--steel);
-		font-family: var(--font-sans);
-		font-size: 0.68rem;
-		font-weight: 500;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.community-avatar--editable:focus-within {
-		outline: 3px solid rgb(20 87 217 / 18%);
-		outline-offset: 3px;
 	}
 
 	.community-edit-fields,
@@ -1672,86 +1570,6 @@
 
 	.profile-club-goals {
 		margin-top: 1.5rem;
-	}
-
-	.profile-field-label {
-		color: var(--steel);
-		font-size: 0.72rem;
-		font-weight: 600;
-	}
-
-	.profile-field-label small {
-		font: inherit;
-		font-weight: 450;
-	}
-
-	.profile-upload {
-		position: relative;
-		display: grid;
-		grid-template-columns: auto minmax(0, 1fr);
-		align-items: center;
-		min-height: 3.25rem;
-		border: 1px solid var(--line-dark);
-		background: white;
-		cursor: pointer;
-		transition:
-			border-color 140ms ease,
-			background 140ms ease;
-	}
-
-	.profile-upload:hover {
-		border-color: var(--ink);
-		background: var(--paper);
-	}
-
-	.profile-upload:focus-within {
-		border-color: var(--blue);
-		outline: 3px solid rgb(20 87 217 / 16%);
-		outline-offset: 1px;
-	}
-
-	.profile-upload__action {
-		align-self: stretch;
-		display: grid;
-		min-width: 8.5rem;
-		padding: 0.75rem 1rem;
-		background: var(--ink);
-		color: white;
-		font-size: 0.78rem;
-		font-weight: 650;
-		place-items: center;
-	}
-
-	.profile-upload__name {
-		min-width: 0;
-		padding: 0.75rem 1rem;
-		overflow: hidden;
-		color: var(--steel);
-		font-size: 0.8rem;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.profile-upload__name--selected {
-		color: var(--ink);
-		font-weight: 600;
-	}
-
-	.profile-upload__input {
-		position: absolute;
-		width: 1px !important;
-		height: 1px !important;
-		padding: 0 !important;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
-		clip-path: inset(50%);
-		white-space: nowrap;
-	}
-
-	.profile-field--wide > small {
-		color: var(--steel);
-		font-size: 0.72rem;
-		line-height: 1.45;
 	}
 
 	.profile-field--wide textarea {

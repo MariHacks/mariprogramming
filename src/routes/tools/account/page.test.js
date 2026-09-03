@@ -133,13 +133,12 @@ describe('account page', () => {
 		expect(screen.getByLabelText('First name')).toBeInTheDocument();
 		expect(screen.getByLabelText('Last name')).toBeInTheDocument();
 		expect(screen.getByLabelText('Student number')).toBeInTheDocument();
-		expect(screen.getByLabelText(/Profile picture/)).not.toBeRequired();
-		expect(screen.getByText('Choose image')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Choose image' })).toBeInTheDocument();
 		expect(screen.getByText('No image selected')).toBeInTheDocument();
-		await fireEvent.change(screen.getByLabelText(/Profile picture/), {
-			target: { files: [new File(['avatar'], 'ada.png', { type: 'image/png' })] }
-		});
-		expect(screen.getByText('ada.png')).toBeInTheDocument();
+		expect(screen.getByLabelText('Choose profile picture file')).toHaveAttribute(
+			'accept',
+			'image/jpeg,image/png,image/webp'
+		);
 		expect(screen.getByRole('option', { name: 'Arts and Sciences' })).toBeInTheDocument();
 		expect(
 			screen.getByRole('option', { name: 'Science, Pure and Applied Science' })
@@ -436,9 +435,7 @@ describe('account page', () => {
 		const calendar = screen.getByLabelText('Weekly course schedule');
 		expect(calendar).toBeVisible();
 		expect(calendar).toHaveClass('weekday-only');
-		expect(accountPageSource).not.toMatch(
-			/\.schedule-onboarding-preview\s*\{[^}]*max-height:/gu
-		);
+		expect(accountPageSource).not.toMatch(/\.schedule-onboarding-preview\s*\{[^}]*max-height:/gu);
 		expect(cssRulesFor('.schedule-onboarding-preview')).toContain('overflow: visible;');
 		expect(cssRulesFor('.schedule-onboarding-preview :global(.schedule-calendar)')).toContain(
 			'overflow: visible;'
@@ -695,12 +692,14 @@ describe('account page', () => {
 		expect(screen.getByLabelText('Username')).toHaveValue('ada_codes');
 		expect(screen.getByLabelText('First name')).toHaveValue('Ada');
 		expect(screen.getByLabelText('Last name')).toHaveValue('Lovelace');
-		const image = screen.getByLabelText('Change profile picture');
-		expect(image).toHaveAttribute('type', 'file');
-		await fireEvent.change(image, {
-			target: { files: [new File(['new avatar'], 'new-ada.png', { type: 'image/png' })] }
-		});
-		expect(screen.getByText('new-ada.png')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Change profile picture' })).toHaveAttribute(
+			'type',
+			'button'
+		);
+		expect(screen.getByLabelText('Choose profile picture file')).toHaveAttribute(
+			'accept',
+			'image/jpeg,image/png,image/webp'
+		);
 		expect(screen.getByRole('button', { name: 'Save profile' })).toHaveAttribute('type', 'submit');
 		await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 		expect(screen.queryByRole('form', { name: 'Edit profile' })).not.toBeInTheDocument();
