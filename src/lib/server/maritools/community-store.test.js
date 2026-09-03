@@ -775,6 +775,46 @@ describe('createCommunityStore', () => {
 		expect(JSON.stringify(outlines)).not.toContain('inferenceCount');
 	});
 
+	it('omits incomplete memberships and maps legacy or empty outline metadata', async () => {
+		const incompleteMembership = createCommunityStore(
+			inner({
+				getProgrammingClubMembership: vi.fn(async () => ({
+					userId: USER,
+					createdAt: new Date('2025-09-01T12:00:00.000Z'),
+					requiredFormCompletedAt: null
+				})),
+				listUserOutlines: vi.fn(async () => [
+					{
+						sha256: 'b'.repeat(64),
+						proposals: { courseCode: '420-201-RE', title: 'Programming I' }
+					},
+					{ sha256: 'c'.repeat(64), createdAt: null, proposals: null }
+				])
+			})
+		);
+
+		await expect(incompleteMembership.getPublicProfile(USER)).resolves.toMatchObject({
+			joinedAt: null
+		});
+		await expect(incompleteMembership.listOutlinesByAuthor(USER)).resolves.toEqual([
+			{
+				sha256: 'b'.repeat(64),
+				createdAt: null,
+				extraction: {
+					proposals: { courseCode: '420-201-RE', title: 'Programming I' }
+				}
+			},
+			{ sha256: 'c'.repeat(64), createdAt: null, extraction: null }
+		]);
+
+		const missingMembership = createCommunityStore(
+			inner({ getProgrammingClubMembership: vi.fn(async () => null) })
+		);
+		await expect(missingMembership.getPublicProfile(USER)).resolves.toMatchObject({
+			joinedAt: null
+		});
+	});
+
 	it('redacts profiles and reports staff', async () => {
 		const store = createCommunityStore(inner());
 		const profile = await store.getProfile(USER);
