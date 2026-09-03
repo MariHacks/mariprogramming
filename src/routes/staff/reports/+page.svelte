@@ -272,7 +272,7 @@
 			threadId: durationPrompt.report.threadId ?? '',
 			subjectUserId: durationPrompt.report.subjectUserId ?? ''
 		}}
-		enhance={enhanceQueue}
+		enhance={(form) => enhance(form, enhanceQueue)}
 		onCancel={closeDurationPrompt}
 	/>
 {/if}
