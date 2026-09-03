@@ -111,6 +111,47 @@ describe('free-time board page server', () => {
 		).resolves.toMatchObject({ signedInDisplayName: 'nick.zhicheng' });
 	});
 
+	it('keeps account lookup failures from blocking a signed-in board', async () => {
+		const rejectedLookups = handlers({
+			students: {
+				getProfile: vi.fn(async () => {
+					throw new Error('profile unavailable');
+				}),
+				getSchedule: vi.fn(async () => {
+					throw new Error('schedule unavailable');
+				})
+			}
+		});
+		await expect(
+			rejectedLookups.load(
+				event({ locals: { maritools: { email: '@example.com', userId: 'u1' } } })
+			)
+		).resolves.toMatchObject({ signedInDisplayName: null, savedSchedulePaste: '' });
+
+		const nullSchedule = handlers({
+			students: {
+				getProfile: vi.fn(async () => ({ displayName: '   ' })),
+				getSchedule: vi.fn(async () => null)
+			}
+		});
+		await expect(
+			nullSchedule.load(
+				event({ locals: { maritools: { email: 'ada@example.com', userId: 'u1' } } })
+			)
+		).resolves.toMatchObject({ signedInDisplayName: 'ada', savedSchedulePaste: '' });
+
+		const unavailableStudentStore = handlers({
+			createStudentStore: vi.fn(() => {
+				throw new Error('student store unavailable');
+			})
+		});
+		await expect(
+			unavailableStudentStore.load(
+				event({ locals: { maritools: { email: 'ada@example.com', userId: 'u1' } } })
+			)
+		).resolves.toMatchObject({ signedInDisplayName: 'ada', savedSchedulePaste: '' });
+	});
+
 	it('returns not found for a missing board', async () => {
 		const missing = handlers({ store: { getBoardBySlug: vi.fn(async () => null) } });
 		await expect(missing.load(event())).resolves.toMatchObject({ notFound: true, board: null });

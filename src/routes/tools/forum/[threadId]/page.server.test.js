@@ -37,6 +37,8 @@ function handlers(overrides = {}) {
 		lockThread: vi.fn(async () => THREAD_ROW),
 		removeThread: vi.fn(async () => THREAD_ROW),
 		removeReply: vi.fn(async () => ({ id: REPLY })),
+		muteUser: vi.fn(async () => ({ userId: SESSION.userId })),
+		banUser: vi.fn(async () => ({ userId: SESSION.userId })),
 		canManageThread: vi.fn(async () => false),
 		canManageReply: vi.fn(async () => false),
 		...overrides.store
@@ -380,6 +382,39 @@ describe('forum thread page server', () => {
 		expect(staff.store.removeThread).toHaveBeenCalledWith(THREAD);
 	});
 
+	it('rejects unmanaged reply edits and thread deletes', async () => {
+		const denied = handlers({
+			store: {
+				canManageThread: vi.fn(async () => false),
+				canManageReply: vi.fn(async () => false)
+			}
+		});
+
+		expect(
+			(
+				await denied.actions.edit(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'reply', targetId: REPLY, body: 'Nope' }
+					})
+				)
+			).status
+		).toBe(403);
+		expect(
+			(
+				await denied.actions.delete(
+					event({
+						locals: { maritools: SESSION },
+						form: { targetKind: 'thread', targetId: THREAD }
+					})
+				)
+			).status
+		).toBe(403);
+		expect(
+			(await denied.actions.edit(event({ locals: { maritools: SESSION } }))).status
+		).toBe(400);
+	});
+
 	it('returns bounded edit and delete errors', async () => {
 		const invalid = handlers({
 			store: {
@@ -568,6 +603,59 @@ describe('forum thread page server', () => {
 			(await noRole.actions.moderate(event({ locals: { maritools: SESSION }, form: { moderation: 'lock' } })))
 				.status
 		).toBe(403);
+	});
+
+	it('mutes and bans authors with bounded duration inputs', async () => {
+		const current = handlers();
+
+		await expect(
+			current.actions.moderate(
+				event({
+					locals: { maritools: STAFF },
+					form: { moderation: 'mute-author', authorUserId: SESSION.userId, mutePreset: '1h' }
+				})
+			)
+		).resolves.toEqual({ moderated: true });
+		expect(current.store.muteUser).toHaveBeenCalledWith(
+			SESSION.userId,
+			expect.objectContaining({ until: expect.any(Date) })
+		);
+
+		await expect(
+			current.actions.moderate(
+				event({
+					locals: { maritools: STAFF },
+					form: {
+						moderation: 'ban-author',
+						authorUserId: SESSION.userId,
+						banPreset: 'permanent'
+					}
+				})
+			)
+		).resolves.toEqual({ moderated: true });
+		expect(current.store.banUser).toHaveBeenCalledWith(SESSION.userId, { permanent: true });
+		await expect(
+			current.actions.moderate(
+				event({
+					locals: { maritools: STAFF },
+					form: { moderation: 'ban-author', authorUserId: SESSION.userId, banPreset: '7d' }
+				})
+			)
+		).resolves.toEqual({ moderated: true });
+		expect(current.store.banUser).toHaveBeenLastCalledWith(
+			SESSION.userId,
+			expect.objectContaining({ until: expect.any(Date) })
+		);
+
+		for (const moderation of ['mute-author', 'ban-author']) {
+			expect(
+				(
+					await current.actions.moderate(
+						event({ locals: { maritools: STAFF }, form: { moderation } })
+					)
+				).status
+			).toBe(400);
+		}
 	});
 
 	it('returns bounded moderation errors', async () => {

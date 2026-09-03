@@ -133,6 +133,27 @@ describe('semester page server', () => {
 		expect(data.activeTerm).toEqual({ id: 'fall-2026', name: 'Fall 2026' });
 	});
 
+	it('uses the current date when no clock dependency is supplied', async () => {
+		const current = handlers({
+			getToday: undefined,
+			repository: {
+				listTerms: vi.fn(async () => [
+					{ id: 'current', name: 'Current term', startDate: '2000-01-01', endDate: '2999-12-31' }
+				])
+			}
+		});
+
+		await expect(current.load(event())).resolves.toMatchObject({
+			activeTerm: { id: 'current', name: 'Current term' }
+		});
+	});
+
+	it('returns no active term when configured terms do not include today', async () => {
+		const current = handlers({ repository: { listTerms: vi.fn(async () => []) } });
+
+		await expect(current.load(event())).resolves.toMatchObject({ activeTerm: null });
+	});
+
 	it('restores saved and processing outlines from the signed-in account', async () => {
 		const outlines = [
 			{
@@ -286,6 +307,17 @@ describe('semester page server', () => {
 		expect(current.provider.extract).not.toHaveBeenCalled();
 	});
 
+	it('treats missing extracted text as a scanned document', async () => {
+		const current = handlers({
+			extractPdf: vi.fn(() => ({ text: undefined, byteLength: 90_000, sha256: 'cd'.repeat(32) }))
+		});
+
+		const result = await current.actions.extract(
+			event({ file: new File(['x'], 'scan.pdf', { type: 'application/pdf' }) })
+		);
+		expect(result.status).toBe(400);
+	});
+
 	it('refuses a non-PDF upload', async () => {
 		const current = handlers({
 			extractPdf: vi.fn(() => ({ text: '', byteLength: 4, sha256: 'ee'.repeat(32) })),
@@ -361,6 +393,19 @@ describe('semester page server', () => {
 		expect(current.repository.deleteOutline).toHaveBeenCalledWith({
 			userId: SESSION.userId,
 			sha256: 'ab'.repeat(32)
+		});
+	});
+
+	it('lets the repository validate a missing outline identifier', async () => {
+		const current = handlers();
+
+		await expect(current.actions.deleteOutline(event())).resolves.toEqual({
+			deleted: true,
+			sha256: ''
+		});
+		expect(current.repository.deleteOutline).toHaveBeenCalledWith({
+			userId: SESSION.userId,
+			sha256: ''
 		});
 	});
 
@@ -520,6 +565,15 @@ describe('semester page server', () => {
 			}
 		});
 		expect((await unavailable.actions.confirmAnalysis(event())).status).toBe(503);
+
+		const unexpected = handlers({
+			repository: {
+				acceptOutlineAnalysis: vi.fn(async () => {
+					throw new Error('confirmation failed');
+				})
+			}
+		});
+		await expect(unexpected.actions.confirmAnalysis(event())).rejects.toThrow('confirmation failed');
 	});
 
 	it('returns 503 when profile lookup is down', async () => {
@@ -722,5 +776,54 @@ describe('semester page server', () => {
 			})
 		);
 		expect(result.status).toBe(503);
+	});
+
+	it('rejects contribution when no academic term is active', async () => {
+		const current = handlers({ repository: { listTerms: vi.fn(async () => []) } });
+		const result = await current.actions.contribute(
+			event({ form: { structured: JSON.stringify({ assessments: [], books: [] }) } })
+		);
+
+		expect(result.status).toBe(503);
+		expect(current.repository.saveOutlineReview).not.toHaveBeenCalled();
+		expect(current.repository.contribute).not.toHaveBeenCalled();
+	});
+
+	it('blocks outline deletion until the account is ready', async () => {
+		expect((await handlers().actions.deleteOutline(event({ locals: {} }))).status).toBe(401);
+
+		const incomplete = handlers({ repository: { getProfile: vi.fn(async () => null) } });
+		expect((await incomplete.actions.deleteOutline(event())).status).toBe(400);
+	});
+
+	it.each([
+		['input', new MaritoolsInputError('invalid-outline'), 400],
+		['unavailable', new MaritoolsUnavailableError(), 503]
+	])('maps %s outline deletion errors', async (_name, failure, status) => {
+		const current = handlers({
+			repository: {
+				deleteOutline: vi.fn(async () => {
+					throw failure;
+				})
+			}
+		});
+
+		expect(
+			(await current.actions.deleteOutline(event({ form: { sha256: 'ab'.repeat(32) } }))).status
+		).toBe(status);
+	});
+
+	it('rethrows unexpected outline deletion errors', async () => {
+		const current = handlers({
+			repository: {
+				deleteOutline: vi.fn(async () => {
+					throw new Error('delete failed');
+				})
+			}
+		});
+
+		await expect(
+			current.actions.deleteOutline(event({ form: { sha256: 'ab'.repeat(32) } }))
+		).rejects.toThrow('delete failed');
 	});
 });
