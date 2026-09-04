@@ -718,8 +718,15 @@
 						>
 							<div class="member-form-intro">
 								<div>
-									<h2 id="required-form-title">Fill out the Microsoft form later</h2>
-									<p class="member-form-later-note">This does not block your signup.</p>
+									<h2 id="required-form-title">Fill out the school's form later</h2>
+									<p class="member-form-later-note">
+										Sign up here first. You can complete this form afterward.
+									</p>
+									<p>
+										Marianopolis requires everyone to fill out its membership form separately for
+										every club they join. This is a school requirement, not an extra step to create
+										your account here.
+									</p>
 									<div class="member-form-club-note" role="note" aria-label="Club name">
 										<span>Choose</span>
 										<strong>The Programming Club</strong>

@@ -162,9 +162,16 @@ describe('account page', () => {
 
 		await fireEvent.click(memberFormTab);
 		expect(
-			screen.getByRole('heading', { name: 'Fill out the Microsoft form later' })
+			screen.getByRole('heading', { name: "Fill out the school's form later" })
 		).toBeInTheDocument();
-		expect(screen.getByText('This does not block your signup.')).toBeInTheDocument();
+		expect(
+			screen.getByText('Sign up here first. You can complete this form afterward.')
+		).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				'Marianopolis requires everyone to fill out its membership form separately for every club they join. This is a school requirement, not an extra step to create your account here.'
+			)
+		).toBeInTheDocument();
 		expect(screen.getByRole('note', { name: 'Club name' })).toHaveTextContent(
 			'The Programming Club'
 		);
