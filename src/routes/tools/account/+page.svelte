@@ -717,13 +717,18 @@
 							hidden={profileTab !== 'member-form'}
 						>
 							<div class="member-form-intro">
-								<p>
-									This is Marianopolis' membership form, which everyone must complete
-									<strong>separately for every club they join</strong>. Choose
-									<strong>The Programming Club</strong>, listed under T.
-									<strong>You can fill this out later if you want</strong>, after signing up on our
-									website.
-								</p>
+								<div>
+									<p>
+										This is Marianopolis' membership form, which everyone must complete
+										<strong>separately for every club they join</strong>.
+										<strong>You can fill this out later if you want</strong>, after signing up on
+										our website.
+									</p>
+									<div class="member-form-club-note" role="note" aria-label="Club name">
+										<strong>The Programming Club</strong>
+										<span>Listed under T</span>
+									</div>
+								</div>
 								<a
 									class="primary-button"
 									href={data.requiredFormUrl}
@@ -1355,6 +1360,23 @@
 		grid-template-columns: minmax(0, 1fr) auto;
 		align-items: start;
 		gap: 2rem;
+	}
+
+	.member-form-intro strong {
+		color: var(--ink);
+		font-weight: 750;
+	}
+
+	.member-form-club-note {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.35rem 1rem;
+		margin-top: 1.25rem;
+		padding: 0.5rem 0 0.5rem 1rem;
+		border-left: 3px solid var(--blue);
+		color: var(--steel);
+		font-size: 0.9rem;
 	}
 
 	.profile-section-head {

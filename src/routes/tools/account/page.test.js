@@ -164,8 +164,11 @@ describe('account page', () => {
 		const memberForm = screen.getByRole('region', { name: 'School membership form' });
 		expect(memberForm.querySelectorAll('.member-form-intro p')).toHaveLength(1);
 		expect(memberForm.querySelector('h2')).toBeNull();
-		expect(memberForm).toHaveTextContent(
-			"This is Marianopolis' membership form, which everyone must complete separately for every club they join. Choose The Programming Club, listed under T. You can fill this out later if you want, after signing up on our website."
+		expect(memberForm.querySelector('.member-form-intro p')).toHaveTextContent(
+			"This is Marianopolis' membership form, which everyone must complete separately for every club they join. You can fill this out later if you want, after signing up on our website."
+		);
+		expect(screen.getByRole('note', { name: 'Club name' })).toHaveTextContent(
+			'The Programming Club Listed under T'
 		);
 		expect(screen.getByText('The Programming Club').tagName).toBe('STRONG');
 		expect(screen.getByText('You can fill this out later if you want').tagName).toBe('STRONG');
