@@ -161,21 +161,14 @@ describe('account page', () => {
 		expect(screen.queryByRole('button', { name: 'Join the club' })).not.toBeInTheDocument();
 
 		await fireEvent.click(memberFormTab);
-		expect(
-			screen.getByRole('heading', { name: "Fill out the school's form later" })
-		).toBeInTheDocument();
-		expect(
-			screen.getByText('Sign up here first. You can complete this form afterward.')
-		).toBeInTheDocument();
-		expect(
-			screen.getByText(
-				'Marianopolis requires everyone to fill out its membership form separately for every club they join. This is a school requirement, not an extra step to create your account here.'
-			)
-		).toBeInTheDocument();
-		expect(screen.getByRole('note', { name: 'Club name' })).toHaveTextContent(
-			'The Programming Club'
+		const memberForm = screen.getByRole('region', { name: 'School membership form' });
+		expect(memberForm.querySelectorAll('.member-form-intro p')).toHaveLength(1);
+		expect(memberForm.querySelector('h2')).toBeNull();
+		expect(memberForm).toHaveTextContent(
+			"This is Marianopolis' membership form, which everyone must complete separately for every club they join. Choose The Programming Club, listed under T. You can fill this out later if you want, after signing up on our website."
 		);
-		expect(screen.getByRole('note', { name: 'Club name' })).toHaveTextContent('listed under T');
+		expect(screen.getByText('The Programming Club').tagName).toBe('STRONG');
+		expect(screen.getByText('You can fill this out later if you want').tagName).toBe('STRONG');
 		expect(screen.getByRole('link', { name: 'Open required form' }).getAttribute('href')).toContain(
 			base.requiredFormUrl
 		);

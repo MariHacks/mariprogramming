@@ -713,26 +713,17 @@
 						<section
 							data-signup-tab="member-form"
 							class="onboarding-panel"
-							aria-labelledby="required-form-title"
+							aria-label="School membership form"
 							hidden={profileTab !== 'member-form'}
 						>
 							<div class="member-form-intro">
-								<div>
-									<h2 id="required-form-title">Fill out the school's form later</h2>
-									<p class="member-form-later-note">
-										Sign up here first. You can complete this form afterward.
-									</p>
-									<p>
-										Marianopolis requires everyone to fill out its membership form separately for
-										every club they join. This is a school requirement, not an extra step to create
-										your account here.
-									</p>
-									<div class="member-form-club-note" role="note" aria-label="Club name">
-										<span>Choose</span>
-										<strong>The Programming Club</strong>
-										<small>listed under T</small>
-									</div>
-								</div>
+								<p>
+									This is Marianopolis' membership form, which everyone must complete
+									<strong>separately for every club they join</strong>. Choose
+									<strong>The Programming Club</strong>, listed under T.
+									<strong>You can fill this out later if you want</strong>, after signing up on our
+									website.
+								</p>
 								<a
 									class="primary-button"
 									href={data.requiredFormUrl}
@@ -1282,8 +1273,7 @@
 		white-space: nowrap;
 	}
 
-	.profile-section-head h2,
-	.onboarding-panel h2 {
+	.profile-section-head h2 {
 		margin: 0;
 		font-family: var(--font-display);
 		font-size: clamp(1.4rem, 2.5vw, 2.15rem);
@@ -1365,43 +1355,6 @@
 		grid-template-columns: minmax(0, 1fr) auto;
 		align-items: start;
 		gap: 2rem;
-	}
-
-	.member-form-intro h2 {
-		max-width: 13ch;
-		font-size: clamp(2.75rem, 6vw, 5.5rem);
-		font-weight: 850;
-		letter-spacing: -0.055em;
-		line-height: 0.94;
-	}
-
-	.member-form-later-note {
-		margin-top: 1rem;
-		color: var(--ink);
-		font-size: 1.05rem;
-		font-weight: 750;
-	}
-
-	.member-form-club-note {
-		display: flex;
-		align-items: baseline;
-		width: fit-content;
-		margin-top: 1rem;
-		padding: 0.65rem 0.8rem;
-		border: 1px solid var(--line-dark);
-		background: var(--paper-blue);
-		gap: 0.45rem;
-		color: var(--steel);
-		font-size: 0.78rem;
-	}
-
-	.member-form-club-note strong {
-		color: var(--ink);
-		font-size: 0.86rem;
-	}
-
-	.member-form-club-note small {
-		font-size: inherit;
 	}
 
 	.profile-section-head {
