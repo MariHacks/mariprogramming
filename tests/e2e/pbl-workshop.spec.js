@@ -51,6 +51,21 @@ async function recordedPage(browser, origin, viewport = { width: 1400, height: 9
  * @param {import('@playwright/test').APIRequestContext} request
  * @param {string} code
  */
+function pythonBox(page) {
+	return page.getByRole('textbox', { name: 'Python' });
+}
+
+/**
+ * @param {import('@playwright/test').Page} page
+ * @param {string} text
+ */
+async function fillPython(page, text) {
+	const editor = pythonBox(page);
+	await editor.click();
+	await page.keyboard.press('Control+A');
+	await page.keyboard.insertText(text);
+}
+
 async function joinWithMember(request, code) {
 	const memberId = randomBytes(16).toString('hex');
 	return request.post(`/api/pbl/rooms/${code}/join`, {
@@ -103,6 +118,7 @@ test.describe.serial('PBL 1 student workshop', () => {
 		});
 		await expect(rec.getByText('Press Run.')).toBeVisible();
 		await expect(rec.getByRole('button', { name: 'Run' })).toBeVisible();
+		await expect(rec.locator('.cm-editor')).toBeVisible();
 		await rec.getByRole('button', { name: 'Run' }).click();
 		await expect(rec.getByLabel('Program output')).toContainText('Experiment loaded', {
 			timeout: 120000
@@ -110,8 +126,7 @@ test.describe.serial('PBL 1 student workshop', () => {
 		await expect(rec.getByRole('status')).toContainText('Change the message');
 		await expect(rec.getByText(/Not yet/)).toBeVisible();
 		await saveProof(rec, '02-beginner-fail-check');
-		const editor = rec.getByRole('textbox', { name: 'Python' });
-		await editor.fill('print("Lab table 3 is live")\n');
+		await fillPython(rec, 'print("Lab table 3 is live")\n');
 		await rec.getByRole('button', { name: 'Run' }).click();
 		await expect(rec.getByLabel('Program output')).toContainText('Lab table 3 is live', {
 			timeout: 30000
@@ -127,7 +142,7 @@ test.describe.serial('PBL 1 student workshop', () => {
 		await expect(
 			rec.getByRole('heading', { name: 'Values, variables, types, expressions' })
 		).toBeVisible({ timeout: 20000 });
-		await expect(editor).toHaveValue(/Lab table 3 is live/);
+		await expect(pythonBox(rec)).toContainText(/Lab table 3 is live/);
 		await saveProof(rec, '04-reload-keeps-step-and-code');
 		await keepVideo(context, rec, '02-beginner-run-and-reload');
 	});
@@ -157,30 +172,25 @@ test.describe.serial('PBL 1 student workshop', () => {
 		await expect(follow.page.getByText('Watching. Teammate is typing.')).toBeVisible({
 			timeout: 20000
 		});
-		await expect(follow.page.getByRole('textbox', { name: 'Python' })).toHaveAttribute('readonly');
-		await driver.page
-			.getByRole('textbox', { name: 'Python' })
-			.fill('print("synced from device A")\n');
-		await expect(follow.page.getByRole('textbox', { name: 'Python' })).toHaveValue(
-			/synced from device A/,
-			{ timeout: 15000 }
-		);
-		await follow.page.getByRole('textbox', { name: 'Python' }).pressSequentially('nope');
-		await expect(driver.page.getByRole('textbox', { name: 'Python' })).toHaveValue(
-			/synced from device A/,
-			{ timeout: 8000 }
-		);
-		await expect(follow.page.getByRole('textbox', { name: 'Python' })).toHaveValue(
-			/synced from device A/,
-			{ timeout: 8000 }
-		);
+		await expect(pythonBox(follow.page)).toHaveAttribute('aria-readonly', 'true');
+		await fillPython(driver.page, 'print("synced from device A")\n');
+		await expect(pythonBox(follow.page)).toContainText(/synced from device A/, {
+			timeout: 15000
+		});
+		await pythonBox(follow.page).pressSequentially('nope');
+		await expect(pythonBox(driver.page)).toContainText(/synced from device A/, {
+			timeout: 8000
+		});
+		await expect(pythonBox(follow.page)).toContainText(/synced from device A/, {
+			timeout: 8000
+		});
 		await saveProof(follow.page, '05-follower-readonly');
 		await follow.page.getByRole('button', { name: 'Take keyboard' }).click();
 		await expect(follow.page.getByText('You type. Teammates see this.')).toBeVisible({
 			timeout: 15000
 		});
-		await follow.page.getByRole('textbox', { name: 'Python' }).fill('print("taken by B")\n');
-		await expect(driver.page.getByRole('textbox', { name: 'Python' })).toHaveValue(/taken by B/, {
+		await fillPython(follow.page, 'print("taken by B")\n');
+		await expect(pythonBox(driver.page)).toContainText(/taken by B/, {
 			timeout: 15000
 		});
 		await saveProof(driver.page, '06-two-session-handoff');
@@ -265,7 +275,7 @@ test.describe.serial('PBL 1 student workshop', () => {
 		const panes = rec.getByRole('navigation', { name: 'Studio sections' });
 		await expect(panes.getByRole('button', { name: 'Lesson' })).toBeVisible();
 		await panes.getByRole('button', { name: 'Code' }).click();
-		await expect(rec.getByRole('textbox', { name: 'Python' })).toBeVisible();
+		await expect(pythonBox(rec)).toBeVisible();
 		await panes.getByRole('button', { name: 'Output' }).click();
 		await expect(rec.getByLabel('Program output')).toBeVisible();
 		await rec.getByRole('button', { name: 'Run' }).click();

@@ -20,6 +20,11 @@ vi.mock('$app/stores', async () => {
 	};
 });
 
+vi.mock('$lib/pbl/PythonEditor.svelte', async () => {
+	const { default: Stub } = await import('./PythonEditor.stub.svelte');
+	return { default: Stub };
+});
+
 vi.mock('$lib/pbl/workshop-controller.js', async () => {
 	const { SCIENCE_STEPS } = await import('$lib/pbl/science-workshop.js');
 	return {
@@ -74,7 +79,7 @@ describe('PBL studio page', () => {
 		const user = userEvent.setup();
 		render(StudioPage);
 		expect(screen.getByRole('heading', { level: 1, name: 'Get something running' })).toBeVisible();
-		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveValue('print("hi")');
+		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveTextContent('print("hi")');
 		expect(screen.getByRole('status')).toHaveTextContent('The program printed your message.');
 		expect(screen.getByRole('heading', { name: 'report.txt' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Syntax' })).toBeEnabled();
@@ -121,7 +126,7 @@ describe('PBL studio page', () => {
 			files: {}
 		};
 		render(StudioPage);
-		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveAttribute('readonly');
+		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveAttribute('aria-readonly', 'true');
 		expect(screen.getByText('Watching. Teammate is typing.')).toBeVisible();
 		await user.click(screen.getByRole('button', { name: 'Take keyboard' }));
 		expect(takeDriver).toHaveBeenCalled();

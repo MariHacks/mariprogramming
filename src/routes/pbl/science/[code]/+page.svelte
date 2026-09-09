@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { resolve } from '$app/paths';
 	import { clubContent } from '$lib/content/club';
+	import PythonEditor from '$lib/pbl/PythonEditor.svelte';
 	import { createWorkshopController } from '$lib/pbl/workshop-controller.js';
 
 	$: code = $page.params.code;
@@ -16,6 +17,8 @@
 	let copied = false;
 	/** @type {'lesson' | 'code' | 'output'} */
 	let pane = 'lesson';
+	/** @type {'testcase' | 'output'} */
+	let consoleTab = 'output';
 
 	onMount(() => {
 		controller = createWorkshopController({ code });
@@ -40,6 +43,11 @@
 			copied = false;
 		}
 	}
+
+	function runProgram() {
+		consoleTab = 'output';
+		void controller?.run();
+	}
 </script>
 
 <svelte:head>
@@ -61,33 +69,37 @@
 				Output
 			</button>
 		</nav>
+
 		<aside class="lesson">
-			<header class="lesson-head">
-				<p class="eyebrow">PBL 1 · {state.teamName || 'Team room'} · {state.code}</p>
-				<ol class="steps">
-					{#each state.steps as step (step.id)}
-						<li>
-							<button
-								type="button"
-								class:current={step.id === state.currentStep}
-								disabled={state.blocked === 'full' || step.id > state.unlockedStep}
-								on:click={() => controller?.selectStep(step.id)}
-							>
-								{step.id}
-							</button>
-						</li>
-					{/each}
-				</ol>
+			<p class="eyebrow">PBL 1 · {state.teamName || 'Team room'} · {state.code}</p>
+			<ol class="steps">
+				{#each state.steps as step (step.id)}
+					<li>
+						<button
+							type="button"
+							class:current={step.id === state.currentStep}
+							disabled={state.blocked === 'full' || step.id > state.unlockedStep}
+							on:click={() => controller?.selectStep(step.id)}
+						>
+							{step.id}
+						</button>
+					</li>
+				{/each}
+			</ol>
+			<div class="title-row">
 				<h1>{state.step.title}</h1>
-				<p class="minutes">about {state.step.minutes} min</p>
-			</header>
+				<p class="minutes">{state.step.minutes} min</p>
+			</div>
 			<p class="body">{state.step.body}</p>
 			{#if state.step.notes}
-				<ul class="notes">
-					{#each state.step.notes as note (note)}
-						<li>{note}</li>
-					{/each}
-				</ul>
+				<section class="examples" aria-label="Notes">
+					<h2>Examples</h2>
+					<ul class="notes">
+						{#each state.step.notes as note (note)}
+							<li>{note}</li>
+						{/each}
+					</ul>
+				</section>
 			{/if}
 			<div class="hints">
 				<p>Hints</p>
@@ -118,6 +130,7 @@
 					class:fail={!state.lastCheck.passed}
 					role="status"
 				>
+					<span class="verdict">{state.lastCheck.passed ? 'Accepted' : 'Wrong Answer'}</span>
 					{state.lastCheck.message}
 				</p>
 			{/if}
@@ -129,11 +142,24 @@
 
 		<section class="work" aria-label="Python editor">
 			<div class="toolbar">
-				<p>
-					Share <code>{state.code}</code>
-					<button type="button" on:click={copyLink}>{copied ? 'Copied' : 'Copy link'}</button>
-				</p>
-				<p>{state.memberCount}/10 on this team</p>
+				<div class="toolbar-meta">
+					<p class="lang">Python</p>
+					<p>
+						Share <code>{state.code}</code>
+						<button type="button" on:click={copyLink}>{copied ? 'Copied' : 'Copy link'}</button>
+					</p>
+					<p>{state.memberCount}/10 on this team</p>
+				</div>
+				{#if state.blocked !== 'full'}
+					<button
+						class="button-primary run"
+						type="button"
+						disabled={state.running}
+						on:click={runProgram}
+					>
+						{state.running ? 'Running' : 'Run'}
+					</button>
+				{/if}
 			</div>
 			{#if state.blocked === 'full'}
 				<p class="error" role="alert">{state.roomError || 'This team is full (10 people).'}</p>
@@ -151,39 +177,47 @@
 						<button type="button" on:click={() => controller?.takeDriver()}>Take keyboard</button>
 					{/if}
 				</p>
-				<label class="editor-label">
-					Python
-					<textarea
-						spellcheck="false"
-						value={state.source}
-						readonly={state.readOnly || !state.isDriver}
-						on:input={(event) => controller?.setSource(event.currentTarget.value)}
-					></textarea>
-				</label>
-				<label class="stdin-label">
-					Program input, one line per input()
-					<textarea
-						class="stdin"
-						value={state.stdinText}
-						on:input={(event) => controller?.setStdin(event.currentTarget.value)}
-					></textarea>
-				</label>
+				<div class="editor-shell">
+					<PythonEditor
+						source={state.source}
+						editable={!state.readOnly}
+						onSource={(value) => controller?.setSource(value)}
+					/>
+				</div>
 				<p class="next-action">{state.nextAction}</p>
-				<div class="run-row">
-					<button
-						class="button-primary"
-						type="button"
-						disabled={state.running}
-						on:click={() => controller?.run()}
-					>
-						{state.running ? 'Running' : 'Run'}
-					</button>
+				<div class="console" data-tab={consoleTab}>
+					<div class="console-tabs" role="tablist" aria-label="Program console">
+						<button
+							type="button"
+							role="tab"
+							aria-selected={consoleTab === 'testcase'}
+							on:click={() => (consoleTab = 'testcase')}
+						>
+							Testcase
+						</button>
+						<button
+							type="button"
+							role="tab"
+							aria-selected={consoleTab === 'output'}
+							on:click={() => (consoleTab = 'output')}
+						>
+							Output
+						</button>
+					</div>
+					<label class="stdin-label">
+						Program input, one line per input()
+						<textarea
+							class="stdin"
+							value={state.stdinText}
+							on:input={(event) => controller?.setStdin(event.currentTarget.value)}
+						></textarea>
+					</label>
 					{#if state.pythonError}
 						<p class="error" role="status">{state.pythonError}</p>
 					{/if}
+					<pre class="output" aria-label="Program output">{state.output ||
+							'Output appears here.'}</pre>
 				</div>
-				<pre class="output" aria-label="Program output">{state.output ||
-						'Output appears here.'}</pre>
 				{#if Object.keys(state.files).length}
 					<section class="files" aria-label="Generated files">
 						<h2>Generated files</h2>
@@ -206,69 +240,108 @@
 	.studio {
 		display: grid;
 		min-height: calc(100svh - 4.5rem);
-		background: #fff;
+		background: #f4f5f7;
 	}
 
 	.lesson,
 	.work {
 		min-width: 0;
-		padding: 1.25rem clamp(1rem, 3vw, 1.75rem);
+		min-height: 0;
 	}
 
 	.lesson {
 		display: grid;
 		align-content: start;
+		padding: 1.1rem 1.25rem 1.5rem;
 		border-block-end: var(--rule);
-		gap: 1rem;
+		gap: 0.85rem;
+		background: #fff;
 	}
 
 	.eyebrow,
-	.minutes {
+	.minutes,
+	.lang {
 		color: var(--quiet-steel);
-		font-size: 0.75rem;
-		font-weight: 650;
-		letter-spacing: 0.04em;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
 	}
 
 	.steps {
 		display: flex;
 		flex-wrap: wrap;
-		margin: 0.75rem 0 0;
+		margin: 0;
 		padding: 0;
-		gap: 0.35rem;
+		gap: 0.3rem;
 		list-style: none;
 	}
 
 	.steps button {
-		width: 2.75rem;
-		height: 2.75rem;
-		border: 1px solid rgb(var(--midnight-rgb) / 22%);
+		width: 2.15rem;
+		height: 2.15rem;
+		border: 1px solid rgb(var(--midnight-rgb) / 16%);
+		border-radius: 999px;
 		background: #fff;
 		color: inherit;
+		font-size: 0.8rem;
+		font-weight: 650;
 		cursor: pointer;
 	}
 
 	.steps button.current,
 	.steps button:not(:disabled):hover {
 		border-color: var(--club-blue);
+		background: rgb(var(--club-blue-rgb) / 8%);
 		color: var(--club-blue);
 	}
 
+	.steps button:disabled {
+		opacity: 0.38;
+		cursor: not-allowed;
+	}
+
+	.title-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.65rem 1rem;
+	}
+
 	.lesson h1 {
-		max-width: 16ch;
-		font-size: clamp(1.75rem, 4vw, 2.4rem);
+		max-width: 18ch;
+		font-size: clamp(1.45rem, 3vw, 1.85rem);
+		line-height: 1.15;
+	}
+
+	.minutes {
+		padding: 0.2rem 0.5rem;
+		border-radius: 999px;
+		background: #fff4d6;
+		color: #8a5a00;
 	}
 
 	.body,
 	.stretch {
 		max-width: 42rem;
 		font-size: 0.9375rem;
-		line-height: 1.5;
+		line-height: 1.55;
+	}
+
+	.examples h2,
+	.hints p,
+	.files h2,
+	.files h3 {
+		margin: 0;
+		font-family: var(--font-body);
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 	}
 
 	.notes {
-		margin: 0;
+		margin: 0.4rem 0 0;
 		padding-inline-start: 1.1rem;
 		color: var(--quiet-steel);
 		font-size: 0.875rem;
@@ -276,36 +349,33 @@
 
 	.hints {
 		display: grid;
-		gap: 0.45rem;
-	}
-
-	.hints p,
-	.files h2,
-	.files h3 {
-		font-family: var(--font-body);
-		font-size: 0.75rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
+		gap: 0.4rem;
 	}
 
 	.hints button {
-		min-height: 2.75rem;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid rgb(var(--midnight-rgb) / 22%);
+		min-height: 2.4rem;
+		padding: 0.45rem 0.7rem;
+		border: 1px solid rgb(var(--midnight-rgb) / 16%);
+		border-radius: 0.35rem;
 		background: #fff;
 		text-align: left;
 		cursor: pointer;
 	}
 
+	.hints button:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
 	.hint,
 	.output,
 	.files pre,
-	textarea {
+	.stdin {
 		width: 100%;
 		margin: 0;
 		padding: 0.75rem;
-		border: 1px solid rgb(var(--midnight-rgb) / 18%);
+		border: 1px solid rgb(var(--midnight-rgb) / 12%);
+		border-radius: 0.35rem;
 		background: var(--mist);
 		font-family: var(--font-mono);
 		font-size: 0.8125rem;
@@ -314,44 +384,64 @@
 	}
 
 	.check {
+		padding: 0.7rem 0.8rem;
+		border-radius: 0.35rem;
 		font-size: 0.875rem;
 		font-weight: 650;
+	}
+
+	.verdict {
+		display: block;
+		margin-bottom: 0.15rem;
+		font-size: 0.72rem;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
 	}
 
 	.check.pass {
-		color: var(--club-blue);
-	}
-
-	.check.fail,
-	.next-action {
-		font-size: 0.875rem;
-		font-weight: 650;
+		background: #ecf8ef;
+		color: #157347;
 	}
 
 	.check.fail {
+		background: #fdecec;
 		color: var(--danger);
 	}
 
 	.next-action {
-		margin: 0.85rem 0 0;
+		margin: 0;
+		padding: 0 1rem;
+		color: var(--quiet-steel);
+		font-size: 0.8125rem;
+		font-weight: 650;
 	}
 
 	.drive {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		margin: 0.75rem 0 0;
+		align-self: stretch;
+		box-sizing: border-box;
+		width: 100%;
+		margin: 0;
+		padding: 0.45rem 1rem;
 		gap: 0.5rem;
-		font-size: 0.875rem;
+		border-block-end: 1px solid #3e3b3f;
+		background: #2d2a2e;
+		color: #fcfcfa;
+		font-size: 0.8125rem;
 		font-weight: 650;
+		letter-spacing: 0;
+		text-transform: none;
 	}
 
 	.drive button {
-		min-height: 2.75rem;
-		padding: 0.35rem 0.7rem;
-		border: 1px solid var(--club-blue);
-		background: #fff;
-		color: var(--club-blue);
+		min-height: 2.15rem;
+		padding: 0.25rem 0.7rem;
+		border: 1px solid #78dce8;
+		border-radius: 0.3rem;
+		background: transparent;
+		color: #78dce8;
 		font-weight: 650;
 		cursor: pointer;
 	}
@@ -360,61 +450,140 @@
 		display: none;
 	}
 
+	.work {
+		display: flex;
+		flex-direction: column;
+		background: #2d2a2e;
+		color: #fcfcfa;
+	}
+
 	.toolbar {
 		display: flex;
 		flex-wrap: wrap;
+		align-items: center;
 		justify-content: space-between;
-		gap: 0.75rem;
+		padding: 0.45rem 0.85rem;
+		gap: 0.65rem;
+		background: #221f22;
+		border-block-end: 1px solid #3e3b3f;
 		font-size: 0.8125rem;
 	}
 
-	.toolbar button {
-		min-height: 2.75rem;
-		margin-inline-start: 0.5rem;
+	.toolbar-meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem 1.1rem;
+	}
+
+	.lang {
+		padding: 0.2rem 0.5rem;
+		border-radius: 0.25rem;
+		background: #3e3b3f;
+		color: #ffd866;
+	}
+
+	.toolbar code {
+		padding: 0.1rem 0.35rem;
+		border-radius: 0.25rem;
+		background: #3e3b3f;
+		color: #78dce8;
+	}
+
+	.toolbar button:not(.run) {
+		min-height: 2.15rem;
+		margin-inline-start: 0.35rem;
 		border: 0;
 		background: transparent;
-		color: var(--club-blue);
+		color: #78dce8;
 		font-weight: 650;
 		cursor: pointer;
 	}
 
-	.editor-label,
+	.run {
+		min-height: 2.35rem;
+		padding-inline: 1.1rem;
+	}
+
+	.editor-shell {
+		flex: 1 1 auto;
+		min-width: 0;
+		min-height: 14rem;
+		overflow: hidden;
+	}
+
 	.stdin-label {
 		display: grid;
-		margin-block-start: 0.85rem;
+		padding: 0.65rem 0.85rem 0;
 		gap: 0.35rem;
-		font-size: 0.75rem;
+		color: #c8c4c6;
+		font-size: 0.72rem;
 		font-weight: 700;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
 	}
 
-	textarea {
-		min-height: 18rem;
-		background: #fff;
-		resize: vertical;
+	.stdin,
+	.output,
+	.files pre {
+		border-color: #3e3b3f;
+		background: #221f22;
+		color: #fcfcfa;
 	}
 
 	.stdin {
-		min-height: 4.5rem;
+		min-height: 4.2rem;
+		resize: vertical;
 	}
 
-	.run-row {
+	.console {
+		display: grid;
+		border-block-start: 1px solid #3e3b3f;
+		background: #221f22;
+	}
+
+	.console-tabs {
 		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		margin-block: 0.85rem;
-		gap: 0.75rem;
+		gap: 0.15rem;
+		padding: 0.35rem 0.55rem 0;
+	}
+
+	.console-tabs button {
+		min-height: 2.15rem;
+		padding: 0.3rem 0.75rem;
+		border: 0;
+		border-radius: 0.3rem 0.3rem 0 0;
+		background: transparent;
+		color: #c8c4c6;
+		font-weight: 650;
+		cursor: pointer;
+	}
+
+	.console-tabs button[aria-selected='true'] {
+		background: #2d2a2e;
+		color: #fcfcfa;
 	}
 
 	.output {
-		min-height: 8rem;
-		background: #061431;
-		color: #f8fafc;
+		min-height: 7rem;
+		border: 0;
+		border-radius: 0;
+		letter-spacing: 0;
+		text-transform: none;
+	}
+
+	.files {
+		padding: 0.75rem 1rem 1rem;
+	}
+
+	.files h2,
+	.files h3 {
+		color: #c8c4c6;
 	}
 
 	.error {
-		color: var(--danger);
+		margin: 0.5rem 1rem;
+		color: #ff6188;
 		font-size: 0.875rem;
 		font-weight: 650;
 	}
@@ -423,11 +592,17 @@
 		padding: 2rem;
 	}
 
+	.work > .button-primary {
+		align-self: start;
+		margin: 0.75rem 1rem;
+	}
+
 	@media (max-width: 63.99rem) {
 		.pane-switch {
 			display: flex;
 			flex-wrap: wrap;
 			grid-column: 1 / -1;
+			background: #fff;
 			border-block-end: var(--rule);
 		}
 
@@ -449,30 +624,43 @@
 		}
 
 		.studio[data-pane='code'] .lesson,
-		.studio[data-pane='code'] .output,
+		.studio[data-pane='code'] .console,
 		.studio[data-pane='code'] .files {
 			display: none;
 		}
 
 		.studio[data-pane='output'] .lesson,
-		.studio[data-pane='output'] .editor-label,
-		.studio[data-pane='output'] .stdin-label {
+		.studio[data-pane='output'] .editor-shell,
+		.studio[data-pane='output'] .drive {
 			display: none;
 		}
 
-		textarea {
-			min-height: 10rem;
+		.editor-shell {
+			min-height: 16rem;
 		}
 	}
 
 	@media (min-width: 64rem) {
 		.studio {
-			grid-template-columns: minmax(18rem, 0.42fr) minmax(0, 1.58fr);
+			grid-template-columns: minmax(18rem, 0.4fr) minmax(0, 1.6fr);
 		}
 
 		.lesson {
 			border-block-end: 0;
 			border-inline-end: var(--rule);
+			overflow: auto;
+		}
+
+		.work {
+			overflow: hidden;
+		}
+
+		.console[data-tab='testcase'] .output {
+			display: none;
+		}
+
+		.console[data-tab='output'] .stdin-label {
+			display: none;
 		}
 	}
 </style>
