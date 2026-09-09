@@ -123,8 +123,25 @@ export function createPblRuntime(dependencies = {}) {
 		}
 		try {
 			await ensureSchema();
-		} catch {
-			/* table may already exist; Neon queries still run */
+		} catch (error) {
+			const message = (error instanceof Error ? error.message : String(error))
+				.replace(/postgres(?:ql)?:\/\/\S+/gi, '[db]')
+				.slice(0, 120);
+			console.error('pbl_schema_ensure_failed', message);
+		}
+		try {
+			const { default: pg } = await import('pg');
+			const pool = new pg.Pool({ connectionString: databaseUrl, max: 1 });
+			try {
+				await pool.query(
+					'ALTER TABLE pbl_rooms ADD COLUMN IF NOT EXISTS driver_member_id varchar(64)'
+				);
+			} finally {
+				await pool.end();
+			}
+		} catch (error) {
+			const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+			console.error('pbl_driver_column', code);
 		}
 		const run = (overrides = {}) =>
 			withTransaction(
