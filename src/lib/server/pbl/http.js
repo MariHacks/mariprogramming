@@ -35,6 +35,9 @@ export function pblErrorResponse(error) {
 			{ status: 409, headers: { 'cache-control': 'no-store' } }
 		);
 	}
+	const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+	const name = error instanceof Error ? error.name : 'Error';
+	console.error('pbl_unavailable', name, code);
 	return json({ error: UNAVAILABLE }, { status: 503, headers: { 'cache-control': 'no-store' } });
 }
 
