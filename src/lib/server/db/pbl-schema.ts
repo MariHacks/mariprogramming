@@ -30,6 +30,7 @@ export const pblRooms = pgTable(
 		openedHints: jsonb('opened_hints').$type<Record<string, number>>().default({}).notNull(),
 		stepEnteredAt: timestamp('step_entered_at', { withTimezone: true }).defaultNow().notNull(),
 		memberCount: integer('member_count').default(1).notNull(),
+		driverMemberId: varchar('driver_member_id', { length: 64 }),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()

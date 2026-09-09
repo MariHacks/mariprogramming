@@ -14,6 +14,8 @@
 	/** @type {ReturnType<typeof createWorkshopController> | null} */
 	let controller = null;
 	let copied = false;
+	/** @type {'lesson' | 'code' | 'output'} */
+	let pane = 'lesson';
 
 	onMount(() => {
 		controller = createWorkshopController({ code });
@@ -43,14 +45,22 @@
 <svelte:head>
 	<title>PBL 1 studio | {clubContent.name}</title>
 	<meta name="robots" content="noindex, nofollow" />
-	<meta
-		name="description"
-		content="Team Python studio for Speedrun Programming in Science."
-	/>
+	<meta name="description" content="Team Python studio for Speedrun Programming in Science." />
 </svelte:head>
 
 {#if state}
-	<section class="studio" aria-label="Workshop studio">
+	<section class="studio" aria-label="Workshop studio" data-pane={pane}>
+		<nav class="pane-switch" aria-label="Studio sections">
+			<button type="button" class:current={pane === 'lesson'} on:click={() => (pane = 'lesson')}>
+				Lesson
+			</button>
+			<button type="button" class:current={pane === 'code'} on:click={() => (pane = 'code')}>
+				Code
+			</button>
+			<button type="button" class:current={pane === 'output'} on:click={() => (pane = 'output')}>
+				Output
+			</button>
+		</nav>
 		<aside class="lesson">
 			<header class="lesson-head">
 				<p class="eyebrow">PBL 1 · {state.teamName || 'Team room'} · {state.code}</p>
@@ -60,7 +70,7 @@
 							<button
 								type="button"
 								class:current={step.id === state.currentStep}
-								disabled={step.id > state.unlockedStep}
+								disabled={state.blocked === 'full' || step.id > state.unlockedStep}
 								on:click={() => controller?.selectStep(step.id)}
 							>
 								{step.id}
@@ -84,7 +94,8 @@
 				{#each [1, 2, 3] as level (level)}
 					<button
 						type="button"
-						disabled={level > (state.openedHints?.[String(state.currentStep)] ?? 0) + 1}
+						disabled={state.blocked === 'full' ||
+							level > (state.openedHints?.[String(state.currentStep)] ?? 0) + 1}
 						on:click={() => controller?.openHint(level)}
 					>
 						{level === 1 ? 'Idea' : level === 2 ? 'Syntax' : 'Partial code'}
@@ -101,7 +112,12 @@
 				{/if}
 			</div>
 			{#if state.lastCheck}
-				<p class="check" class:pass={state.lastCheck.passed} role="status">
+				<p
+					class="check"
+					class:pass={state.lastCheck.passed}
+					class:fail={!state.lastCheck.passed}
+					role="status"
+				>
 					{state.lastCheck.message}
 				</p>
 			{/if}
@@ -119,45 +135,66 @@
 				</p>
 				<p>{state.memberCount}/10 on this team</p>
 			</div>
-			{#if state.roomError}
-				<p class="error" role="alert">{state.roomError}</p>
-			{/if}
-			<label class="editor-label">
-				Python
-				<textarea
-					spellcheck="false"
-					value={state.source}
-					readonly={state.readOnly}
-					on:input={(event) => controller?.setSource(event.currentTarget.value)}
-				></textarea>
-			</label>
-			<label class="stdin-label">
-				Program input, one line per input()
-				<textarea
-					class="stdin"
-					value={state.stdinText}
-					on:input={(event) => controller?.setStdin(event.currentTarget.value)}
-				></textarea>
-			</label>
-			<div class="run-row">
-				<button class="button-primary" type="button" disabled={state.running} on:click={() => controller?.run()}>
-					{state.running ? 'Running' : 'Run'}
-				</button>
-				{#if state.pythonError}
-					<p class="error" role="status">{state.pythonError}</p>
+			{#if state.blocked === 'full'}
+				<p class="error" role="alert">{state.roomError || 'This team is full (10 people).'}</p>
+				<p class="body">10 people already. Create or join another team.</p>
+				<a class="button-primary" href={resolve('/pbl/science', {})}>Join another team</a>
+			{:else}
+				{#if state.roomError}
+					<p class="error" role="alert">{state.roomError}</p>
 				{/if}
-			</div>
-			<pre class="output" aria-label="Program output">{state.output || 'Output appears here.'}</pre>
-			{#if Object.keys(state.files).length}
-				<section class="files" aria-label="Generated files">
-					<h2>Generated files</h2>
-					{#each Object.entries(state.files) as [name, contents] (name)}
-						<article>
-							<h3>{name}</h3>
-							<pre>{contents}</pre>
-						</article>
-					{/each}
-				</section>
+				<p class="drive">
+					{#if state.isDriver}
+						You type. Teammates see this.
+					{:else}
+						Watching. Teammate is typing.
+						<button type="button" on:click={() => controller?.takeDriver()}>Take keyboard</button>
+					{/if}
+				</p>
+				<label class="editor-label">
+					Python
+					<textarea
+						spellcheck="false"
+						value={state.source}
+						readonly={state.readOnly || !state.isDriver}
+						on:input={(event) => controller?.setSource(event.currentTarget.value)}
+					></textarea>
+				</label>
+				<label class="stdin-label">
+					Program input, one line per input()
+					<textarea
+						class="stdin"
+						value={state.stdinText}
+						on:input={(event) => controller?.setStdin(event.currentTarget.value)}
+					></textarea>
+				</label>
+				<p class="next-action">{state.nextAction}</p>
+				<div class="run-row">
+					<button
+						class="button-primary"
+						type="button"
+						disabled={state.running}
+						on:click={() => controller?.run()}
+					>
+						{state.running ? 'Running' : 'Run'}
+					</button>
+					{#if state.pythonError}
+						<p class="error" role="status">{state.pythonError}</p>
+					{/if}
+				</div>
+				<pre class="output" aria-label="Program output">{state.output ||
+						'Output appears here.'}</pre>
+				{#if Object.keys(state.files).length}
+					<section class="files" aria-label="Generated files">
+						<h2>Generated files</h2>
+						{#each Object.entries(state.files) as [name, contents] (name)}
+							<article>
+								<h3>{name}</h3>
+								<pre>{contents}</pre>
+							</article>
+						{/each}
+					</section>
+				{/if}
 			{/if}
 		</section>
 	</section>
@@ -285,6 +322,44 @@
 		color: var(--club-blue);
 	}
 
+	.check.fail,
+	.next-action {
+		font-size: 0.875rem;
+		font-weight: 650;
+	}
+
+	.check.fail {
+		color: var(--danger);
+	}
+
+	.next-action {
+		margin: 0.85rem 0 0;
+	}
+
+	.drive {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		margin: 0.75rem 0 0;
+		gap: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 650;
+	}
+
+	.drive button {
+		min-height: 2.75rem;
+		padding: 0.35rem 0.7rem;
+		border: 1px solid var(--club-blue);
+		background: #fff;
+		color: var(--club-blue);
+		font-weight: 650;
+		cursor: pointer;
+	}
+
+	.pane-switch {
+		display: none;
+	}
+
 	.toolbar {
 		display: flex;
 		flex-wrap: wrap;
@@ -346,6 +421,48 @@
 
 	.loading {
 		padding: 2rem;
+	}
+
+	@media (max-width: 63.99rem) {
+		.pane-switch {
+			display: flex;
+			flex-wrap: wrap;
+			grid-column: 1 / -1;
+			border-block-end: var(--rule);
+		}
+
+		.pane-switch button {
+			flex: 1;
+			min-height: 2.75rem;
+			border: 0;
+			background: #fff;
+			cursor: pointer;
+		}
+
+		.pane-switch button.current {
+			color: var(--club-blue);
+			font-weight: 700;
+		}
+
+		.studio[data-pane='lesson'] .work {
+			display: none;
+		}
+
+		.studio[data-pane='code'] .lesson,
+		.studio[data-pane='code'] .output,
+		.studio[data-pane='code'] .files {
+			display: none;
+		}
+
+		.studio[data-pane='output'] .lesson,
+		.studio[data-pane='output'] .editor-label,
+		.studio[data-pane='output'] .stdin-label {
+			display: none;
+		}
+
+		textarea {
+			min-height: 10rem;
+		}
 	}
 
 	@media (min-width: 64rem) {

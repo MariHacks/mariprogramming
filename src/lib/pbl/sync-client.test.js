@@ -58,6 +58,8 @@ describe('room sync client', () => {
 		await vi.advanceTimersByTimeAsync(400);
 		await Promise.resolve();
 		expect(calls.some((call) => call.init?.method === 'PUT')).toBe(true);
+		const firstPut = calls.find((call) => call.init?.method === 'PUT');
+		expect(JSON.parse(String(firstPut?.init?.body ?? '{}')).source).toBe('print("team")');
 		await vi.advanceTimersByTimeAsync(1000);
 		sync.stop();
 		expect(states.at(-1)?.source).toBeDefined();
@@ -105,7 +107,7 @@ describe('room sync client', () => {
 		await flusher.pull();
 	});
 
-	it('retries a conflicted PUT with the local source and the server version', async () => {
+	it('keeps the server source on conflict instead of overlaying local typing', async () => {
 		const states = [];
 		const errors = [];
 		/** @type {any[]} */
@@ -118,17 +120,14 @@ describe('room sync client', () => {
 				if ((init?.method ?? 'GET') === 'PUT') {
 					const body = JSON.parse(String(init?.body ?? '{}'));
 					bodies.push(body);
-					if (bodies.length === 1) {
-						return new Response(
-							JSON.stringify({
-								error: 'The room changed on another device.',
-								conflict: true,
-								room: { code: 'AB23JK', source: 'from-b', version: 4 }
-							}),
-							{ status: 409 }
-						);
-					}
-					return new Response(JSON.stringify({ ...body, version: body.version + 1 }));
+					return new Response(
+						JSON.stringify({
+							error: 'The room changed on another device.',
+							conflict: true,
+							room: { code: 'AB23JK', source: 'from-b', version: 4, currentStep: 1 }
+						}),
+						{ status: 409 }
+					);
 				}
 				return new Response(JSON.stringify({ code: 'AB23JK', source: 'from-a', version: 3 }));
 			}
@@ -136,11 +135,11 @@ describe('room sync client', () => {
 		await sync.join();
 		sync.update({ source: 'from-a-edit' });
 		await sync.flush();
-		expect(bodies).toHaveLength(2);
-		expect(bodies[0].version).toBe(3);
-		expect(bodies[1]).toMatchObject({ version: 4, source: 'from-a-edit' });
-		expect(states.at(-1)?.source).toBe('from-a-edit');
-		expect(states.at(-1)?.version).toBe(5);
+		expect(bodies).toHaveLength(1);
+		expect(bodies[0]).toMatchObject({ version: 3, source: 'from-a-edit' });
+		expect(states.at(-1)?.source).toBe('from-b');
+		expect(states.at(-1)?.version).toBe(4);
+		expect(states.at(-1)?.currentStep).toBe(1);
 		expect(errors).toEqual([]);
 		sync.stop();
 	});
@@ -182,23 +181,22 @@ describe('room sync client', () => {
 		quiet.stop();
 
 		const bodies = [];
+		/** @type {any[]} */
+		const unversionedStates = [];
 		const unversioned = createRoomSync({
 			code: 'AB23JK',
-			onState: () => {},
+			onState: (state) => unversionedStates.push(state),
 			fetch: async (url, init) => {
 				if ((init?.method ?? 'GET') === 'PUT') {
 					const body = JSON.parse(String(init?.body ?? '{}'));
 					bodies.push(body);
-					if (bodies.length === 1) {
-						return new Response(
-							JSON.stringify({
-								conflict: true,
-								room: { code: 'AB23JK', source: 'server', version: 0 }
-							}),
-							{ status: 409 }
-						);
-					}
-					return new Response(JSON.stringify({ ...body, version: 2 }));
+					return new Response(
+						JSON.stringify({
+							conflict: true,
+							room: { code: 'AB23JK', source: 'server', version: 0 }
+						}),
+						{ status: 409 }
+					);
 				}
 				return new Response(JSON.stringify({ code: 'AB23JK', source: 'local', version: 1 }));
 			}
@@ -206,7 +204,8 @@ describe('room sync client', () => {
 		await unversioned.join();
 		unversioned.update({ source: 'local-edit' });
 		await unversioned.flush();
-		expect(bodies[1]?.source).toBe('local-edit');
+		expect(bodies).toHaveLength(1);
+		expect(unversionedStates.at(-1)?.source).toBe('server');
 		unversioned.stop();
 
 		const pending = createRoomSync({
@@ -217,6 +216,125 @@ describe('room sync client', () => {
 		await pending.join();
 		pending.update({ source: 'queued' });
 		pending.stop();
+	});
+
+	it('omits source on flush when the member is following', async () => {
+		/** @type {any[]} */
+		const bodies = [];
+		const sync = createRoomSync({
+			code: 'AB23JK',
+			onState: () => {},
+			fetch: async (url, init) => {
+				if ((init?.method ?? 'GET') === 'PUT') {
+					bodies.push(JSON.parse(String(init?.body ?? '{}')));
+					return new Response(JSON.stringify({ code: 'AB23JK', version: 2, isDriver: false }));
+				}
+				return new Response(
+					JSON.stringify({ code: 'AB23JK', source: 'print(1)', version: 1, isDriver: false })
+				);
+			}
+		});
+		await sync.join();
+		sync.update({ currentStep: 0 });
+		await sync.flush();
+		expect(bodies[0].source).toBeUndefined();
+		expect(bodies[0].currentStep).toBe(0);
+		sync.stop();
+	});
+
+	it('retries a driver source push after a join bumps the version', async () => {
+		/** @type {any[]} */
+		const bodies = [];
+		/** @type {any[]} */
+		const states = [];
+		const sync = createRoomSync({
+			code: 'AB23JK',
+			onState: (state) => states.push(state),
+			fetch: async (url, init) => {
+				if ((init?.method ?? 'GET') === 'PUT') {
+					const body = JSON.parse(String(init?.body ?? '{}'));
+					bodies.push(body);
+					if (bodies.length === 1) {
+						return new Response(
+							JSON.stringify({
+								conflict: true,
+								room: {
+									code: 'AB23JK',
+									source: 'print("Experiment loaded")\n',
+									version: 4,
+									isDriver: true
+								}
+							}),
+							{ status: 409 }
+						);
+					}
+					return new Response(
+						JSON.stringify({ ...body, version: body.version + 1, isDriver: true })
+					);
+				}
+				return new Response(
+					JSON.stringify({
+						code: 'AB23JK',
+						source: 'print("Experiment loaded")\n',
+						version: 3,
+						isDriver: true
+					})
+				);
+			}
+		});
+		await sync.join();
+		sync.update({ source: 'print("synced from device A")\n' });
+		await sync.flush();
+		expect(bodies).toHaveLength(2);
+		expect(bodies[1]).toMatchObject({
+			version: 4,
+			source: 'print("synced from device A")\n'
+		});
+		expect(states.at(-1)?.source).toBe('print("synced from device A")\n');
+		sync.stop();
+	});
+
+	it('retries takeDriver after a conflict so a handoff is not dropped', async () => {
+		/** @type {any[]} */
+		const bodies = [];
+		/** @type {any[]} */
+		const states = [];
+		const sync = createRoomSync({
+			code: 'AB23JK',
+			onState: (state) => states.push(state),
+			fetch: async (url, init) => {
+				if ((init?.method ?? 'GET') === 'PUT') {
+					const body = JSON.parse(String(init?.body ?? '{}'));
+					bodies.push(body);
+					if (bodies.length === 1) {
+						return new Response(
+							JSON.stringify({
+								conflict: true,
+								room: { code: 'AB23JK', source: 'from-a', version: 4, isDriver: false }
+							}),
+							{ status: 409 }
+						);
+					}
+					return new Response(
+						JSON.stringify({
+							...body,
+							version: body.version + 1,
+							isDriver: body.takeDriver === true
+						})
+					);
+				}
+				return new Response(
+					JSON.stringify({ code: 'AB23JK', source: 'start', version: 3, isDriver: false })
+				);
+			}
+		});
+		await sync.join();
+		sync.update({ takeDriver: true });
+		await sync.flush();
+		expect(bodies).toHaveLength(2);
+		expect(bodies[1]).toMatchObject({ takeDriver: true, version: 4 });
+		expect(states.at(-1)?.isDriver).toBe(true);
+		sync.stop();
 	});
 
 	it('keeps local typing when a poll returns a newer room', async () => {
@@ -231,7 +349,9 @@ describe('room sync client', () => {
 			onState: (state) => states.push(state),
 			fetch: async (url, init) => {
 				if ((init?.method ?? 'GET') === 'PUT') {
-					return new Response(JSON.stringify({ conflict: true, room: { source: 'remote', version: 9 } }));
+					return new Response(
+						JSON.stringify({ conflict: true, room: { source: 'remote', version: 9 } })
+					);
 				}
 				getCount += 1;
 				return new Response(JSON.stringify({ source: `remote-${getCount}`, version: getCount }));

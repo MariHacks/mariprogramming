@@ -4,11 +4,14 @@
 	import { resolve } from '$app/paths';
 	import { clubContent } from '$lib/content/club';
 	import { getScienceStep } from '$lib/pbl/science-workshop.js';
-	import { timeOnStepLabel } from '$lib/pbl/workshop-session.js';
+	import { teamPace, timeOnStepLabel } from '$lib/pbl/workshop-session.js';
 
 	$: code = $page.params.code;
 	/** @type {any} */
 	let room = null;
+	$: pace = room
+		? teamPace(getScienceStep(room.currentStep), room.lastCheck, room.stepEnteredAt, now)
+		: null;
 	let error = '';
 	let now = Date.now();
 	/** @type {ReturnType<typeof setInterval> | null} */
@@ -65,6 +68,15 @@
 					<dt>Current step</dt>
 					<dd>
 						{room.currentStep}. {getScienceStep(room.currentStep)?.title ?? ''}
+					</dd>
+				</div>
+				<div>
+					<dt>Pace</dt>
+					<dd>
+						{pace?.label ?? ''}
+						{#if pace?.detail}
+							· {pace.detail}
+						{/if}
 					</dd>
 				</div>
 				<div>

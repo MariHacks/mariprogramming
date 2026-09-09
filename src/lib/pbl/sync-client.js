@@ -78,16 +78,45 @@ export function createRoomSync(options) {
 		}
 		if (!dirty || stopped) return;
 		const outgoing = {
-			source: local.source,
 			currentStep: local.currentStep,
 			unlockedStep: local.unlockedStep,
 			openedHints: local.openedHints,
 			lastCheck: local.lastCheck
 		};
+		if (local.takeDriver === true || local.isDriver !== false) {
+			outgoing.source = local.source;
+		}
+		if (local.takeDriver === true) outgoing.takeDriver = true;
 		let result = await putOnce({ ...outgoing, version });
-		if (result?.conflict) {
-			version = Number(result.room.version) || version;
-			result = await putOnce({ ...result.room, ...outgoing, version });
+		if (result?.conflict && result.room) {
+			const retryTake = outgoing.takeDriver === true;
+			const keepDriverSource =
+				result.room.isDriver === true &&
+				typeof outgoing.source === 'string' &&
+				outgoing.source !== result.room.source;
+			if (keepDriverSource) {
+				result = await putOnce({
+					...outgoing,
+					version: Number(result.room.version) || version
+				});
+				if (result?.conflict && result.room) applyRoom(result.room);
+				else if (result?.room) applyRoom(result.room);
+				return;
+			}
+			applyRoom(result.room);
+			if (retryTake && result.room.isDriver !== true) {
+				result = await putOnce({
+					source: result.room.source,
+					currentStep: result.room.currentStep,
+					unlockedStep: result.room.unlockedStep,
+					openedHints: result.room.openedHints,
+					lastCheck: result.room.lastCheck,
+					takeDriver: true,
+					version: Number(result.room.version) || version
+				});
+				if (result?.room) applyRoom(result.room);
+			}
+			return;
 		}
 		if (result?.room) applyRoom(result.room);
 	}

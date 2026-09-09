@@ -2,7 +2,12 @@ import { createPythonHost } from './python-host.js';
 import { runScienceCheck } from './run-checks.js';
 import { SCIENCE_STARTER_SOURCE, SCIENCE_STEPS, getScienceStep } from './science-workshop.js';
 import { createRoomSync } from './sync-client.js';
-import { canOpenStep, nextUnlockedStep, withOpenedHint } from './workshop-session.js';
+import {
+	canOpenStep,
+	nextUnlockedStep,
+	studioNextAction,
+	withOpenedHint
+} from './workshop-session.js';
 
 /**
  * @param {{
@@ -40,6 +45,8 @@ export function createWorkshopController(options) {
 	let pythonError = '';
 	let roomError = '';
 	let readOnly = false;
+	let blocked = '';
+	let isDriver = true;
 
 	function snapshot() {
 		return {
@@ -52,7 +59,14 @@ export function createWorkshopController(options) {
 			running,
 			pythonError,
 			roomError,
-			readOnly
+			readOnly,
+			blocked,
+			isDriver,
+			nextAction: studioNextAction({
+				blocked,
+				lastCheck: room.lastCheck,
+				currentStep: room.currentStep
+			})
 		};
 	}
 
@@ -64,18 +78,32 @@ export function createWorkshopController(options) {
 		code: options.code,
 		onState: (next) => {
 			room = { ...room, ...next };
+			if (typeof next.isDriver === 'boolean') isDriver = next.isDriver;
+			readOnly = blocked === 'full' || !isDriver;
 			publish();
 		},
 		onError: (message) => {
 			roomError = message;
-			if (message.includes('full')) readOnly = true;
+			if (message.includes('full')) {
+				blocked = 'full';
+				readOnly = true;
+				isDriver = false;
+			}
 			publish();
 		}
 	});
 
 	async function join() {
 		const joined = await sync.join();
-		if (joined) room = { ...room, ...joined };
+		if (!joined) {
+			readOnly = blocked === 'full' || !isDriver;
+			if (blocked === 'full') await sync.pull();
+			publish();
+			return snapshot();
+		}
+		room = { ...room, ...joined };
+		if (typeof joined.isDriver === 'boolean') isDriver = joined.isDriver;
+		readOnly = blocked === 'full' || !isDriver;
 		sync.start();
 		publish();
 		return snapshot();
@@ -83,9 +111,16 @@ export function createWorkshopController(options) {
 
 	/** @param {string} source */
 	function setSource(source) {
-		if (readOnly) return;
+		if (blocked || !isDriver) return;
 		room = { ...room, source };
 		sync.update({ source });
+		publish();
+	}
+
+	function takeDriver() {
+		if (blocked) return;
+		sync.update({ takeDriver: true });
+		void sync.flush();
 		publish();
 	}
 
@@ -97,6 +132,7 @@ export function createWorkshopController(options) {
 
 	/** @param {number} stepId */
 	function selectStep(stepId) {
+		if (blocked) return;
 		if (!canOpenStep(stepId, room.unlockedStep)) return;
 		room = { ...room, currentStep: stepId };
 		sync.update({ currentStep: stepId });
@@ -106,6 +142,7 @@ export function createWorkshopController(options) {
 
 	/** @param {number} level */
 	function openHint(level) {
+		if (blocked) return;
 		const openedHints = withOpenedHint(room.openedHints ?? {}, room.currentStep, level);
 		room = { ...room, openedHints };
 		sync.update({ openedHints });
@@ -114,6 +151,7 @@ export function createWorkshopController(options) {
 	}
 
 	async function run() {
+		if (blocked) return snapshot();
 		running = true;
 		pythonError = '';
 		publish();
@@ -155,6 +193,7 @@ export function createWorkshopController(options) {
 	return {
 		join,
 		setSource,
+		takeDriver,
 		setStdin,
 		selectStep,
 		openHint,
@@ -173,5 +212,3 @@ export function createWorkshopController(options) {
 		}
 	};
 }
-
-

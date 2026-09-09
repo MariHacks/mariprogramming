@@ -55,7 +55,7 @@ describe('PBL room poll and push', () => {
 					'content-type': 'application/json',
 					cookie: `pbl_member=${MEMBER}`
 				},
-				body: JSON.stringify({ version: 2, source: 'print("team")' })
+				body: JSON.stringify({ version: 2, source: 'print("team")', takeDriver: true })
 			}),
 			url: new URL('https://club.example/api/pbl/rooms/AB23JK')
 		});

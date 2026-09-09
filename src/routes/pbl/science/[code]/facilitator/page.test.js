@@ -22,18 +22,19 @@ describe('facilitator view', () => {
 	it('shows the team snapshot', async () => {
 		vi.stubGlobal(
 			'fetch',
-			vi.fn(async () =>
-				new Response(
-					JSON.stringify({
-						code: 'AB23JK',
-						teamName: 'Lab table 3',
-						currentStep: 2,
-						stepEnteredAt: new Date().toISOString(),
-						lastCheck: { passed: true, message: 'First, last, and length are correct.' },
-						openedHints: { '1': 2 },
-						memberCount: 3
-					})
-				)
+			vi.fn(
+				async () =>
+					new Response(
+						JSON.stringify({
+							code: 'AB23JK',
+							teamName: 'Lab table 3',
+							currentStep: 2,
+							stepEnteredAt: new Date().toISOString(),
+							lastCheck: { passed: true, message: 'First, last, and length are correct.' },
+							openedHints: { '1': 2 },
+							memberCount: 3
+						})
+					)
 			)
 		);
 		render(FacilitatorPage);
@@ -47,6 +48,31 @@ describe('facilitator view', () => {
 			'href',
 			'/pbl/science/AB23JK'
 		);
+	});
+
+	it('labels a team stuck when the last check failed', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(
+				async () =>
+					new Response(
+						JSON.stringify({
+							code: 'AB23JK',
+							teamName: 'Lab table 3',
+							currentStep: 4,
+							stepEnteredAt: new Date(Date.now() - 12 * 60000).toISOString(),
+							lastCheck: { passed: false, message: '48.7 should be discarded.', step: 4 },
+							openedHints: {},
+							memberCount: 2
+						})
+					)
+			)
+		);
+		render(FacilitatorPage);
+		await waitFor(() => {
+			expect(screen.getByText(/Stuck/)).toBeInTheDocument();
+		});
+		expect(screen.getAllByText(/48.7 should be discarded/).length).toBeGreaterThan(0);
 	});
 
 	it('shows a room error', async () => {

@@ -30,6 +30,7 @@ function roomRow(overrides = {}) {
 		stepEnteredAt: NOW,
 		memberCount: 1,
 		version: 1,
+		driverMemberId: MEMBER,
 		...overrides
 	};
 }
@@ -81,7 +82,8 @@ describe('PBL room store', () => {
 			teamName: 'Lab table 3',
 			source: SCIENCE_STARTER_SOURCE,
 			memberCount: 1,
-			joinable: true
+			joinable: true,
+			isDriver: true
 		});
 		expect(repo.members.at(-1)?.memberId).toBe(MEMBER);
 		const generated = await createPblStore(memoryRepo(roomRow({ code: 'TAKEN1' }))).createRoom({
@@ -118,9 +120,9 @@ describe('PBL room store', () => {
 
 	it('rejects unknown workshops, blank names, and missing rooms', async () => {
 		const store = createPblStore(memoryRepo());
-		await expect(store.createRoom({ pblId: 'nope', teamName: 'Lab', memberId: MEMBER })).rejects.toBeInstanceOf(
-			PblInputError
-		);
+		await expect(
+			store.createRoom({ pblId: 'nope', teamName: 'Lab', memberId: MEMBER })
+		).rejects.toBeInstanceOf(PblInputError);
 		await expect(
 			store.createRoom({ pblId: 'science', teamName: '  ', memberId: MEMBER })
 		).rejects.toBeInstanceOf(PblInputError);
@@ -137,9 +139,9 @@ describe('PBL room store', () => {
 		expect(extra.memberCount).toBe(10);
 		repo.rooms[0].memberCount = 10;
 		repo.rooms[0].version += 1;
-		await expect(store.joinRoom({ code: 'AB23JK', memberId: 'c'.repeat(32) })).rejects.toBeInstanceOf(
-			PblFullError
-		);
+		await expect(
+			store.joinRoom({ code: 'AB23JK', memberId: 'c'.repeat(32) })
+		).rejects.toBeInstanceOf(PblFullError);
 	});
 
 	it('syncs source and step progress with optimistic versions', async () => {
@@ -245,9 +247,9 @@ describe('PBL room store', () => {
 			if (calls === 1) return originalFind(code);
 			return null;
 		};
-		await expect(store.joinRoom({ code: 'AB23JK', memberId: 'b'.repeat(32) })).rejects.toBeInstanceOf(
-			PblNotFoundError
-		);
+		await expect(
+			store.joinRoom({ code: 'AB23JK', memberId: 'b'.repeat(32) })
+		).rejects.toBeInstanceOf(PblNotFoundError);
 		const updater = memoryRepo();
 		let updateLooks = 0;
 		const originalUpdateFind = updater.findRoomByCode.bind(updater);
@@ -267,8 +269,31 @@ describe('PBL room store', () => {
 		const updating = memoryRepo();
 		updating.updateRoom = async () => null;
 		const joining = createPblStore(updating, { now: () => NOW });
-		const joined = await joining.joinRoom({ code: 'AB23JK', memberId: 'b'.repeat(32) });
-		expect(joined.memberCount).toBe(2);
+		await expect(
+			joining.joinRoom({ code: 'AB23JK', memberId: 'b'.repeat(32) })
+		).rejects.toBeInstanceOf(PblConflictError);
+	});
+
+	it('lets only the driver change source until someone takes the keyboard', async () => {
+		const other = 'b'.repeat(32);
+		const repo = memoryRepo(roomRow({ memberCount: 2 }));
+		repo.members.push({ roomId: repo.rooms[0].id, memberId: other });
+		const store = createPblStore(repo, { now: () => NOW });
+		await expect(
+			store.updateRoom({ code: 'AB23JK', memberId: other, version: 1, source: 'stolen' })
+		).rejects.toMatchObject({ message: 'Someone else has the keyboard.', status: 403 });
+		const taken = await store.updateRoom({
+			code: 'AB23JK',
+			memberId: other,
+			version: 1,
+			takeDriver: true,
+			source: 'now mine'
+		});
+		expect(taken.isDriver).toBe(true);
+		expect(taken.source).toBe('now mine');
+		await expect(
+			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, source: 'clobber' })
+		).rejects.toMatchObject({ message: 'Someone else has the keyboard.' });
 	});
 
 	it('keeps rooms in process memory for local preview', async () => {

@@ -1,4 +1,11 @@
-import { createPblRuntime, memberFromRequest, pblErrorResponse, pblJson, readPblJson } from '$lib/server/pbl/http.js';
+import {
+	createPblRuntime,
+	memberFromRequest,
+	pblErrorResponse,
+	pblJson,
+	readPblJson
+} from '$lib/server/pbl/http.js';
+import { readMemberId } from '$lib/server/pbl/cookie.js';
 
 export const prerender = false;
 
@@ -9,7 +16,10 @@ export function _createPblRoomEndpoint(dependencies = {}) {
 	/** @param {any} event */
 	async function GET(event) {
 		try {
-			const room = await runtime.withStore((store) => store.getRoom(event.params.code));
+			const viewer = readMemberId(event.request.headers.get('cookie'));
+			const room = await runtime.withStore((store) =>
+				store.getRoom(event.params.code, viewer ?? undefined)
+			);
 			return pblJson(room);
 		} catch (error) {
 			return pblErrorResponse(error);
@@ -30,7 +40,8 @@ export function _createPblRoomEndpoint(dependencies = {}) {
 					currentStep: body.currentStep,
 					unlockedStep: body.unlockedStep,
 					openedHints: body.openedHints,
-					lastCheck: body.lastCheck
+					lastCheck: body.lastCheck,
+					takeDriver: body.takeDriver === true
 				})
 			);
 			return pblJson(room, 200, membership.setCookie ? { 'set-cookie': membership.setCookie } : {});

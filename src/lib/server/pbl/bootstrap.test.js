@@ -38,10 +38,30 @@ describe('PBL schema bootstrap', () => {
 	});
 
 	it('skips work when pbl_rooms already exists', async () => {
-		const query = vi.fn(async () => ({ rows: [{ table_name: 'pbl_rooms' }] }));
+		const query = vi.fn(async (sql) => {
+			if (String(sql).includes('to_regclass')) return { rows: [{ table_name: 'pbl_rooms' }] };
+			if (String(sql).includes('driver_member_id'))
+				return { rows: [{ column_name: 'driver_member_id' }] };
+			return { rows: [] };
+		});
 		const { pool } = poolHarness(query);
 		await ensurePblSchema('postgresql://u:p@localhost/db', { createPool: () => pool });
-		expect(query).toHaveBeenCalledTimes(1);
+		expect(query.mock.calls.some((call) => String(call[0]).includes('CREATE TABLE'))).toBe(false);
+	});
+
+	it('adds driver_member_id when the rooms table exists without it', async () => {
+		const query = vi.fn(async (sql) => {
+			if (String(sql).includes('to_regclass')) return { rows: [{ table_name: 'pbl_rooms' }] };
+			if (String(sql).includes('information_schema')) return { rows: [] };
+			return { rows: [] };
+		});
+		const { pool } = poolHarness(query);
+		await ensurePblSchema('postgresql://u:p@localhost/db', { createPool: () => pool });
+		expect(
+			query.mock.calls.some(
+				(call) => String(call[0]).includes('driver_member_id') && String(call[0]).includes('ALTER')
+			)
+		).toBe(true);
 	});
 
 	it('applies grants when the runtime role exists', async () => {

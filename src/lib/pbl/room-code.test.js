@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH, isRoomCode, normalizeRoomCode } from './room-code.js';
+import {
+	ROOM_CODE_ALPHABET,
+	ROOM_CODE_LENGTH,
+	isRoomCode,
+	normalizeRoomCode
+} from './room-code.js';
 
 describe('room codes', () => {
 	it('accepts only the short typeable alphabet', () => {

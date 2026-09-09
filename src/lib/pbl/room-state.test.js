@@ -26,7 +26,9 @@ describe('PBL room state', () => {
 		expect(normalizeTeamName(12)).toBeNull();
 		expect(normalizeTeamName('bad\u0001name')).toBeNull();
 		expect(normalizeTeamName('x'.repeat(MAX_TEAM_NAME_CHARS + 1))).toBeNull();
-		expect(normalizeTeamName('x'.repeat(MAX_TEAM_NAME_CHARS))).toBe('x'.repeat(MAX_TEAM_NAME_CHARS));
+		expect(normalizeTeamName('x'.repeat(MAX_TEAM_NAME_CHARS))).toBe(
+			'x'.repeat(MAX_TEAM_NAME_CHARS)
+		);
 	});
 
 	it('stores the highest hint opened on each step', () => {
@@ -50,7 +52,8 @@ describe('PBL room state', () => {
 			openedHints: { '1': 2 },
 			stepEnteredAt: now.toISOString(),
 			memberCount: 3,
-			version: 4
+			version: 4,
+			driverMemberId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 		});
 
 		expect(view).toMatchObject({
@@ -62,8 +65,28 @@ describe('PBL room state', () => {
 			unlockedStep: 2,
 			memberCount: 3,
 			version: 4,
-			joinable: true
+			joinable: true,
+			isDriver: false
 		});
+		expect(
+			publicRoomView(
+				{
+					code: 'AB23JK',
+					pblId: 'science',
+					teamName: 'Lab table 3',
+					source: 'print("ok")',
+					currentStep: 2,
+					unlockedStep: 2,
+					lastCheck: null,
+					openedHints: {},
+					stepEnteredAt: now.toISOString(),
+					memberCount: 1,
+					version: 1,
+					driverMemberId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+				},
+				'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+			).isDriver
+		).toBe(true);
 		expect(view.source.length).toBeLessThanOrEqual(MAX_SOURCE_CHARS);
 		expect(view.lastCheck?.passed).toBe(true);
 		expect(view.openedHints).toEqual({ '1': 2 });

@@ -24,7 +24,10 @@ export function pblErrorResponse(error) {
 		error instanceof PblNotFoundError ||
 		error instanceof PblFullError
 	) {
-		return json({ error: error.message }, { status: error.status, headers: { 'cache-control': 'no-store' } });
+		return json(
+			{ error: error.message },
+			{ status: error.status, headers: { 'cache-control': 'no-store' } }
+		);
 	}
 	if (error instanceof PblConflictError) {
 		return json(
@@ -50,7 +53,10 @@ export async function readPblJson(request) {
 		throw new PblInputError('Send JSON.');
 	}
 	const contentLength = request.headers.get('content-length');
-	if (contentLength !== null && (!/^\d+$/u.test(contentLength) || Number(contentLength) > MAX_JSON_BYTES)) {
+	if (
+		contentLength !== null &&
+		(!/^\d+$/u.test(contentLength) || Number(contentLength) > MAX_JSON_BYTES)
+	) {
 		throw new PblInputError('Request is too large.', 413);
 	}
 	const raw = await request.text();
@@ -108,10 +114,17 @@ export function createPblRuntime(dependencies = {}) {
 		} catch {
 			return operation(createStore(getSharedMemoryPblRepository()));
 		}
-		await ensureSchema();
-		return withTransaction(async (transaction) => {
-			return operation(createStore(createRepository(transaction)));
-		}, { databaseUrl });
+		try {
+			await ensureSchema();
+		} catch {
+			/* table may already exist; Neon queries still run */
+		}
+		return withTransaction(
+			async (transaction) => {
+				return operation(createStore(createRepository(transaction)));
+			},
+			{ databaseUrl }
+		);
 	}
 
 	return { withStore };
