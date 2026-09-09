@@ -54,11 +54,9 @@ describe('science step checks', () => {
 				}
 			]).passed
 		).toBe(true);
-		expect(
-			gradeScienceStep(3, [
-				{ stdout: '12.1\n11.8\n12.3\n48.7\n12.0\n11.9\n' }
-			]).passed
-		).toBe(true);
+		expect(gradeScienceStep(3, [{ stdout: '12.1\n11.8\n12.3\n48.7\n12.0\n11.9\n' }]).passed).toBe(
+			true
+		);
 		expect(
 			gradeScienceStep(4, [
 				{ stdout: '12.1 valid\n11.8 valid\n12.3 valid\n48.7 discard\n12.0 valid\n11.9 valid\n' }
@@ -110,9 +108,9 @@ describe('science step checks', () => {
 		expect(
 			gradeScienceStep(8, [{ stdout: '0.192', globals: { standard_deviation: 0.192 } }]).passed
 		).toBe(true);
-		expect(gradeScienceStep(8, [{ stdout: '14.9', globals: { standard_deviation: 14.9 } }]).passed).toBe(
-			false
-		);
+		expect(
+			gradeScienceStep(8, [{ stdout: '14.9', globals: { standard_deviation: 14.9 } }]).passed
+		).toBe(false);
 		expect(
 			gradeScienceStep(9, [
 				{
@@ -157,12 +155,12 @@ describe('science step checks', () => {
 		expect(scienceCheckTrials(6)).toEqual([{ probe: 'functions' }]);
 		expect(scienceCheckTrials(11)).toEqual([{ stdin: ['20'] }]);
 		expect(gradeScienceStep(1, [])).toMatchObject({ passed: false });
-		expect(
-			gradeScienceStep(1, [{ globals: { lower_bound: 0, upper_bound: 1 } }]).passed
-		).toBe(false);
-		expect(gradeScienceStep(1, [{ globals: { lower_bound: 11.9, upper_bound: 12.3 } }]).passed).toBe(
+		expect(gradeScienceStep(1, [{ globals: { lower_bound: 0, upper_bound: 1 } }]).passed).toBe(
 			false
 		);
+		expect(
+			gradeScienceStep(1, [{ globals: { lower_bound: 11.9, upper_bound: 12.3 } }]).passed
+		).toBe(false);
 		expect(gradeScienceStep(2, [{ error: 'boom' }]).passed).toBe(false);
 		expect(
 			gradeScienceStep(2, [
@@ -183,12 +181,8 @@ describe('science step checks', () => {
 		).toBe(false);
 		expect(gradeScienceStep(3, [{ error: 'boom' }]).passed).toBe(false);
 		expect(gradeScienceStep(4, [{ error: 'boom' }]).passed).toBe(false);
-		expect(
-			gradeScienceStep(4, [{ stdout: 'valid\ndiscard\n12.1 valid\n' }]).passed
-		).toBe(false);
-		expect(
-			gradeScienceStep(4, [{ stdout: '48.7 discard\n11.8 valid\n' }]).passed
-		).toBe(false);
+		expect(gradeScienceStep(4, [{ stdout: 'valid\ndiscard\n12.1 valid\n' }]).passed).toBe(false);
+		expect(gradeScienceStep(4, [{ stdout: '48.7 discard\n11.8 valid\n' }]).passed).toBe(false);
 		expect(gradeScienceStep(5, [{ error: 'boom' }]).passed).toBe(false);
 		expect(
 			gradeScienceStep(5, [{ globals: { valid_readings: [12.1] }, stdout: '12.1' }]).passed
@@ -203,9 +197,9 @@ describe('science step checks', () => {
 		).toBe(false);
 		expect(gradeScienceStep(6, [{ error: 'boom' }]).passed).toBe(false);
 		expect(gradeScienceStep(6, [{ globals: {} }]).passed).toBe(false);
-		expect(
-			gradeScienceStep(6, [{ globals: { is_valid: { kind: 'function' } } }]).passed
-		).toBe(false);
+		expect(gradeScienceStep(6, [{ globals: { is_valid: { kind: 'function' } } }]).passed).toBe(
+			false
+		);
 		expect(
 			gradeScienceStep(6, [
 				{
@@ -303,9 +297,7 @@ describe('science step checks', () => {
 		expect(gradeScienceStep(10, [{ error: 'boom' }]).passed).toBe(false);
 		expect(gradeScienceStep(10, [{ stdout: 'average=12.02' }]).passed).toBe(false);
 		expect(gradeScienceStep(10, [{ files: { 'notes.md': 'hi' } }]).passed).toBe(false);
-		expect(
-			gradeScienceStep(10, [{ files: { 'report.txt': 'hello world' } }]).passed
-		).toBe(false);
+		expect(gradeScienceStep(10, [{ files: { 'report.txt': 'hello world' } }]).passed).toBe(false);
 		expect(gradeScienceStep(11, [{ error: 'boom' }]).passed).toBe(false);
 		expect(gradeScienceStep(11, [{ stdout: 'x', inputCount: 0 }]).passed).toBe(false);
 		expect(gradeScienceStep(11, [{ stdout: 'x' }]).passed).toBe(false);
@@ -363,9 +355,7 @@ describe('science step checks', () => {
 				}
 			]).passed
 		).toBe(true);
-		expect(
-			gradeScienceStep(8, [{ stdout: '0.2', globals: { stdev: 0.2 } }]).passed
-		).toBe(true);
+		expect(gradeScienceStep(8, [{ stdout: '0.2', globals: { stdev: 0.2 } }]).passed).toBe(true);
 		expect(gradeScienceStep(8, [{ stdout: '0.2', globals: { std: 0.2 } }]).passed).toBe(true);
 		expect(
 			gradeScienceStep(9, [

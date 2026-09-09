@@ -1,6 +1,7 @@
-import pg from 'pg';
 import migrationSql0020 from '../../../../drizzle/0020_pbl_rooms.sql?raw';
+import migrationSql0021 from '../../../../drizzle/0021_pbl_room_driver.sql?raw';
 import { readMigrationEnvironment, readPblEnvironment } from '../config/environment.js';
+import { createRequestPool } from '../db/transaction.js';
 
 /** @type {Promise<void> | null} */
 let ensurePromise = null;
@@ -15,7 +16,7 @@ function splitMigrationStatements(sql) {
 
 /** @param {string} databaseUrl */
 export function createPblPool(databaseUrl) {
-	return new pg.Pool({ connectionString: databaseUrl, max: 1 });
+	return createRequestPool(databaseUrl);
 }
 
 /**
@@ -32,8 +33,33 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 		const existing = await client.query(
 			"SELECT to_regclass('public.pbl_rooms')::text AS table_name"
 		);
-		if (existing.rows[0]?.table_name) return;
-		const statements = splitMigrationStatements(migrationSql0020);
+		if (existing.rows[0]?.table_name) {
+			const column = await client.query(
+				`SELECT column_name FROM information_schema.columns
+				 WHERE table_schema = 'public' AND table_name = 'pbl_rooms' AND column_name = 'driver_member_id'`
+			);
+			if (column.rows[0]?.column_name) return;
+			const statements = splitMigrationStatements(migrationSql0021);
+			await client.query('BEGIN');
+			try {
+				for (const statement of statements) {
+					await client.query(statement);
+				}
+				await client.query('COMMIT');
+			} catch (error) {
+				try {
+					await client.query('ROLLBACK');
+				} catch {
+					/* ignore */
+				}
+				throw error;
+			}
+			return;
+		}
+		const statements = [
+			...splitMigrationStatements(migrationSql0020),
+			...splitMigrationStatements(migrationSql0021)
+		];
 		await client.query('BEGIN');
 		try {
 			for (const statement of statements) {
@@ -44,7 +70,11 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 					'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pbl_rooms, pbl_room_members TO mariprogramming_runtime'
 				);
 			} catch (error) {
-				if (!String(error instanceof Error ? error.message : error).includes('mariprogramming_runtime')) {
+				if (
+					!String(error instanceof Error ? error.message : error).includes(
+						'mariprogramming_runtime'
+					)
+				) {
 					throw error;
 				}
 			}

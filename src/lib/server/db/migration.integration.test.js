@@ -133,7 +133,7 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 		const migrations = (await readdir(MIGRATIONS_DIRECTORY))
 			.filter((name) => name.endsWith('.sql'))
 			.sort();
-		expect(migrations).toHaveLength(21);
+		expect(migrations).toHaveLength(22);
 		const migrationSql = [];
 		for (const migrationName of migrations) {
 			const migration = await readFile(join(MIGRATIONS_DIRECTORY, migrationName), 'utf8');
@@ -157,6 +157,7 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 		expect(combinedMigration).toContain('mt_catalog_contributions_status_valid');
 		expect(combinedMigration).toContain('mt_student_profiles_username_lower_unique_idx');
 		expect(combinedMigration).toContain('pbl_rooms_code_unique_idx');
+		expect(combinedMigration).toContain('driver_member_id');
 	}, 30000);
 
 	afterAll(async () => {

@@ -24,7 +24,8 @@ function harness(overrides = {}) {
 			unlockedStep: 0,
 			openedHints: {},
 			memberCount: 2,
-			version: 1
+			version: 1,
+			isDriver: true
 		})),
 		start: vi.fn(),
 		stop: vi.fn(),
@@ -90,22 +91,63 @@ describe('workshop controller', () => {
 		expect(controller.getState().step.title).toBe('Get something running');
 		controller.openHint(1);
 		expect(controller.getState().source).toBe('print(1)');
+		/** @type {any} */
+		let fullSync;
 		const full = harness({
 			createSync: (options) => {
 				options.onError?.('This team is full (10 people).');
-				return {
+				fullSync = {
 					join: vi.fn(async () => null),
+					start: vi.fn(),
+					stop: vi.fn(),
+					update: vi.fn(),
+					flush: vi.fn(async () => {}),
+					pull: vi.fn(async () => {})
+				};
+				return fullSync;
+			}
+		});
+		await full.controller.join();
+		expect(full.controller.getState().blocked).toBe('full');
+		expect(fullSync.pull).toHaveBeenCalled();
+		expect(full.controller.getState().readOnly).toBe(true);
+		full.controller.setSource('nope');
+		expect(full.controller.getState().source).not.toBe('nope');
+		expect(fullSync.start).not.toHaveBeenCalled();
+		full.controller.destroy();
+	});
+
+	it('does not push source from a follower until they take the keyboard', async () => {
+		/** @type {any} */
+		let inner;
+		const follower = harness({
+			createSync: () => {
+				inner = {
+					join: vi.fn(async () => ({
+						code: 'AB23JK',
+						source: 'print("shared")',
+						currentStep: 0,
+						unlockedStep: 0,
+						openedHints: {},
+						memberCount: 2,
+						version: 1,
+						isDriver: false
+					})),
 					start: vi.fn(),
 					stop: vi.fn(),
 					update: vi.fn(),
 					flush: vi.fn(async () => {})
 				};
+				return inner;
 			}
 		});
-		expect(full.controller.getState().readOnly).toBe(true);
-		full.controller.setSource('nope');
-		expect(full.controller.getState().source).not.toBe('nope');
-		full.controller.destroy();
+		await follower.controller.join();
+		follower.controller.setSource('stolen');
+		expect(inner.update).not.toHaveBeenCalled();
+		expect(follower.controller.getState().source).toBe('print("shared")');
+		follower.controller.takeDriver();
+		expect(inner.update).toHaveBeenCalledWith({ takeDriver: true });
+		follower.controller.destroy();
 	});
 
 	it('can be constructed with default factories and missing output fields', async () => {
@@ -131,7 +173,8 @@ describe('workshop controller', () => {
 				start: vi.fn(),
 				stop: vi.fn(),
 				update: vi.fn(),
-				flush: vi.fn(async () => {})
+				flush: vi.fn(async () => {}),
+				pull: vi.fn(async () => {})
 			})
 		});
 		await inner.run();

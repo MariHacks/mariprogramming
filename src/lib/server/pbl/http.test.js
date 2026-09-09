@@ -1,12 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
-import {
-	PblConflictError,
-	PblFullError,
-	PblInputError,
-	PblNotFoundError
-} from './store.js';
+import { PblConflictError, PblFullError, PblInputError, PblNotFoundError } from './store.js';
 import { _resetSharedMemoryPblRepository } from './store.js';
 import {
 	createPblRuntime,
@@ -25,9 +20,7 @@ describe('PBL HTTP helpers', () => {
 		});
 		expect(pblErrorResponse(new PblNotFoundError()).status).toBe(404);
 		expect(pblErrorResponse(new PblFullError()).status).toBe(403);
-		const conflict = pblErrorResponse(
-			new PblConflictError({ code: 'AB23JK', version: 2 })
-		);
+		const conflict = pblErrorResponse(new PblConflictError({ code: 'AB23JK', version: 2 }));
 		expect(conflict.status).toBe(409);
 		expect(await conflict.json()).toMatchObject({ conflict: true });
 		expect(pblErrorResponse(new Error('db')).status).toBe(503);
@@ -138,6 +131,20 @@ describe('PBL HTTP helpers', () => {
 		const store = { ping: 'ok' };
 		const runtime = createPblRuntime({
 			ensureSchema: vi.fn(async () => undefined),
+			readEnvironment: () => ({ databaseUrl: 'postgresql://u:p@localhost/db' }),
+			withTransaction: async (operation) => operation({}),
+			createRepository: () => ({}),
+			createStore: () => store
+		});
+		expect(await runtime.withStore(async (current) => current)).toBe(store);
+	});
+
+	it('still opens a store when schema ensure fails', async () => {
+		const store = { ping: 'ok' };
+		const runtime = createPblRuntime({
+			ensureSchema: vi.fn(async () => {
+				throw new Error('cannot create');
+			}),
 			readEnvironment: () => ({ databaseUrl: 'postgresql://u:p@localhost/db' }),
 			withTransaction: async (operation) => operation({}),
 			createRepository: () => ({}),

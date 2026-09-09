@@ -42,10 +42,12 @@ export function normalizeOpenedHints(value) {
  *   openedHints: Record<string, number>,
  *   stepEnteredAt: string,
  *   memberCount: number,
- *   version: number
+ *   version: number,
+ *   driverMemberId?: string | null
  * }} row
+ * @param {string} [viewerMemberId]
  */
-export function publicRoomView(row) {
+export function publicRoomView(row, viewerMemberId) {
 	return {
 		code: row.code,
 		pblId: row.pblId,
@@ -58,6 +60,7 @@ export function publicRoomView(row) {
 		stepEnteredAt: row.stepEnteredAt,
 		memberCount: row.memberCount,
 		version: row.version,
-		joinable: canAcceptMember(row.memberCount)
+		joinable: canAcceptMember(row.memberCount),
+		isDriver: Boolean(row.driverMemberId && viewerMemberId && row.driverMemberId === viewerMemberId)
 	};
 }

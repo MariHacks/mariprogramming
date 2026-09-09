@@ -53,23 +53,29 @@ function oneRow(rows) {
 	return Array.isArray(rows) && rows[0] ? rows[0] : null;
 }
 
-/** @param {any} row */
-export function roomFromRow(row) {
+/** @param {any} row @param {string} [viewerMemberId] */
+export function roomFromRow(row, viewerMemberId) {
 	if (!row) return null;
-	return publicRoomView({
-		code: row.code,
-		pblId: row.pblId,
-		teamName: row.teamName,
-		source: row.source,
-		currentStep: row.currentStep,
-		unlockedStep: row.unlockedStep,
-		lastCheck: row.lastCheck ?? null,
-		openedHints: normalizeOpenedHints(row.openedHints),
-		stepEnteredAt:
-			row.stepEnteredAt instanceof Date ? row.stepEnteredAt.toISOString() : String(row.stepEnteredAt),
-		memberCount: row.memberCount,
-		version: row.version
-	});
+	return publicRoomView(
+		{
+			code: row.code,
+			pblId: row.pblId,
+			teamName: row.teamName,
+			source: row.source,
+			currentStep: row.currentStep,
+			unlockedStep: row.unlockedStep,
+			lastCheck: row.lastCheck ?? null,
+			openedHints: normalizeOpenedHints(row.openedHints),
+			stepEnteredAt:
+				row.stepEnteredAt instanceof Date
+					? row.stepEnteredAt.toISOString()
+					: String(row.stepEnteredAt),
+			memberCount: row.memberCount,
+			version: row.version,
+			driverMemberId: row.driverMemberId ?? null
+		},
+		viewerMemberId
+	);
 }
 
 /** @param {any} transaction */
@@ -215,20 +221,21 @@ export function createPblStore(repository, clock = {}) {
 				openedHints: {},
 				stepEnteredAt: enteredAt,
 				memberCount: 1,
-				version: 1
+				version: 1,
+				driverMemberId: input.memberId
 			});
 			if (!row) throw new PblInputError('Could not create the team room.', 503);
 			await repository.insertMember({ roomId: row.id, memberId: input.memberId });
-			return roomFromRow(row);
+			return roomFromRow(row, input.memberId);
 		},
 
-		/** @param {unknown} code */
-		async getRoom(code) {
+		/** @param {unknown} code @param {string} [viewerMemberId] */
+		async getRoom(code, viewerMemberId) {
 			const normalized = normalizeRoomCode(code);
 			if (!normalized) throw new PblInputError('That room code is not valid.');
 			const row = await repository.findRoomByCode(normalized);
 			if (!row) throw new PblNotFoundError();
-			return roomFromRow(row);
+			return roomFromRow(row, viewerMemberId);
 		},
 
 		/**
@@ -239,15 +246,16 @@ export function createPblStore(repository, clock = {}) {
 			const row = await repository.findRoomByCode(room.code);
 			if (!row) throw new PblNotFoundError();
 			const existing = await repository.findMember(row.id, input.memberId);
-			if (existing) return roomFromRow(row);
+			if (existing) return roomFromRow(row, input.memberId);
 			if (!canAcceptMember(row.memberCount)) throw new PblFullError();
-			await repository.insertMember({ roomId: row.id, memberId: input.memberId });
 			const updated = await repository.updateRoom(row.code, row.version, {
 				memberCount: row.memberCount + 1,
 				version: row.version + 1,
 				updatedAt: now()
 			});
-			return roomFromRow(updated ?? { ...row, memberCount: row.memberCount + 1, version: row.version + 1 });
+			if (!updated) throw new PblConflictError(roomFromRow(row, input.memberId));
+			await repository.insertMember({ roomId: row.id, memberId: input.memberId });
+			return roomFromRow(updated, input.memberId);
 		},
 
 		/**
@@ -259,7 +267,8 @@ export function createPblStore(repository, clock = {}) {
 		 *   currentStep?: unknown,
 		 *   unlockedStep?: unknown,
 		 *   openedHints?: unknown,
-		 *   lastCheck?: unknown
+		 *   lastCheck?: unknown,
+		 *   takeDriver?: unknown
 		 * }} input
 		 */
 		async updateRoom(input) {
@@ -269,17 +278,26 @@ export function createPblStore(repository, clock = {}) {
 			const member = await repository.findMember(row.id, input.memberId);
 			if (!member) throw new PblInputError('Join this team before editing.', 403);
 			if (!Number.isInteger(input.version)) throw new PblInputError('Missing room version.');
-			if (input.version !== row.version) throw new PblConflictError(roomFromRow(row));
+			if (input.version !== row.version)
+				throw new PblConflictError(roomFromRow(row, input.memberId));
 
 			/** @type {Record<string, unknown>} */
 			const patch = { version: row.version + 1, updatedAt: now() };
+			const taking = input.takeDriver === true;
+			if (taking) patch.driverMemberId = input.memberId;
 			if (input.source !== undefined) {
+				const driverId = taking ? input.memberId : row.driverMemberId;
+				if (driverId && driverId !== input.memberId) {
+					throw new PblInputError('Someone else has the keyboard.', 403);
+				}
+				if (!driverId) patch.driverMemberId = input.memberId;
 				if (typeof input.source !== 'string' || input.source.length > MAX_SOURCE_CHARS) {
 					throw new PblInputError('The program is too long to sync.');
 				}
 				patch.source = input.source;
 			}
-			if (input.openedHints !== undefined) patch.openedHints = normalizeOpenedHints(input.openedHints);
+			if (input.openedHints !== undefined)
+				patch.openedHints = normalizeOpenedHints(input.openedHints);
 			if (input.lastCheck !== undefined) patch.lastCheck = input.lastCheck;
 			if (input.unlockedStep !== undefined) {
 				if (!Number.isInteger(input.unlockedStep) || input.unlockedStep < row.unlockedStep) {
@@ -297,8 +315,8 @@ export function createPblStore(repository, clock = {}) {
 				if (input.currentStep !== row.currentStep) patch.stepEnteredAt = now();
 			}
 			const updated = await repository.updateRoom(row.code, row.version, patch);
-			if (!updated) throw new PblConflictError(roomFromRow(row));
-			return roomFromRow(updated);
+			if (!updated) throw new PblConflictError(roomFromRow(row, input.memberId));
+			return roomFromRow(updated, input.memberId);
 		}
 	};
 }

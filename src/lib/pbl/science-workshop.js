@@ -120,7 +120,7 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 8,
 		title: 'Imports',
 		minutes: 6,
-		body: 'import math and use math.sqrt to print a standard deviation of the valid readings. import math brings the module. from math import sqrt brings one name. The formula is in the starter comment so the math is not the lesson.',
+		body: 'import math and use math.sqrt to print a standard deviation of the valid readings. import math brings the module. from math import sqrt brings one name. The formula is in the notes so the math is not the lesson.',
 		notes: Object.freeze([
 			'sample standard deviation: sqrt(sum((x - average) ** 2 for x in values) / (len(values) - 1))'
 		]),

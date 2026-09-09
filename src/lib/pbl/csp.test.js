@@ -8,8 +8,7 @@ import {
 	isPblStudioPath
 } from './csp.js';
 
-const BASE =
-	"default-src 'self'; script-src 'self'; connect-src 'self'; worker-src 'self'";
+const BASE = "default-src 'self'; script-src 'self'; connect-src 'self'; worker-src 'self'";
 
 describe('PBL Python CSP', () => {
 	it('identifies workshop documents and studio routes', () => {
@@ -34,9 +33,9 @@ describe('PBL Python CSP', () => {
 		expect(expandPblCsp(expanded)).toBe(expanded);
 		expect(expandPblCsp('')).toBe('');
 		expect(PYODIDE_INDEX_URL).toContain('/pyodide/v0.27.5/full/');
-		expect(expandPblCspInHtml(`<meta http-equiv="content-security-policy" content="${BASE}">`)).toContain(
-			'wasm-unsafe-eval'
-		);
+		expect(
+			expandPblCspInHtml(`<meta http-equiv="content-security-policy" content="${BASE}">`)
+		).toContain('wasm-unsafe-eval');
 	});
 
 	it('copies response headers when a Content-Security-Policy is present', async () => {

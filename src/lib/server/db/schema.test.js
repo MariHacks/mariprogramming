@@ -77,7 +77,15 @@ describe('consolidated database schema', () => {
 		expect(tableName(schema.pblRooms)).toBe('pbl_rooms');
 		expect(tableName(schema.pblRoomMembers)).toBe('pbl_room_members');
 		expect(getTableConfig(schema.pblRooms).columns.map((column) => column.name)).toEqual(
-			expect.arrayContaining(['code', 'pbl_id', 'team_name', 'source', 'current_step', 'opened_hints'])
+			expect.arrayContaining([
+				'code',
+				'pbl_id',
+				'team_name',
+				'source',
+				'current_step',
+				'opened_hints',
+				'driver_member_id'
+			])
 		);
 		expect(indexNames(schema.pblRooms)).toEqual(['pbl_rooms_code_unique_idx', 'pbl_rooms_pbl_id_idx']);
 		expect(checkNames(schema.pblRooms)).toEqual([

@@ -2,9 +2,12 @@ import { cleanup, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { openHint, run } = vi.hoisted(() => ({
+const { openHint, run, takeDriver, setSource, studio } = vi.hoisted(() => ({
 	openHint: vi.fn(),
-	run: vi.fn()
+	run: vi.fn(),
+	takeDriver: vi.fn(),
+	setSource: vi.fn(),
+	studio: { patch: /** @type {Record<string, unknown>} */ ({}) }
 }));
 
 vi.mock('$app/stores', async () => {
@@ -38,8 +41,12 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 					pythonError: '',
 					roomError: '',
 					readOnly: false,
+					blocked: '',
+					isDriver: true,
+					nextAction: 'Open the next step.',
 					step: SCIENCE_STEPS[0],
-					steps: SCIENCE_STEPS
+					steps: SCIENCE_STEPS,
+					...studio.patch
 				});
 				return () => {};
 			},
@@ -47,8 +54,9 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 			destroy() {},
 			selectStep: vi.fn(),
 			openHint,
-			setSource: vi.fn(),
+			setSource,
 			setStdin: vi.fn(),
+			takeDriver,
 			run
 		})
 	};
@@ -56,7 +64,10 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 
 import StudioPage from './+page.svelte';
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	studio.patch = {};
+});
 
 describe('PBL studio page', () => {
 	it('shows the lesson and editor for a joined room', async () => {
@@ -76,5 +87,43 @@ describe('PBL studio page', () => {
 			'href',
 			'/pbl/science/AB23JK/facilitator'
 		);
+		expect(screen.getByText('Open the next step.')).toBeVisible();
+		expect(
+			screen.getAllByRole('button').some((button) => /^\d+$/u.test(button.textContent ?? ''))
+		).toBe(true);
+		expect(screen.getByRole('button', { name: '11', exact: true })).toBeDisabled();
+	});
+
+	it('hides the editor when the team is full', () => {
+		studio.patch = {
+			blocked: 'full',
+			roomError: 'This team is full (10 people).',
+			memberCount: 10,
+			joinable: false,
+			readOnly: true,
+			isDriver: false,
+			nextAction: 'This team is full.',
+			files: {}
+		};
+		render(StudioPage);
+		expect(screen.getByRole('alert')).toHaveTextContent('This team is full (10 people).');
+		expect(screen.queryByRole('textbox', { name: 'Python' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
+	});
+
+	it('lets a follower watch code and take the keyboard', async () => {
+		const user = userEvent.setup();
+		studio.patch = {
+			isDriver: false,
+			readOnly: true,
+			nextAction: 'Press Run.',
+			lastCheck: null,
+			files: {}
+		};
+		render(StudioPage);
+		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveAttribute('readonly');
+		expect(screen.getByText('Watching. Teammate is typing.')).toBeVisible();
+		await user.click(screen.getByRole('button', { name: 'Take keyboard' }));
+		expect(takeDriver).toHaveBeenCalled();
 	});
 });
