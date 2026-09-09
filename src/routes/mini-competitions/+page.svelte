@@ -28,6 +28,10 @@
 		</div>
 
 		<nav class="competition-links ruled-index" aria-label="Programming links">
+			<a class="ruled-link" href={resolve('/pbl', {})}>
+				<span>Open the current workshop</span>
+				<span aria-hidden="true">→</span>
+			</a>
 			<a class="ruled-link" href={resolve('/our-workshops', {})}>
 				<span>Browse workshop archive</span>
 				<span aria-hidden="true">→</span>

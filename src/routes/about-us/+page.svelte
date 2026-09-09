@@ -21,7 +21,10 @@
 		<div class="about-reading editorial-rail">
 			<div class="about-copy">
 				<p>Members can get help while they build and use original workshop material.</p>
-				<p>Mini-competitions are being prepared. Members can also take part in MariHacks.</p>
+				<p>
+					The current workshop is Speedrun Programming in Science. Members can also take part in
+					MariHacks.
+				</p>
 				<p class="beginner-note">You do not need programming experience to join.</p>
 			</div>
 
@@ -40,7 +43,7 @@
 						</a>
 					</li>
 					<li>
-						<a class="ruled-link" href={resolve('/our-workshops', {})}>
+						<a class="ruled-link" href={resolve('/pbl', {})}>
 							<span>Browse workshops</span>
 							<span aria-hidden="true">→</span>
 						</a>

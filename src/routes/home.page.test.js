@@ -26,9 +26,9 @@ describe('home route', () => {
 		render(HomePage);
 		const hero = screen.getByRole('region', { name: 'Come build something with us.' });
 
-		expect(within(hero).getByRole('link', { name: 'Browse workshops' })).toHaveAttribute(
+		expect(within(hero).getByRole('link', { name: 'Start the workshop' })).toHaveAttribute(
 			'href',
-			'/our-workshops'
+			'/pbl'
 		);
 		expect(
 			within(hero).queryByRole('link', { name: 'Explore upcoming events' })
@@ -65,19 +65,21 @@ describe('home route', () => {
 
 		expect(screen.getByRole('heading', { level: 2, name: 'Peer Help' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { level: 2, name: 'Workshops' })).toBeInTheDocument();
-		expect(
-			screen.getByRole('heading', { level: 2, name: 'Mini-Competitions' })
-		).toBeInTheDocument();
+		expect(screen.getByRole('heading', { level: 2, name: 'PBL 1' })).toBeInTheDocument();
 		expect(screen.getByRole('heading', { level: 2, name: 'MariHacks' })).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Visit MariHacks' })).toHaveAttribute(
 			'href',
 			'https://www.marihacks.com/'
 		);
-		expect(screen.getAllByText('Coming Soon')).toHaveLength(1);
+		expect(screen.queryByText('Coming Soon')).not.toBeInTheDocument();
 		expect(screen.queryByRole('link', { name: /current challenge/i })).not.toBeInTheDocument();
-		expect(screen.getByRole('link', { name: 'Mini-Competitions status' })).toHaveAttribute(
+		expect(screen.getAllByRole('link', { name: 'Start the workshop' })[0]).toHaveAttribute(
 			'href',
-			'/mini-competitions'
+			'/pbl'
+		);
+		expect(screen.getByRole('link', { name: 'Open PBL 1' })).toHaveAttribute(
+			'href',
+			'/pbl/science'
 		);
 	});
 

@@ -70,7 +70,7 @@ describe('events route', () => {
 
 		expect(screen.getByRole('link', { name: 'Browse workshops' })).toHaveAttribute(
 			'href',
-			'/our-workshops'
+			'/pbl'
 		);
 		expect(screen.queryByRole('link', { name: 'Browse workshop archive' })).not.toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Browse resources' })).toHaveAttribute(

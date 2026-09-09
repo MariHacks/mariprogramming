@@ -73,6 +73,25 @@ describe('consolidated database schema', () => {
 		expect(schema.accountRelations).toBeDefined();
 	});
 
+	it('declares PBL team rooms that are not hardcoded to a single lesson', () => {
+		expect(tableName(schema.pblRooms)).toBe('pbl_rooms');
+		expect(tableName(schema.pblRoomMembers)).toBe('pbl_room_members');
+		expect(getTableConfig(schema.pblRooms).columns.map((column) => column.name)).toEqual(
+			expect.arrayContaining(['code', 'pbl_id', 'team_name', 'source', 'current_step', 'opened_hints'])
+		);
+		expect(indexNames(schema.pblRooms)).toEqual(['pbl_rooms_code_unique_idx', 'pbl_rooms_pbl_id_idx']);
+		expect(checkNames(schema.pblRooms)).toEqual([
+			'pbl_rooms_member_count_range',
+			'pbl_rooms_source_length',
+			'pbl_rooms_steps_nonnegative',
+			'pbl_rooms_version_positive'
+		]);
+		expect(indexNames(schema.pblRoomMembers)).toEqual([
+			'pbl_room_members_room_idx',
+			'pbl_room_members_room_member_unique_idx'
+		]);
+	});
+
 	it('tracks completion of the required Programming Club form', () => {
 		const membershipColumns = getTableConfig(schema.mtProgrammingClubMemberships).columns.map(
 			(column) => column.name

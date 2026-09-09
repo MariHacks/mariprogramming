@@ -22,7 +22,7 @@ describe('about route', () => {
 		expect(
 			screen.getByText('Members can get help while they build and use original workshop material.')
 		).toBeInTheDocument();
-		expect(screen.getByText(/mini-competitions are being prepared/i)).toBeInTheDocument();
+		expect(screen.getByText(/Speedrun Programming in Science/i)).toBeInTheDocument();
 		expect(screen.getByText(/do not need programming experience/i)).toBeInTheDocument();
 		expect(container).not.toHaveTextContent(
 			/your next move|before you begin|how we learn together/i
@@ -45,7 +45,7 @@ describe('about route', () => {
 		expect(links[2]).toBe(resourceLink);
 		expect(signupLink).toHaveAttribute('href', clubContent.signupUrl);
 		expect(signupLink).not.toHaveAttribute('target');
-		expect(workshopLink).toHaveAttribute('href', '/our-workshops');
+		expect(workshopLink).toHaveAttribute('href', '/pbl');
 		expect(resourceLink).toHaveAttribute('href', '/resources');
 		expect(discordLink).toHaveAttribute('href', 'https://discord.gg/c6JJw9d');
 		expect(discordLink).toHaveAttribute('target', '_blank');

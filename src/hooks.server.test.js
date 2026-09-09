@@ -98,6 +98,23 @@ describe('server authentication hook', () => {
 		expect(response.headers.has('referrer-policy')).toBe(false);
 	});
 
+	it('relaxes Python runtime CSP only on PBL pages', async () => {
+		const setup = harness();
+		const policy = "script-src 'self'; connect-src 'self'; worker-src 'self'";
+		setup.resolve.mockImplementation(async (_event, options) => {
+			const html = `<meta http-equiv="content-security-policy" content="${policy}">`;
+			const body = options?.transformPageChunk ? options.transformPageChunk({ html }) : html;
+			return new Response(body, { headers: { 'content-security-policy': policy } });
+		});
+		const pbl = await setup.handle({ event: event('/pbl/science'), resolve: setup.resolve });
+		expect(await pbl.text()).toContain('wasm-unsafe-eval');
+		expect(pbl.headers.get('content-security-policy')).toContain('https://cdn.jsdelivr.net');
+		setup.resolve.mockImplementation(async () => new Response('public response'));
+		const events = await setup.handle({ event: event('/events'), resolve: setup.resolve });
+		expect(setup.resolve.mock.calls.at(-1)?.[1]).toBeUndefined();
+		expect(await events.text()).toBe('public response');
+	});
+
 	it('preserves downstream headers while tightening a sensitive response', async () => {
 		const setup = harness();
 		setup.resolve.mockResolvedValue(

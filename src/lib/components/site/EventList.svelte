@@ -46,7 +46,7 @@
 			<p>Confirmed dates appear here when published.</p>
 		</div>
 		<nav class="empty-actions" aria-label="While you wait">
-			<a class="empty-action" href={resolve('/our-workshops', {})}>
+			<a class="empty-action" href={resolve('/pbl', {})}>
 				<span>Browse workshops</span>
 				<span aria-hidden="true">→</span>
 			</a>

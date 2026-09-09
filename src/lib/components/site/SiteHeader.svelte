@@ -15,11 +15,11 @@
 	const primaryLinks = [
 		{ label: 'About', href: '/about-us', external: false },
 		{ label: 'Events', href: '/events', external: false },
-		{ label: 'Workshops', href: '/our-workshops', external: false },
+		{ label: 'Workshops', href: '/pbl', external: false },
 		{ label: 'MariTools', href: '/tools', external: false }
 	];
 	const statusLinks = [
-		{ label: 'Mini-Competitions', href: '/mini-competitions', external: false }
+		{ label: 'Workshop archive', href: '/our-workshops', external: false }
 	];
 	const compactLinks = primaryLinks.slice(0, 3);
 	const moreLinks = [
