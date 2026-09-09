@@ -31,6 +31,8 @@ export const pblRooms = pgTable(
 		stepEnteredAt: timestamp('step_entered_at', { withTimezone: true }).defaultNow().notNull(),
 		memberCount: integer('member_count').default(1).notNull(),
 		driverMemberId: varchar('driver_member_id', { length: 64 }),
+		yjsState: text('yjs_state').default('').notNull(),
+		awarenessState: text('awareness_state').default('').notNull(),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()

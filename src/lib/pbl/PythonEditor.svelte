@@ -1,13 +1,20 @@
 <script>
 	import { onMount } from 'svelte';
 	import { createPythonCollabEditor } from '$lib/pbl/python-editor.js';
+	import { teammateColor, teammateName } from '$lib/pbl/yjs-collab.js';
 
 	/** @type {string} */
 	export let source = '';
+	/** @type {string} */
+	export let yjsState = '';
+	/** @type {string} */
+	export let awarenessState = '';
 	/** @type {boolean} */
 	export let editable = true;
-	/** @type {(value: string) => void} */
-	export let onSource = () => {};
+	/** @type {{ name: string, color: string, colorLight: string } | null} */
+	export let user = null;
+	/** @type {(payload: { source: string, yjsState: string, awarenessState: string }) => void} */
+	export let onCollab = () => {};
 
 	let host = /** @type {HTMLDivElement | null} */ (null);
 	/** @type {ReturnType<typeof createPythonCollabEditor> | null} */
@@ -15,11 +22,23 @@
 
 	onMount(() => {
 		if (!host) return;
+		const seed =
+			typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+				? crypto.randomUUID()
+				: String(Date.now());
+		const palette = teammateColor(seed);
 		const current = createPythonCollabEditor(host, {
 			source,
+			yjsState,
+			awarenessState,
 			editable,
-			onChange(value) {
-				onSource(value);
+			user: user ?? {
+				name: teammateName(seed),
+				color: palette.color,
+				colorLight: palette.colorLight
+			},
+			onChange(payload) {
+				onCollab(payload);
 			}
 		});
 		editor = current;
@@ -29,7 +48,8 @@
 		};
 	});
 
-	$: if (editor) editor.setSource(source);
+	$: if (editor) editor.applyYjsState(yjsState);
+	$: if (editor) editor.applyAwarenessState(awarenessState);
 	$: if (editor) editor.setEditable(editable);
 </script>
 

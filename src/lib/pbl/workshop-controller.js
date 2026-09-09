@@ -36,7 +36,9 @@ export function createWorkshopController(options) {
 		memberCount: 1,
 		version: 0,
 		stepEnteredAt: now(),
-		joinable: true
+		joinable: true,
+		yjsState: '',
+		awarenessState: ''
 	};
 	let stdinText = '';
 	let output = '';
@@ -46,7 +48,6 @@ export function createWorkshopController(options) {
 	let roomError = '';
 	let readOnly = false;
 	let blocked = '';
-	let isDriver = true;
 
 	function snapshot() {
 		return {
@@ -61,7 +62,7 @@ export function createWorkshopController(options) {
 			roomError,
 			readOnly,
 			blocked,
-			isDriver,
+			isDriver: blocked !== 'full',
 			nextAction: studioNextAction({
 				blocked,
 				lastCheck: room.lastCheck,
@@ -78,8 +79,7 @@ export function createWorkshopController(options) {
 		code: options.code,
 		onState: (next) => {
 			room = { ...room, ...next };
-			if (typeof next.isDriver === 'boolean') isDriver = next.isDriver;
-			readOnly = blocked === 'full' || !isDriver;
+			readOnly = blocked === 'full';
 			publish();
 		},
 		onError: (message) => {
@@ -87,7 +87,6 @@ export function createWorkshopController(options) {
 			if (message.includes('full')) {
 				blocked = 'full';
 				readOnly = true;
-				isDriver = false;
 			}
 			publish();
 		}
@@ -96,14 +95,13 @@ export function createWorkshopController(options) {
 	async function join() {
 		const joined = await sync.join();
 		if (!joined) {
-			readOnly = blocked === 'full' || !isDriver;
+			readOnly = blocked === 'full';
 			if (blocked === 'full') await sync.pull();
 			publish();
 			return snapshot();
 		}
 		room = { ...room, ...joined };
-		if (typeof joined.isDriver === 'boolean') isDriver = joined.isDriver;
-		readOnly = blocked === 'full' || !isDriver;
+		readOnly = blocked === 'full';
 		sync.start();
 		publish();
 		return snapshot();
@@ -111,16 +109,24 @@ export function createWorkshopController(options) {
 
 	/** @param {string} source */
 	function setSource(source) {
-		if (blocked || !isDriver) return;
-		room = { ...room, source };
-		sync.update({ source });
-		publish();
+		if (blocked) return;
+		setCollab({ source, yjsState: room.yjsState, awarenessState: room.awarenessState });
 	}
 
-	function takeDriver() {
+	/** @param {{ source?: string, yjsState?: string, awarenessState?: string }} payload */
+	function setCollab(payload) {
 		if (blocked) return;
-		sync.update({ takeDriver: true });
-		void sync.flush();
+		room = {
+			...room,
+			source: payload.source ?? room.source,
+			yjsState: payload.yjsState ?? room.yjsState,
+			awarenessState: payload.awarenessState ?? room.awarenessState
+		};
+		sync.update({
+			source: room.source,
+			yjsState: room.yjsState,
+			awarenessState: room.awarenessState
+		});
 		publish();
 	}
 
@@ -193,7 +199,7 @@ export function createWorkshopController(options) {
 	return {
 		join,
 		setSource,
-		takeDriver,
+		setCollab,
 		setStdin,
 		selectStep,
 		openHint,

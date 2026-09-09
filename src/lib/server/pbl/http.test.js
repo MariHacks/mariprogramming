@@ -83,7 +83,7 @@ describe('PBL HTTP helpers', () => {
 				new Request('https://club.example/api/pbl/rooms', {
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
-					body: `{"x":"${'a'.repeat(120001)}"}`
+					body: `{"x":"${'a'.repeat(400001)}"}`
 				})
 			)
 		).rejects.toMatchObject({ status: 413 });
@@ -91,7 +91,7 @@ describe('PBL HTTP helpers', () => {
 			readPblJson(
 				new Request('https://club.example/api/pbl/rooms', {
 					method: 'POST',
-					headers: { 'content-type': 'application/json', 'content-length': '120001' },
+					headers: { 'content-type': 'application/json', 'content-length': '400001' },
 					body: '{}'
 				})
 			)

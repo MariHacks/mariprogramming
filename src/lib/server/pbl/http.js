@@ -14,7 +14,7 @@ import {
 	getSharedMemoryPblRepository
 } from './store.js';
 
-const MAX_JSON_BYTES = 120000;
+const MAX_JSON_BYTES = 400000;
 const UNAVAILABLE = 'The workshop room service is unavailable.';
 
 /** @param {unknown} error */

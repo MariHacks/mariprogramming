@@ -84,7 +84,9 @@ describe('consolidated database schema', () => {
 				'source',
 				'current_step',
 				'opened_hints',
-				'driver_member_id'
+				'driver_member_id',
+				'yjs_state',
+				'awareness_state'
 			])
 		);
 		expect(indexNames(schema.pblRooms)).toEqual(['pbl_rooms_code_unique_idx', 'pbl_rooms_pbl_id_idx']);

@@ -42,6 +42,7 @@ describe('PBL schema bootstrap', () => {
 			if (String(sql).includes('to_regclass')) return { rows: [{ table_name: 'pbl_rooms' }] };
 			if (String(sql).includes('driver_member_id'))
 				return { rows: [{ column_name: 'driver_member_id' }] };
+			if (String(sql).includes('yjs_state')) return { rows: [{ column_name: 'yjs_state' }] };
 			return { rows: [] };
 		});
 		const { pool } = poolHarness(query);
@@ -60,6 +61,61 @@ describe('PBL schema bootstrap', () => {
 		expect(
 			query.mock.calls.some(
 				(call) => String(call[0]).includes('driver_member_id') && String(call[0]).includes('ALTER')
+			)
+		).toBe(true);
+		expect(
+			query.mock.calls.some(
+				(call) => String(call[0]).includes('yjs_state') && String(call[0]).includes('ALTER')
+			)
+		).toBe(true);
+	});
+
+	it('still reports the original error if yjs alter rollback fails', async () => {
+		const query = vi.fn(async (sql) => {
+			if (String(sql).includes('to_regclass')) return { rows: [{ table_name: 'pbl_rooms' }] };
+			if (String(sql).includes('driver_member_id'))
+				return { rows: [{ column_name: 'driver_member_id' }] };
+			if (String(sql).includes('ALTER') && String(sql).includes('yjs_state')) {
+				throw new Error('cannot alter');
+			}
+			if (String(sql) === 'ROLLBACK') throw new Error('rollback failed');
+			return { rows: [] };
+		});
+		const { pool } = poolHarness(query);
+		await expect(
+			ensurePblSchema('postgresql://u:p@localhost/db', { createPool: () => pool })
+		).rejects.toThrow('cannot alter');
+	});
+
+	it('rolls back when adding yjs_state fails', async () => {
+		const query = vi.fn(async (sql) => {
+			if (String(sql).includes('to_regclass')) return { rows: [{ table_name: 'pbl_rooms' }] };
+			if (String(sql).includes('driver_member_id'))
+				return { rows: [{ column_name: 'driver_member_id' }] };
+			if (String(sql).includes('ALTER') && String(sql).includes('yjs_state')) {
+				throw new Error('cannot alter');
+			}
+			return { rows: [] };
+		});
+		const { pool } = poolHarness(query);
+		await expect(
+			ensurePblSchema('postgresql://u:p@localhost/db', { createPool: () => pool })
+		).rejects.toThrow('cannot alter');
+		expect(query).toHaveBeenCalledWith('ROLLBACK');
+	});
+
+	it('adds yjs_state when the rooms table already has a driver column', async () => {
+		const query = vi.fn(async (sql) => {
+			if (String(sql).includes('to_regclass')) return { rows: [{ table_name: 'pbl_rooms' }] };
+			if (String(sql).includes('driver_member_id'))
+				return { rows: [{ column_name: 'driver_member_id' }] };
+			return { rows: [] };
+		});
+		const { pool } = poolHarness(query);
+		await ensurePblSchema('postgresql://u:p@localhost/db', { createPool: () => pool });
+		expect(
+			query.mock.calls.some(
+				(call) => String(call[0]).includes('yjs_state') && String(call[0]).includes('ALTER')
 			)
 		).toBe(true);
 	});

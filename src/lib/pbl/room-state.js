@@ -43,7 +43,9 @@ export function normalizeOpenedHints(value) {
  *   stepEnteredAt: string,
  *   memberCount: number,
  *   version: number,
- *   driverMemberId?: string | null
+ *   driverMemberId?: string | null,
+ *   yjsState?: string,
+ *   awarenessState?: string
  * }} row
  * @param {string} [viewerMemberId]
  */
@@ -60,7 +62,9 @@ export function publicRoomView(row, viewerMemberId) {
 		stepEnteredAt: row.stepEnteredAt,
 		memberCount: row.memberCount,
 		version: row.version,
+		yjsState: typeof row.yjsState === 'string' ? row.yjsState : '',
+		awarenessState: typeof row.awarenessState === 'string' ? row.awarenessState : '',
 		joinable: canAcceptMember(row.memberCount),
-		isDriver: Boolean(row.driverMemberId && viewerMemberId && row.driverMemberId === viewerMemberId)
+		isDriver: Boolean(viewerMemberId)
 	};
 }

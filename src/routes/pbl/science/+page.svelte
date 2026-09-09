@@ -79,7 +79,7 @@
 			<ul class="facts">
 				<li>In-browser Python. No install.</li>
 				<li>Checks after Run. Three hints per step.</li>
-				<li>One driver types. Teammates follow, then take the keyboard.</li>
+				<li>Everyone types at once. Colored cursors show who is where.</li>
 			</ul>
 		</div>
 

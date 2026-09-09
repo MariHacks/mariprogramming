@@ -169,19 +169,14 @@
 				{#if state.roomError}
 					<p class="error" role="alert">{state.roomError}</p>
 				{/if}
-				<p class="drive">
-					{#if state.isDriver}
-						You type. Teammates see this.
-					{:else}
-						Watching. Teammate is typing.
-						<button type="button" on:click={() => controller?.takeDriver()}>Take keyboard</button>
-					{/if}
-				</p>
+				<p class="drive">Everyone can type.</p>
 				<div class="editor-shell">
 					<PythonEditor
 						source={state.source}
+						yjsState={state.yjsState ?? ''}
+						awarenessState={state.awarenessState ?? ''}
 						editable={!state.readOnly}
-						onSource={(value) => controller?.setSource(value)}
+						onCollab={(payload) => controller?.setCollab(payload)}
 					/>
 				</div>
 				<p class="next-action">{state.nextAction}</p>
@@ -435,16 +430,7 @@
 		text-transform: none;
 	}
 
-	.drive button {
-		min-height: 2.15rem;
-		padding: 0.25rem 0.7rem;
-		border: 1px solid #78dce8;
-		border-radius: 0.3rem;
-		background: transparent;
-		color: #78dce8;
-		font-weight: 650;
-		cursor: pointer;
-	}
+
 
 	.pane-switch {
 		display: none;

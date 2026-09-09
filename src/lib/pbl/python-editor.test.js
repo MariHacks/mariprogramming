@@ -90,7 +90,7 @@ describe('python collab editor', () => {
 		editor.view.dispatch({
 			changes: { from: editor.view.state.doc.length, insert: '\nprint(2)' }
 		});
-		expect(onChange).toHaveBeenCalledWith('print(1)\nprint(2)');
+		expect(onChange.mock.calls[0][0].source).toBe('print(1)\nprint(2)');
 		expect(editor.getSource()).toBe('print(1)\nprint(2)');
 		onChange.mockClear();
 		editor.setSource('print(1)\nprint(2)');
@@ -111,5 +111,29 @@ describe('python collab editor', () => {
 		editor.ytext.insert(editor.ytext.length, '\n# teammate');
 		expect(editor.view.state.doc.toString()).toBe('print(1)\n# teammate');
 		editor.destroy();
+	});
+
+	it('loads a Yjs snapshot and applies a remote teammate update', () => {
+		const onChange = vi.fn();
+		const author = mount({
+			source: 'print("A")',
+			user: { name: 'Ada', color: '#ff6188', colorLight: '#ff618833' },
+			onChange
+		});
+		const snapshot = author.encode();
+		const peer = mount({
+			yjsState: snapshot.yjsState,
+			awarenessState: snapshot.awarenessState,
+			user: { name: 'Bo', color: '#a9dc76', colorLight: '#a9dc7633' }
+		});
+		expect(peer.getSource()).toBe('print("A")');
+		author.ytext.insert(author.ytext.length, '\nprint("B")');
+		peer.applyYjsState(author.encode().yjsState);
+		peer.applyAwarenessState(author.encode().awarenessState);
+		peer.applyYjsState('');
+		peer.applyAwarenessState('');
+		expect(peer.getSource()).toContain('print("B")');
+		author.destroy();
+		peer.destroy();
 	});
 });

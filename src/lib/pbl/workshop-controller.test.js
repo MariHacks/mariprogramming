@@ -25,7 +25,9 @@ function harness(overrides = {}) {
 			openedHints: {},
 			memberCount: 2,
 			version: 1,
-			isDriver: true
+			isDriver: true,
+			yjsState: '',
+			awarenessState: ''
 		})),
 		start: vi.fn(),
 		stop: vi.fn(),
@@ -86,7 +88,11 @@ describe('workshop controller', () => {
 		expect(controller.getState().pythonError).toBe('boom');
 		expect(controller.getState().unlockedStep).toBe(0);
 		controller.setSource('print("team")');
-		expect(sync.update).toHaveBeenCalledWith({ source: 'print("team")' });
+		expect(sync.update).toHaveBeenCalledWith({
+			source: 'print("team")',
+			yjsState: '',
+			awarenessState: ''
+		});
 		onState()({ source: 'print(1)', currentStep: 99, unlockedStep: 0, openedHints: null });
 		expect(controller.getState().step.title).toBe('Get something running');
 		controller.openHint(1);
@@ -117,10 +123,10 @@ describe('workshop controller', () => {
 		full.controller.destroy();
 	});
 
-	it('does not push source from a follower until they take the keyboard', async () => {
+	it('pushes source from every joined member', async () => {
 		/** @type {any} */
 		let inner;
-		const follower = harness({
+		const teammate = harness({
 			createSync: () => {
 				inner = {
 					join: vi.fn(async () => ({
@@ -131,7 +137,8 @@ describe('workshop controller', () => {
 						openedHints: {},
 						memberCount: 2,
 						version: 1,
-						isDriver: false
+						yjsState: '',
+						awarenessState: ''
 					})),
 					start: vi.fn(),
 					stop: vi.fn(),
@@ -141,13 +148,30 @@ describe('workshop controller', () => {
 				return inner;
 			}
 		});
-		await follower.controller.join();
-		follower.controller.setSource('stolen');
-		expect(inner.update).not.toHaveBeenCalled();
-		expect(follower.controller.getState().source).toBe('print("shared")');
-		follower.controller.takeDriver();
-		expect(inner.update).toHaveBeenCalledWith({ takeDriver: true });
-		follower.controller.destroy();
+		await teammate.controller.join();
+		teammate.controller.setSource('print("from B")');
+		expect(inner.update).toHaveBeenCalledWith({
+			source: 'print("from B")',
+			yjsState: '',
+			awarenessState: ''
+		});
+		teammate.controller.setCollab({});
+		expect(inner.update).toHaveBeenCalledWith({
+			source: 'print("from B")',
+			yjsState: '',
+			awarenessState: ''
+		});
+		teammate.controller.setCollab({
+			source: 'print("from B")\nprint("from A")',
+			yjsState: 'abc=',
+			awarenessState: 'def='
+		});
+		expect(inner.update).toHaveBeenCalledWith({
+			source: 'print("from B")\nprint("from A")',
+			yjsState: 'abc=',
+			awarenessState: 'def='
+		});
+		teammate.controller.destroy();
 	});
 
 	it('can be constructed with default factories and missing output fields', async () => {

@@ -1,5 +1,6 @@
 import migrationSql0020 from '../../../../drizzle/0020_pbl_rooms.sql?raw';
 import migrationSql0021 from '../../../../drizzle/0021_pbl_room_driver.sql?raw';
+import migrationSql0022 from '../../../../drizzle/0022_pbl_yjs_state.sql?raw';
 import { readMigrationEnvironment, readPblEnvironment } from '../config/environment.js';
 import { createRequestPool } from '../db/transaction.js';
 
@@ -34,12 +35,20 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 			"SELECT to_regclass('public.pbl_rooms')::text AS table_name"
 		);
 		if (existing.rows[0]?.table_name) {
-			const column = await client.query(
+			const driver = await client.query(
 				`SELECT column_name FROM information_schema.columns
 				 WHERE table_schema = 'public' AND table_name = 'pbl_rooms' AND column_name = 'driver_member_id'`
 			);
-			if (column.rows[0]?.column_name) return;
-			const statements = splitMigrationStatements(migrationSql0021);
+			const yjs = await client.query(
+				`SELECT column_name FROM information_schema.columns
+				 WHERE table_schema = 'public' AND table_name = 'pbl_rooms' AND column_name = 'yjs_state'`
+			);
+			/** @type {string[]} */
+			const statements = [];
+			if (!driver.rows[0]?.column_name)
+				statements.push(...splitMigrationStatements(migrationSql0021));
+			if (!yjs.rows[0]?.column_name) statements.push(...splitMigrationStatements(migrationSql0022));
+			if (statements.length === 0) return;
 			await client.query('BEGIN');
 			try {
 				for (const statement of statements) {
@@ -58,7 +67,8 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 		}
 		const statements = [
 			...splitMigrationStatements(migrationSql0020),
-			...splitMigrationStatements(migrationSql0021)
+			...splitMigrationStatements(migrationSql0021),
+			...splitMigrationStatements(migrationSql0022)
 		];
 		await client.query('BEGIN');
 		try {

@@ -2,11 +2,10 @@ import { cleanup, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { openHint, run, takeDriver, setSource, studio } = vi.hoisted(() => ({
+const { openHint, run, setCollab, studio } = vi.hoisted(() => ({
 	openHint: vi.fn(),
 	run: vi.fn(),
-	takeDriver: vi.fn(),
-	setSource: vi.fn(),
+	setCollab: vi.fn(),
 	studio: { patch: /** @type {Record<string, unknown>} */ ({}) }
 }));
 
@@ -59,9 +58,9 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 			destroy() {},
 			selectStep: vi.fn(),
 			openHint,
-			setSource,
+			setCollab,
+			setSource: vi.fn(),
 			setStdin: vi.fn(),
-			takeDriver,
 			run
 		})
 	};
@@ -116,19 +115,20 @@ describe('PBL studio page', () => {
 		expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
 	});
 
-	it('lets a follower watch code and take the keyboard', async () => {
-		const user = userEvent.setup();
+	it('lets every teammate type', () => {
 		studio.patch = {
-			isDriver: false,
-			readOnly: true,
+			isDriver: true,
+			readOnly: false,
 			nextAction: 'Press Run.',
 			lastCheck: null,
 			files: {}
 		};
 		render(StudioPage);
-		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveAttribute('aria-readonly', 'true');
-		expect(screen.getByText('Watching. Teammate is typing.')).toBeVisible();
-		await user.click(screen.getByRole('button', { name: 'Take keyboard' }));
-		expect(takeDriver).toHaveBeenCalled();
+		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveAttribute(
+			'aria-readonly',
+			'false'
+		);
+		expect(screen.getByText('Everyone can type.')).toBeVisible();
+		expect(screen.queryByRole('button', { name: 'Take keyboard' })).toBeNull();
 	});
 });

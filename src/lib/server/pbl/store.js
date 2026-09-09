@@ -10,6 +10,7 @@ import {
 	publicRoomView
 } from '$lib/pbl/room-state.js';
 import { SCIENCE_STARTER_SOURCE, SCIENCE_STEP_COUNT } from '$lib/pbl/science-workshop.js';
+import { mergeAwarenessStates, mergeYjsStates, normalizeYjsState } from '$lib/pbl/yjs-collab.js';
 import { pblRoomMembers, pblRooms } from '../db/schema';
 import { generateRoomCode } from './ids.js';
 
@@ -72,7 +73,9 @@ export function roomFromRow(row, viewerMemberId) {
 					: String(row.stepEnteredAt),
 			memberCount: row.memberCount,
 			version: row.version,
-			driverMemberId: row.driverMemberId ?? null
+			driverMemberId: row.driverMemberId ?? null,
+			yjsState: row.yjsState ?? '',
+			awarenessState: row.awarenessState ?? ''
 		},
 		viewerMemberId
 	);
@@ -222,7 +225,9 @@ export function createPblStore(repository, clock = {}) {
 				stepEnteredAt: enteredAt,
 				memberCount: 1,
 				version: 1,
-				driverMemberId: input.memberId
+				driverMemberId: input.memberId,
+				yjsState: '',
+				awarenessState: ''
 			});
 			if (!row) throw new PblInputError('Could not create the team room.', 503);
 			await repository.insertMember({ roomId: row.id, memberId: input.memberId });
@@ -268,7 +273,8 @@ export function createPblStore(repository, clock = {}) {
 		 *   unlockedStep?: unknown,
 		 *   openedHints?: unknown,
 		 *   lastCheck?: unknown,
-		 *   takeDriver?: unknown
+		 *   yjsState?: unknown,
+		 *   awarenessState?: unknown
 		 * }} input
 		 */
 		async updateRoom(input) {
@@ -283,18 +289,30 @@ export function createPblStore(repository, clock = {}) {
 
 			/** @type {Record<string, unknown>} */
 			const patch = { version: row.version + 1, updatedAt: now() };
-			const taking = input.takeDriver === true;
-			if (taking) patch.driverMemberId = input.memberId;
-			if (input.source !== undefined) {
-				const driverId = taking ? input.memberId : row.driverMemberId;
-				if (driverId && driverId !== input.memberId) {
-					throw new PblInputError('Someone else has the keyboard.', 403);
+			const yjsIncoming = normalizeYjsState(input.yjsState);
+			if (yjsIncoming === null) throw new PblInputError('Invalid editor sync.');
+			const awarenessIncoming = normalizeYjsState(input.awarenessState);
+			if (awarenessIncoming === null) throw new PblInputError('Invalid editor sync.');
+			if (yjsIncoming) {
+				try {
+					const merged = mergeYjsStates(row.yjsState || '', yjsIncoming);
+					patch.yjsState = merged.yjsState;
+					patch.source = merged.source;
+				} catch (error) {
+					throw new PblInputError(error instanceof Error ? error.message : 'Invalid editor sync.');
 				}
-				if (!driverId) patch.driverMemberId = input.memberId;
+			} else if (input.source !== undefined) {
 				if (typeof input.source !== 'string' || input.source.length > MAX_SOURCE_CHARS) {
 					throw new PblInputError('The program is too long to sync.');
 				}
 				patch.source = input.source;
+			}
+			if (awarenessIncoming) {
+				patch.awarenessState = mergeAwarenessStates(
+					row.awarenessState || '',
+					awarenessIncoming,
+					now().getTime()
+				);
 			}
 			if (input.openedHints !== undefined)
 				patch.openedHints = normalizeOpenedHints(input.openedHints);

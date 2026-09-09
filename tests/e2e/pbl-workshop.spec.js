@@ -147,7 +147,7 @@ test.describe.serial('PBL 1 student workshop', () => {
 		await keepVideo(context, rec, '02-beginner-run-and-reload');
 	});
 
-	test('lets a second device follow without clobbering, then blocks the 11th person', async ({
+	test('lets two devices type at once, then blocks the 11th person', async ({
 		page,
 		browser,
 		request
@@ -164,36 +164,31 @@ test.describe.serial('PBL 1 student workshop', () => {
 			timeout: 30000
 		});
 		const code = driver.page.url().split('/').at(-1);
-		await expect(driver.page.getByText('You type. Teammates see this.')).toBeVisible({
+		await expect(driver.page.getByText('Everyone can type.')).toBeVisible({
 			timeout: 20000
 		});
 		const follow = await recordedPage(browser, origin);
 		await follow.page.goto(`/pbl/science/${code}`);
-		await expect(follow.page.getByText('Watching. Teammate is typing.')).toBeVisible({
+		await expect(follow.page.getByText('Everyone can type.')).toBeVisible({
 			timeout: 20000
 		});
-		await expect(pythonBox(follow.page)).toHaveAttribute('aria-readonly', 'true');
+		await expect(pythonBox(follow.page)).toHaveAttribute('aria-readonly', 'false');
 		await fillPython(driver.page, 'print("synced from device A")\n');
 		await expect(pythonBox(follow.page)).toContainText(/synced from device A/, {
 			timeout: 15000
 		});
-		await pythonBox(follow.page).pressSequentially('nope');
-		await expect(pythonBox(driver.page)).toContainText(/synced from device A/, {
-			timeout: 8000
+		await pythonBox(follow.page).click();
+		await follow.page.keyboard.press('End');
+		await follow.page.keyboard.press('Enter');
+		await pythonBox(follow.page).pressSequentially('print("from B")');
+		await expect(pythonBox(driver.page)).toContainText(/from B/, {
+			timeout: 15000
 		});
 		await expect(pythonBox(follow.page)).toContainText(/synced from device A/, {
 			timeout: 8000
 		});
-		await saveProof(follow.page, '05-follower-readonly');
-		await follow.page.getByRole('button', { name: 'Take keyboard' }).click();
-		await expect(follow.page.getByText('You type. Teammates see this.')).toBeVisible({
-			timeout: 15000
-		});
-		await fillPython(follow.page, 'print("taken by B")\n');
-		await expect(pythonBox(driver.page)).toContainText(/taken by B/, {
-			timeout: 15000
-		});
-		await saveProof(driver.page, '06-two-session-handoff');
+		await saveProof(follow.page, '05-two-cursors-type');
+		await saveProof(driver.page, '06-two-session-merge');
 		await keepVideo(follow.context, follow.page, '05-follower-and-handoff');
 
 		for (let i = 0; i < 8; i += 1) {

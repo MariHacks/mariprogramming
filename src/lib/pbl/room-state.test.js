@@ -66,7 +66,9 @@ describe('PBL room state', () => {
 			memberCount: 3,
 			version: 4,
 			joinable: true,
-			isDriver: false
+			isDriver: false,
+			yjsState: '',
+			awarenessState: ''
 		});
 		expect(
 			publicRoomView(
