@@ -37,7 +37,11 @@ export function pblErrorResponse(error) {
 	}
 	const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
 	const name = error instanceof Error ? error.name : 'Error';
-	console.error('pbl_unavailable', name, code);
+	const message = (error instanceof Error ? error.message : String(error))
+		.replace(/postgres(?:ql)?:\/\/\S+/gi, '[db]')
+		.replace(/[\w.-]+\.neon\.tech\S*/gi, '[host]')
+		.slice(0, 180);
+	console.error('pbl_unavailable', name, code, message);
 	return json({ error: UNAVAILABLE }, { status: 503, headers: { 'cache-control': 'no-store' } });
 }
 
@@ -122,12 +126,29 @@ export function createPblRuntime(dependencies = {}) {
 		} catch {
 			/* table may already exist; Neon queries still run */
 		}
-		return withTransaction(
-			async (transaction) => {
-				return operation(createStore(createRepository(transaction)));
-			},
-			{ databaseUrl }
-		);
+		const run = (overrides = {}) =>
+			withTransaction(
+				async (transaction) => {
+					return operation(createStore(createRepository(transaction)));
+				},
+				{ databaseUrl, ...overrides }
+			);
+		try {
+			return await run();
+		} catch (error) {
+			const message = (error instanceof Error ? error.message : String(error))
+				.replace(/postgres(?:ql)?:\/\/\S+/gi, '[db]')
+				.replace(/[\w.-]+\.neon\.tech\S*/gi, '[host]')
+				.slice(0, 180);
+			console.error('pbl_neon_failed', error instanceof Error ? error.name : 'Error', message);
+			const { default: pg } = await import('pg');
+			const { drizzle: drizzlePostgres } = await import('drizzle-orm/node-postgres');
+			const schema = await import('../db/schema');
+			return run({
+				createPool: (url) => new pg.Pool({ connectionString: url, max: 1 }),
+				createDatabase: (client) => drizzlePostgres(client, { schema })
+			});
+		}
 	}
 
 	return { withStore };
