@@ -51,6 +51,8 @@ const DISALLOWED_HOST_SUFFIX_LABELS = new Set([
 
 /** @typedef {{ databaseUrl: string }} OrderConfirmationEnvironment */
 
+/** @typedef {{ databaseUrl: string }} PblEnvironment */
+
 /** @typedef {{ appOrigin: string, databaseUrl: string }} OrderConfirmationAccessEnvironment */
 
 /** @typedef {{ appOrigin: string }} StaffSignInEnvironment */
@@ -339,6 +341,17 @@ export function readOrderConfirmationEnvironment(source = privateEnvironment) {
 	return Object.freeze({
 		databaseUrl: postgresUrl(requiredString(source, 'DATABASE_URL'))
 	});
+}
+
+/**
+ * Public PBL rooms only need the runtime database. Payment, Google, and cron
+ * configuration must not keep a workshop offline.
+ *
+ * @param {unknown} [source]
+ * @returns {Readonly<PblEnvironment>}
+ */
+export function readPblEnvironment(source = privateEnvironment) {
+	return readOrderConfirmationEnvironment(source);
 }
 
 /**

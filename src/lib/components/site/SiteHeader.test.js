@@ -26,7 +26,7 @@ describe('SiteHeader', () => {
 		);
 		expect(within(navigation).getByRole('link', { name: 'Workshops' })).toHaveAttribute(
 			'href',
-			'/our-workshops'
+			'/pbl'
 		);
 		expect(within(navigation).getByRole('link', { name: 'MariTools' })).toHaveAttribute(
 			'href',
@@ -245,33 +245,33 @@ describe('SiteHeader', () => {
 		);
 	});
 
-	it('keeps Mini-Competitions reachable from compact and mobile disclosure menus', () => {
-		const { container } = render(SiteHeader, { props: { pathname: '/mini-competitions' } });
+	it('keeps the workshop archive reachable from compact and mobile disclosure menus', () => {
+		const { container } = render(SiteHeader, { props: { pathname: '/our-workshops' } });
 
-		expect(container.querySelector('#compact-more-menu a[href="/mini-competitions"]')).toHaveAttribute(
+		expect(container.querySelector('#compact-more-menu a[href="/our-workshops"]')).toHaveAttribute(
 			'aria-current',
 			'page'
 		);
-		expect(container.querySelector('#mobile-navigation a[href="/mini-competitions"]')).toHaveAttribute(
+		expect(container.querySelector('#mobile-navigation a[href="/our-workshops"]')).toHaveAttribute(
 			'aria-current',
 			'page'
 		);
 		expect(
 			within(screen.getByRole('navigation', { name: 'Primary navigation' })).queryByRole(
 				'link',
-				{ name: 'Mini-Competitions' }
+				{ name: 'Workshop archive' }
 			)
 		).not.toBeInTheDocument();
-		expect(container.querySelectorAll('a[href="/mini-competitions"]')).toHaveLength(2);
+		expect(container.querySelectorAll('a[href="/our-workshops"]')).toHaveLength(2);
 	});
 
-	it('marks Workshops current in every responsive navigation mode', () => {
-		const { container } = render(SiteHeader, { props: { pathname: '/our-workshops' } });
+	it('marks Workshops current on the live PBL path in every responsive navigation mode', () => {
+		const { container } = render(SiteHeader, { props: { pathname: '/pbl/science' } });
 
-		for (const link of container.querySelectorAll('a[href="/our-workshops"]')) {
+		for (const link of container.querySelectorAll('a[href="/pbl"]')) {
 			expect(link).toHaveAttribute('aria-current', 'page');
 		}
-		expect(container.querySelectorAll('a[href="/our-workshops"]')).toHaveLength(3);
+		expect(container.querySelectorAll('a[href="/pbl"]')).toHaveLength(3);
 	});
 
 	it('does not expose Book Delivery for a route with a shared path prefix', () => {

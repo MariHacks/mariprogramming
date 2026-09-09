@@ -45,7 +45,7 @@ describe('club error route', () => {
 		expect(screen.getByRole('link', { name: 'Return to club home' })).toHaveAttribute('href', '/');
 		expect(screen.getByRole('link', { name: 'Browse workshops' })).toHaveAttribute(
 			'href',
-			'/our-workshops'
+			'/pbl'
 		);
 		expect(screen.getByRole('link', { name: 'Check events' })).toHaveAttribute('href', '/events');
 		expect(screen.getByRole('link', { name: 'Open resources' })).toHaveAttribute(

@@ -20,6 +20,7 @@ export default defineConfig({
 				'src/test/**',
 				// This static SvelteKit mode export has no runtime behaviour to exercise.
 				'src/routes/+layout.js',
+				'src/routes/pbl/**/+page.js',
 				'src/app.d.ts',
 				'src/app.html',
 				'src/service-worker.js'

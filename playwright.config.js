@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = 'http://127.0.0.1:4173';
+const port = process.env.PLAYWRIGHT_PORT || '4173';
+const baseURL = `http://127.0.0.1:${port}`;
 const prePersistenceBookDeliverySpecs = [
 	'**/book-cart-status.spec.js',
 	'**/book-checkout-confirmation.spec.js',
@@ -32,9 +33,9 @@ export default defineConfig({
 		}
 	],
 	webServer: {
-		command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',
+		command: `npm run build && npm run preview -- --host 127.0.0.1 --port ${port} --strictPort`,
 		url: baseURL,
-		reuseExistingServer: false,
+		reuseExistingServer: process.env.PLAYWRIGHT_REUSE === '1',
 		timeout: 120000,
 		env: {
 			...process.env,

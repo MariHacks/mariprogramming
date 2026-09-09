@@ -24,6 +24,10 @@ describe('mini-competitions route', () => {
 	it('offers only working destinations while students wait', () => {
 		render(MiniCompetitionsPage);
 
+		expect(screen.getByRole('link', { name: 'Open the current workshop' })).toHaveAttribute(
+			'href',
+			'/pbl'
+		);
 		expect(screen.getByRole('link', { name: 'Browse workshop archive' })).toHaveAttribute(
 			'href',
 			'/our-workshops'

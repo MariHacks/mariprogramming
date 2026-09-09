@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 const routes = [
 	{ path: '/about-us', heading: 'About the club' },
 	{ path: '/events', heading: 'Events' },
+	{ path: '/pbl', heading: 'Workshops' },
 	{ path: '/our-workshops', heading: 'Workshop archive' },
 	{ path: '/resources', heading: 'Resources' },
 	{ path: '/mini-competitions', heading: 'Mini-Competitions' }
@@ -57,39 +58,37 @@ for (const viewport of [
 	});
 }
 
-test('Mini-Competitions stays reachable from home and disclosure menus', async ({ page }) => {
+test('the live workshop sits ahead of the archive in public navigation', async ({ page }) => {
 	await page.setViewportSize({ width: 1440, height: 900 });
 	await page.goto('/');
-	await page.getByRole('link', { name: 'Mini-Competitions status' }).click();
-	await expect(page).toHaveURL('/mini-competitions');
-	await expect(page.getByText('Coming Soon')).toBeVisible();
-	await expect(
-		page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', {
-			name: 'Mini-Competitions',
-			exact: true
-		})
-	).toHaveCount(0);
+	await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', {
+		name: 'Workshops',
+		exact: true
+	}).click();
+	await expect(page).toHaveURL('/pbl');
+	await expect(page.getByRole('heading', { level: 2, name: 'Speedrun Programming in Science' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Workshop archive' })).toHaveAttribute(
+		'href',
+		'/our-workshops'
+	);
 
 	await page.setViewportSize({ width: 768, height: 900 });
 	await page.goto('/');
 	await page.getByRole('button', { name: 'More', exact: true }).click();
 	await page
 		.getByRole('navigation', { name: 'Compact navigation' })
-		.getByRole('link', { name: 'Mini-Competitions', exact: true })
+		.getByRole('link', { name: 'Workshop archive', exact: true })
 		.click();
-	await expect(page).toHaveURL('/mini-competitions');
+	await expect(page).toHaveURL('/our-workshops');
 
 	await page.setViewportSize({ width: 390, height: 844 });
 	await page.goto('/');
 	await page.getByRole('button', { name: 'Open navigation' }).click();
 	await page
 		.getByRole('navigation', { name: 'Mobile navigation' })
-		.getByRole('link', {
-			name: 'Mini-Competitions',
-			exact: true
-		})
+		.getByRole('link', { name: 'Workshop archive', exact: true })
 		.click();
-	await expect(page).toHaveURL('/mini-competitions');
+	await expect(page).toHaveURL('/our-workshops');
 });
 
 test('all editorial routes expose a keyboard focus path', async ({ page }) => {

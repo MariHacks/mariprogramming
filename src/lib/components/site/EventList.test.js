@@ -18,7 +18,7 @@ describe('EventList', () => {
 		expect(screen.getByText('Confirmed dates appear here when published.')).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: 'Browse workshops' })).toHaveAttribute(
 			'href',
-			'/our-workshops'
+			'/pbl'
 		);
 		const communityLink = screen.getByRole('link', {
 			name: clubContent.communityAction.label

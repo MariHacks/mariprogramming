@@ -10,6 +10,7 @@ import {
 	readOrderConfirmationAccessEnvironment,
 	readBookWorkEnvironment,
 	readOrderConfirmationEnvironment,
+	readPblEnvironment,
 	readRuntimeEnvironment,
 	readStaffCatalogueEnvironment,
 	readStaffSignInEnvironment,
@@ -206,6 +207,15 @@ describe('private server environment', () => {
 		['invalid database URL', { DATABASE_URL: 'https://db.example.com/books' }]
 	])('rejects an order-confirmation environment with %s', (_label, source) => {
 		expect(() => readOrderConfirmationEnvironment(source)).toThrow(ServerConfigurationError);
+	});
+
+	it('reads only DATABASE_URL for public PBL rooms', () => {
+		const configuration = readPblEnvironment({
+			DATABASE_URL: validEnvironment.DATABASE_URL,
+			STRIPE_SECRET_KEY: 'must-not-be-read'
+		});
+		expect(configuration).toEqual({ databaseUrl: validEnvironment.DATABASE_URL });
+		expect(Object.isFrozen(configuration)).toBe(true);
 	});
 
 	it.each([

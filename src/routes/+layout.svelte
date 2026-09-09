@@ -3,12 +3,14 @@
 	import { page } from '$app/stores';
 	import SiteFooter from '$lib/components/site/SiteFooter.svelte';
 	import SiteHeader from '$lib/components/site/SiteHeader.svelte';
+	import { isPblStudioPath } from '$lib/pbl/csp.js';
 
 	/** @type {import('./$types').LayoutData} */
 	export let data;
 
 	$: pathname = $page.url.pathname;
 	$: isStaffRoute = pathname === '/staff' || pathname.startsWith('/staff/');
+	$: isPblStudio = isPblStudioPath(pathname);
 </script>
 
 <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -19,7 +21,7 @@
 	<slot></slot>
 </main>
 
-{#if !isStaffRoute}<SiteFooter />{/if}
+{#if !isStaffRoute && !isPblStudio}<SiteFooter />{/if}
 
 <style>
 	.skip-link {

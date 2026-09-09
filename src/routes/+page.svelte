@@ -8,7 +8,7 @@
 	const hasUpcomingEvents = getUpcomingEvents(clubContent.events).length > 0;
 	const heroSecondary = hasUpcomingEvents
 		? { label: 'Explore upcoming events', href: '/events' }
-		: { label: 'Browse workshops', href: '/our-workshops' };
+		: { label: 'Start the workshop', href: '/pbl' };
 
 	const activities = [
 		{
@@ -21,17 +21,16 @@
 		},
 		{
 			title: 'Workshops',
-			description: 'Learn practical concepts with material made by the club.',
-			label: 'Browse workshops',
-			href: '/our-workshops',
+			description: 'Build one scientific data-analyzer in the browser. No install.',
+			label: 'Start the workshop',
+			href: '/pbl',
 			icon: 'code'
 		},
 		{
-			title: 'Mini-Competitions',
-			description: 'Short programming challenges are being prepared.',
-			status: 'Coming Soon',
-			label: 'Mini-Competitions status',
-			href: '/mini-competitions',
+			title: 'PBL 1',
+			description: 'Speedrun Programming in Science. Create or join a team of up to 10.',
+			label: 'Open PBL 1',
+			href: '/pbl/science',
 			icon: 'trophy'
 		},
 		{
@@ -93,8 +92,7 @@
 			The student-run programming club for Marianopolis students of every experience level.
 		</p>
 		<p class="hero-body">
-			Learn with other students through workshops, shared resources, mini-competitions, and
-			MariHacks.
+			Learn with other students through workshops, shared resources, and MariHacks.
 		</p>
 		<div class="hero-actions">
 			<a

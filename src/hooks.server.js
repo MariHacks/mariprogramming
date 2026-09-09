@@ -1,5 +1,6 @@
 import { building } from '$app/environment';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
+import { applyPblCspHeader, expandPblCspInHtml, isPblDocumentPath } from '$lib/pbl/csp.js';
 import { isMaritoolsSession, isStaffSession } from '$lib/server/auth/authorization.js';
 import { withRequestAuth } from '$lib/server/auth/runtime.js';
 import { ensureMariToolsBootstrap } from '$lib/server/maritools/bootstrap.js';
@@ -100,6 +101,14 @@ export function createHandle({
 		if (!isBuilding && isPath(event.url.pathname, '/tools')) {
 			await ensureMariToolsBootstrap();
 		}
+		/** @param {import('@sveltejs/kit').RequestEvent} current */
+		async function render(current) {
+			if (!isPblDocumentPath(current.url.pathname)) return resolve(current);
+			const response = await resolve(current, {
+				transformPageChunk: ({ html }) => expandPblCspInHtml(html)
+			});
+			return applyPblCspHeader(response);
+		}
 		/** @param {Response} response */
 		const finalize = (response) => applyRoutePolicy(response, event.url.pathname);
 		const authPath = isPath(event.url.pathname, AUTH_PATH);
@@ -112,7 +121,7 @@ export function createHandle({
 			(!authPath && !staffPath && !sessionCookie);
 
 		if (skipAuth) {
-			return finalize(await resolve(event));
+			return finalize(await render(event));
 		}
 
 		try {
@@ -141,7 +150,7 @@ export function createHandle({
 		} catch {
 			// Sign-in must stay reachable when a stale cookie meets an auth outage.
 			if (!authPath && (!staffPath || publicStaffSignIn)) {
-				return finalize(await resolve(event));
+				return finalize(await render(event));
 			}
 			return finalize(
 				new Response(AUTH_UNAVAILABLE, {
@@ -182,7 +191,7 @@ export function createHandle({
 			}
 		}
 
-		return finalize(await resolve(event));
+		return finalize(await render(event));
 	};
 }
 

@@ -6,7 +6,7 @@
 	import { createClubContactLinks } from '$lib/club-contact.js';
 
 	const recoveryRoutes = [
-		{ label: 'Browse workshops', href: '/our-workshops' },
+		{ label: 'Browse workshops', href: '/pbl' },
 		{ label: 'Check events', href: '/events' },
 		{ label: 'Open resources', href: '/resources' }
 	];

@@ -1,0 +1,92 @@
+// @vitest-environment node
+
+import { describe, expect, it, vi } from 'vitest';
+import { GET, PUT, _createPblRoomEndpoint } from './+server.js';
+
+const MEMBER = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+function runtime(store) {
+	return _createPblRoomEndpoint({
+		ensureSchema: vi.fn(async () => undefined),
+		readEnvironment: () => ({ databaseUrl: 'postgresql://u:p@localhost/db' }),
+		withTransaction: async (operation) => operation(store),
+		createRepository: (transaction) => transaction,
+		createStore: (repository) => repository
+	});
+}
+
+describe('PBL room poll and push', () => {
+	it('returns the current room', async () => {
+		const { GET } = runtime({
+			getRoom: async (code) => ({ code, source: 'print(1)', version: 2 })
+		});
+		const response = await GET({
+			params: { code: 'AB23JK' },
+			request: new Request('https://club.example/api/pbl/rooms/AB23JK'),
+			url: new URL('https://club.example/api/pbl/rooms/AB23JK')
+		});
+		expect(await response.json()).toMatchObject({ code: 'AB23JK', version: 2 });
+	});
+
+	it('maps a missing room to 404', async () => {
+		const { PblNotFoundError } = await import('$lib/server/pbl/store.js');
+		const { GET } = runtime({
+			getRoom: async () => {
+				throw new PblNotFoundError();
+			}
+		});
+		const response = await GET({
+			params: { code: 'NOPE01' },
+			request: new Request('https://club.example/api/pbl/rooms/NOPE01'),
+			url: new URL('https://club.example/api/pbl/rooms/NOPE01')
+		});
+		expect(response.status).toBe(404);
+	});
+
+	it('updates a joined member and maps failures', async () => {
+		const { PUT } = runtime({
+			updateRoom: async (input) => ({ code: input.code, source: input.source, version: 3 })
+		});
+		const response = await PUT({
+			params: { code: 'AB23JK' },
+			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
+				method: 'PUT',
+				headers: {
+					'content-type': 'application/json',
+					cookie: `pbl_member=${MEMBER}`
+				},
+				body: JSON.stringify({ version: 2, source: 'print("team")' })
+			}),
+			url: new URL('https://club.example/api/pbl/rooms/AB23JK')
+		});
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ version: 3 });
+
+		const minted = await PUT({
+			params: { code: 'AB23JK' },
+			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ version: 2, source: 'print("team")' })
+			}),
+			url: new URL('https://club.example/api/pbl/rooms/AB23JK')
+		});
+		expect(minted.headers.get('set-cookie')).toContain('pbl_member=');
+
+		const missing = await PUT({
+			params: { code: 'AB23JK' },
+			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
+				method: 'PUT',
+				headers: { 'content-type': 'text/plain' },
+				body: 'x'
+			}),
+			url: new URL('https://club.example/api/pbl/rooms/AB23JK')
+		});
+		expect(missing.status).toBe(400);
+	});
+
+	it('exports live handlers', () => {
+		expect(typeof GET).toBe('function');
+		expect(typeof PUT).toBe('function');
+	});
+});
