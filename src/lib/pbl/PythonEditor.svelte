@@ -98,6 +98,8 @@
 		flex-shrink: 0;
 		width: auto !important;
 		height: 100%;
+		background-color: #221f22;
+		color: #727072;
 		font-family: var(--font-mono);
 		font-size: 12px;
 		font-weight: 400;
@@ -121,5 +123,7 @@
 
 	.python-host :global(.cm-content) {
 		flex: 1 0 auto;
+		color: #fcfcfa;
+		caret-color: #ffd866;
 	}
 </style>

@@ -277,4 +277,56 @@ test.describe.serial('PBL 1 student workshop', () => {
 		await saveProof(rec, '10-phone-panes');
 		await keepVideo(context, rec, '10-phone-panes');
 	});
+
+	test('opens three hint levels and shows the Monokai editor beside the lesson', async ({
+		page,
+		browser
+	}) => {
+		test.setTimeout(60000);
+		await page.goto('/pbl/science');
+		const origin = new URL(page.url()).origin;
+		const { context, page: rec } = await recordedPage(browser, origin);
+		await rec.goto('/pbl/science');
+		await rec.getByLabel('Team name').fill('Hint table');
+		await rec.getByRole('button', { name: 'Create room' }).click();
+		await expect(rec).toHaveURL(/\/pbl\/science\/[A-Z0-9]{6}$/);
+		await expect(rec.getByRole('heading', { name: 'Get something running' })).toBeVisible({
+			timeout: 30000
+		});
+		const lesson = rec.getByRole('heading', { name: 'Get something running' });
+		const editor = rec.locator('.cm-editor');
+		await expect(editor).toBeVisible();
+		const lessonBox = await lesson.boundingBox();
+		const editorBox = await editor.boundingBox();
+		expect(lessonBox && editorBox && lessonBox.x < editorBox.x).toBe(true);
+		const chrome = await editor.evaluate((el) => {
+			const host = el.closest('.python-host');
+			const gutter = el.querySelector('.cm-gutters');
+			const stringTok = [...el.querySelectorAll('.cm-line span')].find((span) =>
+				(span.textContent ?? '').includes('Experiment')
+			);
+			return {
+				host: host ? getComputedStyle(host).backgroundColor : '',
+				gutter: gutter ? getComputedStyle(gutter).backgroundColor : '',
+				string: stringTok ? getComputedStyle(stringTok).color : '',
+				ink: getComputedStyle(el.querySelector('.cm-content') ?? el).color
+			};
+		});
+		expect(chrome.host).toBe('rgb(45, 42, 46)');
+		expect(chrome.gutter).toBe('rgb(34, 31, 34)');
+		expect(chrome.ink).toBe('rgb(252, 252, 250)');
+		expect(['rgb(255, 216, 102)', 'rgb(252, 252, 250)']).toContain(chrome.string);
+		await rec.getByRole('button', { name: 'Idea' }).click();
+		await expect(
+			rec.getByText('The program should print a different sentence than the one it started with.')
+		).toBeVisible();
+		await rec.getByRole('button', { name: 'Syntax' }).click();
+		await expect(
+			rec.getByText('Edit the text inside the quotes, then use the Run button.')
+		).toBeVisible();
+		await rec.getByRole('button', { name: 'Partial code' }).click();
+		await expect(rec.getByText('print("something you wrote")')).toBeVisible();
+		await saveProof(rec, '11-hints-and-monokai');
+		await keepVideo(context, rec, '11-hints-and-monokai');
+	});
 });
