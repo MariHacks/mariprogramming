@@ -119,7 +119,7 @@
 >
 	<div class="header-frame">
 		<a
-			class="brand"
+			class="brand header-cluster-left"
 			href={resolve('/', {})}
 			aria-label="Marianopolis Programming Club, home"
 			on:click={closeDisclosures}
@@ -314,7 +314,7 @@
 			</nav>
 		</div>
 
-		<div class="header-actions">
+		<div class="header-actions header-cluster-right">
 			<nav class="header-contact" aria-label="Club contact">
 				<a href={contactLinks.bug.href} rel="external">{contactLinks.bug.label}</a>
 			</nav>
@@ -857,11 +857,12 @@
 		}
 	}
 
+	/* Absolute center morph: PBL label <-> Workshops (same slot). */
 	.pbl-context {
 		position: absolute;
 		top: 50%;
 		left: 50%;
-		z-index: 2;
+		z-index: 3;
 		margin: 0;
 		max-width: min(36rem, 70vw);
 		overflow: hidden;
@@ -889,17 +890,23 @@
 		transition: height var(--pbl-header-motion) var(--ease-out);
 	}
 
-	.site-header.is-compact-pbl .brand,
+	.site-header.is-compact-pbl .header-frame {
+		overflow: visible;
+	}
+
+	.site-header.is-compact-pbl .header-cluster-left,
+	.site-header.is-compact-pbl .header-cluster-right,
 	.site-header.is-compact-pbl .brand-name,
 	.site-header.is-compact-pbl .brand-mark,
-	.site-header.is-compact-pbl .wide-navigation .navigation-list > li,
-	.site-header.is-compact-pbl .compact-navigation .navigation-list > li,
+	.site-header.is-compact-pbl .wide-navigation .navigation-list > li:not(.pbl-morph-slot),
+	.site-header.is-compact-pbl .compact-navigation .navigation-list > li:not(.pbl-morph-slot),
 	.site-header.is-compact-pbl .header-contact,
 	.site-header.is-compact-pbl .header-socials,
-	.site-header.is-compact-pbl .header-actions,
 	.site-header.is-compact-pbl .navigation-link,
+	.site-header.is-compact-pbl .disclosure-button,
 	.site-header.is-compact-pbl .signup-link,
-	.site-header.is-compact-pbl .identity-button {
+	.site-header.is-compact-pbl .identity-button,
+	.site-header.is-compact-pbl .pbl-morph-target {
 		transition:
 			opacity var(--pbl-header-motion) var(--ease-out),
 			transform var(--pbl-header-motion) var(--ease-out),
@@ -908,21 +915,76 @@
 			padding var(--pbl-header-motion) var(--ease-out),
 			width var(--pbl-header-motion) var(--ease-out),
 			height var(--pbl-header-motion) var(--ease-out),
-			font-size var(--pbl-header-motion) var(--ease-out);
+			max-width var(--pbl-header-motion) var(--ease-out),
+			gap var(--pbl-header-motion) var(--ease-out),
+			font-size var(--pbl-header-motion) var(--ease-out),
+			margin var(--pbl-header-motion) var(--ease-out);
+	}
+
+	.site-header.is-compact-pbl .header-cluster-left {
+		transform-origin: right center;
+	}
+
+	.site-header.is-compact-pbl .header-cluster-right {
+		transform-origin: left center;
+	}
+
+	.site-header.is-compact-pbl .wide-navigation .navigation-list > li:first-child,
+	.site-header.is-compact-pbl .wide-navigation .navigation-list > li:nth-child(2),
+	.site-header.is-compact-pbl .compact-navigation .navigation-list > li:first-child {
+		transform-origin: right center;
+	}
+
+	.site-header.is-compact-pbl .wide-navigation .navigation-list > li:last-child,
+	.site-header.is-compact-pbl .compact-navigation .more-item,
+	.site-header.is-compact-pbl .header-contact,
+	.site-header.is-compact-pbl .header-socials {
+		transform-origin: left center;
 	}
 
 	/*
 	 * Collapsed PBL chrome: fine-pointer hover devices only.
 	 * Touch / coarse pointers and small breakpoints stay on the full header
 	 * so navigation is never hover-trapped (mobile keeps the existing menu).
+	 *
+	 * Collapsed = elements pulled toward the center morph pivot + scaled down.
+	 * Expand (hover/focus-within) = radiate outward (translate away + scale up)
+	 * while the center label crossfades PBL name -> Workshops in place.
 	 */
 	@media (hover: hover) and (pointer: fine) {
-		.site-header.is-compact-pbl:not(:hover):not(:focus-within) {
-			height: 2.25rem;
+		/* Workshops shares the absolute center slot with the PBL label (fine pointer only). */
+		.site-header.is-compact-pbl .wide-navigation .pbl-morph-slot,
+		.site-header.is-compact-pbl .compact-navigation .pbl-morph-slot {
+			position: static;
+			z-index: 2;
+			flex: 0 0 auto;
+			width: 5.75rem;
+			min-height: 2.75rem;
 		}
 
-		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .brand {
-			transform: translateX(1.25rem);
+		.site-header.is-compact-pbl .wide-navigation .pbl-morph-target,
+		.site-header.is-compact-pbl .compact-navigation .pbl-morph-target {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			z-index: 2;
+			transform: translate(-50%, -50%);
+			transform-origin: center center;
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) {
+			height: 2rem;
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-frame {
+			padding-block: 0;
+		}
+
+		/* Left cluster: tiny home mark, tucked toward the pivot. */
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-cluster-left {
+			min-height: 1.5rem;
+			gap: 0;
+			transform: translateX(2.75rem) scale(0.88);
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .brand-name {
@@ -930,7 +992,7 @@
 			margin: 0;
 			opacity: 0;
 			overflow: hidden;
-			transform: translateX(-0.35rem) scale(0.92);
+			transform: translateX(-0.25rem) scale(0.9);
 			visibility: hidden;
 			transition:
 				opacity var(--pbl-header-motion) var(--ease-out),
@@ -940,15 +1002,11 @@
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .brand-mark {
-			width: 1.25rem;
-			height: 1.3rem;
+			width: 0.9375rem;
+			height: 1rem;
 		}
 
-		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .brand {
-			min-height: 1.75rem;
-			gap: 0;
-		}
-
+		/* Center morph: show PBL name; hide Workshops in the same slot. */
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .pbl-context {
 			opacity: 1;
 			transform: translate(-50%, -50%) scale(1);
@@ -956,13 +1014,23 @@
 			transition-delay: 0s;
 		}
 
-		/* Outer nav items pull into the center; Workshops yields to the PBL label. */
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .pbl-morph-target {
+			opacity: 0;
+			transform: translate(-50%, -50%) scale(0.94);
+			visibility: hidden;
+			pointer-events: none;
+			transition:
+				opacity var(--pbl-header-motion) var(--ease-out),
+				transform var(--pbl-header-motion) var(--ease-out),
+				visibility 0s linear var(--pbl-header-motion);
+		}
+
+		/* Nav wings collapse into the pivot (About/Events from left, MariTools from right). */
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
 			.wide-navigation
 			.navigation-list
 			> li:not(.pbl-morph-slot) {
 			opacity: 0;
-			transform: scale(0.88);
 			visibility: hidden;
 			pointer-events: none;
 			transition:
@@ -975,32 +1043,24 @@
 			.wide-navigation
 			.navigation-list
 			> li:first-child {
-			transform: translateX(1.75rem) scale(0.88);
+			transform: translateX(3.25rem) scale(0.85);
+			transition-delay: 0ms;
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
 			.wide-navigation
 			.navigation-list
 			> li:nth-child(2) {
-			transform: translateX(0.85rem) scale(0.88);
+			transform: translateX(1.75rem) scale(0.85);
+			transition-delay: 30ms;
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
 			.wide-navigation
 			.navigation-list
 			> li:last-child {
-			transform: translateX(-1.75rem) scale(0.88);
-		}
-
-		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .pbl-morph-target {
-			opacity: 0;
-			transform: scale(0.94);
-			visibility: hidden;
-			pointer-events: none;
-			transition:
-				opacity var(--pbl-header-motion) var(--ease-out),
-				transform var(--pbl-header-motion) var(--ease-out),
-				visibility 0s linear var(--pbl-header-motion);
+			transform: translateX(-3.25rem) scale(0.85);
+			transition-delay: 30ms;
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
@@ -1010,28 +1070,30 @@
 			opacity: 0;
 			visibility: hidden;
 			pointer-events: none;
-			transform: scale(0.9);
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
 			.compact-navigation
 			.navigation-list
 			> li:first-child {
-			transform: translateX(1.25rem) scale(0.9);
+			transform: translateX(2.5rem) scale(0.85);
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .compact-navigation .more-item {
-			transform: translateX(-1.25rem) scale(0.9);
+			transform: translateX(-2.5rem) scale(0.85);
 		}
 
+		/* Right utilities (except account control) fold into the pivot. */
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-contact,
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-socials {
 			opacity: 0;
-			transform: translateX(-0.75rem) scale(0.92);
+			transform: translateX(-2.5rem) scale(0.85);
 			visibility: hidden;
 			pointer-events: none;
 			max-width: 0;
 			overflow: hidden;
+			margin: 0;
+			padding: 0;
 			transition:
 				opacity var(--pbl-header-motion) var(--ease-out),
 				transform var(--pbl-header-motion) var(--ease-out),
@@ -1039,26 +1101,71 @@
 				visibility 0s linear var(--pbl-header-motion);
 		}
 
-		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-actions {
-			transform: translateX(-0.35rem);
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-cluster-right {
+			transform: translateX(-1.75rem) scale(0.94);
 			gap: 0;
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .navigation-link,
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .disclosure-button,
-		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .signup-link,
-		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .identity-button,
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-contact a {
-			min-height: 1.75rem;
+			min-height: 1.5rem;
 		}
 
+		/* Compact chip: text-sm type, tight padding, fits ~28-32px bar. */
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .signup-link {
-			padding: 0.35rem 0.85rem;
+			min-height: 1.35rem;
+			padding: 0.12rem 0.55rem;
 			margin-inline-start: 0;
+			border-radius: 999px;
+			font-size: 0.75rem;
+			font-weight: 650;
+			transform: scale(0.96);
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .identity-button {
-			padding: 0.2rem 0.45rem;
+			min-height: 1.35rem;
+			padding: 0.1rem 0.4rem;
+			gap: 0.3rem;
+			font-size: 0.75rem;
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .identity-avatar {
+			width: 1.15rem;
+			height: 1.15rem;
+			font-size: 0.5rem;
+		}
+
+		/* Expanded: stagger wings slightly as they radiate out from center. */
+		.site-header.is-compact-pbl:is(:hover, :focus-within) .header-cluster-left {
+			transition-delay: 0ms;
+		}
+
+		.site-header.is-compact-pbl:is(:hover, :focus-within)
+			.wide-navigation
+			.navigation-list
+			> li:first-child {
+			transition-delay: 20ms;
+		}
+
+		.site-header.is-compact-pbl:is(:hover, :focus-within)
+			.wide-navigation
+			.navigation-list
+			> li:nth-child(2) {
+			transition-delay: 40ms;
+		}
+
+		.site-header.is-compact-pbl:is(:hover, :focus-within)
+			.wide-navigation
+			.navigation-list
+			> li:last-child {
+			transition-delay: 40ms;
+		}
+
+		.site-header.is-compact-pbl:is(:hover, :focus-within) .header-cluster-right,
+		.site-header.is-compact-pbl:is(:hover, :focus-within) .header-contact,
+		.site-header.is-compact-pbl:is(:hover, :focus-within) .header-socials {
+			transition-delay: 20ms;
 		}
 	}
 
@@ -1073,17 +1180,18 @@
 		.mobile-navigation,
 		.signup-link,
 		.site-header.is-compact-pbl,
-		.site-header.is-compact-pbl .brand,
+		.site-header.is-compact-pbl .header-cluster-left,
+		.site-header.is-compact-pbl .header-cluster-right,
 		.site-header.is-compact-pbl .brand-name,
 		.site-header.is-compact-pbl .brand-mark,
 		.site-header.is-compact-pbl .wide-navigation .navigation-list > li,
 		.site-header.is-compact-pbl .compact-navigation .navigation-list > li,
 		.site-header.is-compact-pbl .header-contact,
 		.site-header.is-compact-pbl .header-socials,
-		.site-header.is-compact-pbl .header-actions,
 		.site-header.is-compact-pbl .navigation-link,
 		.site-header.is-compact-pbl .signup-link,
 		.site-header.is-compact-pbl .identity-button,
+		.site-header.is-compact-pbl .pbl-morph-target,
 		.pbl-context {
 			transition-duration: 1ms !important;
 			transition-delay: 0s !important;

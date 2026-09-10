@@ -449,6 +449,23 @@ describe('SiteHeader', () => {
 		);
 		expect(siteHeaderSource).toMatch(/--pbl-header-motion:\s*280ms/u);
 		expect(siteHeaderSource).toMatch(/\.pbl-morph-target/u);
+		// Collapsed bar is IDE-density (<=2rem) with a tiny home mark and compact account chip.
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\)\s*\{[\s\S]*?height:\s*2rem/u
+		);
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\) \.brand-mark\s*\{[\s\S]*?width:\s*0\.9375rem/u
+		);
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\) \.signup-link\s*\{[\s\S]*?font-size:\s*0\.75rem/u
+		);
+		expect(siteHeaderSource).toMatch(/header-cluster-left/u);
+		expect(siteHeaderSource).toMatch(/header-cluster-right/u);
+		// Expand radiates from the center morph pivot (translate away + scale up).
+		expect(siteHeaderSource).toMatch(/transform-origin:\s*right center/u);
+		expect(siteHeaderSource).toMatch(/transform-origin:\s*left center/u);
+		expect(siteHeaderSource).toMatch(/translateX\(3\.25rem\) scale\(0\.85\)/u);
+		expect(siteHeaderSource).toMatch(/translateX\(-3\.25rem\) scale\(0\.85\)/u);
 	});
 
 	it('shows Workshops as the hub compact label', () => {
