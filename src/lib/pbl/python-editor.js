@@ -57,7 +57,9 @@ export const MONOKAI_DARK = Object.freeze({
 	green: '#a9dc76',
 	cyan: '#78dce8',
 	purple: '#ab9df2',
+	// Opaque — selectionLayer is under .cm-activeLine; keep contrast high.
 	selection: '#47839a',
+	// Opaque chrome tint (studio UI). Active-line uses a translucent overlay in theme.
 	line: '#3e3b3f',
 	cursor: '#ffd866',
 	panel: '#221f22',
@@ -78,7 +80,9 @@ export const MONOKAI_LIGHT = Object.freeze({
 	green: '#269d69',
 	cyan: '#1c8ca8',
 	purple: '#7058be',
-	selection: '#bfd4de',
+	// Stronger than stock #bfd4de so the range reads clearly on cream bg.
+	selection: '#8eb9cc',
+	// Opaque chrome tint (studio UI). Active-line uses a translucent overlay in theme.
 	line: '#efe8e5',
 	cursor: '#706b6e',
 	panel: '#f0e9e7',
@@ -188,15 +192,19 @@ function monokaiChrome(palette, dark) {
 			'.cm-cursor, .cm-dropCursor': {
 				borderLeftColor: palette.cursor
 			},
-			'&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
-				{
-					backgroundColor: palette.selection
-				},
+			/* selectionLayer sits under content (z-index -1); opaque activeLine hid it. */
+			'.cm-selectionBackground, .cm-content ::selection': {
+				backgroundColor: palette.selection + ' !important'
+			},
+			'&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
+				backgroundColor: palette.selection + ' !important'
+			},
 			'.cm-activeLine': {
-				backgroundColor: palette.line
+				// Translucent wash so selection shows through (CM default pattern).
+				backgroundColor: dark ? '#ffffff14' : '#29242a12'
 			},
 			'.cm-activeLineGutter': {
-				backgroundColor: palette.line,
+				backgroundColor: dark ? '#ffffff14' : '#29242a12',
 				color: palette.ink
 			},
 			'.cm-foldPlaceholder': {

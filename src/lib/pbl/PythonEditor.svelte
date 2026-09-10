@@ -67,7 +67,7 @@
 <div
 	class="python-host"
 	data-editor-theme={themeMode}
-	style="--pbl-editor-bg: {palette.bg}; --pbl-editor-gutter: {palette.bgGutter}; --pbl-editor-ink: {palette.ink}; --pbl-editor-comment: {palette.comment}; --pbl-editor-cursor: {palette.cursor}"
+	style="--pbl-editor-bg: {palette.bg}; --pbl-editor-gutter: {palette.bgGutter}; --pbl-editor-ink: {palette.ink}; --pbl-editor-comment: {palette.comment}; --pbl-editor-cursor: {palette.cursor}; --pbl-editor-selection: {palette.selection}; --pbl-editor-line: {palette.line}; --pbl-editor-active-line: {themeMode === 'light' ? '#29242a12' : '#ffffff14'}"
 	bind:this={host}
 ></div>
 
@@ -130,5 +130,17 @@
 		flex: 1 0 auto;
 		color: var(--pbl-editor-ink, #fcfcfa);
 		caret-color: var(--pbl-editor-cursor, #ffd866);
+	}
+
+	/* Primary selection: opaque color; activeLine stays translucent so it does not cover it. */
+	.python-host :global(.cm-selectionBackground),
+	.python-host :global(.cm-editor.cm-focused .cm-selectionLayer .cm-selectionBackground),
+	.python-host :global(.cm-content ::selection) {
+		background-color: var(--pbl-editor-selection, #47839a) !important;
+	}
+
+	.python-host :global(.cm-activeLine),
+	.python-host :global(.cm-activeLineGutter) {
+		background-color: var(--pbl-editor-active-line, #ffffff14);
 	}
 </style>
