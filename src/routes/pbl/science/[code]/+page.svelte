@@ -185,7 +185,10 @@
 
 		<aside class="lesson">
 			<div class="lesson-scroll">
-				<p class="eyebrow">PBL 1 — {state.teamName || 'Team room'} — {state.code}</p>
+				<header class="lesson-identity">
+					<p class="series-label">PBL 1</p>
+					<p class="team-name">{state.teamName || 'Team room'}</p>
+				</header>
 				<div class="title-row">
 					<h1>{state.step.title}</h1>
 					<p class="minutes">{state.step.minutes} min</p>
@@ -425,7 +428,27 @@
 		gap: 0.85rem;
 	}
 
-	.eyebrow,
+	.lesson-identity {
+		display: grid;
+		gap: 0.15rem;
+	}
+
+	.series-label {
+		margin: 0;
+		color: var(--quiet-steel);
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.team-name {
+		margin: 0;
+		font-size: 1.05rem;
+		font-weight: 650;
+		line-height: 1.25;
+	}
+
 	.minutes,
 	.lang {
 		color: var(--quiet-steel);

@@ -77,6 +77,18 @@ afterEach(() => {
 });
 
 describe('PBL studio page', () => {
+	it('ranks team identity over the quiet PBL label and keeps the code in Share', () => {
+		const { container } = render(StudioPage);
+		const lesson = container.querySelector('.lesson');
+		expect(lesson).not.toBeNull();
+		expect(within(lesson).getByText('PBL 1')).toBeVisible();
+		expect(within(lesson).getByText('Lab table 3')).toBeVisible();
+		expect(within(lesson).queryByText('AB23JK')).toBeNull();
+		expect(lesson?.textContent ?? '').not.toMatch(/PBL 1\s*[—·]/u);
+		expect(container.querySelector('.toolbar code')).toHaveTextContent('AB23JK');
+		expect(screen.getByRole('button', { name: 'Copy link' })).toBeVisible();
+	});
+
 	it('shows the lesson and editor for a joined room', async () => {
 		const user = userEvent.setup();
 		render(StudioPage);
