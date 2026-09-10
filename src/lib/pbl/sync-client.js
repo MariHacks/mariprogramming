@@ -3,10 +3,11 @@ import {
 	mergeRoomPreferringNewerLastCheck
 } from './room-state.js';
 
-/** Active collab poll — was 250ms; 1s still feels live, ~4× less Neon churn. */
-const POLL_MS = 1000;
-/** Back off further when the tab is hidden. */
-const HIDDEN_POLL_MS = 15000;
+/**
+ * Focused tab: version probes are cheap (304), so poll often for collab feel.
+ * Hidden tab: do not poll — catch up with one pull on focus.
+ */
+const POLL_MS = 250;
 const PUSH_MS = 400;
 
 /**
@@ -14,7 +15,6 @@ const PUSH_MS = 400;
  *   code: string,
  *   fetch?: typeof fetch,
  *   pollMs?: number,
- *   hiddenPollMs?: number,
  *   pushMs?: number,
  *   onState: (state: any) => void,
  *   onError?: (message: string) => void
@@ -23,7 +23,6 @@ const PUSH_MS = 400;
 export function createRoomSync(options) {
 	const fetchImpl = options.fetch ?? fetch;
 	const activePollMs = options.pollMs ?? POLL_MS;
-	const hiddenPollMs = options.hiddenPollMs ?? HIDDEN_POLL_MS;
 	const pushMs = options.pushMs ?? PUSH_MS;
 	let version = 0;
 	let dirty = false;
@@ -37,9 +36,8 @@ export function createRoomSync(options) {
 	/** @type {(() => void) | null} */
 	let onVisibility = null;
 
-	function currentPollMs() {
-		if (typeof document !== 'undefined' && document.hidden) return hiddenPollMs;
-		return activePollMs;
+	function tabIsHidden() {
+		return typeof document !== 'undefined' && document.hidden;
 	}
 
 	async function request(path, init) {
@@ -205,11 +203,18 @@ export function createRoomSync(options) {
 		return payload;
 	}
 
-	function armPoll() {
+	function disarmPoll() {
 		if (pollTimer) clearInterval(pollTimer);
+		pollTimer = null;
+	}
+
+	function armPoll() {
+		disarmPoll();
+		// Background tabs do not need live collab — save Neon until focus returns.
+		if (tabIsHidden()) return;
 		pollTimer = setInterval(() => {
 			void pull();
-		}, currentPollMs());
+		}, activePollMs);
 	}
 
 	function start() {
@@ -219,8 +224,12 @@ export function createRoomSync(options) {
 		if (typeof document !== 'undefined' && !onVisibility) {
 			onVisibility = () => {
 				if (stopped) return;
+				if (document.hidden) {
+					disarmPoll();
+					return;
+				}
+				void pull();
 				armPoll();
-				if (!document.hidden) void pull();
 			};
 			document.addEventListener('visibilitychange', onVisibility);
 		}
@@ -228,9 +237,8 @@ export function createRoomSync(options) {
 
 	function stop() {
 		stopped = true;
-		if (pollTimer) clearInterval(pollTimer);
+		disarmPoll();
 		if (pushTimer) clearTimeout(pushTimer);
-		pollTimer = null;
 		pushTimer = null;
 		if (onVisibility && typeof document !== 'undefined') {
 			document.removeEventListener('visibilitychange', onVisibility);
