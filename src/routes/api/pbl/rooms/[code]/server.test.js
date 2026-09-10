@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { GET, PUT, _createPblRoomEndpoint } from './+server.js';
 
 const MEMBER = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const SESSION = { maritools: { userId: 'user-lab-3', email: 'lab@marihacks.com' } };
 
 function runtime(store) {
 	return _createPblRoomEndpoint({
@@ -43,11 +44,37 @@ describe('PBL room poll and push', () => {
 		expect(response.status).toBe(404);
 	});
 
+	it('rejects updates without a club session', async () => {
+		const { PUT } = runtime({
+			updateRoom: async () => {
+				throw new Error('unused');
+			}
+		});
+		const response = await PUT({
+			locals: { maritools: null },
+			params: { code: 'AB23JK' },
+			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
+				method: 'PUT',
+				headers: {
+					'content-type': 'application/json',
+					cookie: `pbl_member=${MEMBER}`
+				},
+				body: JSON.stringify({ version: 2, source: 'print("team")' })
+			}),
+			url: new URL('https://club.example/api/pbl/rooms/AB23JK')
+		});
+		expect(response.status).toBe(401);
+		expect(await response.json()).toMatchObject({
+			error: 'Sign in with your club Google account to create or join a team.'
+		});
+	});
+
 	it('updates a joined member and maps failures', async () => {
 		const { PUT } = runtime({
 			updateRoom: async (input) => ({ code: input.code, source: input.source, version: 3 })
 		});
 		const response = await PUT({
+			locals: SESSION,
 			params: { code: 'AB23JK' },
 			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
 				method: 'PUT',
@@ -63,6 +90,7 @@ describe('PBL room poll and push', () => {
 		expect(await response.json()).toMatchObject({ version: 3 });
 
 		const minted = await PUT({
+			locals: SESSION,
 			params: { code: 'AB23JK' },
 			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
 				method: 'PUT',
@@ -74,6 +102,7 @@ describe('PBL room poll and push', () => {
 		expect(minted.headers.get('set-cookie')).toContain('pbl_member=');
 
 		const missing = await PUT({
+			locals: SESSION,
 			params: { code: 'AB23JK' },
 			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
 				method: 'PUT',

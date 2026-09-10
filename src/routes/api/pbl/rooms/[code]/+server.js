@@ -3,7 +3,8 @@ import {
 	memberFromRequest,
 	pblErrorResponse,
 	pblJson,
-	readPblJson
+	readPblJson,
+	requirePblSession
 } from '$lib/server/pbl/http.js';
 import { readMemberId } from '$lib/server/pbl/cookie.js';
 
@@ -29,6 +30,7 @@ export function _createPblRoomEndpoint(dependencies = {}) {
 	/** @param {any} event */
 	async function PUT(event) {
 		try {
+			requirePblSession(event.locals);
 			const body = await readPblJson(event.request);
 			const membership = memberFromRequest(event.request, event);
 			const room = await runtime.withStore((store) =>

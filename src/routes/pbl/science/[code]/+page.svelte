@@ -12,9 +12,26 @@
 		storeEditorTheme
 	} from '$lib/pbl/python-editor.js';
 	import { createWorkshopController } from '$lib/pbl/workshop-controller.js';
+	import { requestStudentAuthorization } from '$lib/auth/student-sign-in.js';
 
 	/** @type {{ data: { collabUser?: { userId?: string, email?: string, name?: string | null } | null } }} */
 	export let data = { collabUser: null };
+
+	$: signedIn = Boolean(data?.collabUser?.userId);
+	$: canEdit = signedIn && !!state && !state.readOnly && state.blocked !== 'full';
+	$: accountHref = resolve('/tools/account', {});
+	let signingIn = false;
+
+	async function startSignIn() {
+		signingIn = true;
+		try {
+			const callbackURL = `${$page.url.origin}${$page.url.pathname}`;
+			const url = await requestStudentAuthorization(callbackURL);
+			window.location.assign(url);
+		} catch {
+			signingIn = false;
+		}
+	}
 
 	const LESSON_WIDTH_KEY = 'pbl-studio-lesson-width';
 	const CONSOLE_HEIGHT_KEY = 'pbl-studio-console-height';
@@ -152,6 +169,7 @@
 	}
 
 	function runProgram() {
+		if (!canEdit) return;
 		consoleTab = 'output';
 		pane = 'output';
 		void controller?.run();
@@ -280,9 +298,13 @@
 					{#each [1, 2, 3] as level (level)}
 						<button
 							type="button"
-							disabled={state.blocked === 'full' ||
+							disabled={!canEdit ||
+								state.blocked === 'full' ||
 								level > (state.openedHints?.[String(state.currentStep)] ?? 0) + 1}
-							on:click={() => controller?.openHint(level)}
+							on:click={() => {
+								if (!canEdit) return;
+								controller?.openHint(level);
+							}}
 						>
 							{level === 1 ? 'Idea' : level === 2 ? 'Syntax' : 'Partial code'}
 						</button>
@@ -351,8 +373,11 @@
 							<button
 								type="button"
 								class:current={step.id === state.currentStep}
-								disabled={state.blocked === 'full' || step.id > state.unlockedStep}
-								on:click={() => controller?.selectStep(step.id)}
+								disabled={!canEdit || state.blocked === 'full' || step.id > state.unlockedStep}
+								on:click={() => {
+									if (!canEdit) return;
+									controller?.selectStep(step.id);
+								}}
 							>
 								{step.id}
 							</button>
@@ -363,7 +388,7 @@
 					<button
 						class="button-primary next-step"
 						type="button"
-						disabled={!canGoNext}
+						disabled={!canEdit || !canGoNext}
 						on:click={goNext}
 					>
 						Next
@@ -403,7 +428,7 @@
 						<button
 							class="button-primary run"
 							type="button"
-							disabled={state.running}
+							disabled={!canEdit || state.running}
 							on:click={runProgram}
 						>
 							{state.running ? 'Running' : 'Run'}
@@ -419,17 +444,31 @@
 				{#if state.roomError}
 					<p class="error" role="alert">{state.roomError}</p>
 				{/if}
-				<div class="editor-shell">
+				{#if !signedIn}
+					<div class="guest-banner" role="region" aria-label="Sign in required">
+						<p>Sign in with your club Google account to edit and run this team studio.</p>
+						<div class="guest-actions">
+							<button class="button-primary" type="button" disabled={signingIn} on:click={startSignIn}>
+								{signingIn ? 'Opening Google…' : 'Sign in with Google'}
+							</button>
+							<a class="quiet-link" href={accountHref}>Club account <span aria-hidden="true">→</span></a>
+						</div>
+					</div>
+				{/if}
+				<div class="editor-shell" class:guest-locked={!canEdit}>
 					{#key `${state.viewStep ?? state.currentStep}:${state.editorEpoch ?? 0}`}
 						<PythonEditor
 							source={state.source}
 							yjsState={state.yjsState ?? ''}
 							awarenessState={state.awarenessState ?? ''}
-							editable={!state.readOnly}
+							editable={canEdit}
 							theme={editorTheme}
 							user={collabUserFromProfile(data?.collabUser)}
 							editorEpoch={state.editorEpoch ?? 0}
-							onCollab={(payload) => controller?.setCollab(payload)}
+							onCollab={(payload) => {
+								if (!canEdit) return;
+								controller?.setCollab(payload);
+							}}
 						/>
 					{/key}
 				</div>
@@ -469,7 +508,11 @@
 								<textarea
 									class="stdin"
 									value={state.stdinText}
-									on:input={(event) => controller?.setStdin(event.currentTarget.value)}
+									disabled={!canEdit}
+									on:input={(event) => {
+										if (!canEdit) return;
+										controller?.setStdin(event.currentTarget.value);
+									}}
 								></textarea>
 							</label>
 							{#if state.pythonError}
@@ -978,6 +1021,38 @@
 		min-height: 2.15rem;
 		padding: 0.35rem 0.7rem;
 		border-radius: 0.35rem;
+	}
+
+	.guest-banner {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem 1rem;
+		margin: 0 0 0.65rem;
+		padding: 0.7rem 0.85rem;
+		border: var(--rule, 1px solid rgb(var(--midnight-rgb, 6 20 49) / 18%));
+		border-radius: var(--radius-md, 0.375rem);
+		background: color-mix(in srgb, var(--sky, #b9d1ff) 28%, var(--surface-raised, #fff));
+		color: var(--graphite, #17213a);
+		font-size: 0.875rem;
+		line-height: 1.4;
+	}
+
+	.guest-banner p {
+		margin: 0;
+		flex: 1 1 14rem;
+	}
+
+	.guest-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.65rem 0.85rem;
+	}
+
+	.editor-shell.guest-locked {
+		opacity: 0.92;
 	}
 
 	.editor-shell {

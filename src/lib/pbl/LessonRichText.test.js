@@ -29,6 +29,10 @@ describe('LessonRichText', () => {
 		expect(screen.getByText(/Shows a value in the output panel/i)).toBeVisible();
 		expect(screen.getByText('Useful for')).toBeVisible();
 		expect(screen.getByText('Example')).toBeVisible();
+		expect(tip).toHaveTextContent('print("hello")');
+		expect(screen.getByText('Output')).toBeVisible();
+		expect(tip).toHaveTextContent('hello');
+		expect(tip).toHaveTextContent('7');
 		expect(tip.className).toMatch(/popover/);
 
 		await user.keyboard('{Escape}');

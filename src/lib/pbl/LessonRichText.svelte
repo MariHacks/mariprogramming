@@ -156,6 +156,12 @@
 							<span class="popover-label">Example</span>
 						</p>
 						<pre class="popover-example">{segment.entry.example}</pre>
+						{#if segment.entry.exampleOutput}
+							<p class="popover-block popover-output-label">
+								<span class="popover-label">Output</span>
+							</p>
+							<pre class="popover-example popover-output">{segment.entry.exampleOutput}</pre>
+						{/if}
 					</span>
 				{/if}
 			</span>
@@ -260,6 +266,10 @@
 		font-weight: 700;
 		letter-spacing: 0.05em;
 		text-transform: uppercase;
+	}
+
+	.popover-output-label {
+		margin-top: 0.55rem;
 	}
 
 	.popover-example {
