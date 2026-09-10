@@ -91,6 +91,19 @@ function memoryRepo(seed = roomRow()) {
 		},
 		async listSubmissions(roomId) {
 			return (this.submissions ?? []).filter((row) => row.roomId === roomId);
+		},
+		async deleteMember(roomId, memberId) {
+			const index = members.findIndex((row) => row.roomId === roomId && row.memberId === memberId);
+			if (index >= 0) members.splice(index, 1);
+			return true;
+		},
+		async deleteRoom(roomId) {
+			const index = rooms.findIndex((row) => row.id === roomId);
+			if (index >= 0) rooms.splice(index, 1);
+			for (let i = members.length - 1; i >= 0; i -= 1) {
+				if (members[i].roomId === roomId) members.splice(i, 1);
+			}
+			return true;
 		}
 	};
 }
@@ -324,7 +337,7 @@ describe('PBL room store', () => {
 			source: 'print("from B")'
 		});
 		expect(fromOther.source).toBe('print("from B")');
-		expect(fromOther.isDriver).toBe(true);
+		expect(fromOther.isDriver).toBe(false);
 		const fromFirst = await store.updateRoom({
 			code: 'AB23JK',
 			memberId: MEMBER,
@@ -479,4 +492,36 @@ describe('PBL room store', () => {
 			store.createRoom({ pblId: 'science', teamName: 'Lab', memberId: MEMBER, userId: USER })
 		).rejects.toMatchObject({ status: 503 });
 	});
+
+	it('lets the leader eject a teammate but not themselves or the driver', async () => {
+		const other = 'b'.repeat(32);
+		const repo = memoryRepo(roomRow({ memberCount: 2 }));
+		repo.members.push({ roomId: repo.rooms[0].id, memberId: other, userId: 'user-b' });
+		const store = createPblStore(repo, { now: () => NOW });
+		const updated = await store.ejectMember({
+			code: 'AB23JK',
+			actorMemberId: MEMBER,
+			targetMemberId: other
+		});
+		expect(updated.memberCount).toBe(1);
+		expect(repo.members).toHaveLength(1);
+		await expect(
+			store.ejectMember({ code: 'AB23JK', actorMemberId: MEMBER, targetMemberId: MEMBER })
+		).rejects.toMatchObject({ message: /leader cannot be removed|cannot remove yourself/i });
+	});
+
+	it('lets staff eject, transfer leadership, and disband a room', async () => {
+		const other = 'b'.repeat(32);
+		const repo = memoryRepo(roomRow({ memberCount: 2 }));
+		repo.members.push({ roomId: repo.rooms[0].id, memberId: other, userId: 'user-b' });
+		const store = createPblStore(repo, { now: () => NOW });
+		await store.transferDriver({ code: 'AB23JK', newDriverMemberId: other });
+		expect(repo.rooms[0].driverMemberId).toBe(other);
+		await store.staffEjectMember({ code: 'AB23JK', targetMemberId: MEMBER });
+		expect(repo.members.map((m) => m.memberId)).toEqual([other]);
+		const gone = await store.disbandRoom({ code: 'AB23JK' });
+		expect(gone).toEqual({ ok: true, code: 'AB23JK' });
+		expect(repo.rooms).toHaveLength(0);
+	});
+
 });

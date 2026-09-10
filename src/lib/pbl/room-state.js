@@ -46,7 +46,6 @@ export function normalizeStepSources(value) {
 	return sources;
 }
 
-/** @param {unknown} value */
 export function normalizeStepYjs(value) {
 	/** @type {Record<string, string>} */
 	const encoded = {};
@@ -120,7 +119,8 @@ export function mergeRoomPreferringNewerLastCheck(serverRoom, localRoom) {
  *   yjsState?: string,
  *   awarenessState?: string,
  *   stepSources?: Record<string, string>,
- *   stepYjs?: Record<string, string>
+ *   stepYjs?: Record<string, string>,
+ *   members?: Array<{ memberId: string, userId?: string | null, email?: string | null, name?: string | null }>,
  * }} row
  * @param {string} [viewerMemberId]
  */
@@ -145,7 +145,11 @@ export function publicRoomView(row, viewerMemberId) {
 		awarenessState: typeof row.awarenessState === 'string' ? row.awarenessState : '',
 		stepSources,
 		stepYjs,
+		driverMemberId: row.driverMemberId ?? null,
+		members: Array.isArray(row.members) ? row.members : undefined,
 		joinable: canAcceptMember(row.memberCount),
-		isDriver: Boolean(viewerMemberId)
+		isDriver: Boolean(
+			viewerMemberId && row.driverMemberId && viewerMemberId === row.driverMemberId
+		)
 	};
 }

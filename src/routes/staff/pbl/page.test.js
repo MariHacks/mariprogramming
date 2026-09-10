@@ -1,5 +1,4 @@
 import { cleanup, render, screen } from '@testing-library/svelte';
-import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import StaffPblPage from './+page.svelte';
 
@@ -8,8 +7,7 @@ afterEach(() => {
 });
 
 describe('staff PBL teams page', () => {
-	it('lists team progress, members, and expandable source', async () => {
-		const user = userEvent.setup();
+	it('lists unlocked progress and links to team detail', async () => {
 		render(StaffPblPage, {
 			data: {
 				unavailable: false,
@@ -18,12 +16,10 @@ describe('staff PBL teams page', () => {
 						code: 'AB23JK',
 						pblId: 'science',
 						teamName: 'Lab table 3',
-						currentStep: 1,
 						unlockedStep: 2,
 						memberCount: 2,
 						updatedAt: '2026-09-09T18:00:00.000Z',
 						lastCheck: { step: 1, passed: true, message: 'Nice work' },
-						source: 'print("hello")',
 						members: [
 							{
 								memberId: 'a'.repeat(32),
@@ -46,11 +42,9 @@ describe('staff PBL teams page', () => {
 		expect(screen.getByText('ada@marihacks.com')).toBeInTheDocument();
 		expect(screen.getByText('Anonymous device')).toBeInTheDocument();
 		expect(screen.getByText(/Step 2 · passed · Nice work/)).toBeInTheDocument();
-		const details = screen.getByText('Team source code').closest('details');
-		expect(details).toBeTruthy();
-		expect(details?.open).toBe(false);
-		await user.click(screen.getByText('Team source code'));
-		expect(screen.getByText('print("hello")')).toBeInTheDocument();
+		expect(screen.queryByText('Current step')).not.toBeInTheDocument();
+		expect(screen.getByText('Unlocked step')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: /View step sources/i })).toBeInTheDocument();
 	});
 
 	it('explains when no teams exist', () => {

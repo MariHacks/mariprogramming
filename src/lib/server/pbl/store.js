@@ -177,6 +177,21 @@ export function createDrizzlePblRepository(transaction) {
 				.from(pblStepSubmissions)
 				.where(eq(pblStepSubmissions.roomId, roomId))
 				.orderBy(desc(pblStepSubmissions.createdAt));
+		},
+		/**
+		 * @param {string} roomId
+		 * @param {string} memberId
+		 */
+		async deleteMember(roomId, memberId) {
+			await transaction
+				.delete(pblRoomMembers)
+				.where(and(eq(pblRoomMembers.roomId, roomId), eq(pblRoomMembers.memberId, memberId)));
+			return true;
+		},
+		/** @param {string} roomId */
+		async deleteRoom(roomId) {
+			await transaction.delete(pblRooms).where(eq(pblRooms.id, roomId));
+			return true;
 		}
 	};
 }
@@ -270,6 +285,27 @@ export function createMemoryPblRepository() {
 					const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
 					return bTime - aTime;
 				});
+		},
+		/**
+		 * @param {string} roomId
+		 * @param {string} memberId
+		 */
+		async deleteMember(roomId, memberId) {
+			const index = members.findIndex((row) => row.roomId === roomId && row.memberId === memberId);
+			if (index >= 0) members.splice(index, 1);
+			return true;
+		},
+		/** @param {string} roomId */
+		async deleteRoom(roomId) {
+			const index = rooms.findIndex((row) => row.id === roomId);
+			if (index >= 0) rooms.splice(index, 1);
+			for (let i = members.length - 1; i >= 0; i -= 1) {
+				if (members[i].roomId === roomId) members.splice(i, 1);
+			}
+			for (let i = submissions.length - 1; i >= 0; i -= 1) {
+				if (submissions[i].roomId === roomId) submissions.splice(i, 1);
+			}
+			return true;
 		}
 	};
 }
@@ -349,6 +385,20 @@ export function createPblStore(repository, clock = {}) {
 			if (!normalized) throw new PblInputError('That room code is not valid.');
 			const row = await repository.findRoomByCode(normalized);
 			if (!row) throw new PblNotFoundError();
+			if (viewerMemberId) {
+				const membership = await repository.findMember(row.id, viewerMemberId);
+				if (!membership) {
+					throw new PblInputError('You were removed from this team.', 403);
+				}
+				const memberRows = await repository.listMembersWithUsers([row.id]);
+				const members = memberRows.map((member) => ({
+					memberId: member.memberId,
+					userId: member.userId ?? null,
+					email: member.email ?? null,
+					name: member.name ?? null
+				}));
+				return roomFromRow({ ...row, members }, viewerMemberId);
+			}
 			return roomFromRow(row, viewerMemberId);
 		},
 
@@ -574,6 +624,7 @@ export function createPblStore(repository, clock = {}) {
 				teamName: row.teamName,
 				source: row.source ?? '',
 				unlockedStep: row.unlockedStep,
+				driverMemberId: row.driverMemberId ?? null,
 				lastCheck: row.lastCheck ?? null,
 				memberCount: row.memberCount,
 				stepSources: normalizeStepSources(row.stepSources),
@@ -611,6 +662,88 @@ export function createPblStore(repository, clock = {}) {
 								: null
 				}))
 			};
+		},
+
+		/**
+		 * Leader eject (or staff via staffEjectMember).
+		 * @param {{ code: unknown, actorMemberId?: string, targetMemberId: string, asStaff?: boolean }} input
+		 */
+		async ejectMember(input) {
+			const normalized = normalizeRoomCode(input.code);
+			if (!normalized) throw new PblInputError('That room code is not valid.');
+			const row = await repository.findRoomByCode(normalized);
+			if (!row) throw new PblNotFoundError();
+			const targetId = typeof input.targetMemberId === 'string' ? input.targetMemberId : '';
+			if (!targetId) throw new PblInputError('Pick a teammate to remove.');
+			if (targetId === row.driverMemberId) {
+				throw new PblInputError('The team leader cannot be removed. Transfer leadership first.');
+			}
+			if (!input.asStaff) {
+				const actorId = typeof input.actorMemberId === 'string' ? input.actorMemberId : '';
+				if (!actorId || actorId !== row.driverMemberId) {
+					throw new PblInputError('Only the team leader can remove teammates.', 403);
+				}
+				if (actorId === targetId) {
+					throw new PblInputError('You cannot remove yourself.');
+				}
+			}
+			const target = await repository.findMember(row.id, targetId);
+			if (!target) throw new PblInputError('That teammate is not on this team.', 404);
+			await repository.deleteMember(row.id, targetId);
+			const nextCount = Math.max(1, Number(row.memberCount) - 1);
+			const updated = await repository.updateRoom(row.code, row.version, {
+				memberCount: nextCount,
+				version: row.version + 1,
+				updatedAt: now()
+			});
+			if (!updated) {
+				// Member already deleted; still return current view for staff.
+				const fresh = await repository.findRoomByCode(normalized);
+				return roomFromRow(fresh ?? row);
+			}
+			return roomFromRow(updated);
+		},
+
+		/**
+		 * @param {{ code: unknown, targetMemberId: string }} input
+		 */
+		async staffEjectMember(input) {
+			return this.ejectMember({ ...input, asStaff: true });
+		},
+
+		/**
+		 * @param {{ code: unknown, newDriverMemberId: string }} input
+		 */
+		async transferDriver(input) {
+			const normalized = normalizeRoomCode(input.code);
+			if (!normalized) throw new PblInputError('That room code is not valid.');
+			const row = await repository.findRoomByCode(normalized);
+			if (!row) throw new PblNotFoundError();
+			const nextDriver =
+				typeof input.newDriverMemberId === 'string' ? input.newDriverMemberId : '';
+			if (!nextDriver) throw new PblInputError('Pick a new team leader.');
+			const target = await repository.findMember(row.id, nextDriver);
+			if (!target) throw new PblInputError('That teammate is not on this team.', 404);
+			if (nextDriver === row.driverMemberId) {
+				return roomFromRow(row);
+			}
+			const updated = await repository.updateRoom(row.code, row.version, {
+				driverMemberId: nextDriver,
+				version: row.version + 1,
+				updatedAt: now()
+			});
+			if (!updated) throw new PblConflictError(roomFromRow(row));
+			return roomFromRow(updated);
+		},
+
+		/** @param {{ code: unknown }} input */
+		async disbandRoom(input) {
+			const normalized = normalizeRoomCode(input.code);
+			if (!normalized) throw new PblInputError('That room code is not valid.');
+			const row = await repository.findRoomByCode(normalized);
+			if (!row) throw new PblNotFoundError();
+			await repository.deleteRoom(row.id);
+			return { ok: true, code: normalized };
 		},
 
 		async listStaffRooms() {
