@@ -95,14 +95,14 @@ function monokaiProOpenTheme() {
 					color: MONOKAI.comment,
 					border: 'none',
 					fontFamily: "var(--font-mono), 'Roboto Mono', ui-monospace, monospace",
-					fontSize: '12px',
+					fontSize: '14px',
 					fontWeight: '400',
 					letterSpacing: '0',
 					lineHeight: '1.55',
 					padding: '8px 0'
 				},
 				'.cm-gutterElement': {
-					fontSize: '12px',
+					fontSize: '14px',
 					fontWeight: '400',
 					letterSpacing: '0',
 					lineHeight: '1.55'
