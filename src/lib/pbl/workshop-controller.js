@@ -79,7 +79,7 @@ export function createWorkshopController(options) {
 			roomError,
 			readOnly,
 			blocked,
-			isDriver: blocked !== 'full',
+			isDriver: Boolean(room.isDriver),
 			nextAction: studioNextAction({
 				blocked,
 				lastCheck: room.lastCheck,
@@ -485,6 +485,27 @@ export function createWorkshopController(options) {
 		return result;
 	}
 
+	/** @param {string} targetMemberId */
+	async function ejectMember(targetMemberId) {
+		if (!targetMemberId || blocked === 'full') return null;
+		const response = await fetchImpl(
+			`/api/pbl/rooms/${options.code}/members/${encodeURIComponent(targetMemberId)}`,
+			{
+				method: 'DELETE',
+				headers: { accept: 'application/json' }
+			}
+		);
+		const payload = await response.json().catch(() => ({}));
+		if (!response.ok) {
+			roomError =
+				typeof payload.error === 'string' ? payload.error : 'Could not remove that teammate.';
+			publish();
+			return null;
+		}
+		applyRemoteRoom(payload.room && typeof payload.room === 'object' ? payload.room : payload);
+		return snapshot();
+	}
+
 	function destroy() {
 		sync.stop();
 		host.destroy();
@@ -498,6 +519,7 @@ export function createWorkshopController(options) {
 		selectStep,
 		openHint,
 		run,
+		ejectMember,
 		destroy,
 		getState: snapshot,
 		/**

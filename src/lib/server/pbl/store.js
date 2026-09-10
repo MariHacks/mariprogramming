@@ -86,7 +86,8 @@ export function roomFromRow(row, viewerMemberId) {
 			yjsState: row.yjsState ?? '',
 			awarenessState: row.awarenessState ?? '',
 			stepSources: row.stepSources ?? {},
-			stepYjs: row.stepYjs ?? {}
+			stepYjs: row.stepYjs ?? {},
+			members: Array.isArray(row.members) ? row.members : undefined
 		},
 		viewerMemberId
 	);

@@ -493,6 +493,21 @@ describe('PBL room store', () => {
 		).rejects.toMatchObject({ status: 503 });
 	});
 
+
+	it('includes members for a room member viewer', async () => {
+		const repo = memoryRepo(roomRow({ memberCount: 1 }));
+		repo.members[0].email = 'lead@marihacks.com';
+		repo.members[0].name = 'Lead';
+		const store = createPblStore(repo, { now: () => NOW });
+		const room = await store.getRoom('AB23JK', MEMBER);
+		expect(room.isDriver).toBe(true);
+		expect(room.members).toEqual([
+			{ memberId: MEMBER, userId: USER, email: 'lead@marihacks.com', name: 'Lead' }
+		]);
+		const publicView = await store.getRoom('AB23JK');
+		expect(publicView.members).toBeUndefined();
+	});
+
 	it('lets the leader eject a teammate but not themselves or the driver', async () => {
 		const other = 'b'.repeat(32);
 		const repo = memoryRepo(roomRow({ memberCount: 2 }));
