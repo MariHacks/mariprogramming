@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PBL_CATALOG, getPblById, SCIENCE_PBL_ID } from './catalog.js';
+import { PBL_CATALOG, getPblById, resolvePblHeaderLabel, SCIENCE_PBL_ID } from './catalog.js';
 
 describe('PBL catalog', () => {
 	it('ships PBL 1 as a joinable workshop, not an archive item', () => {
@@ -22,5 +22,16 @@ describe('PBL catalog', () => {
 		expect(getPblById('science')?.title).toBe('Speedrun Programming in Science');
 		expect(getPblById('missing')).toBeNull();
 		expect(getPblById(1)).toBeNull();
+	});
+});
+
+describe('resolvePblHeaderLabel', () => {
+	it('uses Workshops on the hub and unknown series, and the catalog title on known paths', () => {
+		expect(resolvePblHeaderLabel('/pbl')).toBe('Workshops');
+		expect(resolvePblHeaderLabel('/pbl/science')).toBe('Speedrun Programming in Science');
+		expect(resolvePblHeaderLabel('/pbl/science/ABC123')).toBe('Speedrun Programming in Science');
+		expect(resolvePblHeaderLabel('/pbl/missing')).toBe('Workshops');
+		expect(resolvePblHeaderLabel('/about-us')).toBe('Workshops');
+		expect(resolvePblHeaderLabel(null)).toBe('Workshops');
 	});
 });

@@ -4,10 +4,15 @@
 	import { endStaffSession } from '$lib/auth/staff-sign-out.js';
 	import { clubContent, isExternalSignupUrl } from '$lib/content/club';
 	import { createClubContactLinks } from '$lib/club-contact.js';
+	import { resolvePblHeaderLabel } from '$lib/pbl/catalog.js';
 	import SocialIcon from './SocialIcon.svelte';
 
 	/** @type {string} */
 	export let pathname;
+
+	/** Compact IDE-density header on /pbl routes; expands on hover / focus-within. */
+	/** @type {boolean} */
+	export let compactPbl = false;
 
 	/** @type {import('$lib/maritools/header-account.js').ReturnType<typeof import('$lib/maritools/header-account.js').headerAccountView>} */
 	export let headerAccount = { kind: 'signed-out' };
@@ -18,9 +23,7 @@
 		{ label: 'Workshops', href: '/pbl', external: false },
 		{ label: 'MariTools', href: '/tools', external: false }
 	];
-	const statusLinks = [
-		{ label: 'Workshop archive', href: '/our-workshops', external: false }
-	];
+	const statusLinks = [{ label: 'Workshop archive', href: '/our-workshops', external: false }];
 	const compactLinks = primaryLinks.slice(0, 3);
 	const moreLinks = [
 		...primaryLinks.slice(3),
@@ -41,6 +44,7 @@
 	let moreOpen = false;
 	let accountMenuOpen = false;
 	let previousPathname = pathname;
+	$: pblHeaderLabel = resolvePblHeaderLabel(pathname);
 	/** @type {HTMLButtonElement} */
 	let mobileButton;
 	/** @type {HTMLButtonElement} */
@@ -107,7 +111,12 @@
 <svelte:window on:keydown={handleKeydown} />
 <svelte:document on:pointerdown={handleOutsidePointer} />
 
-<header class="site-header" data-shell-version="editorial">
+<header
+	class="site-header"
+	class:is-compact-pbl={compactPbl}
+	data-shell-version="editorial"
+	data-compact-pbl={compactPbl ? 'true' : 'false'}
+>
 	<div class="header-frame">
 		<a
 			class="brand"
@@ -122,13 +131,19 @@
 			</span>
 		</a>
 
+		{#if compactPbl}
+			<p class="pbl-context" data-pbl-context aria-hidden="true">{pblHeaderLabel}</p>
+		{/if}
+
 		<nav class="wide-navigation" aria-label="Primary navigation" data-navigation-mode="wide">
 			<ul class="navigation-list">
 				{#each primaryLinks as link (link.href)}
-					<li>
+					<li class:pbl-morph-slot={link.href === '/pbl'}>
 						<a
 							class:current={isCurrent(link.href)}
 							class="navigation-link"
+							class:pbl-morph-target={link.href === '/pbl'}
+							data-pbl-morph={link.href === '/pbl' ? 'workshops' : undefined}
 							href={resolve(link.href, {})}
 							aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a
 						>
@@ -145,10 +160,12 @@
 			>
 				<ul class="navigation-list">
 					{#each compactLinks as link (link.href)}
-						<li>
+						<li class:pbl-morph-slot={link.href === '/pbl'}>
 							<a
 								class:current={isCurrent(link.href)}
 								class="navigation-link"
+								class:pbl-morph-target={link.href === '/pbl'}
+								data-pbl-morph={link.href === '/pbl' ? 'workshops' : undefined}
 								href={resolve(link.href, {})}
 								aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a
 							>
@@ -333,8 +350,10 @@
 							on:click={closeDisclosures}>Sign up</a
 						>
 					{:else}
-						<a class="signup-link" href={resolve(clubContent.signupUrl, {})} on:click={closeDisclosures}
-							>Sign up</a
+						<a
+							class="signup-link"
+							href={resolve(clubContent.signupUrl, {})}
+							on:click={closeDisclosures}>Sign up</a
 						>
 					{/if}
 				{:else}
@@ -351,8 +370,9 @@
 							{:else}
 								{headerAccount.initials}
 							{/if}
-						</span><b>{headerAccount.displayName}</b
-						><svg viewBox="0 0 12 12" aria-hidden="true"><path d="m2.5 4.5 3.5 3 3.5-3" /></svg>
+						</span><b>{headerAccount.displayName}</b><svg viewBox="0 0 12 12" aria-hidden="true"
+							><path d="m2.5 4.5 3.5 3 3.5-3" /></svg
+						>
 					</button>
 					<div class="account-menu" id="account-menu" hidden={!accountMenuOpen}>
 						<a href={resolve('/tools/account', {})} on:click={closeDisclosures}>Your account</a>
@@ -375,6 +395,7 @@
 	}
 
 	.header-frame {
+		position: relative;
 		display: grid;
 		grid-template-columns: auto minmax(0, 1fr) auto;
 		align-items: center;
@@ -836,11 +857,236 @@
 		}
 	}
 
+	.pbl-context {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		z-index: 2;
+		margin: 0;
+		max-width: min(36rem, 70vw);
+		overflow: hidden;
+		color: var(--midnight);
+		font-family: var(--font-display);
+		font-size: 0.8125rem;
+		font-weight: 650;
+		letter-spacing: -0.02em;
+		line-height: 1.1;
+		text-align: center;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		pointer-events: none;
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0.96);
+		visibility: hidden;
+		transition:
+			opacity var(--pbl-header-motion, 280ms) var(--ease-out),
+			transform var(--pbl-header-motion, 280ms) var(--ease-out),
+			visibility 0s linear var(--pbl-header-motion, 280ms);
+	}
+
+	.site-header.is-compact-pbl {
+		--pbl-header-motion: 280ms;
+		transition: height var(--pbl-header-motion) var(--ease-out);
+	}
+
+	.site-header.is-compact-pbl .brand,
+	.site-header.is-compact-pbl .brand-name,
+	.site-header.is-compact-pbl .brand-mark,
+	.site-header.is-compact-pbl .wide-navigation .navigation-list > li,
+	.site-header.is-compact-pbl .compact-navigation .navigation-list > li,
+	.site-header.is-compact-pbl .header-contact,
+	.site-header.is-compact-pbl .header-socials,
+	.site-header.is-compact-pbl .header-actions,
+	.site-header.is-compact-pbl .navigation-link,
+	.site-header.is-compact-pbl .signup-link,
+	.site-header.is-compact-pbl .identity-button {
+		transition:
+			opacity var(--pbl-header-motion) var(--ease-out),
+			transform var(--pbl-header-motion) var(--ease-out),
+			visibility 0s linear 0s,
+			min-height var(--pbl-header-motion) var(--ease-out),
+			padding var(--pbl-header-motion) var(--ease-out),
+			width var(--pbl-header-motion) var(--ease-out),
+			height var(--pbl-header-motion) var(--ease-out),
+			font-size var(--pbl-header-motion) var(--ease-out);
+	}
+
+	/*
+	 * Collapsed PBL chrome: fine-pointer hover devices only.
+	 * Touch / coarse pointers and small breakpoints stay on the full header
+	 * so navigation is never hover-trapped (mobile keeps the existing menu).
+	 */
+	@media (hover: hover) and (pointer: fine) {
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) {
+			height: 2.25rem;
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .brand {
+			transform: translateX(1.25rem);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .brand-name {
+			max-width: 0;
+			margin: 0;
+			opacity: 0;
+			overflow: hidden;
+			transform: translateX(-0.35rem) scale(0.92);
+			visibility: hidden;
+			transition:
+				opacity var(--pbl-header-motion) var(--ease-out),
+				transform var(--pbl-header-motion) var(--ease-out),
+				max-width var(--pbl-header-motion) var(--ease-out),
+				visibility 0s linear var(--pbl-header-motion);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .brand-mark {
+			width: 1.25rem;
+			height: 1.3rem;
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .brand {
+			min-height: 1.75rem;
+			gap: 0;
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .pbl-context {
+			opacity: 1;
+			transform: translate(-50%, -50%) scale(1);
+			visibility: visible;
+			transition-delay: 0s;
+		}
+
+		/* Outer nav items pull into the center; Workshops yields to the PBL label. */
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
+			.wide-navigation
+			.navigation-list
+			> li:not(.pbl-morph-slot) {
+			opacity: 0;
+			transform: scale(0.88);
+			visibility: hidden;
+			pointer-events: none;
+			transition:
+				opacity var(--pbl-header-motion) var(--ease-out),
+				transform var(--pbl-header-motion) var(--ease-out),
+				visibility 0s linear var(--pbl-header-motion);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
+			.wide-navigation
+			.navigation-list
+			> li:first-child {
+			transform: translateX(1.75rem) scale(0.88);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
+			.wide-navigation
+			.navigation-list
+			> li:nth-child(2) {
+			transform: translateX(0.85rem) scale(0.88);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
+			.wide-navigation
+			.navigation-list
+			> li:last-child {
+			transform: translateX(-1.75rem) scale(0.88);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .pbl-morph-target {
+			opacity: 0;
+			transform: scale(0.94);
+			visibility: hidden;
+			pointer-events: none;
+			transition:
+				opacity var(--pbl-header-motion) var(--ease-out),
+				transform var(--pbl-header-motion) var(--ease-out),
+				visibility 0s linear var(--pbl-header-motion);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
+			.compact-navigation
+			.navigation-list
+			> li:not(.pbl-morph-slot) {
+			opacity: 0;
+			visibility: hidden;
+			pointer-events: none;
+			transform: scale(0.9);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within)
+			.compact-navigation
+			.navigation-list
+			> li:first-child {
+			transform: translateX(1.25rem) scale(0.9);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .compact-navigation .more-item {
+			transform: translateX(-1.25rem) scale(0.9);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-contact,
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-socials {
+			opacity: 0;
+			transform: translateX(-0.75rem) scale(0.92);
+			visibility: hidden;
+			pointer-events: none;
+			max-width: 0;
+			overflow: hidden;
+			transition:
+				opacity var(--pbl-header-motion) var(--ease-out),
+				transform var(--pbl-header-motion) var(--ease-out),
+				max-width var(--pbl-header-motion) var(--ease-out),
+				visibility 0s linear var(--pbl-header-motion);
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-actions {
+			transform: translateX(-0.35rem);
+			gap: 0;
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .navigation-link,
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .disclosure-button,
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .signup-link,
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .identity-button,
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-contact a {
+			min-height: 1.75rem;
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .signup-link {
+			padding: 0.35rem 0.85rem;
+			margin-inline-start: 0;
+		}
+
+		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .identity-button {
+			padding: 0.2rem 0.45rem;
+		}
+	}
+
+	@media (max-width: 43.749rem) {
+		.site-header.is-compact-pbl .pbl-context {
+			display: none;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.more-menu,
 		.mobile-navigation,
-		.signup-link {
-			transition-duration: 1ms;
+		.signup-link,
+		.site-header.is-compact-pbl,
+		.site-header.is-compact-pbl .brand,
+		.site-header.is-compact-pbl .brand-name,
+		.site-header.is-compact-pbl .brand-mark,
+		.site-header.is-compact-pbl .wide-navigation .navigation-list > li,
+		.site-header.is-compact-pbl .compact-navigation .navigation-list > li,
+		.site-header.is-compact-pbl .header-contact,
+		.site-header.is-compact-pbl .header-socials,
+		.site-header.is-compact-pbl .header-actions,
+		.site-header.is-compact-pbl .navigation-link,
+		.site-header.is-compact-pbl .signup-link,
+		.site-header.is-compact-pbl .identity-button,
+		.pbl-context {
+			transition-duration: 1ms !important;
+			transition-delay: 0s !important;
 		}
 	}
 
