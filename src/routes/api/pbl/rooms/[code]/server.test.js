@@ -29,6 +29,22 @@ describe('PBL room poll and push', () => {
 		expect(await response.json()).toMatchObject({ code: 'AB23JK', version: 2 });
 	});
 
+	it('returns 304 when x-pbl-version matches', async () => {
+		const getRoomVersion = vi.fn(async () => 2);
+		const getRoom = vi.fn(async () => ({ code: 'AB23JK', version: 2 }));
+		const { GET } = runtime({ getRoomVersion, getRoom });
+		const response = await GET({
+			params: { code: 'AB23JK' },
+			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
+				headers: { 'x-pbl-version': '2' }
+			}),
+			url: new URL('https://club.example/api/pbl/rooms/AB23JK')
+		});
+		expect(response.status).toBe(304);
+		expect(getRoomVersion).toHaveBeenCalled();
+		expect(getRoom).not.toHaveBeenCalled();
+	});
+
 	it('maps a missing room to 404', async () => {
 		const { PblNotFoundError } = await import('$lib/server/pbl/store.js');
 		const { GET } = runtime({

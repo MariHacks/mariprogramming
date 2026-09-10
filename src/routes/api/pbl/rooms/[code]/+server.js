@@ -10,6 +10,19 @@ import { memberCookie, readMemberId } from '$lib/server/pbl/cookie.js';
 
 export const prerender = false;
 
+/**
+ * @param {Headers} headers
+ * @returns {number | null}
+ */
+function knownVersionFrom(headers) {
+	const raw = headers.get('x-pbl-version');
+	if (raw && /^\d+$/u.test(raw)) return Number(raw);
+	const etag = headers.get('if-none-match');
+	if (!etag) return null;
+	const match = /^\s*"?(\d+)"?\s*$/u.exec(etag);
+	return match ? Number(match[1]) : null;
+}
+
 /** @param {Record<string, any>} [dependencies] */
 export function _createPblRoomEndpoint(dependencies = {}) {
 	const runtime = createPblRuntime(dependencies);
@@ -17,6 +30,21 @@ export function _createPblRoomEndpoint(dependencies = {}) {
 	/** @param {any} event */
 	async function GET(event) {
 		try {
+			const known = knownVersionFrom(event.request.headers);
+			if (known !== null && Number.isInteger(known)) {
+				const current = await runtime.withStore((store) => store.getRoomVersion(event.params.code));
+				if (current === known) {
+					return new Response(null, {
+						status: 304,
+						headers: {
+							'cache-control': 'no-store',
+							etag: `"${current}"`,
+							'x-pbl-version': String(current)
+						}
+					});
+				}
+			}
+
 			const viewer = readMemberId(event.request.headers.get('cookie'));
 			const userId = event.locals?.maritools?.userId;
 			const room = await runtime.withStore((store) =>
@@ -39,6 +67,10 @@ export function _createPblRoomEndpoint(dependencies = {}) {
 			if (rebound) {
 				const secure = event.url.protocol === 'https:';
 				headers['set-cookie'] = memberCookie(rebound, { secure });
+			}
+			if (room && typeof room === 'object' && Number.isFinite(Number(room.version))) {
+				headers.etag = `"${Number(room.version)}"`;
+				headers['x-pbl-version'] = String(Number(room.version));
 			}
 			return pblJson(room, 200, headers);
 		} catch (error) {
