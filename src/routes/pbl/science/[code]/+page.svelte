@@ -166,71 +166,61 @@
 		</nav>
 
 		<aside class="lesson">
-			<p class="eyebrow">PBL 1 · {state.teamName || 'Team room'} · {state.code}</p>
-			<div class="title-row">
-				<h1>{state.step.title}</h1>
-				<p class="minutes">{state.step.minutes} min</p>
-			</div>
-			<p class="body">{state.step.body}</p>
-			{#if state.step.notes}
-				<section class="examples" aria-label="Notes">
-					<h2>Examples</h2>
-					<ul class="notes">
-						{#each state.step.notes as note (note)}
-							<li>{note}</li>
-						{/each}
-					</ul>
-				</section>
-			{/if}
-			<div class="hints">
-				<p>Hints</p>
-				{#each [1, 2, 3] as level (level)}
-					<button
-						type="button"
-						disabled={state.blocked === 'full' ||
-							level > (state.openedHints?.[String(state.currentStep)] ?? 0) + 1}
-						on:click={() => controller?.openHint(level)}
+			<div class="lesson-scroll">
+				<p class="eyebrow">PBL 1 · {state.teamName || 'Team room'} · {state.code}</p>
+				<div class="title-row">
+					<h1>{state.step.title}</h1>
+					<p class="minutes">{state.step.minutes} min</p>
+				</div>
+				<p class="body">{state.step.body}</p>
+				{#if state.step.notes}
+					<section class="examples" aria-label="Notes">
+						<h2>Examples</h2>
+						<ul class="notes">
+							{#each state.step.notes as note (note)}
+								<li>{note}</li>
+							{/each}
+						</ul>
+					</section>
+				{/if}
+				<div class="hints">
+					<p>Hints</p>
+					{#each [1, 2, 3] as level (level)}
+						<button
+							type="button"
+							disabled={state.blocked === 'full' ||
+								level > (state.openedHints?.[String(state.currentStep)] ?? 0) + 1}
+							on:click={() => controller?.openHint(level)}
+						>
+							{level === 1 ? 'Idea' : level === 2 ? 'Syntax' : 'Partial code'}
+						</button>
+					{/each}
+					{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 1}
+						<pre class="hint">{state.step.hints[0]}</pre>
+					{/if}
+					{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 2}
+						<pre class="hint">{state.step.hints[1]}</pre>
+					{/if}
+					{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 3}
+						<pre class="hint">{state.step.hints[2]}</pre>
+					{/if}
+				</div>
+				{#if state.lastCheck}
+					<p
+						class="check"
+						class:pass={state.lastCheck.passed}
+						class:fail={!state.lastCheck.passed}
+						role="status"
 					>
-						{level === 1 ? 'Idea' : level === 2 ? 'Syntax' : 'Partial code'}
-					</button>
-				{/each}
-				{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 1}
-					<pre class="hint">{state.step.hints[0]}</pre>
+						<span class="verdict">{state.lastCheck.passed ? 'Accepted' : 'Wrong Answer'}</span>
+						{state.lastCheck.message}
+					</p>
 				{/if}
-				{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 2}
-					<pre class="hint">{state.step.hints[1]}</pre>
-				{/if}
-				{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 3}
-					<pre class="hint">{state.step.hints[2]}</pre>
+				{#if state.step.stretch && state.currentStep === 11}
+					<p class="stretch">{state.step.stretch}</p>
 				{/if}
 			</div>
-			{#if state.lastCheck}
-				<p
-					class="check"
-					class:pass={state.lastCheck.passed}
-					class:fail={!state.lastCheck.passed}
-					role="status"
-				>
-					<span class="verdict">{state.lastCheck.passed ? 'Accepted' : 'Wrong Answer'}</span>
-					{state.lastCheck.message}
-				</p>
-			{/if}
-			{#if state.step.stretch && state.currentStep === 11}
-				<p class="stretch">{state.step.stretch}</p>
-			{/if}
 			<div class="lesson-footer">
-				{#if state.currentStep < state.steps.length - 1}
-					<button
-						class="button-primary next-step"
-						type="button"
-						disabled={!canGoNext}
-						on:click={goNext}
-					>
-						Next
-					</button>
-				{:else if showFinished}
-					<p class="finished" role="status">Finished</p>
-				{/if}
 				<ol class="steps">
 					{#each state.steps as step (step.id)}
 						<li>
@@ -245,6 +235,18 @@
 						</li>
 					{/each}
 				</ol>
+				{#if state.currentStep < state.steps.length - 1}
+					<button
+						class="button-primary next-step"
+						type="button"
+						disabled={!canGoNext}
+						on:click={goNext}
+					>
+						Next
+					</button>
+				{:else if showFinished}
+					<p class="finished" role="status">Finished</p>
+				{/if}
 			</div>
 		</aside>
 
@@ -369,12 +371,21 @@
 	}
 
 	.lesson {
-		display: grid;
-		align-content: start;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
 		padding: 1.1rem 1.25rem 1.5rem;
 		border-block-end: var(--rule);
-		gap: 0.85rem;
 		background: #fff;
+	}
+
+	.lesson-scroll {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow: auto;
+		display: grid;
+		align-content: start;
+		gap: 0.85rem;
 	}
 
 	.eyebrow,
@@ -388,17 +399,17 @@
 	}
 
 	.lesson-footer {
+		flex: 0 0 auto;
 		display: grid;
-		gap: 0.75rem;
-		margin-top: 0.35rem;
+		gap: 0.55rem;
+		margin-top: 0.75rem;
 		padding-top: 0.85rem;
 		border-block-start: var(--rule);
 	}
 
 	.next-step {
-		justify-self: start;
+		width: 100%;
 		min-height: 2.5rem;
-		padding-inline: 1.25rem;
 	}
 
 	.next-step:disabled {
@@ -414,6 +425,7 @@
 		color: #157347;
 		font-size: 0.875rem;
 		font-weight: 700;
+		text-align: center;
 	}
 
 	.steps {
@@ -771,25 +783,27 @@
 
 	@media (min-width: 64rem) {
 		.studio {
-			grid-template-columns: var(--lesson-width, 20rem) 0.4rem minmax(0, 1fr);
+			grid-template-columns: var(--lesson-width, 20rem) 0.5rem minmax(0, 1fr);
 		}
 
 		.lesson {
 			border-block-end: 0;
 			border-inline-end: 0;
-			overflow: auto;
+			overflow: hidden;
 		}
 
 		.split-x {
 			display: block;
 			cursor: col-resize;
-			background: #d7d9de;
-			border-inline-end: 1px solid #c2c5cc;
+			background:
+				linear-gradient(#d7d9de, #d7d9de) center / 2px 100% no-repeat;
 		}
 
 		.split-x:hover,
 		.split-x:active {
-			background: rgb(var(--club-blue-rgb) / 35%);
+			background:
+				linear-gradient(rgb(var(--club-blue-rgb) / 55%), rgb(var(--club-blue-rgb) / 55%))
+					center / 2px 100% no-repeat;
 		}
 
 		.work {
@@ -798,14 +812,16 @@
 
 		.split-y {
 			display: block;
-			flex: 0 0 0.4rem;
+			flex: 0 0 0.5rem;
 			cursor: row-resize;
-			background: #3e3b3f;
+			background:
+				linear-gradient(#3e3b3f, #3e3b3f) center / 100% 2px no-repeat;
 		}
 
 		.split-y:hover,
 		.split-y:active {
-			background: #78dce8;
+			background:
+				linear-gradient(#78dce8, #78dce8) center / 100% 2px no-repeat;
 		}
 
 		.work-bottom {
