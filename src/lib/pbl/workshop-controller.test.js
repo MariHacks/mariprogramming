@@ -615,6 +615,71 @@ describe('workshop controller', () => {
 		controller.destroy();
 	});
 
+	it('first-open / hop pin: N polls keep stable yjsState and do not grow source', async () => {
+		const { controller, onState } = harness();
+		await controller.join();
+		const afterJoin = controller.getState();
+		const pinnedSource = afterJoin.source;
+		const pinnedYjs = afterJoin.yjsState;
+		expect(pinnedSource).toBeTruthy();
+		expect(pinnedYjs).toBeTruthy();
+		expect(afterJoin.editorEpoch).toBeGreaterThan(0);
+		// Simulate HTTP polls while still pinned (user has not typed yet).
+		for (let i = 0; i < 8; i += 1) {
+			onState()({
+				source: 'print("poll-noise")',
+				yjsState: encodeSourceAsYjs('print("poll-noise")'),
+				stepSources: { '0': pinnedSource },
+				unlockedStep: 0,
+				version: 2 + i
+			});
+		}
+		const afterPolls = controller.getState();
+		expect(afterPolls.source).toBe(pinnedSource);
+		expect(afterPolls.yjsState).toBe(pinnedYjs);
+		expect(afterPolls.source.match(/print/g)?.length).toBe(1);
+		// Hop pin: same stability after selectStep reload.
+		controller.setCollab({
+			source: 'print("step-A")',
+			yjsState: encodeSourceAsYjs('print("step-A")'),
+			awarenessState: ''
+		});
+		// Unlock step 1 via a fake remote so selectStep(1) is allowed.
+		onState()({
+			source: 'print("step-A")',
+			yjsState: encodeSourceAsYjs('print("step-A")'),
+			stepSources: { '0': 'print("step-A")', '1': 'print("step-B")' },
+			unlockedStep: 1,
+			editingStep: 0,
+			version: 20
+		});
+		// Clear pin by typing different source, then hop.
+		controller.setCollab({
+			source: 'print("step-A-edited")',
+			yjsState: encodeSourceAsYjs('print("step-A-edited")'),
+			awarenessState: ''
+		});
+		controller.selectStep(1);
+		const afterHop = controller.getState();
+		const hopSource = afterHop.source;
+		const hopYjs = afterHop.yjsState;
+		expect(hopSource).toBe('print("step-B")');
+		for (let i = 0; i < 5; i += 1) {
+			onState()({
+				source: 'print("other-step-live")',
+				yjsState: encodeSourceAsYjs('print("other-step-live")'),
+				stepSources: { '0': 'print("step-A-edited")', '1': hopSource },
+				unlockedStep: 1,
+				version: 30 + i
+			});
+		}
+		const afterHopPolls = controller.getState();
+		expect(afterHopPolls.source).toBe(hopSource);
+		expect(afterHopPolls.yjsState).toBe(hopYjs);
+		expect(afterHopPolls.source.match(/print/g)?.length).toBe(1);
+		controller.destroy();
+	});
+
 	it('Run does not duplicate source via a fresh Yjs snapshot', async () => {
 		const { controller } = harness({
 			runCheck: async () => ({ passed: true, message: 'ok' })
