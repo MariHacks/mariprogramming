@@ -164,15 +164,14 @@ test.describe.serial('PBL 1 student workshop', () => {
 			timeout: 30000
 		});
 		const code = driver.page.url().split('/').at(-1);
-		await expect(driver.page.getByText('Everyone can type.')).toBeVisible({
+		await expect(pythonBox(driver.page)).toHaveAttribute('aria-readonly', 'false', {
 			timeout: 20000
 		});
 		const follow = await recordedPage(browser, origin);
 		await follow.page.goto(`/pbl/science/${code}`);
-		await expect(follow.page.getByText('Everyone can type.')).toBeVisible({
+		await expect(pythonBox(follow.page)).toHaveAttribute('aria-readonly', 'false', {
 			timeout: 20000
 		});
-		await expect(pythonBox(follow.page)).toHaveAttribute('aria-readonly', 'false');
 		await fillPython(driver.page, 'print("synced from device A")\n');
 		await expect(pythonBox(follow.page)).toContainText(/synced from device A/, {
 			timeout: 15000
@@ -241,11 +240,10 @@ test.describe.serial('PBL 1 student workshop', () => {
 			await expect(rec.locator('.body')).not.toHaveText('');
 		}
 		await saveProof(rec, '08-steps-2-to-11');
-		await rec.getByRole('link', { name: 'Facilitator view' }).click();
-		await expect(rec.getByRole('heading', { name: /Team All steps/ })).toBeVisible();
-		await expect(rec.getByText(/Pace/)).toBeVisible();
-		await saveProof(rec, '09-facilitator');
-		await keepVideo(context, rec, '08-later-steps-and-facilitator');
+		await expect(rec.getByRole('button', { name: 'Next' })).toHaveCount(0);
+		await rec.getByRole('button', { name: '2', exact: true }).click();
+		await expect(rec.getByRole('button', { name: 'Next' })).toBeEnabled();
+		await keepVideo(context, rec, '08-later-steps');
 	});
 
 	test('shows lesson, code, and output panes on a phone-sized screen', async ({

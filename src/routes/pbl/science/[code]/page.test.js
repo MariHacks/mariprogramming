@@ -2,9 +2,10 @@ import { cleanup, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { openHint, run, setCollab, studio } = vi.hoisted(() => ({
+const { openHint, run, selectStep, setCollab, studio } = vi.hoisted(() => ({
 	openHint: vi.fn(),
 	run: vi.fn(),
+	selectStep: vi.fn(),
 	setCollab: vi.fn(),
 	studio: { patch: /** @type {Record<string, unknown>} */ ({}) }
 }));
@@ -56,7 +57,7 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 			},
 			join: async () => {},
 			destroy() {},
-			selectStep: vi.fn(),
+			selectStep,
 			openHint,
 			setCollab,
 			setSource: vi.fn(),
@@ -71,6 +72,7 @@ import StudioPage from './+page.svelte';
 afterEach(() => {
 	cleanup();
 	studio.patch = {};
+	selectStep.mockClear();
 });
 
 describe('PBL studio page', () => {
@@ -87,15 +89,16 @@ describe('PBL studio page', () => {
 		expect(openHint).toHaveBeenCalledWith(1);
 		await user.click(screen.getByRole('button', { name: 'Run' }));
 		expect(run).toHaveBeenCalled();
-		expect(screen.getByRole('link', { name: 'Facilitator view' })).toHaveAttribute(
-			'href',
-			'/pbl/science/AB23JK/facilitator'
-		);
+		expect(screen.queryByRole('link', { name: 'Facilitator view' })).toBeNull();
 		expect(screen.getByText('Open the next step.')).toBeVisible();
 		expect(
 			screen.getAllByRole('button').some((button) => /^\d+$/u.test(button.textContent ?? ''))
 		).toBe(true);
 		expect(screen.getByRole('button', { name: '11', exact: true })).toBeDisabled();
+		const next = screen.getByRole('button', { name: 'Next' });
+		expect(next).toBeEnabled();
+		await user.click(next);
+		expect(selectStep).toHaveBeenCalledWith(1);
 	});
 
 	it('hides the editor when the team is full', () => {
@@ -128,7 +131,38 @@ describe('PBL studio page', () => {
 			'aria-readonly',
 			'false'
 		);
-		expect(screen.getByText('Everyone can type.')).toBeVisible();
+		expect(screen.queryByText('Everyone can type.')).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Take keyboard' })).toBeNull();
+		expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+	});
+
+	it('keeps Next disabled until the step check passes', async () => {
+		const { SCIENCE_STEPS } = await import('$lib/pbl/science-workshop.js');
+		studio.patch = {
+			currentStep: 2,
+			unlockedStep: 2,
+			lastCheck: { passed: false, message: 'Try again.', step: 2 },
+			nextAction: 'Not yet. Try again.',
+			step: SCIENCE_STEPS[2],
+			files: {}
+		};
+		render(StudioPage);
+		expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+	});
+
+	it('shows Finished on the last passed step', async () => {
+		const { SCIENCE_STEPS } = await import('$lib/pbl/science-workshop.js');
+		const last = SCIENCE_STEPS[SCIENCE_STEPS.length - 1];
+		studio.patch = {
+			currentStep: last.id,
+			unlockedStep: last.id,
+			lastCheck: { passed: true, message: 'Done.', step: last.id },
+			nextAction: 'Press Run.',
+			step: last,
+			files: {}
+		};
+		render(StudioPage);
+		expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
+		expect(screen.getByText('Finished')).toBeVisible();
 	});
 });
