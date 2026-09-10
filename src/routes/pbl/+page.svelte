@@ -32,7 +32,6 @@
 						<th scope="col">#</th>
 						<th scope="col">Title</th>
 						<th scope="col">Series</th>
-						<th scope="col">Length</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -45,7 +44,6 @@
 								<a class="open" href={resolve(workshop.href, {})}>Open {workshop.series}</a>
 							</td>
 							<td class="series">{workshop.series}</td>
-							<td class="length">{workshop.duration}</td>
 						</tr>
 					{/each}
 				</tbody>
@@ -84,8 +82,7 @@
 
 	.set-kicker,
 	.set-count,
-	.series,
-	.length {
+	.series {
 		color: var(--quiet-steel);
 		font-size: 0.75rem;
 		font-weight: 700;
@@ -149,11 +146,6 @@
 		text-decoration: underline;
 	}
 
-	.length {
-		color: #157347;
-		white-space: nowrap;
-	}
-
 	.archive-link {
 		padding-block-end: var(--space-lg);
 	}
@@ -181,8 +173,7 @@
 		}
 
 		.num,
-		.series,
-		.length {
+		.series {
 			padding-block: 0.15rem;
 		}
 	}

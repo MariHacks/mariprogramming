@@ -71,10 +71,10 @@
 <section class="join-page surface-paper editorial-page">
 	<div class="page-container join-frame editorial-frame">
 		<div class="problem">
-			<p class="badge">PBL 1 · one activity period</p>
+			<p class="series-label">PBL 1</p>
 			<SectionIntro
 				title="Speedrun Programming in Science"
-				summary="One activity period. One growing program. Create a team or join with a code. Up to 10 people share the same Python editor."
+				summary="Build one growing program together. Create a team or join with a code. Up to 10 people share the same Python editor."
 			/>
 			<ul class="facts">
 				<li>In-browser Python. No install.</li>
@@ -129,12 +129,8 @@
 		padding-block-end: 0.5rem;
 	}
 
-	.badge {
-		width: fit-content;
-		padding: 0.2rem 0.55rem;
-		border-radius: 999px;
-		background: #fff4d6;
-		color: #8a5a00;
+	.series-label {
+		color: var(--quiet-steel);
 		font-size: 0.72rem;
 		font-weight: 700;
 		letter-spacing: 0.04em;

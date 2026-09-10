@@ -168,7 +168,7 @@
 
 		<aside class="lesson">
 			<div class="lesson-scroll">
-				<p class="eyebrow">PBL 1 · {state.teamName || 'Team room'} · {state.code}</p>
+				<p class="eyebrow">PBL 1 — {state.teamName || 'Team room'} — {state.code}</p>
 				<div class="title-row">
 					<h1>{state.step.title}</h1>
 					<p class="minutes">{state.step.minutes} min</p>
@@ -444,7 +444,7 @@
 		width: 2.15rem;
 		height: 2.15rem;
 		border: 1px solid rgb(var(--midnight-rgb) / 16%);
-		border-radius: 999px;
+		border-radius: 0.35rem;
 		background: #fff;
 		color: inherit;
 		font-size: 0.8rem;
@@ -475,13 +475,6 @@
 		max-width: 18ch;
 		font-size: clamp(1.45rem, 3vw, 1.85rem);
 		line-height: 1.15;
-	}
-
-	.minutes {
-		padding: 0.2rem 0.5rem;
-		border-radius: 999px;
-		background: #fff4d6;
-		color: #8a5a00;
 	}
 
 	.body,
@@ -611,18 +604,14 @@
 		gap: 0.75rem 1.1rem;
 	}
 
-	.lang {
-		padding: 0.2rem 0.5rem;
-		border-radius: 0.25rem;
-		background: #3e3b3f;
-		color: #ffd866;
+	.toolbar .lang {
+		color: #c8c4c6;
+		letter-spacing: 0.04em;
 	}
 
 	.toolbar code {
-		padding: 0.1rem 0.35rem;
-		border-radius: 0.25rem;
-		background: #3e3b3f;
 		color: #78dce8;
+		font-family: var(--font-mono);
 	}
 
 	.toolbar button:not(.run) {

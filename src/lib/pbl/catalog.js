@@ -6,7 +6,6 @@ export const PBL_CATALOG = Object.freeze([
 		title: 'Speedrun Programming in Science',
 		series: 'PBL 1',
 		href: '/pbl/science',
-		duration: 'one activity period',
 		summary:
 			'A student with little or no Python builds one scientific data-analyzer that keeps growing.'
 	})
