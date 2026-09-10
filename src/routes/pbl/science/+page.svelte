@@ -1,5 +1,5 @@
-<script>
-	import { goto } from '$app/navigation';
+page bytes 7268
+ { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 	import SectionIntro from '$lib/components/site/SectionIntro.svelte';
@@ -97,7 +97,7 @@
 	<title>PBL 1 | {clubContent.name}</title>
 	<meta
 		name="description"
-		content="Speedrun Programming in Science. Create or join a team room and build one data analyzer in the browser."
+		content="Little or no Python needed — build one scientific data analyzer that grows step by step."
 	/>
 </svelte:head>
 
@@ -107,13 +107,8 @@
 			<p class="series-label">PBL 1</p>
 			<SectionIntro
 				title="Speedrun Programming in Science"
-				summary="Build one growing program together. Create a team or join with a room code. Up to 10 people share the same Python editor."
+				summary="Little or no Python needed — your team builds one scientific data analyzer that grows step by step from a first print to a short report."
 			/>
-			<ul class="facts">
-				<li>In-browser Python. No install.</li>
-				<li>Each Run is checked. Three hints per step if you get stuck.</li>
-				<li>Everyone types at once. Colored cursors show who is where.</li>
-			</ul>
 		</div>
 
 		{#if !signedIn}
@@ -228,13 +223,6 @@
 		text-transform: uppercase;
 	}
 
-	.facts {
-		margin: 0;
-		padding-inline-start: 1.15rem;
-		color: var(--quiet-steel);
-		font-size: var(--text-sm);
-		line-height: 1.55;
-	}
 
 	.join-panels {
 		display: grid;
