@@ -560,7 +560,7 @@ export function createWorkshopController(options) {
 	async function checkCurrent(source = room.source, stepId = viewStep) {
 		const result = await (options.runCheck ?? runScienceCheck)(host, stepId, source);
 		const previousUnlocked = Number(room.unlockedStep) || 0;
-		const unlockedStep = nextUnlockedStep(previousUnlocked, result.passed);
+		const unlockedStep = nextUnlockedStep(previousUnlocked, result.passed, stepId);
 		const lastCheck = {
 			step: stepId,
 			passed: result.passed,

@@ -18,10 +18,19 @@ export function withOpenedHint(openedHints, stepId, level) {
 	return { ...openedHints, [key]: level };
 }
 
-/** @param {number} unlockedStep @param {boolean} passed */
-export function nextUnlockedStep(unlockedStep, passed) {
+/**
+ * Advance unlock only when the frontier step itself is cleared.
+ * Re-running an earlier completed step must not unlock further steps.
+ * @param {number} unlockedStep
+ * @param {boolean} passed
+ * @param {number} [completedStepId] step that was just checked (defaults to frontier)
+ */
+export function nextUnlockedStep(unlockedStep, passed, completedStepId = unlockedStep) {
 	if (!passed) return unlockedStep;
-	return Math.min(SCIENCE_STEP_COUNT - 1, Math.max(unlockedStep, unlockedStep + 1));
+	const frontier = Number(unlockedStep) || 0;
+	const completed = Number(completedStepId);
+	if (!Number.isInteger(completed) || completed !== frontier) return frontier;
+	return Math.min(SCIENCE_STEP_COUNT - 1, frontier + 1);
 }
 
 /** @param {string} iso @param {number} nowMs */
