@@ -701,23 +701,27 @@
 		display: flex;
 		flex: 0 0 auto;
 		align-items: center;
-		align-self: flex-start;
-		gap: 0.15rem;
-		padding: 0.35rem 0.55rem 0;
+		align-self: stretch;
+		gap: 0.35rem;
+		padding: 0.28rem 0.55rem;
 		height: auto;
+		border-block-end: 1px solid #3e3b3f;
+		background: #1e1b1e;
 	}
 
 	.console-tabs button {
 		flex: 0 0 auto;
-		align-self: flex-start;
+		align-self: center;
 		height: auto;
-		min-height: 2.15rem;
-		padding: 0.3rem 0.75rem;
+		min-height: 0;
+		padding: 0.18rem 0.55rem;
 		border: 0;
-		border-radius: 0.3rem 0.3rem 0 0;
+		border-radius: 0.25rem;
 		background: transparent;
-		color: #c8c4c6;
-		font-weight: 650;
+		color: #8b8789;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		line-height: 1.35;
 		cursor: pointer;
 	}
 
