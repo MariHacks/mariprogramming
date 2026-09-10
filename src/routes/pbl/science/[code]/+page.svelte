@@ -304,7 +304,6 @@
 					on:pointerdown={startConsoleResize}
 				></div>
 				<div class="work-bottom">
-					<p class="next-action">{state.nextAction}</p>
 					<div class="console" data-tab={consoleTab}>
 						<div class="console-tabs" role="tablist" aria-label="Program console">
 							<button
@@ -323,6 +322,9 @@
 							>
 								Output
 							</button>
+							{#if state.nextAction}
+								<span class="console-status">{state.nextAction}</span>
+							{/if}
 						</div>
 						<label class="stdin-label">
 							Program input, one line per input()
@@ -568,14 +570,6 @@
 		color: var(--danger);
 	}
 
-	.next-action {
-		margin: 0;
-		padding: 0 1rem;
-		color: var(--quiet-steel);
-		font-size: 0.8125rem;
-		font-weight: 650;
-	}
-
 	.pane-switch {
 		display: none;
 	}
@@ -702,11 +696,25 @@
 		flex: 0 0 auto;
 		align-items: center;
 		align-self: stretch;
+		width: 100%;
 		gap: 0.35rem;
 		padding: 0.28rem 0.55rem;
 		height: auto;
 		border-block-end: 1px solid #3e3b3f;
 		background: #1e1b1e;
+	}
+
+	.console-status {
+		margin: 0;
+		margin-left: auto;
+		color: #8b8789;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		line-height: 1.35;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: min(28rem, 55%);
 	}
 
 	.console-tabs button {

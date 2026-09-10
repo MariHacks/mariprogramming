@@ -68,6 +68,6 @@ describe('workshop session helpers', () => {
 		expect(studioNextAction({ lastCheck: { passed: true }, currentStep: 0 })).toBe(
 			'Open the next step.'
 		);
-		expect(studioNextAction({ lastCheck: null, currentStep: 0 })).toBe('Press Run.');
+		expect(studioNextAction({ lastCheck: null, currentStep: 0 })).toBe('');
 	});
 });

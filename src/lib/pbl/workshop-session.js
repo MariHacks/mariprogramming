@@ -72,5 +72,5 @@ export function studioNextAction(state) {
 	if (state.lastCheck?.passed && (state.currentStep ?? 0) < SCIENCE_STEP_COUNT - 1) {
 		return 'Open the next step.';
 	}
-	return 'Press Run.';
+	return '';
 }

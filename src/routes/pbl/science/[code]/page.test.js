@@ -122,7 +122,7 @@ describe('PBL studio page', () => {
 		studio.patch = {
 			isDriver: true,
 			readOnly: false,
-			nextAction: 'Press Run.',
+			nextAction: '',
 			lastCheck: null,
 			files: {}
 		};
@@ -133,6 +133,7 @@ describe('PBL studio page', () => {
 		);
 		expect(screen.queryByText('Everyone can type.')).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Take keyboard' })).toBeNull();
+		expect(screen.queryByText('Press Run.')).toBeNull();
 		expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
 	});
 
@@ -157,7 +158,7 @@ describe('PBL studio page', () => {
 			currentStep: last.id,
 			unlockedStep: last.id,
 			lastCheck: { passed: true, message: 'Done.', step: last.id },
-			nextAction: 'Press Run.',
+			nextAction: '',
 			step: last,
 			files: {}
 		};

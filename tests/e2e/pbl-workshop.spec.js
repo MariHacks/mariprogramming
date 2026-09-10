@@ -116,7 +116,6 @@ test.describe.serial('PBL 1 student workshop', () => {
 		await expect(rec.getByRole('heading', { name: 'Get something running' })).toBeVisible({
 			timeout: 30000
 		});
-		await expect(rec.getByText('Press Run.')).toBeVisible();
 		await expect(rec.getByRole('button', { name: 'Run' })).toBeVisible();
 		await expect(rec.locator('.cm-editor')).toBeVisible();
 		await rec.getByRole('button', { name: 'Run' }).click();
