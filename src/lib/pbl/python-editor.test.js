@@ -136,4 +136,25 @@ describe('python collab editor', () => {
 		author.destroy();
 		peer.destroy();
 	});
+
+	it('switches Monokai dark and light themes without remounting', () => {
+		const editor = mount({ source: 'def greet():\n\treturn 42\n# note\n' });
+		expect(editor.getTheme()).toBe('dark');
+		const before = editor.view;
+		editor.setTheme('light');
+		expect(editor.getTheme()).toBe('light');
+		expect(editor.view).toBe(before);
+		editor.setTheme('dark');
+		expect(editor.getTheme()).toBe('dark');
+		editor.setTheme('dark');
+		expect(editor.getTheme()).toBe('dark');
+		editor.destroy();
+	});
+
+	it('honors an initial light theme', () => {
+		const editor = mount({ source: 'print(1)', theme: 'light' });
+		expect(editor.getTheme()).toBe('light');
+		editor.destroy();
+	});
+
 });

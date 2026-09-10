@@ -4,6 +4,11 @@
 	import { resolve } from '$app/paths';
 	import { clubContent } from '$lib/content/club';
 	import PythonEditor from '$lib/pbl/PythonEditor.svelte';
+	import {
+		monokaiPalette,
+		readStoredEditorTheme,
+		storeEditorTheme
+	} from '$lib/pbl/python-editor.js';
 	import { createWorkshopController } from '$lib/pbl/workshop-controller.js';
 
 	const LESSON_WIDTH_KEY = 'pbl-studio-lesson-width';
@@ -27,6 +32,10 @@
 	let consoleTab = 'output';
 	let lessonWidth = 320;
 	let consoleHeight = 220;
+	/** @type {'dark' | 'light'} */
+	let editorTheme = typeof window !== 'undefined' ? readStoredEditorTheme() : 'dark';
+
+	$: editorPalette = monokaiPalette(editorTheme);
 
 	$: canGoNext =
 		!!state &&
@@ -53,6 +62,8 @@
 		} catch {
 			/* sessionStorage may be unavailable */
 		}
+
+		editorTheme = readStoredEditorTheme();
 
 		controller = createWorkshopController({ code });
 		const stop = controller.subscribe((next) => {
@@ -86,6 +97,12 @@
 	function goNext() {
 		if (!state || !canGoNext) return;
 		controller?.selectStep(state.currentStep + 1);
+	}
+
+	function toggleEditorTheme() {
+		const next = editorTheme === 'light' ? 'dark' : 'light';
+		editorTheme = next;
+		storeEditorTheme(next);
 	}
 
 	/** @param {PointerEvent} event */
@@ -259,7 +276,12 @@
 			on:pointerdown={startLessonResize}
 		></div>
 
-		<section class="work" aria-label="Python editor">
+		<section
+			class="work"
+			aria-label="Python editor"
+			data-editor-theme={editorTheme}
+			style="--pbl-editor-bg: {editorPalette.bg}; --pbl-editor-gutter: {editorPalette.bgGutter}; --pbl-editor-ink: {editorPalette.ink}; --pbl-editor-comment: {editorPalette.comment}; --pbl-editor-yellow: {editorPalette.yellow}; --pbl-editor-cyan: {editorPalette.cyan}; --pbl-editor-red: {editorPalette.red}; --pbl-editor-panel: {editorPalette.panel}; --pbl-editor-panel-deep: {editorPalette.panelDeep}; --pbl-editor-muted: {editorPalette.muted}; --pbl-editor-rule: {editorPalette.rule}; --pbl-editor-line: {editorPalette.line}"
+		>
 			<div class="toolbar">
 				<div class="toolbar-meta">
 					<p class="lang">Python</p>
@@ -269,16 +291,27 @@
 					</p>
 					<p>{state.memberCount}/10 on this team</p>
 				</div>
-				{#if state.blocked !== 'full'}
+				<div class="toolbar-actions">
 					<button
-						class="button-primary run"
 						type="button"
-						disabled={state.running}
-						on:click={runProgram}
+						class="theme-toggle"
+						aria-pressed={editorTheme === 'light'}
+						aria-label={editorTheme === 'light' ? 'Switch to dark editor colors' : 'Switch to light editor colors'}
+						on:click={toggleEditorTheme}
 					>
-						{state.running ? 'Running' : 'Run'}
+						{editorTheme === 'light' ? 'Dark colors' : 'Light colors'}
 					</button>
-				{/if}
+					{#if state.blocked !== 'full'}
+						<button
+							class="button-primary run"
+							type="button"
+							disabled={state.running}
+							on:click={runProgram}
+						>
+							{state.running ? 'Running' : 'Run'}
+						</button>
+					{/if}
+				</div>
 			</div>
 			{#if state.blocked === 'full'}
 				<p class="error" role="alert">{state.roomError || 'This team is full (10 people).'}</p>
@@ -294,6 +327,7 @@
 						yjsState={state.yjsState ?? ''}
 						awarenessState={state.awarenessState ?? ''}
 						editable={!state.readOnly}
+						theme={editorTheme}
 						onCollab={(payload) => controller?.setCollab(payload)}
 					/>
 				</div>
@@ -578,8 +612,8 @@
 	.work {
 		display: flex;
 		flex-direction: column;
-		background: #2d2a2e;
-		color: #fcfcfa;
+		background: var(--pbl-editor-bg, #2d2a2e);
+		color: var(--pbl-editor-ink, #fcfcfa);
 	}
 
 	.toolbar {
@@ -592,8 +626,8 @@
 		height: auto;
 		padding: 0.45rem 0.85rem;
 		gap: 0.65rem;
-		background: #221f22;
-		border-block-end: 1px solid #3e3b3f;
+		background: var(--pbl-editor-panel, #221f22);
+		border-block-end: 1px solid var(--pbl-editor-rule, #3e3b3f);
 		font-size: 0.8125rem;
 	}
 
@@ -604,13 +638,20 @@
 		gap: 0.75rem 1.1rem;
 	}
 
+	.toolbar-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.45rem 0.65rem;
+	}
+
 	.toolbar .lang {
-		color: #c8c4c6;
+		color: var(--pbl-editor-muted, #c8c4c6);
 		letter-spacing: 0.04em;
 	}
 
 	.toolbar code {
-		color: #78dce8;
+		color: var(--pbl-editor-cyan, #78dce8);
 		font-family: var(--font-mono);
 	}
 
@@ -622,9 +663,19 @@
 		margin-inline-start: 0.35rem;
 		border: 0;
 		background: transparent;
-		color: #78dce8;
+		color: var(--pbl-editor-cyan, #78dce8);
 		font-weight: 650;
 		cursor: pointer;
+	}
+
+	.theme-toggle {
+		margin-inline-start: 0 !important;
+		padding: 0.35rem 0.7rem;
+		border-radius: 0.35rem;
+		border: 1px solid var(--pbl-editor-rule, #3e3b3f) !important;
+		background: var(--pbl-editor-line, #3e3b3f) !important;
+		color: var(--pbl-editor-ink, #fcfcfa) !important;
+		font-weight: 650;
 	}
 
 	.run {
@@ -640,6 +691,7 @@
 		min-width: 0;
 		min-height: 14rem;
 		overflow: hidden;
+		background: var(--pbl-editor-bg, #2d2a2e);
 	}
 
 	.work-bottom {
@@ -652,7 +704,7 @@
 		display: grid;
 		padding: 0.65rem 0.85rem 0;
 		gap: 0.35rem;
-		color: #c8c4c6;
+		color: var(--pbl-editor-muted, #c8c4c6);
 		font-size: 0.72rem;
 		font-weight: 700;
 		letter-spacing: 0.04em;
@@ -662,9 +714,9 @@
 	.stdin,
 	.output,
 	.files pre {
-		border-color: #3e3b3f;
-		background: #221f22;
-		color: #fcfcfa;
+		border-color: var(--pbl-editor-rule, #3e3b3f);
+		background: var(--pbl-editor-panel, #221f22);
+		color: var(--pbl-editor-ink, #fcfcfa);
 	}
 
 	.stdin {
@@ -677,8 +729,8 @@
 		flex-direction: column;
 		align-content: flex-start;
 		min-height: 0;
-		border-block-start: 1px solid #3e3b3f;
-		background: #221f22;
+		border-block-start: 1px solid var(--pbl-editor-rule, #3e3b3f);
+		background: var(--pbl-editor-panel, #221f22);
 	}
 
 	.console-tabs {
@@ -690,14 +742,14 @@
 		gap: 0.35rem;
 		padding: 0.28rem 0.55rem;
 		height: auto;
-		border-block-end: 1px solid #3e3b3f;
-		background: #1e1b1e;
+		border-block-end: 1px solid var(--pbl-editor-rule, #3e3b3f);
+		background: var(--pbl-editor-panel-deep, #1e1b1e);
 	}
 
 	.console-status {
 		margin: 0;
 		margin-left: auto;
-		color: #8b8789;
+		color: var(--pbl-editor-muted, #8b8789);
 		font-size: 0.8125rem;
 		font-weight: 500;
 		line-height: 1.35;
@@ -716,7 +768,7 @@
 		border: 0;
 		border-radius: 0.25rem;
 		background: transparent;
-		color: #8b8789;
+		color: var(--pbl-editor-muted, #8b8789);
 		font-size: 0.8125rem;
 		font-weight: 500;
 		line-height: 1.35;
@@ -724,8 +776,8 @@
 	}
 
 	.console-tabs button[aria-selected='true'] {
-		background: #2d2a2e;
-		color: #fcfcfa;
+		background: var(--pbl-editor-bg, #2d2a2e);
+		color: var(--pbl-editor-ink, #fcfcfa);
 	}
 
 	.output {
@@ -743,12 +795,12 @@
 
 	.files h2,
 	.files h3 {
-		color: #c8c4c6;
+		color: var(--pbl-editor-muted, #c8c4c6);
 	}
 
 	.error {
 		margin: 0.5rem 1rem;
-		color: #ff6188;
+		color: var(--pbl-editor-red, #ff6188);
 		font-size: 0.875rem;
 		font-weight: 650;
 	}
@@ -903,7 +955,7 @@
 			flex: 0 0 1px;
 			height: 1px;
 			cursor: row-resize;
-			background: #3e3b3f;
+			background: var(--pbl-editor-rule, #3e3b3f);
 		}
 
 		.split-y::before {

@@ -1,6 +1,10 @@
 <script>
 	import { onMount } from 'svelte';
-	import { createPythonCollabEditor } from '$lib/pbl/python-editor.js';
+	import {
+		createPythonCollabEditor,
+		monokaiPalette,
+		normalizeEditorTheme
+	} from '$lib/pbl/python-editor.js';
 	import { teammateColor, teammateName } from '$lib/pbl/yjs-collab.js';
 
 	/** @type {string} */
@@ -11,6 +15,8 @@
 	export let awarenessState = '';
 	/** @type {boolean} */
 	export let editable = true;
+	/** @type {'dark' | 'light'} */
+	export let theme = 'dark';
 	/** @type {{ name: string, color: string, colorLight: string } | null} */
 	export let user = null;
 	/** @type {(payload: { source: string, yjsState: string, awarenessState: string }) => void} */
@@ -20,22 +26,26 @@
 	/** @type {ReturnType<typeof createPythonCollabEditor> | null} */
 	let editor = null;
 
+	$: themeMode = normalizeEditorTheme(theme);
+	$: palette = monokaiPalette(themeMode);
+
 	onMount(() => {
 		if (!host) return;
 		const seed =
 			typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
 				? crypto.randomUUID()
 				: String(Date.now());
-		const palette = teammateColor(seed);
+		const colors = teammateColor(seed);
 		const current = createPythonCollabEditor(host, {
 			source,
 			yjsState,
 			awarenessState,
 			editable,
+			theme: themeMode,
 			user: user ?? {
 				name: teammateName(seed),
-				color: palette.color,
-				colorLight: palette.colorLight
+				color: colors.color,
+				colorLight: colors.colorLight
 			},
 			onChange(payload) {
 				onCollab(payload);
@@ -51,9 +61,15 @@
 	$: if (editor) editor.applyYjsState(yjsState);
 	$: if (editor) editor.applyAwarenessState(awarenessState);
 	$: if (editor) editor.setEditable(editable);
+	$: if (editor) editor.setTheme(themeMode);
 </script>
 
-<div class="python-host" bind:this={host}></div>
+<div
+	class="python-host"
+	data-editor-theme={themeMode}
+	style="--pbl-editor-bg: {palette.bg}; --pbl-editor-gutter: {palette.bgGutter}; --pbl-editor-ink: {palette.ink}; --pbl-editor-comment: {palette.comment}; --pbl-editor-cursor: {palette.cursor}"
+	bind:this={host}
+></div>
 
 <style>
 	.python-host {
@@ -62,8 +78,9 @@
 		min-height: 12rem;
 		height: 100%;
 		overflow: hidden;
-		background: #2d2a2e;
-		color: #fcfcfa;
+		/* Stable shell bg before CodeMirror paints — avoids theme flicker. */
+		background: var(--pbl-editor-bg, #2d2a2e);
+		color: var(--pbl-editor-ink, #fcfcfa);
 		font-family: var(--font-mono);
 		font-size: 14px;
 		font-weight: 400;
@@ -78,6 +95,7 @@
 		outline: none;
 		font-size: 14px;
 		letter-spacing: 0;
+		background: var(--pbl-editor-bg, #2d2a2e);
 	}
 
 	.python-host :global(.cm-editor.cm-focused) {
@@ -98,8 +116,8 @@
 		flex-shrink: 0;
 		width: auto !important;
 		height: 100%;
-		background-color: #221f22;
-		color: #727072;
+		background-color: var(--pbl-editor-gutter, #221f22);
+		color: var(--pbl-editor-comment, #727072);
 		font-family: var(--font-mono);
 		font-size: 14px;
 		font-weight: 400;
@@ -123,7 +141,7 @@
 
 	.python-host :global(.cm-content) {
 		flex: 1 0 auto;
-		color: #fcfcfa;
-		caret-color: #ffd866;
+		color: var(--pbl-editor-ink, #fcfcfa);
+		caret-color: var(--pbl-editor-cursor, #ffd866);
 	}
 </style>
