@@ -146,19 +146,6 @@ export function createPblRuntime(dependencies = {}) {
 				.slice(0, 120);
 			console.error('pbl_schema_ensure_failed', message);
 		}
-		try {
-			const { default: pg } = await import('pg');
-			const { ensurePblSchema } = await import('./bootstrap.js');
-			await ensurePblSchema(databaseUrl, {
-				createPool: (url) => new pg.Pool({ connectionString: url, max: 1 })
-			});
-		} catch (error) {
-			const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
-			const message = (error instanceof Error ? error.message : String(error))
-				.replace(/postgres(?:ql)?:\/\/\S+/gi, '[db]')
-				.slice(0, 160);
-			console.error('pbl_schema_pg', code, message);
-		}
 		const run = (overrides = {}) =>
 			withTransaction(
 				async (transaction) => {
