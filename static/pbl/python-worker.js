@@ -109,18 +109,21 @@ self.onmessage = async (event) => {
 	const id = data.id;
 	try {
 		const pyodide = await getPyodide(String(data.indexURL ?? ''));
-		let stdout = '';
-		let stderr = '';
+		const stdoutOut = { text: '', decoder: new TextDecoder() };
+		const stderrOut = { text: '', decoder: new TextDecoder() };
 		let inputCount = 0;
 		const stdin = Array.isArray(data.stdin) ? data.stdin.map(String) : [];
+		// Prefer write over batched: Pyodide 0.27 StringWriter drops \n in batched().
 		pyodide.setStdout({
-			batched: (text) => {
-				stdout += text;
+			write(buf) {
+				stdoutOut.text += stdoutOut.decoder.decode(buf);
+				return buf.length;
 			}
 		});
 		pyodide.setStderr({
-			batched: (text) => {
-				stderr += text;
+			write(buf) {
+				stderrOut.text += stderrOut.decoder.decode(buf);
+				return buf.length;
 			}
 		});
 		pyodide.setStdin({
@@ -142,8 +145,8 @@ self.onmessage = async (event) => {
 			id,
 			type: 'result',
 			result: {
-				stdout,
-				stderr: result.error ? `${stderr}${result.error}` : stderr,
+				stdout: stdoutOut.text,
+				stderr: result.error ? `${stderrOut.text}${result.error}` : stderrOut.text,
 				error: result.error ?? null,
 				globals: result.globals ?? {},
 				files: result.files ?? {},
