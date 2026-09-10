@@ -44,6 +44,48 @@ describe('PBL room poll and push', () => {
 		expect(response.status).toBe(404);
 	});
 
+	it('rebinds pbl_member on GET when the store returns a canonical memberId', async () => {
+		const canonical = 'cccccccccccccccccccccccccccccccc';
+		const stale = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+		const getRoom = vi.fn(async (_code, viewer, userId) => {
+			expect(viewer).toBe(stale);
+			expect(userId).toBe('user-lab-3');
+			return { code: 'AB23JK', version: 2, memberId: canonical, members: [] };
+		});
+		const { GET } = runtime({ getRoom });
+		const response = await GET({
+			locals: SESSION,
+			params: { code: 'AB23JK' },
+			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
+				headers: { cookie: `pbl_member=${stale}` }
+			}),
+			url: new URL('https://club.example/api/pbl/rooms/AB23JK')
+		});
+		expect(response.status).toBe(200);
+		expect(response.headers.get('set-cookie')).toContain(`pbl_member=${canonical}`);
+		expect(getRoom).toHaveBeenCalledWith('AB23JK', stale, 'user-lab-3');
+	});
+
+	it('maps a true removal on GET to 403 without Set-Cookie', async () => {
+		const { PblInputError } = await import('$lib/server/pbl/store.js');
+		const { GET } = runtime({
+			getRoom: async () => {
+				throw new PblInputError('You were removed from this team.', 403);
+			}
+		});
+		const response = await GET({
+			locals: SESSION,
+			params: { code: 'AB23JK' },
+			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
+				headers: { cookie: `pbl_member=${MEMBER}` }
+			}),
+			url: new URL('https://club.example/api/pbl/rooms/AB23JK')
+		});
+		expect(response.status).toBe(403);
+		expect(response.headers.get('set-cookie')).toBeNull();
+		expect(await response.json()).toMatchObject({ error: /removed from this team/i });
+	});
+
 	it('rejects updates without a club session', async () => {
 		const { PUT } = runtime({
 			updateRoom: async () => {
