@@ -83,6 +83,27 @@ function memoryRepo(seed = roomRow()) {
 			if (!row) return null;
 			Object.assign(row, patch);
 			return { ...row };
+		},
+		async insertSubmission(values) {
+			const row = { id: 'sub-1', createdAt: NOW, ...values };
+			(this.submissions ??= []).push(row);
+			return row;
+		},
+		async listSubmissions(roomId) {
+			return (this.submissions ?? []).filter((row) => row.roomId === roomId);
+		},
+		async deleteMember(roomId, memberId) {
+			const index = members.findIndex((row) => row.roomId === roomId && row.memberId === memberId);
+			if (index >= 0) members.splice(index, 1);
+			return true;
+		},
+		async deleteRoom(roomId) {
+			const index = rooms.findIndex((row) => row.id === roomId);
+			if (index >= 0) rooms.splice(index, 1);
+			for (let i = members.length - 1; i >= 0; i -= 1) {
+				if (members[i].roomId === roomId) members.splice(i, 1);
+			}
+			return true;
 		}
 	};
 }
@@ -176,13 +197,15 @@ describe('PBL room store', () => {
 			memberId: MEMBER,
 			version: 1,
 			source: 'print("team")',
-			currentStep: 1,
+			editingStep: 1,
 			unlockedStep: 1,
 			openedHints: { '0': 2 },
 			lastCheck: { step: 0, passed: true, message: 'ok', at: NOW.toISOString() }
 		});
 		expect(updated.source).toBe('print("team")');
 		expect(updated.currentStep).toBe(1);
+		expect(updated.unlockedStep).toBe(1);
+		expect(updated.stepSources['1']).toBe('print("team")');
 		expect(updated.openedHints).toEqual({ '0': 2 });
 		await expect(
 			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 1, source: 'stale' })
@@ -191,7 +214,7 @@ describe('PBL room store', () => {
 			store.updateRoom({ code: 'AB23JK', memberId: 'b'.repeat(32), version: 2, source: 'x' })
 		).rejects.toMatchObject({ status: 403 });
 		await expect(
-			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, currentStep: 8 })
+			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, editingStep: 8 })
 		).rejects.toMatchObject({ message: 'That step is still locked.' });
 		await expect(
 			store.updateRoom({
@@ -205,7 +228,7 @@ describe('PBL room store', () => {
 			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, unlockedStep: 0 })
 		).rejects.toMatchObject({ message: 'Invalid step.' });
 		await expect(
-			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, currentStep: -1 })
+			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, editingStep: -1 })
 		).rejects.toMatchObject({ message: 'Invalid step.' });
 		await expect(
 			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 1.5, source: 'x' })
@@ -314,7 +337,7 @@ describe('PBL room store', () => {
 			source: 'print("from B")'
 		});
 		expect(fromOther.source).toBe('print("from B")');
-		expect(fromOther.isDriver).toBe(true);
+		expect(fromOther.isDriver).toBe(false);
 		const fromFirst = await store.updateRoom({
 			code: 'AB23JK',
 			memberId: MEMBER,
@@ -404,9 +427,7 @@ describe('PBL room store', () => {
 		expect(rooms[0]).toMatchObject({
 			code: 'AB23JK',
 			teamName: 'Lab table 3',
-			currentStep: 1,
 			unlockedStep: 2,
-			source: 'print(1)',
 			members: [
 				{
 					memberId: MEMBER,
@@ -416,6 +437,33 @@ describe('PBL room store', () => {
 				}
 			]
 		});
+		expect(rooms[0].currentStep).toBeUndefined();
+		expect(rooms[0].source).toBeUndefined();
+	});
+
+	it('records step submissions and loads a staff room detail', async () => {
+		const repo = memoryRepo(
+			roomRow({
+				unlockedStep: 1,
+				stepSources: { '0': 'print(0)', '1': 'print(1)' },
+				source: 'print(1)'
+			})
+		);
+		const store = createPblStore(repo, { now: () => NOW });
+		const saved = await store.recordSubmission({
+			code: 'AB23JK',
+			memberId: MEMBER,
+			step: 0,
+			source: 'print(0)',
+			passed: true,
+			message: 'ok'
+		});
+		expect(saved).toMatchObject({ step: 0, passed: true, message: 'ok' });
+		const detail = await store.getStaffRoom('AB23JK');
+		expect(detail.unlockedStep).toBe(1);
+		expect(detail.stepSources['0']).toBe('print(0)');
+		expect(detail.submissions).toHaveLength(1);
+		expect(detail.currentStep).toBeUndefined();
 	});
 
 	it('stores userId and refuses a second join for the same account', async () => {
@@ -444,4 +492,79 @@ describe('PBL room store', () => {
 			store.createRoom({ pblId: 'science', teamName: 'Lab', memberId: MEMBER, userId: USER })
 		).rejects.toMatchObject({ status: 503 });
 	});
+
+
+	it('includes members for a room member viewer', async () => {
+		const repo = memoryRepo(roomRow({ memberCount: 1 }));
+		repo.members[0].email = 'lead@marihacks.com';
+		repo.members[0].name = 'Lead';
+		const store = createPblStore(repo, { now: () => NOW });
+		const room = await store.getRoom('AB23JK', MEMBER);
+		expect(room.isDriver).toBe(true);
+		expect(room.members).toEqual([
+			{ memberId: MEMBER, userId: USER, email: 'lead@marihacks.com', name: 'Lead' }
+		]);
+		const publicView = await store.getRoom('AB23JK');
+		expect(publicView.members).toBeUndefined();
+	});
+
+	it('lets the leader eject a teammate but not themselves or the driver', async () => {
+		const other = 'b'.repeat(32);
+		const repo = memoryRepo(roomRow({ memberCount: 2 }));
+		repo.members.push({ roomId: repo.rooms[0].id, memberId: other, userId: 'user-b' });
+		const store = createPblStore(repo, { now: () => NOW });
+		const updated = await store.ejectMember({
+			code: 'AB23JK',
+			actorMemberId: MEMBER,
+			targetMemberId: other
+		});
+		expect(updated.memberCount).toBe(1);
+		expect(repo.members).toHaveLength(1);
+		await expect(
+			store.ejectMember({ code: 'AB23JK', actorMemberId: MEMBER, targetMemberId: MEMBER })
+		).rejects.toMatchObject({ message: /leader cannot be removed|cannot remove yourself/i });
+	});
+
+	it('lets staff eject, transfer leadership, and disband a room', async () => {
+		const other = 'b'.repeat(32);
+		const repo = memoryRepo(roomRow({ memberCount: 2 }));
+		repo.members.push({ roomId: repo.rooms[0].id, memberId: other, userId: 'user-b' });
+		const store = createPblStore(repo, { now: () => NOW });
+		await store.transferDriver({ code: 'AB23JK', newDriverMemberId: other });
+		expect(repo.rooms[0].driverMemberId).toBe(other);
+		await store.staffEjectMember({ code: 'AB23JK', targetMemberId: MEMBER });
+		expect(repo.members.map((m) => m.memberId)).toEqual([other]);
+		const gone = await store.disbandRoom({ code: 'AB23JK' });
+		expect(gone).toEqual({ ok: true, code: 'AB23JK' });
+		expect(repo.rooms).toHaveLength(0);
+	});
+
+
+	it('persists lastRun on updateRoom and exposes it on the public room', async () => {
+		const repo = createMemoryPblRepository();
+		const store = createPblStore(repo, { now: () => NOW, createCode: () => 'AB23JK' });
+		await store.createRoom({ pblId: 'science', teamName: 'Lab table 3', memberId: MEMBER, userId: USER });
+		const updated = await store.updateRoom({
+			code: 'AB23JK',
+			memberId: MEMBER,
+			version: 1,
+			lastRun: {
+				output: 'Lab table 3\n',
+				error: '',
+				step: 0,
+				at: NOW.toISOString(),
+				running: false
+			}
+		});
+		expect(updated.lastRun).toMatchObject({ output: 'Lab table 3\n', running: false, step: 0 });
+		await expect(
+			store.updateRoom({
+				code: 'AB23JK',
+				memberId: MEMBER,
+				version: 2,
+				lastRun: { output: 'x', step: 0, running: false }
+			})
+		).rejects.toBeInstanceOf(PblInputError);
+	});
+
 });

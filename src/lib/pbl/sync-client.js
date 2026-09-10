@@ -62,6 +62,8 @@ export function createRoomSync(options) {
 	}
 
 	/**
+	 * Apply server room without forcing a shared "current step" onto the client.
+	 * Local view step lives in the workshop controller; we only merge shared maps.
 	 * @param {Record<string, unknown>} payload
 	 * @param {{ keepDirtyIfNewerCheck?: boolean }} [opts]
 	 */
@@ -73,7 +75,11 @@ export function createRoomSync(options) {
 			/** @type {any} */ (merged.lastCheck),
 			/** @type {any} */ (payload.lastCheck)
 		);
-		local = merged;
+		// Never treat server currentStep as an instruction to change local navigation.
+		if ('currentStep' in merged) {
+			delete merged.currentStep;
+		}
+		local = { ...prior, ...merged };
 		if (opts.keepDirtyIfNewerCheck && keptNewerCheck) {
 			dirty = true;
 			options.onState(local);
@@ -109,6 +115,13 @@ export function createRoomSync(options) {
 		) {
 			next.lastCheck = base.lastCheck;
 		}
+		if (isNewerLastCheck(/** @type {any} */ (server.lastRun), /** @type {any} */ (base.lastRun))) {
+			next.lastRun = server.lastRun;
+		} else if (
+			isNewerLastCheck(/** @type {any} */ (base.lastRun), /** @type {any} */ (server.lastRun))
+		) {
+			next.lastRun = base.lastRun;
+		}
 		return next;
 	}
 
@@ -119,13 +132,17 @@ export function createRoomSync(options) {
 		}
 		if (!dirty || stopped) return;
 		const outgoing = {
-			currentStep: local.currentStep,
 			unlockedStep: local.unlockedStep,
 			openedHints: local.openedHints,
 			lastCheck: local.lastCheck,
+			lastRun: local.lastRun,
 			source: local.source,
 			yjsState: local.yjsState,
-			awarenessState: local.awarenessState
+			awarenessState: local.awarenessState,
+			stepSources: local.stepSources,
+			stepYjs: local.stepYjs,
+			editingStep: local.editingStep,
+			replaceEditor: local.replaceEditor === true
 		};
 		let result = await putOnce({ ...outgoing, version });
 		if (result?.conflict && result.room) {

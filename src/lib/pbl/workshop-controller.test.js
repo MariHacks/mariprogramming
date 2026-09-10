@@ -88,11 +88,13 @@ describe('workshop controller', () => {
 		expect(controller.getState().pythonError).toBe('boom');
 		expect(controller.getState().unlockedStep).toBe(0);
 		controller.setSource('print("team")');
-		expect(sync.update).toHaveBeenCalledWith({
-			source: 'print("team")',
-			yjsState: '',
-			awarenessState: ''
-		});
+		expect(sync.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				source: 'print("team")',
+				editingStep: 0,
+				stepSources: expect.objectContaining({ '0': 'print("team")' })
+			})
+		);
 		onState()({ source: 'print(1)', currentStep: 99, unlockedStep: 0, openedHints: null });
 		expect(controller.getState().step.title).toBe('Get something running');
 		controller.openHint(1);
@@ -123,6 +125,30 @@ describe('workshop controller', () => {
 		full.controller.destroy();
 	});
 
+
+	it('keeps viewStep local and copies code forward on unlock', async () => {
+		const { controller, sync } = harness({
+			runCheck: async () => ({ passed: true, message: 'ok' })
+		});
+		await controller.join();
+		sync.update.mockClear();
+		controller.selectStep(0);
+		expect(controller.getState().viewStep).toBe(0);
+		await controller.run();
+		expect(controller.getState().unlockedStep).toBe(1);
+		expect(controller.getState().stepSources['1']).toBeTruthy();
+		sync.update.mockClear();
+		controller.selectStep(1);
+		expect(controller.getState().currentStep).toBe(1);
+		expect(controller.getState().viewStep).toBe(1);
+		const payloads = sync.update.mock.calls.map((call) => call[0]);
+		expect(payloads.some((p) => 'currentStep' in p)).toBe(false);
+		expect(payloads.at(-1)).toMatchObject({
+			editingStep: 1,
+			replaceEditor: true
+		});
+		controller.destroy();
+	});
 	it('pushes source from every joined member', async () => {
 		/** @type {any} */
 		let inner;
@@ -150,27 +176,35 @@ describe('workshop controller', () => {
 		});
 		await teammate.controller.join();
 		teammate.controller.setSource('print("from B")');
-		expect(inner.update).toHaveBeenCalledWith({
-			source: 'print("from B")',
-			yjsState: '',
-			awarenessState: ''
-		});
+		expect(inner.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				source: 'print("from B")',
+				editingStep: 0,
+				stepSources: expect.objectContaining({ '0': 'print("from B")' })
+			})
+		);
 		teammate.controller.setCollab({});
-		expect(inner.update).toHaveBeenCalledWith({
-			source: 'print("from B")',
-			yjsState: '',
-			awarenessState: ''
-		});
+		expect(inner.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				source: 'print("from B")',
+				editingStep: 0
+			})
+		);
 		teammate.controller.setCollab({
 			source: 'print("from B")\nprint("from A")',
 			yjsState: 'abc=',
 			awarenessState: 'def='
 		});
-		expect(inner.update).toHaveBeenCalledWith({
-			source: 'print("from B")\nprint("from A")',
-			yjsState: 'abc=',
-			awarenessState: 'def='
-		});
+		expect(inner.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				source: 'print("from B")\nprint("from A")',
+				yjsState: 'abc=',
+				awarenessState: 'def=',
+				editingStep: 0,
+				stepSources: expect.objectContaining({ '0': 'print("from B")\nprint("from A")' }),
+				stepYjs: expect.objectContaining({ '0': 'abc=' })
+			})
+		);
 		teammate.controller.destroy();
 	});
 
@@ -204,7 +238,43 @@ describe('workshop controller', () => {
 		await inner.run();
 		inner.destroy();
 	});
-});
+
+	it('ejects a teammate through DELETE and keeps isDriver from the room', async () => {
+		const fetchImpl = vi.fn(async () => ({
+			ok: true,
+			json: async () => ({
+				code: 'AB23JK',
+				memberCount: 1,
+				isDriver: true,
+				driverMemberId: 'a'.repeat(32),
+				members: [{ memberId: 'a'.repeat(32), name: 'Lead' }]
+			})
+		}));
+		const { controller, sync } = harness({ fetch: fetchImpl });
+		sync.join.mockResolvedValueOnce({
+			code: 'AB23JK',
+			teamName: 'Lab table 3',
+			source: 'print(1)',
+			unlockedStep: 0,
+			openedHints: {},
+			memberCount: 2,
+			version: 1,
+			isDriver: false,
+			driverMemberId: 'a'.repeat(32),
+			yjsState: '',
+			awarenessState: ''
+		});
+		await controller.join();
+		expect(controller.getState().isDriver).toBe(false);
+		const next = await controller.ejectMember('b'.repeat(32));
+		expect(fetchImpl).toHaveBeenCalledWith(
+			`/api/pbl/rooms/AB23JK/members/${'b'.repeat(32)}`,
+			expect.objectContaining({ method: 'DELETE' })
+		);
+		expect(next?.memberCount).toBe(1);
+		expect(controller.getState().isDriver).toBe(true);
+	});
+
 
 	it('fail then pass updates the status message to Accepted', async () => {
 		let tick = 0;
@@ -399,3 +469,64 @@ describe('workshop controller', () => {
 		});
 		controller.destroy();
 	});
+
+	it('syncs lastRun when running and adopts a newer remote terminal', async () => {
+		const { controller, host, sync, onState } = harness();
+		host.run.mockResolvedValueOnce({
+			stdout: 'hello\n',
+			stderr: '',
+			error: null,
+			globals: {},
+			files: {},
+			inputCount: 0
+		});
+		await controller.join();
+		await controller.run();
+		const runUpdates = sync.update.mock.calls.map((call) => call[0]).filter((p) => p.lastRun);
+		expect(runUpdates.length).toBeGreaterThanOrEqual(2);
+		expect(runUpdates[0].lastRun).toMatchObject({ running: true, step: 0, output: '' });
+		expect(runUpdates.at(-1).lastRun).toMatchObject({
+			running: false,
+			output: 'hello\n',
+			error: ''
+		});
+		expect(controller.getState().output).toBe('hello\n');
+		expect(controller.getState().lastRun?.output).toBe('hello\n');
+
+		onState()({
+			lastRun: {
+				output: 'from-teammate\n',
+				error: '',
+				step: 0,
+				at: '2026-09-08T16:00:00.000Z',
+				running: false
+			}
+		});
+		expect(controller.getState().output).toBe('from-teammate\n');
+		expect(controller.getState().running).toBe(false);
+
+		onState()({
+			lastRun: {
+				output: '',
+				error: '',
+				step: 0,
+				at: '2026-09-08T16:00:01.000Z',
+				running: true
+			}
+		});
+		expect(controller.getState().running).toBe(true);
+		expect(controller.getState().output).toBe('');
+		controller.destroy();
+	});
+
+	it('does not push shared currentStep when syncing lastRun', async () => {
+		const { controller, sync } = harness();
+		await controller.join();
+		await controller.run();
+		const payloads = sync.update.mock.calls.map((call) => call[0]);
+		expect(payloads.some((p) => p.lastRun)).toBe(true);
+		expect(payloads.some((p) => 'currentStep' in p)).toBe(false);
+		controller.destroy();
+	});
+
+});

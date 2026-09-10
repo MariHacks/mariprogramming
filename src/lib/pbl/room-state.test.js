@@ -5,8 +5,12 @@ import {
 	MAX_TEAM_SIZE,
 	canAcceptMember,
 	isNewerLastCheck,
+	MAX_RUN_OUTPUT_CHARS,
 	mergeRoomPreferringNewerLastCheck,
+	normalizeLastRun,
 	normalizeOpenedHints,
+	normalizeStepSources,
+	normalizeStepYjs,
 	normalizeTeamName,
 	publicRoomView
 } from './room-state.js';
@@ -41,6 +45,19 @@ describe('PBL room state', () => {
 		expect(normalizeOpenedHints(['1'])).toEqual({});
 	});
 
+	it('normalizes per-step sources and yjs snapshots', () => {
+		expect(normalizeStepSources(undefined)).toEqual({});
+		expect(normalizeStepSources({ '0': 'print(1)', '1': 'print(2)', bad: 'x' })).toEqual({
+			'0': 'print(1)',
+			'1': 'print(2)'
+		});
+		expect(normalizeStepSources({ '0': 'x'.repeat(MAX_SOURCE_CHARS + 1) })).toEqual({});
+		expect(normalizeStepSources(['nope'])).toEqual({});
+		expect(normalizeStepYjs(null)).toEqual({});
+		expect(normalizeStepYjs({ '0': 'abc=', '1': '%%%', bad: 'x' })).toEqual({ '0': 'abc=' });
+		expect(normalizeStepYjs({ '0': 'a'.repeat(200001) })).toEqual({});
+	});
+
 	it('exposes the fields a second device and a facilitator need', () => {
 		const now = new Date('2026-09-08T15:00:00.000Z');
 		const view = publicRoomView({
@@ -48,14 +65,15 @@ describe('PBL room state', () => {
 			pblId: 'science',
 			teamName: 'Lab table 3',
 			source: 'print("ok")',
-			currentStep: 2,
+			currentStep: 0,
 			unlockedStep: 2,
 			lastCheck: { step: 1, passed: true, message: 'Bounds work.', at: now.toISOString() },
 			openedHints: { '1': 2 },
 			stepEnteredAt: now.toISOString(),
 			memberCount: 3,
 			version: 4,
-			driverMemberId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+			driverMemberId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+			stepSources: { '0': 'print(0)', '1': 'print(1)' }
 		});
 
 		expect(view).toMatchObject({
@@ -70,7 +88,8 @@ describe('PBL room state', () => {
 			joinable: true,
 			isDriver: false,
 			yjsState: '',
-			awarenessState: ''
+			awarenessState: '',
+			stepSources: { '0': 'print(0)', '1': 'print(1)' }
 		});
 		expect(
 			publicRoomView(
@@ -95,7 +114,6 @@ describe('PBL room state', () => {
 		expect(view.lastCheck?.passed).toBe(true);
 		expect(view.openedHints).toEqual({ '1': 2 });
 	});
-});
 
 	it('keeps a newer local lastCheck when merging server room state', () => {
 		expect(isNewerLastCheck(null, { at: '2026-09-08T15:00:00.000Z' })).toBe(false);
@@ -139,3 +157,82 @@ describe('PBL room state', () => {
 		expect(merged.unlockedStep).toBe(1);
 		expect(merged.lastCheck).toMatchObject({ passed: true, at: '2026-09-08T15:01:00.000Z' });
 	});
+
+
+	it('normalizes shared lastRun terminal snapshots', () => {
+		expect(normalizeLastRun(null)).toBeNull();
+		expect(normalizeLastRun({ output: 'hi', error: '', step: 0, at: 'nope', running: false })).toBeNull();
+		expect(
+			normalizeLastRun({
+				output: 'ok\n',
+				error: '',
+				step: 1,
+				at: '2026-09-08T15:00:00.000Z',
+				running: true
+			})
+		).toEqual({
+			output: 'ok\n',
+			error: '',
+			step: 1,
+			at: '2026-09-08T15:00:00.000Z',
+			running: true
+		});
+		const huge = 'x'.repeat(MAX_RUN_OUTPUT_CHARS + 10);
+		expect(normalizeLastRun({
+			output: huge,
+			error: 'boom',
+			step: 0,
+			at: '2026-09-08T15:00:00.000Z',
+			running: false
+		})?.output).toHaveLength(MAX_RUN_OUTPUT_CHARS);
+	});
+
+	it('keeps a newer local lastRun when merging server room state', () => {
+		const merged = mergeRoomPreferringNewerLastCheck(
+			{
+				source: 'from-server',
+				version: 4,
+				lastRun: {
+					output: 'old',
+					error: '',
+					step: 0,
+					at: '2026-09-08T15:00:00.000Z',
+					running: false
+				}
+			},
+			{
+				lastRun: {
+					output: 'fresh\n',
+					error: '',
+					step: 0,
+					at: '2026-09-08T15:01:00.000Z',
+					running: false
+				}
+			}
+		);
+		expect(merged.lastRun).toMatchObject({ output: 'fresh\n', at: '2026-09-08T15:01:00.000Z' });
+		expect(
+			publicRoomView({
+				code: 'AB23JK',
+				pblId: 'science',
+				teamName: 'Lab',
+				source: '',
+				currentStep: 0,
+				unlockedStep: 0,
+				lastCheck: null,
+				lastRun: {
+					output: 'hi',
+					error: '',
+					step: 0,
+					at: '2026-09-08T15:00:00.000Z',
+					running: false
+				},
+				openedHints: {},
+				stepEnteredAt: '2026-09-08T15:00:00.000Z',
+				memberCount: 1,
+				version: 1
+			}).lastRun
+		).toMatchObject({ output: 'hi', running: false });
+	});
+
+});

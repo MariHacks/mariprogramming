@@ -15,10 +15,23 @@ import {
 	normalizeYjsState,
 	teammateColor,
 	teammateName,
-	collabUserFromProfile
+	collabUserFromProfile,
+	encodeSourceAsYjs
 } from './yjs-collab.js';
 
 describe('yjs collab merge', () => {
+
+	it('encodes plain source as a replaceable Yjs snapshot', () => {
+		const encoded = encodeSourceAsYjs('print(1)');
+		expect(typeof encoded).toBe('string');
+		expect(encoded.length).toBeGreaterThan(0);
+		const merged = mergeYjsStates('', encoded);
+		expect(merged.source).toBe('print(1)');
+		expect(encodeSourceAsYjs('')).toBeTruthy();
+		expect(() => encodeSourceAsYjs('x'.repeat(MAX_SOURCE_CHARS + 1))).toThrow(
+			'The program is too long to sync.'
+		);
+	});
 	it('rejects a bad or oversized state string', () => {
 		expect(normalizeYjsState(undefined)).toBe('');
 		expect(normalizeYjsState(null)).toBe('');

@@ -140,7 +140,8 @@ describe('room sync client', () => {
 		expect(bodies[1]).toMatchObject({ version: 4, source: 'from-a-edit' });
 		expect(states.at(-1)?.source).toBe('from-b');
 		expect(states.at(-1)?.version).toBe(4);
-		expect(states.at(-1)?.currentStep).toBe(1);
+		expect(states.at(-1)?.unlockedStep ?? 0).toBeDefined();
+		expect('currentStep' in (states.at(-1) ?? {})).toBe(false);
 		expect(errors).toEqual([]);
 		sync.stop();
 	});
@@ -234,10 +235,17 @@ describe('room sync client', () => {
 			}
 		});
 		await sync.join();
-		sync.update({ currentStep: 0, source: 'print(1)' });
+		sync.update({
+			editingStep: 0,
+			source: 'print(1)',
+			stepSources: { '0': 'print(1)' },
+			stepYjs: {}
+		});
 		await sync.flush();
 		expect(bodies[0].source).toBe('print(1)');
-		expect(bodies[0].currentStep).toBe(0);
+		expect(bodies[0].editingStep).toBe(0);
+		expect(bodies[0].currentStep).toBeUndefined();
+		expect(bodies[0].stepSources).toEqual({ '0': 'print(1)' });
 		sync.stop();
 	});
 
@@ -358,7 +366,6 @@ describe('room sync client', () => {
 		await sync.flush();
 		await sync.pull();
 	});
-});
 
 	it('does not wipe a newer local lastCheck on a double 409 conflict', async () => {
 		const states = [];
@@ -426,3 +433,35 @@ describe('room sync client', () => {
 		expect(states.at(-1)?.unlockedStep).toBe(1);
 		sync.stop();
 	});
+
+	it('sends lastRun on flush without currentStep', async () => {
+		/** @type {any[]} */
+		const bodies = [];
+		const sync = createRoomSync({
+			code: 'AB23JK',
+			onState: () => {},
+			fetch: async (_url, init) => {
+				if ((init?.method ?? 'GET') === 'PUT') {
+					bodies.push(JSON.parse(String(init?.body ?? '{}')));
+					return new Response(JSON.stringify({ code: 'AB23JK', version: 2 }));
+				}
+				return new Response(JSON.stringify({ code: 'AB23JK', source: 'print(1)', version: 1 }));
+			}
+		});
+		await sync.join();
+		sync.update({
+			lastRun: {
+				output: 'hi\n',
+				error: '',
+				step: 0,
+				at: '2026-09-08T15:00:00.000Z',
+				running: false
+			}
+		});
+		await sync.flush();
+		expect(bodies[0].lastRun).toMatchObject({ output: 'hi\n', running: false });
+		expect(bodies[0].currentStep).toBeUndefined();
+		sync.stop();
+	});
+
+});

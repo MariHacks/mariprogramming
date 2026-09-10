@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+	boolean,
 	check,
 	index,
 	integer,
@@ -34,6 +35,15 @@ export const pblRooms = pgTable(
 		driverMemberId: varchar('driver_member_id', { length: 64 }),
 		yjsState: text('yjs_state').default('').notNull(),
 		awarenessState: text('awareness_state').default('').notNull(),
+		stepSources: jsonb('step_sources').$type<Record<string, string>>().default({}).notNull(),
+		stepYjs: jsonb('step_yjs').$type<Record<string, string>>().default({}).notNull(),
+		lastRun: jsonb('last_run').$type<{
+			output: string;
+			error: string;
+			step: number;
+			at: string;
+			running: boolean;
+		} | null>(),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
@@ -72,5 +82,25 @@ export const pblRoomMembers = pgTable(
 			.where(sql`${table.userId} IS NOT NULL`),
 		index('pbl_room_members_room_idx').on(table.roomId),
 		index('pbl_room_members_user_idx').on(table.userId)
+	]
+);
+
+export const pblStepSubmissions = pgTable(
+	'pbl_step_submissions',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		roomId: uuid('room_id')
+			.notNull()
+			.references(() => pblRooms.id, { onDelete: 'cascade' }),
+		step: integer('step').notNull(),
+		source: text('source').notNull(),
+		passed: boolean('passed').notNull(),
+		message: text('message'),
+		memberId: varchar('member_id', { length: 64 }),
+		createdAt: createdAt()
+	},
+	(table) => [
+		index('pbl_step_submissions_room_idx').on(table.roomId),
+		index('pbl_step_submissions_room_step_idx').on(table.roomId, table.step)
 	]
 );

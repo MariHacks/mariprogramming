@@ -1,4 +1,5 @@
 <script>
+	import { resolve } from '$app/paths';
 	import { getPblById } from '$lib/pbl/catalog.js';
 
 	/** @type {{ rooms?: any[], unavailable?: boolean }} */
@@ -44,6 +45,7 @@
 	/** @param {any} member */
 	function memberLabel(member) {
 		if (member?.email) return member.email;
+		if (member?.name) return member.name;
 		if (member?.userId) return member.userId;
 		return 'Anonymous device';
 	}
@@ -59,7 +61,8 @@
 			<p class="eyebrow">Workshops</p>
 			<h1>PBL teams</h1>
 			<p class="lede">
-				Every live workshop room across PBLs, with progress, members, and the shared source.
+				Live workshop rooms by unlocked progress. Open a team to inspect per-step code and past
+				submissions — member view steps stay local to each student.
 			</p>
 		</div>
 		<p class="count" aria-live="polite">
@@ -78,7 +81,9 @@
 					<header class="team-header">
 						<div>
 							<p class="workshop">{workshopLabel(room.pblId)}</p>
-							<h2>{room.teamName}</h2>
+							<h2>
+								<a href={resolve(`/staff/pbl/${room.code}`, {})}>{room.teamName}</a>
+							</h2>
 							<p class="meta">
 								Code <span class="code">{room.code}</span>
 								· {room.memberCount} {room.memberCount === 1 ? 'member' : 'members'}
@@ -87,12 +92,8 @@
 						</div>
 						<dl class="progress">
 							<div>
-								<dt>Current step</dt>
-								<dd>{room.currentStep + 1}</dd>
-							</div>
-							<div>
 								<dt>Unlocked step</dt>
-								<dd>{room.unlockedStep + 1}</dd>
+								<dd>{(room.unlockedStep ?? 0) + 1}</dd>
 							</div>
 							<div class="wide">
 								<dt>Last check</dt>
@@ -119,10 +120,9 @@
 						{/if}
 					</section>
 
-					<details class="source">
-						<summary>Team source code</summary>
-						<pre><code>{room.source || '// Empty program'}</code></pre>
-					</details>
+					<p class="detail-link">
+						<a href={resolve(`/staff/pbl/${room.code}`, {})}>View step sources &amp; submissions</a>
+					</p>
 				</li>
 			{/each}
 		</ul>
@@ -164,7 +164,8 @@
 	.empty,
 	.banner,
 	.meta,
-	.workshop {
+	.workshop,
+	.detail-link {
 		margin: 0;
 		color: var(--quiet-steel);
 		font-size: var(--text-sm);
@@ -214,6 +215,16 @@
 	.team-header h2 {
 		margin: 0.2rem 0 0.35rem;
 		font-size: 1.25rem;
+	}
+
+	.team-header h2 a {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.team-header h2 a:hover,
+	.detail-link a:hover {
+		text-decoration: underline;
 	}
 
 	.code {
@@ -281,20 +292,9 @@
 		font-size: 0.78rem;
 	}
 
-	.source summary {
-		cursor: pointer;
+	.detail-link a {
 		font-weight: 650;
-	}
-
-	.source pre {
-		margin: 0.75rem 0 0;
-		padding: 0.85rem 1rem;
-		overflow: auto;
-		border-radius: 0.4rem;
-		background: #272822;
-		color: #f8f8f2;
-		font-size: 0.82rem;
-		line-height: 1.45;
+		color: var(--club-blue, #0b4cf4);
 	}
 
 	@media (min-width: 56rem) {
