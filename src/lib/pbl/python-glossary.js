@@ -2,6 +2,10 @@
  * Beginner glossary for Science PBL lesson prose.
  * Keep examples generic (no checker spoilers).
  *
+ * Chips are author-marked only: wrap a glossary alias in backticks in the
+ * source string, e.g. `print`, `for`, `input()`, `math.sqrt`. Bare prose is
+ * never auto-linked (English "for" stays plain forever).
+ *
  * @typedef {{
  *   name: string,
  *   summary: string,
@@ -254,68 +258,67 @@ export const PYTHON_GLOSSARY = Object.freeze({
 });
 
 /**
- * Alias text that can appear in lesson prose, mapped to a glossary key.
- * Longer aliases must win (math.sqrt before sqrt pieces, == before =, elif before if).
+ * Alias text authors may put inside backticks, mapped to a glossary key.
+ * Longer aliases must win when resolving marked content (math.sqrt before pieces).
  *
  * @typedef {{
  *   match: string,
- *   key: keyof typeof PYTHON_GLOSSARY extends string ? string : string,
- *   caseSensitive: boolean,
- *   kind: 'word' | 'operator'
+ *   key: string,
+ *   caseSensitive: boolean
  * }} GlossaryAlias
  */
 
 /** @type {readonly GlossaryAlias[]} */
 export const GLOSSARY_ALIASES = Object.freeze([
-	Object.freeze({ match: 'math.sqrt', key: 'math.sqrt', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'dictionaries', key: 'dict', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'dictionary', key: 'dict', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'f-strings', key: 'f-string', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'f-string', key: 'f-string', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'variables', key: 'variable', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'variable', key: 'variable', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'functions', key: 'def', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'function', key: 'def', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'indexing', key: 'indexing', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'indexes', key: 'indexing', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'index', key: 'indexing', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'slicing', key: 'slice', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'slice', key: 'slice', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'lists', key: 'list', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'list', key: 'list', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'files', key: 'open', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'file', key: 'open', caseSensitive: false, kind: 'word' }),
-	Object.freeze({ match: 'float()', key: 'float', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'input()', key: 'input', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'len()', key: 'len', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'sum()', key: 'sum', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'min()', key: 'min', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'max()', key: 'max', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'append', key: 'append', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'import', key: 'import', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'print', key: 'print', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'input', key: 'input', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'float', key: 'float', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'while', key: 'while', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'False', key: 'False', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'True', key: 'True', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'elif', key: 'elif', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'else', key: 'else', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'bool', key: 'bool', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'dict', key: 'dict', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'open', key: 'open', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'range', key: 'range', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'len', key: 'len', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'sum', key: 'sum', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'min', key: 'min', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'max', key: 'max', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'def', key: 'def', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'for', key: 'for', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'str', key: 'str', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'int', key: 'int', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: 'if', key: 'if', caseSensitive: true, kind: 'word' }),
-	Object.freeze({ match: '==', key: '==', caseSensitive: true, kind: 'operator' }),
-	Object.freeze({ match: '=', key: 'variable', caseSensitive: true, kind: 'operator' })
+	Object.freeze({ match: 'math.sqrt', key: 'math.sqrt', caseSensitive: true }),
+	Object.freeze({ match: 'dictionaries', key: 'dict', caseSensitive: false }),
+	Object.freeze({ match: 'dictionary', key: 'dict', caseSensitive: false }),
+	Object.freeze({ match: 'f-strings', key: 'f-string', caseSensitive: false }),
+	Object.freeze({ match: 'f-string', key: 'f-string', caseSensitive: false }),
+	Object.freeze({ match: 'variables', key: 'variable', caseSensitive: false }),
+	Object.freeze({ match: 'variable', key: 'variable', caseSensitive: false }),
+	Object.freeze({ match: 'functions', key: 'def', caseSensitive: false }),
+	Object.freeze({ match: 'function', key: 'def', caseSensitive: false }),
+	Object.freeze({ match: 'indexing', key: 'indexing', caseSensitive: false }),
+	Object.freeze({ match: 'indexes', key: 'indexing', caseSensitive: false }),
+	Object.freeze({ match: 'index', key: 'indexing', caseSensitive: false }),
+	Object.freeze({ match: 'slicing', key: 'slice', caseSensitive: false }),
+	Object.freeze({ match: 'slice', key: 'slice', caseSensitive: false }),
+	Object.freeze({ match: 'lists', key: 'list', caseSensitive: false }),
+	Object.freeze({ match: 'list', key: 'list', caseSensitive: false }),
+	Object.freeze({ match: 'files', key: 'open', caseSensitive: false }),
+	Object.freeze({ match: 'file', key: 'open', caseSensitive: false }),
+	Object.freeze({ match: 'float()', key: 'float', caseSensitive: true }),
+	Object.freeze({ match: 'input()', key: 'input', caseSensitive: true }),
+	Object.freeze({ match: 'len()', key: 'len', caseSensitive: true }),
+	Object.freeze({ match: 'sum()', key: 'sum', caseSensitive: true }),
+	Object.freeze({ match: 'min()', key: 'min', caseSensitive: true }),
+	Object.freeze({ match: 'max()', key: 'max', caseSensitive: true }),
+	Object.freeze({ match: 'append', key: 'append', caseSensitive: true }),
+	Object.freeze({ match: 'import', key: 'import', caseSensitive: true }),
+	Object.freeze({ match: 'print', key: 'print', caseSensitive: true }),
+	Object.freeze({ match: 'input', key: 'input', caseSensitive: true }),
+	Object.freeze({ match: 'float', key: 'float', caseSensitive: true }),
+	Object.freeze({ match: 'while', key: 'while', caseSensitive: true }),
+	Object.freeze({ match: 'False', key: 'False', caseSensitive: true }),
+	Object.freeze({ match: 'True', key: 'True', caseSensitive: true }),
+	Object.freeze({ match: 'elif', key: 'elif', caseSensitive: true }),
+	Object.freeze({ match: 'else', key: 'else', caseSensitive: true }),
+	Object.freeze({ match: 'bool', key: 'bool', caseSensitive: true }),
+	Object.freeze({ match: 'dict', key: 'dict', caseSensitive: true }),
+	Object.freeze({ match: 'open', key: 'open', caseSensitive: true }),
+	Object.freeze({ match: 'range', key: 'range', caseSensitive: true }),
+	Object.freeze({ match: 'len', key: 'len', caseSensitive: true }),
+	Object.freeze({ match: 'sum', key: 'sum', caseSensitive: true }),
+	Object.freeze({ match: 'min', key: 'min', caseSensitive: true }),
+	Object.freeze({ match: 'max', key: 'max', caseSensitive: true }),
+	Object.freeze({ match: 'def', key: 'def', caseSensitive: true }),
+	Object.freeze({ match: 'for', key: 'for', caseSensitive: true }),
+	Object.freeze({ match: 'str', key: 'str', caseSensitive: true }),
+	Object.freeze({ match: 'int', key: 'int', caseSensitive: true }),
+	Object.freeze({ match: 'if', key: 'if', caseSensitive: true }),
+	Object.freeze({ match: '==', key: '==', caseSensitive: true }),
+	Object.freeze({ match: '=', key: 'variable', caseSensitive: true })
 ]);
 
 /** @type {readonly GlossaryAlias[]} */
@@ -324,52 +327,22 @@ const SORTED_ALIASES = Object.freeze(
 );
 
 /**
- * @param {string | null | undefined} ch
- * @returns {boolean}
+ * Resolve backtick inner text to a glossary alias (longest match wins).
+ * The whole inner string must equal the alias (no bare-prose scanning).
+ *
+ * @param {string} inner
+ * @returns {GlossaryAlias | null}
  */
-function isWordChar(ch) {
-	return typeof ch === 'string' && ch.length === 1 && /[A-Za-z0-9_]/.test(ch);
-}
-
-/**
- * @param {string} text
- * @param {number} start
- * @param {number} end
- * @param {GlossaryAlias} alias
- */
-export function hasGlossaryBoundary(text, start, end, alias) {
-	const before = start > 0 ? text[start - 1] : '';
-	const after = end < text.length ? text[end] : '';
-
-	if (alias.kind === 'operator') {
-		// Assignment and equality: do not treat <= >= != or the second = of == as '='.
-		if (before === '!' || before === '<' || before === '>' || before === '=') return false;
-		if (after === '=') return false;
-		return true;
+export function resolveGlossaryMark(inner) {
+	const text = typeof inner === 'string' ? inner.trim() : '';
+	if (!text) return null;
+	for (const alias of SORTED_ALIASES) {
+		const ok = alias.caseSensitive
+			? text === alias.match
+			: text.toLowerCase() === alias.match.toLowerCase();
+		if (ok) return alias;
 	}
-
-	// Allow a trailing () already consumed by aliases like float(); bare names need word edges.
-	if (isWordChar(before)) return false;
-	if (isWordChar(after)) return false;
-	// Do not start matching in the middle of a dotted name unless the alias includes the dot.
-	if (before === '.' && !alias.match.includes('.')) return false;
-	return true;
-}
-
-/**
- * @param {string} text
- * @param {GlossaryAlias} alias
- * @param {number} index
- */
-function aliasMatchesAt(text, alias, index) {
-	const end = index + alias.match.length;
-	if (end > text.length) return false;
-	const slice = text.slice(index, end);
-	const ok = alias.caseSensitive
-		? slice === alias.match
-		: slice.toLowerCase() === alias.match.toLowerCase();
-	if (!ok) return false;
-	return hasGlossaryBoundary(text, index, end, alias);
+	return null;
 }
 
 /**
@@ -378,7 +351,8 @@ function aliasMatchesAt(text, alias, index) {
 
 /**
  * Split lesson prose into plain text and glossary term segments.
- * Longest alias wins. By default every occurrence is linked. Pass oncePerTerm: true to link only the first hit per key.
+ * Only explicit `backtick` marks become chips. Bare keywords in prose never link.
+ * Pass oncePerTerm: true to link only the first marked hit per key.
  *
  * @param {string} text
  * @param {{ oncePerTerm?: boolean }} [options]
@@ -394,36 +368,40 @@ export function tokenizeLessonText(text, options = {}) {
 	/** @type {LessonSegment[]} */
 	const segments = [];
 	let cursor = 0;
-	let plainStart = 0;
 
 	while (cursor < source.length) {
-		/** @type {GlossaryAlias | null} */
-		let hit = null;
-		for (const alias of SORTED_ALIASES) {
-			if (oncePerTerm && used.has(alias.key)) continue;
-			if (!aliasMatchesAt(source, alias, cursor)) continue;
-			hit = alias;
+		const open = source.indexOf('`', cursor);
+		if (open === -1) {
+			segments.push({ type: 'text', value: source.slice(cursor) });
 			break;
 		}
 
-		if (!hit) {
-			cursor += 1;
-			continue;
+		if (open > cursor) {
+			segments.push({ type: 'text', value: source.slice(cursor, open) });
 		}
 
-		if (plainStart < cursor) {
-			segments.push({ type: 'text', value: source.slice(plainStart, cursor) });
+		const close = source.indexOf('`', open + 1);
+		if (close === -1) {
+			// Unclosed backtick: treat the rest as plain text.
+			segments.push({ type: 'text', value: source.slice(open) });
+			break;
 		}
-		const value = source.slice(cursor, cursor + hit.match.length);
-		const entry = PYTHON_GLOSSARY[hit.key];
-		segments.push({ type: 'term', value, key: hit.key, entry });
-		used.add(hit.key);
-		cursor += hit.match.length;
-		plainStart = cursor;
-	}
 
-	if (plainStart < source.length) {
-		segments.push({ type: 'text', value: source.slice(plainStart) });
+		const inner = source.slice(open + 1, close);
+		const alias = resolveGlossaryMark(inner);
+		if (alias && !(oncePerTerm && used.has(alias.key))) {
+			const entry = PYTHON_GLOSSARY[alias.key];
+			segments.push({ type: 'term', value: inner, key: alias.key, entry });
+			used.add(alias.key);
+		} else if (alias && oncePerTerm && used.has(alias.key)) {
+			// Already linked this key; show the marked text without a chip.
+			segments.push({ type: 'text', value: inner });
+		} else {
+			// Unknown mark: keep backticks so authors notice a typo.
+			segments.push({ type: 'text', value: source.slice(open, close + 1) });
+		}
+
+		cursor = close + 1;
 	}
 
 	return segments;

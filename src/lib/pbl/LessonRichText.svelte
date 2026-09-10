@@ -1,11 +1,11 @@
 <script>
-	import { onDestroy } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import { tokenizeLessonText } from '$lib/pbl/python-glossary.js';
 
 	/** @type {string} */
 	export let text = '';
 
-	/** When true, only the first occurrence of each glossary key is linked. Default false: every hit. */
+	/** When true, only the first marked occurrence of each glossary key is linked. Default false: every mark. */
 	export let oncePerTerm = false;
 
 	/** Extra class on the root wrapper (e.g. body / note). */
@@ -15,34 +15,57 @@
 
 	/** @type {string | null} */
 	let openId = null;
-	/** Sticky open from tap/click (touch-friendly toggle). */
-	let sticky = false;
 	/** @type {HTMLElement | null} */
 	let rootEl = null;
+	/** @type {HTMLElement | null} */
+	let popoverEl = null;
+	/** @type {HTMLElement | null} */
+	let anchorEl = null;
 
-	/** @param {string} id */
-	function show(id) {
-		openId = id;
-	}
-
-	function hideIfNotSticky() {
-		if (!sticky) openId = null;
-	}
-
-	/** @param {string} id */
-	function toggle(id) {
-		if (openId === id && sticky) {
-			sticky = false;
-			openId = null;
+	/** @param {string} id @param {HTMLElement} anchor */
+	async function toggle(id, anchor) {
+		if (openId === id) {
+			closeAll();
 			return;
 		}
-		sticky = true;
 		openId = id;
+		anchorEl = anchor;
+		await tick();
+		positionPopover();
 	}
 
 	function closeAll() {
-		sticky = false;
 		openId = null;
+		anchorEl = null;
+		popoverEl = null;
+	}
+
+	function positionPopover() {
+		if (!popoverEl || !anchorEl || typeof window === 'undefined') return;
+
+		const margin = 8;
+		const gap = 6;
+		const rect = anchorEl.getBoundingClientRect();
+		const pop = popoverEl.getBoundingClientRect();
+		const vw = window.innerWidth;
+		const vh = window.innerHeight;
+
+		let left = rect.left;
+		let top = rect.bottom + gap;
+
+		if (left + pop.width > vw - margin) {
+			left = Math.max(margin, vw - margin - pop.width);
+		}
+		if (left < margin) left = margin;
+
+		if (top + pop.height > vh - margin) {
+			const above = rect.top - gap - pop.height;
+			if (above >= margin) top = above;
+			else top = Math.max(margin, vh - margin - pop.height);
+		}
+
+		popoverEl.style.left = `${Math.round(left)}px`;
+		popoverEl.style.top = `${Math.round(top)}px`;
 	}
 
 	/** @param {KeyboardEvent} event */
@@ -55,21 +78,30 @@
 
 	/** @param {MouseEvent} event */
 	function onDocPointer(event) {
-		if (openId === null || !sticky) return;
+		if (openId === null) return;
 		const target = event.target;
 		if (target instanceof Node && rootEl?.contains(target)) return;
 		closeAll();
 	}
 
+	/** @param {Event} _event */
+	function onViewportChange(_event) {
+		if (openId !== null) positionPopover();
+	}
+
 	if (typeof window !== 'undefined') {
 		window.addEventListener('keydown', onKeydown);
 		window.addEventListener('pointerdown', onDocPointer, true);
+		window.addEventListener('resize', onViewportChange);
+		window.addEventListener('scroll', onViewportChange, true);
 	}
 
 	onDestroy(() => {
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('keydown', onKeydown);
 			window.removeEventListener('pointerdown', onDocPointer, true);
+			window.removeEventListener('resize', onViewportChange);
+			window.removeEventListener('scroll', onViewportChange, true);
 		}
 	});
 </script>
@@ -88,11 +120,7 @@
 					aria-expanded={open}
 					aria-controls={id}
 					aria-label={`${segment.entry.name}: show beginner docs`}
-					on:pointerenter={() => show(id)}
-					on:pointerleave={hideIfNotSticky}
-					on:focus={() => show(id)}
-					on:blur={hideIfNotSticky}
-					on:click|preventDefault={() => toggle(id)}
+					on:click|preventDefault={(event) => toggle(id, /** @type {HTMLElement} */ (event.currentTarget))}
 				>
 					{segment.value}
 				</button>
@@ -101,8 +129,7 @@
 						class="popover"
 						id={id}
 						role="tooltip"
-						on:pointerenter={() => show(id)}
-						on:pointerleave={hideIfNotSticky}
+						bind:this={popoverEl}
 					>
 						<strong class="popover-name">{segment.entry.name}</strong>
 						<p class="popover-block">
@@ -158,9 +185,10 @@
 		font: inherit;
 		font-weight: 600;
 		line-height: inherit;
-		cursor: help;
+		cursor: pointer;
 		text-decoration: none;
 		vertical-align: baseline;
+		white-space: normal;
 	}
 
 	.python-term:hover,
@@ -171,12 +199,13 @@
 	}
 
 	.popover {
-		position: absolute;
-		z-index: 40;
-		top: calc(100% + 0.35rem);
-		left: 0;
-		width: min(22rem, 78vw);
-		padding: 0.7rem 0.8rem;
+		position: fixed;
+		z-index: 80;
+		box-sizing: border-box;
+		min-width: 16rem;
+		width: max-content;
+		max-width: min(22rem, calc(100vw - 2rem));
+		padding: 0.75rem 0.85rem;
 		border: 1px solid color-mix(in srgb, var(--quiet-steel, #6b7280) 35%, transparent);
 		border-radius: 0.55rem;
 		background: var(--panel-bg, #12141a);
@@ -187,6 +216,9 @@
 		line-height: 1.45;
 		text-align: left;
 		white-space: normal;
+		overflow-wrap: anywhere;
+		word-break: normal;
+		overflow: visible;
 	}
 
 	.popover-name {
@@ -194,10 +226,13 @@
 		margin-bottom: 0.45rem;
 		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 		font-size: 0.875rem;
+		white-space: normal;
 	}
 
 	.popover-block {
 		margin: 0 0 0.45rem;
+		white-space: normal;
+		overflow-wrap: anywhere;
 	}
 
 	.popover-label {
@@ -213,13 +248,15 @@
 	.popover-example {
 		margin: 0;
 		padding: 0.45rem 0.55rem;
+		max-width: 100%;
 		overflow-x: auto;
 		border-radius: 0.35rem;
 		background: color-mix(in srgb, #000 35%, transparent);
 		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 		font-size: 0.75rem;
 		line-height: 1.4;
-		white-space: pre;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
