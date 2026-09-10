@@ -62,6 +62,22 @@ function memoryRepo(seed = roomRow()) {
 		async findMemberByUser(roomId, userId) {
 			return members.find((row) => row.roomId === roomId && row.userId === userId) ?? null;
 		},
+		async listRooms() {
+			return [...rooms];
+		},
+		async listMembersWithUsers(roomIds) {
+			const wanted = new Set(roomIds);
+			return members
+				.filter((row) => wanted.has(row.roomId))
+				.map((row) => ({
+					roomId: row.roomId,
+					memberId: row.memberId,
+					userId: row.userId ?? null,
+					joinedAt: row.joinedAt ?? null,
+					email: row.email ?? null,
+					name: row.name ?? null
+				}));
+		},
 		async updateRoom(code, expectedVersion, patch) {
 			const row = rooms.find((item) => item.code === code && item.version === expectedVersion);
 			if (!row) return null;
@@ -368,6 +384,38 @@ describe('PBL room store', () => {
 		});
 		const stored = await repo.findRoomByCode('MEM001');
 		expect(await repo.findMember(stored.id, 'missing')).toBeNull();
+	});
+
+	it('lists rooms with member accounts for staff', async () => {
+		const repo = memoryRepo(
+			roomRow({
+				currentStep: 1,
+				unlockedStep: 2,
+				lastCheck: { step: 1, passed: true, message: 'ok' },
+				source: 'print(1)',
+				updatedAt: NOW
+			})
+		);
+		repo.members[0].email = 'lab@marihacks.com';
+		repo.members[0].name = 'Lab';
+		const store = createPblStore(repo, { now: () => NOW });
+		const rooms = await store.listStaffRooms();
+		expect(rooms).toHaveLength(1);
+		expect(rooms[0]).toMatchObject({
+			code: 'AB23JK',
+			teamName: 'Lab table 3',
+			currentStep: 1,
+			unlockedStep: 2,
+			source: 'print(1)',
+			members: [
+				{
+					memberId: MEMBER,
+					userId: USER,
+					email: 'lab@marihacks.com',
+					name: 'Lab'
+				}
+			]
+		});
 	});
 
 	it('stores userId and refuses a second join for the same account', async () => {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { getPblById } from '$lib/pbl/catalog.js';
 import { normalizeRoomCode } from '$lib/pbl/room-code.js';
 import {
@@ -11,7 +11,7 @@ import {
 } from '$lib/pbl/room-state.js';
 import { SCIENCE_STARTER_SOURCE, SCIENCE_STEP_COUNT } from '$lib/pbl/science-workshop.js';
 import { mergeAwarenessStates, mergeYjsStates, normalizeYjsState } from '$lib/pbl/yjs-collab.js';
-import { pblRoomMembers, pblRooms } from '../db/schema';
+import { pblRoomMembers, pblRooms, user } from '../db/schema';
 import { generateRoomCode } from './ids.js';
 
 export class PblInputError extends Error {
@@ -137,6 +137,25 @@ export function createDrizzlePblRepository(transaction) {
 					.where(and(eq(pblRooms.code, code), eq(pblRooms.version, expectedVersion)))
 					.returning()
 			);
+		},
+		async listRooms() {
+			return transaction.select().from(pblRooms).orderBy(desc(pblRooms.updatedAt), desc(pblRooms.code));
+		},
+		/** @param {string[]} roomIds */
+		async listMembersWithUsers(roomIds) {
+			if (!Array.isArray(roomIds) || roomIds.length === 0) return [];
+			return transaction
+				.select({
+					roomId: pblRoomMembers.roomId,
+					memberId: pblRoomMembers.memberId,
+					userId: pblRoomMembers.userId,
+					joinedAt: pblRoomMembers.joinedAt,
+					email: user.email,
+					name: user.name
+				})
+				.from(pblRoomMembers)
+				.leftJoin(user, eq(pblRoomMembers.userId, user.id))
+				.where(inArray(pblRoomMembers.roomId, roomIds));
 		}
 	};
 }
@@ -190,6 +209,28 @@ export function createMemoryPblRepository() {
 			if (!row) return null;
 			Object.assign(row, patch);
 			return { ...row };
+		},
+		async listRooms() {
+			return [...rooms].sort((a, b) => {
+				const aTime = a.updatedAt instanceof Date ? a.updatedAt.getTime() : 0;
+				const bTime = b.updatedAt instanceof Date ? b.updatedAt.getTime() : 0;
+				if (bTime !== aTime) return bTime - aTime;
+				return String(b.code).localeCompare(String(a.code));
+			});
+		},
+		/** @param {string[]} roomIds */
+		async listMembersWithUsers(roomIds) {
+			const wanted = new Set(roomIds);
+			return members
+				.filter((row) => wanted.has(row.roomId))
+				.map((row) => ({
+					roomId: row.roomId,
+					memberId: row.memberId,
+					userId: row.userId ?? null,
+					joinedAt: row.joinedAt ?? null,
+					email: row.email ?? null,
+					name: row.name ?? null
+				}));
 		}
 	};
 }
@@ -371,6 +412,50 @@ export function createPblStore(repository, clock = {}) {
 			const updated = await repository.updateRoom(row.code, row.version, patch);
 			if (!updated) throw new PblConflictError(roomFromRow(row, input.memberId));
 			return roomFromRow(updated, input.memberId);
+		},
+
+		async listStaffRooms() {
+			const rows = await repository.listRooms();
+			const roomIds = rows.map((row) => row.id).filter(Boolean);
+			const memberRows = await repository.listMembersWithUsers(roomIds);
+			/** @type {Map<string, any[]>} */
+			const byRoom = new Map();
+			for (const member of memberRows) {
+				const list = byRoom.get(member.roomId) ?? [];
+				list.push({
+					memberId: member.memberId,
+					userId: member.userId ?? null,
+					email: member.email ?? null,
+					name: member.name ?? null,
+					joinedAt:
+						member.joinedAt instanceof Date
+							? member.joinedAt.toISOString()
+							: member.joinedAt
+								? String(member.joinedAt)
+								: null
+				});
+				byRoom.set(member.roomId, list);
+			}
+			return rows.map((row) => {
+				const membersForRoom = byRoom.get(row.id) ?? [];
+				return {
+					code: row.code,
+					pblId: row.pblId,
+					teamName: row.teamName,
+					source: row.source ?? '',
+					currentStep: row.currentStep,
+					unlockedStep: row.unlockedStep,
+					lastCheck: row.lastCheck ?? null,
+					memberCount: row.memberCount,
+					updatedAt:
+						row.updatedAt instanceof Date
+							? row.updatedAt.toISOString()
+							: row.updatedAt
+								? String(row.updatedAt)
+								: null,
+					members: membersForRoom
+				};
+			});
 		}
 	};
 }

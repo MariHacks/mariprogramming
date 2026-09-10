@@ -34,6 +34,7 @@ describe('protected staff shell', () => {
 			'href',
 			'/staff/book-work'
 		);
+		expect(screen.getByRole('link', { name: 'PBL teams' })).toHaveAttribute('href', '/staff/pbl');
 		expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/staff/reports');
 		expect(screen.getByRole('link', { name: 'Catalog conflicts' })).toHaveAttribute(
 			'href',
@@ -74,6 +75,14 @@ describe('protected staff shell', () => {
 		expect(screen.getByRole('alert')).toHaveTextContent('Sign out is unavailable. Try again.');
 		expect(document.body).not.toHaveTextContent('session database secret');
 		expect(screen.getByRole('button', { name: 'Sign out' })).not.toBeDisabled();
+	});
+
+	it('marks PBL teams active on the workshop rooms page', () => {
+		render(StaffLayout, {
+			data: { staff: STAFF, pathname: '/staff/pbl' }
+		});
+		expect(screen.getByRole('link', { name: 'PBL teams' })).toHaveAttribute('aria-current', 'page');
+		expect(screen.getByRole('link', { name: 'Orders' })).not.toHaveAttribute('aria-current', 'page');
 	});
 
 	it('does not show the protected shell on the public sign-in route', () => {
