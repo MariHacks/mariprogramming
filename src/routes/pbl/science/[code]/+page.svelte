@@ -287,7 +287,6 @@
 		>
 			<div class="toolbar">
 				<div class="toolbar-meta">
-					<p class="lang">Python</p>
 					<p>
 						Share <code>{state.code}</code>
 						<button type="button" on:click={copyLink}>{copied ? 'Copied' : 'Copy link'}</button>
@@ -449,8 +448,7 @@
 		line-height: 1.25;
 	}
 
-	.minutes,
-	.lang {
+	.minutes {
 		color: var(--quiet-steel);
 		font-size: 0.72rem;
 		font-weight: 700;
@@ -668,11 +666,6 @@
 		gap: 0.45rem 0.65rem;
 	}
 
-	.toolbar .lang {
-		color: var(--pbl-editor-muted, #c8c4c6);
-		letter-spacing: 0.04em;
-	}
-
 	.toolbar code {
 		color: var(--pbl-editor-cyan, #78dce8);
 		font-family: var(--font-mono);
@@ -705,8 +698,9 @@
 		flex: 0 0 auto;
 		align-self: center;
 		height: auto;
-		min-height: 2.35rem;
-		padding-inline: 1.1rem;
+		min-height: 2.15rem;
+		padding: 0.35rem 0.7rem;
+		border-radius: 0.35rem;
 	}
 
 	.editor-shell {
