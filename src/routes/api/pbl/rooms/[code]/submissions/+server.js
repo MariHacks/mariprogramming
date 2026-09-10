@@ -3,7 +3,8 @@ import {
 	memberFromRequest,
 	pblErrorResponse,
 	pblJson,
-	readPblJson
+	readPblJson,
+	requirePblSession
 } from '$lib/server/pbl/http.js';
 
 export const prerender = false;
@@ -15,6 +16,7 @@ export function _createPblSubmissionsEndpoint(dependencies = {}) {
 	/** @param {any} event */
 	async function POST(event) {
 		try {
+			requirePblSession(event.locals);
 			const body = await readPblJson(event.request);
 			const membership = memberFromRequest(event.request, event);
 			const submission = await runtime.withStore((store) =>

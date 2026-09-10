@@ -5,6 +5,7 @@ import { DELETE, _createPblEjectMemberEndpoint } from './+server.js';
 
 const MEMBER = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const OTHER = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+const SESSION = { maritools: { userId: 'user-lab-3', email: 'lab@marihacks.com' } };
 
 function runtime(store) {
 	return _createPblEjectMemberEndpoint({
@@ -17,6 +18,25 @@ function runtime(store) {
 }
 
 describe('DELETE /api/pbl/rooms/[code]/members/[memberId]', () => {
+	it('rejects eject without a club session', async () => {
+		const { DELETE } = runtime({
+			ejectMember: async () => {
+				throw new Error('unused');
+			},
+			getRoom: async () => ({})
+		});
+		const response = await DELETE({
+			locals: { maritools: null },
+			params: { code: 'AB23JK', memberId: OTHER },
+			request: new Request('https://club.example/api/pbl/rooms/AB23JK/members/' + OTHER, {
+				method: 'DELETE',
+				headers: { cookie: `pbl_member=${MEMBER}` }
+			}),
+			url: new URL('https://club.example/api/pbl/rooms/AB23JK/members/' + OTHER)
+		});
+		expect(response.status).toBe(401);
+	});
+
 	it('lets the leader eject a teammate and returns the refreshed room', async () => {
 		const ejectMember = vi.fn(async () => ({ code: 'AB23JK', memberCount: 1 }));
 		const getRoom = vi.fn(async () => ({
@@ -28,6 +48,7 @@ describe('DELETE /api/pbl/rooms/[code]/members/[memberId]', () => {
 		}));
 		const { DELETE } = runtime({ ejectMember, getRoom });
 		const response = await DELETE({
+			locals: SESSION,
 			params: { code: 'AB23JK', memberId: OTHER },
 			request: new Request('https://club.example/api/pbl/rooms/AB23JK/members/' + OTHER, {
 				method: 'DELETE',
@@ -58,6 +79,7 @@ describe('DELETE /api/pbl/rooms/[code]/members/[memberId]', () => {
 			getRoom: async () => ({})
 		});
 		const forbidden = await DELETE({
+			locals: SESSION,
 			params: { code: 'AB23JK', memberId: OTHER },
 			request: new Request('https://club.example/api/pbl/rooms/AB23JK/members/' + OTHER, {
 				method: 'DELETE',

@@ -2,7 +2,8 @@ import {
 	createPblRuntime,
 	memberFromRequest,
 	pblErrorResponse,
-	pblJson
+	pblJson,
+	requirePblSession
 } from '$lib/server/pbl/http.js';
 
 export const prerender = false;
@@ -14,6 +15,7 @@ export function _createPblEjectMemberEndpoint(dependencies = {}) {
 	/** @param {any} event */
 	async function DELETE(event) {
 		try {
+			requirePblSession(event.locals);
 			const membership = memberFromRequest(event.request, event);
 			const room = await runtime.withStore(async (store) => {
 				await store.ejectMember({

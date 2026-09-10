@@ -48,9 +48,19 @@ describe('python glossary', () => {
 			expect(entry.summary).toBeTruthy();
 			expect(entry.usefulFor).toBeTruthy();
 			expect(entry.example).toBeTruthy();
+			if (entry.example.includes('print(')) {
+				expect(entry.exampleOutput).toBeTruthy();
+			} else {
+				expect(entry.exampleOutput).toBeUndefined();
+			}
 			expect(entry.summary).not.toMatch(/\u2014/);
 			expect(entry.usefulFor).not.toMatch(/\u2014/);
 		}
+	});
+
+	it('documents stdout for the print example', () => {
+		expect(PYTHON_GLOSSARY.print.exampleOutput).toBe('hello\n7');
+		expect(PYTHON_GLOSSARY.slice.exampleOutput).toBe('[12.1, 11.8]');
 	});
 
 	it('does not auto-link bare prose, including English for', () => {

@@ -11,6 +11,7 @@
  *   summary: string,
  *   usefulFor: string,
  *   example: string,
+ *   exampleOutput?: string,
  *   params?: string,
  *   returns?: string
  * }} GlossaryEntry
@@ -23,6 +24,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Shows a value in the output panel so you can see what your program did.',
 		usefulFor: 'Checking results, labels, and short messages while you learn.',
 		example: 'print("hello")\nprint(3 + 4)',
+		exampleOutput: 'hello\n7',
 		params: 'One or more values, separated by commas. Optional sep and end change spacing.',
 		returns: 'None. It displays text; it does not give a value back to use later.'
 	}),
@@ -31,6 +33,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'A name that holds a value. The = sign stores the right-hand side into that name.',
 		usefulFor: 'Reusing numbers and text without typing them again, and building formulas step by step.',
 		example: 'reading = 12.1\nlabel = "trial"\nprint(reading)',
+		exampleOutput: '12.1',
 		params: 'Left side: a name. Right side: any expression Python can evaluate.',
 		returns: 'Assignment itself is not a value you print; the name then holds the stored value.'
 	}),
@@ -39,6 +42,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Compares two values and asks "are these equal?"',
 		usefulFor: 'Checks in if/while conditions when you care about equality, not storing a value.',
 		example: 'print(3 == 3)\nprint("lab" == "Lab")',
+		exampleOutput: 'True\nFalse',
 		params: 'Left and right expressions to compare.',
 		returns: 'True or False.'
 	}),
@@ -47,6 +51,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'A whole number with no decimal part, like 3 or -2.',
 		usefulFor: 'Counts, indexes, and anything that should stay as a whole number.',
 		example: 'n = 3\nprint(type(n))',
+		exampleOutput: "<class 'int'>",
 		params: 'int(x) can convert a value toward a whole number when conversion makes sense.',
 		returns: 'An int value, or an int from int(...).'
 	}),
@@ -63,6 +68,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Text data, written in quotes, like "lab" or \'ok\'.',
 		usefulFor: 'Labels, messages, file names, and anything you read as words.',
 		example: 'unit = "mm"\nprint(str(12.1))',
+		exampleOutput: '12.1',
 		params: 'str(x) turns many values into text.',
 		returns: 'A string.'
 	}),
@@ -71,6 +77,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'A yes/no value. In Python those two values are True and False.',
 		usefulFor: 'Flags and conditions that steer if/while decisions.',
 		example: 'ok = True\nprint(bool(0))\nprint(bool(1))',
+		exampleOutput: 'False\nTrue',
 		params: 'bool(x) asks whether x counts as true in a condition.',
 		returns: 'True or False.'
 	}),
@@ -79,6 +86,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'The boolean value for yes / on / condition passed.',
 		usefulFor: 'Return values from checks, and clear flags in your own code.',
 		example: 'ready = True\nif ready:\n    print("go")',
+		exampleOutput: 'go',
 		returns: 'True is itself a bool value.'
 	}),
 	False: Object.freeze({
@@ -86,6 +94,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'The boolean value for no / off / condition failed.',
 		usefulFor: 'Marking failed checks and turning features off.',
 		example: 'done = False\nprint(done)',
+		exampleOutput: 'False',
 		returns: 'False is itself a bool value.'
 	}),
 	list: Object.freeze({
@@ -93,6 +102,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'An ordered collection of values in square brackets, like [12.1, 11.8].',
 		usefulFor: 'Keeping related measurements together so you can loop, index, and count them.',
 		example: 'readings = [12.1, 11.8, 12.3]\nprint(readings[0])',
+		exampleOutput: '12.1',
 		params: 'Items inside the brackets, separated by commas.',
 		returns: 'A list object you can store in a variable.'
 	}),
@@ -101,6 +111,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Picking one item from a list (or string) with [position]. The first item is index 0.',
 		usefulFor: 'Reading the first, last, or nth measurement without looping.',
 		example: 'readings = [12.1, 11.8, 12.3]\nprint(readings[0])\nprint(readings[-1])',
+		exampleOutput: '12.1\n12.3',
 		params: 'An integer index. Negative indexes count from the end.',
 		returns: 'The item at that position.'
 	}),
@@ -109,6 +120,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'A piece of a list written as a[start:end]. The end index is exclusive.',
 		usefulFor: 'Grabbing a small window of readings to inspect.',
 		example: 'readings = [12.1, 11.8, 12.3, 12.0]\nprint(readings[0:2])',
+		exampleOutput: '[12.1, 11.8]',
 		params: 'start and end indexes. Either can be omitted.',
 		returns: 'A new list with the selected items.'
 	}),
@@ -117,6 +129,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Counts how many items are in a list (or characters in a string).',
 		usefulFor: 'Averages, loops with range, and checking that a list is not empty.',
 		example: 'readings = [12.1, 11.8]\nprint(len(readings))',
+		exampleOutput: '2',
 		params: 'A sequence such as a list or string.',
 		returns: 'An int count.'
 	}),
@@ -124,7 +137,8 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		name: 'for',
 		summary: 'A loop that walks through each item in a list (or other sequence) one by one.',
 		usefulFor: 'Printing, filtering, or totaling every reading without copy-paste.',
-		example: 'for reading in readings:\n    print(reading)',
+		example: 'readings = [12.1, 11.8, 12.3]\nfor reading in readings:\n    print(reading)',
+		exampleOutput: '12.1\n11.8\n12.3',
 		params: 'for name in sequence: then an indented body.',
 		returns: 'A for loop does not return a value; it repeats the body.'
 	}),
@@ -132,7 +146,8 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		name: 'range',
 		summary: 'Makes a sequence of integers, often used to walk indexes.',
 		usefulFor: 'Pairing a trial number with readings[i].',
-		example: 'for i in range(3):\n    print(i)\nfor i in range(len(readings)):\n    print(i, readings[i])',
+		example: 'readings = [12.1, 11.8, 12.3]\nfor i in range(3):\n    print(i)\nfor i in range(len(readings)):\n    print(i, readings[i])',
+		exampleOutput: '0\n1\n2\n0 12.1\n1 11.8\n2 12.3',
 		params: 'range(stop) or range(start, stop). stop is exclusive.',
 		returns: 'A range object you usually loop over.'
 	}),
@@ -140,7 +155,8 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		name: 'if',
 		summary: 'Runs a block of code only when a condition is True.',
 		usefulFor: 'Accepting good readings and skipping impossible ones.',
-		example: 'if reading >= 10:\n    print("ok")',
+		example: 'reading = 12.1\nif reading >= 10:\n    print("ok")',
+		exampleOutput: 'ok',
 		params: 'A condition after if, then an indented body.',
 		returns: 'Does not return a value; it chooses whether to run code.'
 	}),
@@ -148,7 +164,8 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		name: 'elif',
 		summary: 'Means "else if": another condition to try when the earlier if was False.',
 		usefulFor: 'Several labeled paths without nesting many ifs.',
-		example: 'if x < 0:\n    print("neg")\nelif x == 0:\n    print("zero")\nelse:\n    print("pos")',
+		example: 'x = 0\nif x < 0:\n    print("neg")\nelif x == 0:\n    print("zero")\nelse:\n    print("pos")',
+		exampleOutput: 'zero',
 		params: 'A condition, same style as if.',
 		returns: 'Does not return a value.'
 	}),
@@ -156,7 +173,8 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		name: 'else',
 		summary: 'The fallback block when the matching if/elif conditions were False.',
 		usefulFor: 'The discard path when a reading is out of range.',
-		example: 'if ok:\n    print("valid")\nelse:\n    print("discard")',
+		example: 'ok = False\nif ok:\n    print("valid")\nelse:\n    print("discard")',
+		exampleOutput: 'discard',
 		returns: 'Does not return a value.'
 	}),
 	append: Object.freeze({
@@ -164,6 +182,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Adds one item to the end of a list, changing that list in place.',
 		usefulFor: 'Building a filtered list of accepted readings as you loop.',
 		example: 'valid = []\nvalid.append(12.1)\nprint(valid)',
+		exampleOutput: '[12.1]',
 		params: 'list.append(item) takes the value to add.',
 		returns: 'None. The list itself grows.'
 	}),
@@ -172,6 +191,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Adds up all numbers in a list.',
 		usefulFor: 'Totals before you compute an average.',
 		example: 'print(sum([12.1, 11.9]))',
+		exampleOutput: '24.0',
 		params: 'A list (or similar) of numbers. Optional start value.',
 		returns: 'The numeric total.'
 	}),
@@ -179,7 +199,8 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		name: 'min',
 		summary: 'Finds the smallest value among its arguments or inside a list.',
 		usefulFor: 'Quick checks on the lowest reading.',
-		example: 'print(min(12.1, 11.8, 12.3))\nprint(min(readings))',
+		example: 'readings = [12.1, 11.8, 12.3]\nprint(min(12.1, 11.8, 12.3))\nprint(min(readings))',
+		exampleOutput: '11.8\n11.8',
 		params: 'Several values, or one sequence.',
 		returns: 'The smallest value.'
 	}),
@@ -187,7 +208,8 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		name: 'max',
 		summary: 'Finds the largest value among its arguments or inside a list.',
 		usefulFor: 'Spotting spikes and setting thresholds.',
-		example: 'print(max(12.1, 11.8, 12.3))\nprint(max(readings))',
+		example: 'readings = [12.1, 11.8, 12.3]\nprint(max(12.1, 11.8, 12.3))\nprint(max(readings))',
+		exampleOutput: '12.3\n12.3',
 		params: 'Several values, or one sequence.',
 		returns: 'The largest value.'
 	}),
@@ -196,6 +218,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Defines a reusable block of code with a name, parameters, and an optional return.',
 		usefulFor: 'Packaging checks and averages so the main program stays short.',
 		example: 'def double(n):\n    return n * 2\n\nprint(double(5))',
+		exampleOutput: '10',
 		params: 'Names in the parentheses. Call the function with matching arguments.',
 		returns: 'Whatever return sends back, or None if there is no return.'
 	}),
@@ -204,6 +227,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Reads a line of text from Program input (or the keyboard in a normal terminal).',
 		usefulFor: 'Asking for a threshold or other value before you filter data.',
 		example: 'name = input("Name: ")\nprint(name)',
+		exampleOutput: 'Name: Ada\nAda',
 		params: 'Optional prompt string shown to the user.',
 		returns: 'Always a str, even if the person typed digits.'
 	}),
@@ -220,6 +244,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Loads a module so you can use its tools, like math.sqrt.',
 		usefulFor: 'Bringing in standard library helpers instead of reinventing them.',
 		example: 'import math\nprint(math.sqrt(9))\nfrom math import sqrt\nprint(sqrt(9))',
+		exampleOutput: '3.0\n3.0',
 		params: 'A module name, or from module import name.',
 		returns: 'Makes names available; import itself is not a printed value.'
 	}),
@@ -228,6 +253,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'Square root function from the math module.',
 		usefulFor: 'Statistics formulas such as sample standard deviation.',
 		example: 'import math\nprint(math.sqrt(9))',
+		exampleOutput: '3.0',
 		params: 'A non-negative number.',
 		returns: 'A float square root.'
 	}),
@@ -236,6 +262,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'A mapping of keys to values, written with braces, like {"average": 12.1}.',
 		usefulFor: 'Storing named results so you look them up by meaning.',
 		example: 'summary = {"average": 12.1, "count": 5}\nprint(summary["average"])\nsummary["unit"] = "mm"',
+		exampleOutput: '12.1',
 		params: 'Keys and values. Look up with summary[key].',
 		returns: 'A dict object. summary[key] returns the stored value.'
 	}),
@@ -244,6 +271,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		summary: 'A string with an f before the quotes so {expressions} insert live values.',
 		usefulFor: 'Building reports from calculated numbers without messy concatenation.',
 		example: 'average = 12.1\nreport = f"average={average}"\nprint(report)',
+		exampleOutput: 'average=12.1',
 		params: 'Expressions inside { } inside the f-string.',
 		returns: 'A regular str after the values are filled in.'
 	}),

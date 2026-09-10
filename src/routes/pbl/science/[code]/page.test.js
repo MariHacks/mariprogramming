@@ -84,8 +84,15 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 
 import StudioPage from './+page.svelte';
 
-async function renderReady(props) {
-	const view = render(StudioPage, props);
+const signedInData = {
+	collabUser: { userId: 'user-lead', email: 'lead@marihacks.com', name: 'Lead' }
+};
+
+async function renderReady(props = {}) {
+	const view = render(StudioPage, {
+		...props,
+		data: props.data ?? signedInData
+	});
 	await waitFor(() => {
 		expect(screen.queryByText('Joining the team room…')).toBeNull();
 	});
@@ -325,6 +332,19 @@ describe('PBL studio page', () => {
 		const dialog = screen.getByRole('dialog', { name: 'Lab table 3' });
 		expect(within(dialog).queryByRole('button', { name: 'Remove' })).toBeNull();
 		expect(within(dialog).getByText('Only the team leader can remove teammates.')).toBeVisible();
+	});
+
+
+
+	it('keeps the editor read-only for unsigned visitors', async () => {
+		await renderReady({ data: { collabUser: null } });
+		const editor = screen.getByRole('textbox', { name: 'Python' });
+		expect(editor).toHaveAttribute('aria-readonly', 'true');
+		expect(screen.getByRole('button', { name: 'Run' })).toBeDisabled();
+		expect(
+			screen.getByText(/Sign in with your club Google account to edit and run/i)
+		).toBeVisible();
+		expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
 	});
 
 
