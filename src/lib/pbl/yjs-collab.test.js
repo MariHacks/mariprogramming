@@ -14,7 +14,8 @@ import {
 	mergeYjsStates,
 	normalizeYjsState,
 	teammateColor,
-	teammateName
+	teammateName,
+	collabUserFromProfile
 } from './yjs-collab.js';
 
 describe('yjs collab merge', () => {
@@ -61,12 +62,22 @@ describe('yjs collab merge', () => {
 	});
 
 	it('names and colors teammates from a stable seed', () => {
-		expect(teammateName('abcdxyz')).toBe('Teammate abcd');
-		expect(teammateName('')).toBe('Teammate gues');
-		expect(teammateName(null)).toBe('Teammate gues');
+		expect(teammateName('Ada Lovelace')).toBe('Ada Lovelace');
+		expect(teammateName('ada@marihacks.com')).toBe('ada');
+		expect(teammateName('abcdef0123456789abcdef0123456789')).toBe('Teammate abcd');
+		expect(teammateName('')).toBe('Teammate');
+		expect(teammateName(null)).toBe('Teammate');
 		expect(teammateColor('alpha').color).toMatch(/^#/u);
 		expect(teammateColor('alpha')).toEqual(teammateColor('alpha'));
 		expect(teammateColor('').color).toMatch(/^#/u);
+		const user = collabUserFromProfile({
+			name: 'Zhich',
+			email: 'zhich@example.com',
+			userId: 'user-1'
+		});
+		expect(user.name).toBe('Zhich');
+		expect(user.color).toMatch(/^#/u);
+		expect(collabUserFromProfile({ email: 'ada@marihacks.com' }).name).toBe('ada');
 	});
 
 	it('merges awareness so both cursors survive, then drops stale peers', () => {
