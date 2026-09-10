@@ -1,6 +1,7 @@
 <script>
 	import { resolve } from '$app/paths';
-	import { getPblById } from '$lib/pbl/catalog.js';
+	import { getPblById, SCIENCE_PBL_ID } from '$lib/pbl/catalog.js';
+	import { SCIENCE_STEP_COUNT } from '$lib/pbl/science-workshop.js';
 
 	/** @type {{ rooms?: any[], unavailable?: boolean }} */
 	export let data;
@@ -35,6 +36,14 @@
 		return parts.join(' · ');
 	}
 
+	/** @param {any} lastCheck */
+	function lastCheckTone(lastCheck) {
+		if (!lastCheck || typeof lastCheck !== 'object') return 'neutral';
+		if (lastCheck.passed === true) return 'pass';
+		if (lastCheck.passed === false) return 'fail';
+		return 'neutral';
+	}
+
 	/** @param {string} pblId */
 	function workshopLabel(pblId) {
 		const entry = getPblById(pblId);
@@ -49,6 +58,15 @@
 		if (member?.userId) return member.userId;
 		return 'Anonymous device';
 	}
+
+	/** @param {any} room */
+	function unlockDisplay(room) {
+		const unlocked = (room.unlockedStep ?? 0) + 1;
+		if (room.pblId === SCIENCE_PBL_ID) {
+			return `${unlocked} / ${SCIENCE_STEP_COUNT}`;
+		}
+		return String(unlocked);
+	}
 </script>
 
 <svelte:head>
@@ -58,11 +76,10 @@
 <section class="staff-page">
 	<header class="page-header">
 		<div>
-			<p class="eyebrow">Workshops</p>
 			<h1>PBL teams</h1>
 			<p class="lede">
-				Live workshop rooms by unlocked progress. Open a team to inspect per-step code and past
-				submissions — member view steps stay local to each student.
+				Rooms by unlocked progress. Open a team for per-step source and submissions — view steps stay
+				local to each student.
 			</p>
 		</div>
 		<p class="count" aria-live="polite">
@@ -75,54 +92,42 @@
 	{:else if rooms.length === 0}
 		<p class="empty" role="status">No PBL teams yet. Rooms show up here after students create one.</p>
 	{:else}
-		<ul class="team-list">
+		<ul class="roster">
 			{#each rooms as room (room.code)}
-				<li class="team-card">
-					<header class="team-header">
-						<div>
+				<li>
+					<a class="roster-row" href={resolve(`/staff/pbl/${room.code}`, {})}>
+						<div class="row-main">
 							<p class="workshop">{workshopLabel(room.pblId)}</p>
-							<h2>
-								<a href={resolve(`/staff/pbl/${room.code}`, {})}>{room.teamName}</a>
-							</h2>
+							<div class="title-line">
+								<h2>{room.teamName}</h2>
+								<span class="code">{room.code}</span>
+							</div>
 							<p class="meta">
-								Code <span class="code">{room.code}</span>
-								· {room.memberCount} {room.memberCount === 1 ? 'member' : 'members'}
+								{room.memberCount} {room.memberCount === 1 ? 'member' : 'members'}
 								· Updated {localDate(room.updatedAt)}
 							</p>
+							{#if room.members?.length}
+								<ul class="member-chips" aria-label="Team members">
+									{#each room.members as member (member.memberId)}
+										<li>{memberLabel(member)}</li>
+									{/each}
+								</ul>
+							{:else}
+								<p class="quiet">No member accounts linked yet.</p>
+							{/if}
 						</div>
-						<dl class="progress">
-							<div>
-								<dt>Unlocked step</dt>
-								<dd>{(room.unlockedStep ?? 0) + 1}</dd>
-							</div>
-							<div class="wide">
-								<dt>Last check</dt>
-								<dd>{lastCheckSummary(room.lastCheck)}</dd>
-							</div>
-						</dl>
-					</header>
-
-					<section class="members" aria-label="Team members">
-						<h3>Members</h3>
-						{#if room.members?.length}
-							<ul>
-								{#each room.members as member (member.memberId)}
-									<li>
-										<span class="member-email">{memberLabel(member)}</span>
-										{#if member.userId}
-											<span class="member-id">{member.userId}</span>
-										{/if}
-									</li>
-								{/each}
-							</ul>
-						{:else}
-							<p class="quiet">No member accounts linked yet.</p>
-						{/if}
-					</section>
-
-					<p class="detail-link">
-						<a href={resolve(`/staff/pbl/${room.code}`, {})}>View step sources &amp; submissions</a>
-					</p>
+						<div class="row-status">
+							<span class="unlock-pill">
+								<span class="unlock-label">Unlocked</span>
+								<span class="unlock-value">{unlockDisplay(room)}</span>
+							</span>
+							<p class="last-check" data-tone={lastCheckTone(room.lastCheck)}>
+								<span class="last-label">Last check</span>
+								<span class="last-value">{lastCheckSummary(room.lastCheck)}</span>
+							</p>
+							<span class="open-cta">Open team</span>
+						</div>
+					</a>
 				</li>
 			{/each}
 		</ul>
@@ -132,30 +137,26 @@
 <style>
 	.staff-page {
 		display: grid;
-		gap: 1.5rem;
-		padding: 1.5rem var(--page-gutter) 2.5rem;
+		gap: 1.25rem;
+		max-width: 72rem;
+		margin: 0 auto;
+		padding: 1.5rem var(--page-gutter) 3rem;
+		min-width: 0;
 	}
 
 	.page-header {
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: space-between;
-		gap: 1rem 1.5rem;
+		gap: 0.85rem 1.5rem;
 		align-items: end;
-	}
-
-	.eyebrow {
-		margin: 0 0 0.35rem;
-		color: var(--quiet-steel);
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
 	}
 
 	h1 {
 		margin: 0;
-		font-size: clamp(1.6rem, 2vw, 2rem);
+		font-size: clamp(1.65rem, 2.4vw, 2.1rem);
+		line-height: 1.15;
+		letter-spacing: -0.02em;
 	}
 
 	.lede,
@@ -164,8 +165,7 @@
 	.empty,
 	.banner,
 	.meta,
-	.workshop,
-	.detail-link {
+	.workshop {
 		margin: 0;
 		color: var(--quiet-steel);
 		font-size: var(--text-sm);
@@ -178,129 +178,217 @@
 	}
 
 	.count {
-		font-weight: 650;
+		font-weight: 700;
 		color: var(--midnight);
 	}
 
 	.banner,
 	.empty {
 		padding: 1rem 1.15rem;
-		border: var(--rule);
-		border-radius: 0.45rem;
+		border: var(--rule-strong);
 		background: #fff;
 	}
 
-	.team-list {
+	.roster {
 		display: grid;
-		gap: 1rem;
 		margin: 0;
 		padding: 0;
 		list-style: none;
-	}
-
-	.team-card {
-		display: grid;
-		gap: 1rem;
-		padding: 1.15rem 1.25rem 1.25rem;
-		border: var(--rule);
-		border-radius: 0.5rem;
+		border: var(--rule-strong);
 		background: #fff;
 	}
 
-	.team-header {
+	.roster > li + li {
+		border-top: var(--rule);
+	}
+
+	.roster-row {
 		display: grid;
 		gap: 1rem;
-	}
-
-	.team-header h2 {
-		margin: 0.2rem 0 0.35rem;
-		font-size: 1.25rem;
-	}
-
-	.team-header h2 a {
+		padding: 1.1rem 1.25rem;
 		color: inherit;
 		text-decoration: none;
+		min-width: 0;
 	}
 
-	.team-header h2 a:hover,
-	.detail-link a:hover {
-		text-decoration: underline;
+	.roster-row:hover {
+		background: #f7f9fc;
 	}
 
-	.code {
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	.roster-row:focus-visible {
+		outline: 2px solid var(--club-blue);
+		outline-offset: -2px;
+	}
+
+	.workshop {
+		margin: 0 0 0.3rem;
+		font-size: 0.82rem;
 		font-weight: 700;
-		color: var(--midnight);
 	}
 
-	.progress {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, max-content));
-		gap: 0.65rem 1.25rem;
-		margin: 0;
-	}
-
-	.progress div {
-		display: grid;
-		gap: 0.15rem;
-	}
-
-	.progress .wide {
-		grid-column: 1 / -1;
-	}
-
-	.progress dt {
-		color: var(--quiet-steel);
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.03em;
-		text-transform: uppercase;
-	}
-
-	.progress dd {
-		margin: 0;
-		font-weight: 650;
-	}
-
-	.members h3 {
-		margin: 0 0 0.45rem;
-		font-size: 0.95rem;
-	}
-
-	.members ul {
-		display: grid;
-		gap: 0.35rem;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-
-	.members li {
+	.title-line {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.35rem 0.75rem;
 		align-items: baseline;
 	}
 
-	.member-email {
-		font-weight: 650;
+	.title-line h2 {
+		margin: 0;
+		font-size: 1.15rem;
+		line-height: 1.25;
+		letter-spacing: -0.015em;
+		overflow-wrap: anywhere;
 	}
 
-	.member-id {
-		color: var(--quiet-steel);
+	.code {
 		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: var(--midnight);
+		letter-spacing: 0.03em;
+	}
+
+	.meta {
+		margin-top: 0.35rem;
+	}
+
+	.member-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+		margin: 0.65rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.member-chips li {
+		display: inline-flex;
+		align-items: center;
+		max-width: 100%;
+		padding: 0.2rem 0.55rem;
+		border: var(--rule);
+		background: #f5f7fb;
+		color: var(--midnight);
 		font-size: 0.78rem;
-	}
-
-	.detail-link a {
 		font-weight: 650;
-		color: var(--club-blue, #0b4cf4);
+		line-height: 1.35;
+		overflow-wrap: anywhere;
 	}
 
-	@media (min-width: 56rem) {
-		.team-header {
-			grid-template-columns: minmax(0, 1.4fr) minmax(14rem, 1fr);
+	.quiet {
+		margin-top: 0.55rem;
+	}
+
+	.row-status {
+		display: grid;
+		gap: 0.55rem;
+		align-content: start;
+		min-width: 0;
+	}
+
+	.unlock-pill {
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.35rem 0.55rem;
+		width: fit-content;
+		padding: 0.35rem 0.65rem;
+		border: var(--rule-strong);
+		background: #edf4ff;
+		color: var(--club-blue);
+	}
+
+	.unlock-label {
+		font-size: 0.7rem;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.unlock-value {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 0.95rem;
+		font-weight: 750;
+		letter-spacing: -0.01em;
+		color: var(--midnight);
+	}
+
+	.last-check {
+		display: grid;
+		gap: 0.15rem;
+		margin: 0;
+		min-width: 0;
+	}
+
+	.last-label {
+		color: var(--quiet-steel);
+		font-size: 0.7rem;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.last-value {
+		color: var(--midnight);
+		font-size: var(--text-sm);
+		font-weight: 650;
+		line-height: 1.4;
+		overflow-wrap: anywhere;
+	}
+
+	.last-check[data-tone='pass'] .last-value {
+		color: #0f766e;
+	}
+
+	.last-check[data-tone='fail'] .last-value {
+		color: #9d2936;
+	}
+
+	.open-cta {
+		color: var(--club-blue);
+		font-size: var(--text-sm);
+		font-weight: 750;
+	}
+
+	.roster-row:hover .open-cta {
+		text-decoration: underline;
+	}
+
+	@media (min-width: 52rem) {
+		.roster-row {
+			grid-template-columns: minmax(0, 1.55fr) minmax(12.5rem, 0.9fr);
+			gap: 1.25rem 1.75rem;
 			align-items: start;
+		}
+
+		.row-status {
+			justify-items: end;
+			text-align: right;
+		}
+
+		.last-check {
+			justify-items: end;
+		}
+	}
+
+	@media (max-width: 40rem) {
+		.staff-page {
+			padding-block: 1.25rem 2.5rem;
+			gap: 1rem;
+		}
+
+		.roster-row {
+			gap: 0.85rem;
+			padding: 0.95rem 1rem;
+		}
+
+		.member-chips {
+			margin-top: 0.5rem;
+		}
+
+		.row-status {
+			gap: 0.45rem;
 		}
 	}
 </style>
