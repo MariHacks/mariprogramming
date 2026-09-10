@@ -26,6 +26,8 @@
 	/** @type {ReturnType<typeof createWorkshopController> | null} */
 	let controller = null;
 	let copied = false;
+	/** @type {ReturnType<typeof setTimeout> | undefined} */
+	let copyReset;
 	/** @type {'lesson' | 'code' | 'output'} */
 	let pane = 'lesson';
 	/** @type {'testcase' | 'output'} */
@@ -76,6 +78,7 @@
 	});
 
 	onDestroy(() => {
+		if (copyReset !== undefined) clearTimeout(copyReset);
 		controller?.destroy();
 	});
 
@@ -83,6 +86,11 @@
 		try {
 			await navigator.clipboard.writeText(`${window.location.origin}${sharePath}`);
 			copied = true;
+			if (copyReset !== undefined) clearTimeout(copyReset);
+			copyReset = setTimeout(() => {
+				copied = false;
+				copyReset = undefined;
+			}, 1500);
 		} catch {
 			copied = false;
 		}
@@ -240,12 +248,31 @@
 			<div class="lesson-footer">
 				<header class="team-footer" aria-label="Team">
 					<p class="series-label">PBL 1</p>
-					<p class="team-name">{state.teamName || 'Team room'}</p>
-					<div class="team-share">
-						<code>{state.code}</code>
-						<button type="button" on:click={copyLink}>{copied ? 'Copied' : 'Copy link'}</button>
+					<div class="team-row">
+						<p class="team-name">{state.teamName || 'Team room'}</p>
+						<div class="team-chips">
+							<button
+								type="button"
+								class="team-chip team-chip-code"
+								aria-label={copied ? 'Copied share link' : `Copy share link ${state.code}`}
+								on:click={copyLink}
+							>
+								{copied ? 'Copied' : state.code}
+							</button>
+							<span
+								class="team-chip team-chip-count"
+								aria-label={`${state.memberCount} of 10 on this team`}
+							>
+								<svg class="person-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+									<path
+										d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5.25 6.5a5.25 5.25 0 0 1 10.5 0V15h-10.5v-.5Z"
+										fill="currentColor"
+									/>
+								</svg>
+								{state.memberCount}/10
+							</span>
+						</div>
 					</div>
-					<p class="team-count">{state.memberCount}/10 on this team</p>
 				</header>
 				<ol class="steps">
 					{#each state.steps as step (step.id)}
@@ -444,7 +471,7 @@
 
 	.team-footer {
 		display: grid;
-		gap: 0.2rem;
+		gap: 0.3rem;
 	}
 
 	.series-label {
@@ -456,42 +483,61 @@
 		text-transform: uppercase;
 	}
 
+	.team-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.55rem;
+	}
+
 	.team-name {
 		margin: 0;
+		min-width: 0;
 		font-size: 0.95rem;
 		font-weight: 650;
 		line-height: 1.25;
 	}
 
-	.team-share {
+	.team-chips {
 		display: flex;
+		flex-shrink: 0;
 		flex-wrap: wrap;
+		justify-content: flex-end;
 		align-items: center;
-		gap: 0.35rem 0.55rem;
+		gap: 0.35rem;
 	}
 
-	.team-share code {
+	.team-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.28rem;
+		min-height: 1.55rem;
+		padding: 0.12rem 0.45rem;
+		border: 1px solid rgb(var(--midnight-rgb) / 14%);
+		border-radius: 0.35rem;
+		background: rgb(var(--midnight-rgb) / 4%);
+		color: var(--quiet-steel);
+		font-size: 0.75rem;
+		font-weight: 650;
+		line-height: 1.2;
+		white-space: nowrap;
+	}
+
+	.team-chip-code {
 		font-family: var(--font-mono);
-		font-size: 0.8125rem;
-		font-weight: 650;
 		color: var(--club-blue);
-	}
-
-	.team-share button {
-		border: 0;
-		padding: 0;
-		background: transparent;
-		color: var(--club-blue);
-		font: inherit;
-		font-size: 0.8125rem;
-		font-weight: 650;
 		cursor: pointer;
 	}
 
-	.team-count {
-		margin: 0;
-		color: var(--quiet-steel);
-		font-size: 0.75rem;
+	.team-chip-code:focus-visible {
+		outline: 2px solid var(--club-blue);
+		outline-offset: 2px;
+	}
+
+	.person-icon {
+		width: 0.75rem;
+		height: 0.75rem;
+		flex-shrink: 0;
 	}
 
 	.next-step {

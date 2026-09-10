@@ -86,19 +86,43 @@ describe('PBL studio page', () => {
 		const team = within(footer);
 		expect(team.getByText('PBL 1')).toBeVisible();
 		expect(team.getByText('Lab table 3')).toBeVisible();
-		expect(team.getByText('AB23JK')).toBeVisible();
-		expect(team.getByRole('button', { name: 'Copy link' })).toBeVisible();
-		expect(team.getByText('2/10 on this team')).toBeVisible();
+		const codeChip = team.getByRole('button', { name: 'Copy share link AB23JK' });
+		expect(codeChip).toBeVisible();
+		expect(codeChip).toHaveTextContent('AB23JK');
+		expect(team.queryByRole('button', { name: 'Copy link' })).toBeNull();
+		const countChip = team.getByLabelText('2 of 10 on this team');
+		expect(countChip).toBeVisible();
+		expect(countChip).toHaveTextContent('2/10');
+		expect(countChip.querySelector('svg.person-icon')).not.toBeNull();
+		const row = footer?.querySelector('.team-row');
+		const chips = footer?.querySelector('.team-chips');
+		expect(row).not.toBeNull();
+		expect(chips).not.toBeNull();
+		expect(chips?.querySelectorAll('.team-chip')).toHaveLength(2);
 		expect(footer?.textContent ?? '').not.toMatch(/PBL 1\s*[—·]/u);
 		expect(footer?.textContent ?? '').not.toMatch(/Lab table 3\s*[—·]/u);
 		expect(within(toolbar).queryByText('Share')).toBeNull();
 		expect(within(toolbar).queryByText('AB23JK')).toBeNull();
-		expect(within(toolbar).queryByRole('button', { name: 'Copy link' })).toBeNull();
-		expect(within(toolbar).queryByText(/on this team/)).toBeNull();
+		expect(within(toolbar).queryByRole('button', { name: /Copy/ })).toBeNull();
+		expect(within(toolbar).queryByText(/\/10/)).toBeNull();
 		expect(screen.getAllByText('AB23JK')).toHaveLength(1);
 		expect(screen.getAllByText('Lab table 3')).toHaveLength(1);
-		expect(screen.getAllByText('2/10 on this team')).toHaveLength(1);
+		expect(screen.getAllByLabelText(/of 10 on this team/)).toHaveLength(1);
 		expect(container.querySelector('.lesson-scroll .team-name')).toBeNull();
+	});
+
+	it('copies the share link from the room code chip', async () => {
+		const user = userEvent.setup();
+		const writeText = vi.fn().mockResolvedValue(undefined);
+		Object.defineProperty(navigator, 'clipboard', {
+			configurable: true,
+			value: { writeText }
+		});
+		render(StudioPage);
+		const codeChip = screen.getByRole('button', { name: 'Copy share link AB23JK' });
+		await user.click(codeChip);
+		expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/pbl/science/AB23JK`);
+		expect(screen.getByRole('button', { name: 'Copied share link' })).toHaveTextContent('Copied');
 	});
 
 	it('shows the lesson and editor for a joined room', async () => {
