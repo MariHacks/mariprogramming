@@ -497,4 +497,39 @@ describe('room sync client', () => {
 		sync.stop();
 	});
 
+	it('pauses polling while the tab is hidden and resumes on focus', async () => {
+		vi.useFakeTimers();
+		/** @type {Array<{ url: string, init?: RequestInit }>} */
+		const calls = [];
+		const sync = createRoomSync({
+			code: 'AB23JK',
+			pollMs: 250,
+			onState: () => {},
+			fetch: async (url, init) => {
+				calls.push({ url: String(url), init });
+				if (String(url).endsWith('/join')) {
+					return new Response(JSON.stringify({ code: 'AB23JK', source: 'print(1)', version: 1 }));
+				}
+				return new Response(null, { status: 304 });
+			}
+		});
+		await sync.join();
+		const before = calls.length;
+		sync.start();
+		await vi.advanceTimersByTimeAsync(750);
+		const focusedPolls = calls.length - before;
+		expect(focusedPolls).toBeGreaterThanOrEqual(3);
+		// jsdom: flip visibility
+		Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+		document.dispatchEvent(new Event('visibilitychange'));
+		const afterHide = calls.length;
+		await vi.advanceTimersByTimeAsync(2000);
+		expect(calls.length).toBe(afterHide);
+		Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+		document.dispatchEvent(new Event('visibilitychange'));
+		await Promise.resolve();
+		expect(calls.length).toBeGreaterThan(afterHide);
+		sync.stop();
+	});
+
 });
