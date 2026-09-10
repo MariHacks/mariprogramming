@@ -420,7 +420,7 @@
 					<p class="error" role="alert">{state.roomError}</p>
 				{/if}
 				<div class="editor-shell">
-					{#key state.viewStep ?? state.currentStep}
+					{#key `${state.viewStep ?? state.currentStep}:${state.editorEpoch ?? 0}`}
 						<PythonEditor
 							source={state.source}
 							yjsState={state.yjsState ?? ''}
@@ -428,6 +428,7 @@
 							editable={!state.readOnly}
 							theme={editorTheme}
 							user={collabUserFromProfile(data?.collabUser)}
+							editorEpoch={state.editorEpoch ?? 0}
 							onCollab={(payload) => controller?.setCollab(payload)}
 						/>
 					{/key}

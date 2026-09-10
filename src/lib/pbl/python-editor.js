@@ -38,7 +38,8 @@ import {
 	applyRemoteAwareness,
 	applyRemoteYjs,
 	bytesToBase64,
-	encodeLocalAwareness
+	encodeLocalAwareness,
+	sourceFromYjsState
 } from './yjs-collab.js';
 
 /** @typedef {'dark' | 'light'} EditorThemeMode */
@@ -326,9 +327,11 @@ export function createPythonCollabEditor(parent, options = {}) {
 	const awareness = new Awareness(ydoc);
 	const user = options.user ?? { name: 'You', color: '#78dce8', colorLight: '#78dce833' };
 	awareness.setLocalStateField('user', user);
+	if (options.awarenessState) {
+		applyRemoteAwareness(awareness, options.awarenessState, 'remote', { localUser: user });
+	}
 	if (options.yjsState) applyRemoteYjs(ydoc, options.yjsState);
 	else if (options.source) ytext.insert(0, options.source);
-	if (options.awarenessState) applyRemoteAwareness(awareness, options.awarenessState);
 	const editable = new Compartment();
 	const aria = new Compartment();
 	const theme = new Compartment();
@@ -448,17 +451,35 @@ export function createPythonCollabEditor(parent, options = {}) {
 		setSource,
 		setEditable,
 		setTheme,
-		/** @param {string} encoded */
+		/**
+		 * Merge a peer Yjs update into the live doc (same-step sync only).
+		 * @param {string} encoded
+		 */
 		applyYjsState(encoded) {
 			if (!encoded) return;
 			applyingRemote = true;
 			applyRemoteYjs(ydoc, encoded);
 			applyingRemote = false;
 		},
+		/**
+		 * Replace the whole document from a full snapshot / plain source.
+		 * Used for step switches and encodeSourceAsYjs snapshots — never merge.
+		 * @param {string} encoded
+		 * @param {string} [fallbackSource]
+		 */
+		replaceYjsState(encoded, fallbackSource = '') {
+			const next =
+				encoded && typeof encoded === 'string'
+					? sourceFromYjsState(encoded)
+					: typeof fallbackSource === 'string'
+						? fallbackSource
+						: '';
+			setSource(next);
+		},
 		/** @param {string} encoded */
 		applyAwarenessState(encoded) {
 			if (!encoded) return;
-			applyRemoteAwareness(awareness, encoded);
+			applyRemoteAwareness(awareness, encoded, 'remote', { localUser: user });
 		},
 		destroy() {
 			view.destroy();
