@@ -466,6 +466,20 @@ describe('SiteHeader', () => {
 		expect(siteHeaderSource).toMatch(/transform-origin:\s*left center/u);
 		expect(siteHeaderSource).toMatch(/translateX\(3\.25rem\) scale\(0\.85\)/u);
 		expect(siteHeaderSource).toMatch(/translateX\(-3\.25rem\) scale\(0\.85\)/u);
+		// Absolute center only while collapsed; expanded Workshops sits in the nav flex slot.
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\) \.pbl-morph-target\s*\{[\s\S]*?position:\s*absolute[\s\S]*?left:\s*50%/u
+		);
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:is\(:hover, :focus-within\)[\s\S]*?\.pbl-morph-target\s*\{[\s\S]*?position:\s*relative[\s\S]*?transform:\s*none/u
+		);
+		// Base (non-collapsed) morph-target rule must be in-flow, not absolute-centered.
+		const baseMorph = siteHeaderSource.match(
+			/\.is-compact-pbl \.wide-navigation \.pbl-morph-target,[\s\S]*?\.compact-navigation \.pbl-morph-target\s*\{([^}]*)\}/u
+		);
+		expect(baseMorph?.[1]).toMatch(/position:\s*relative/u);
+		expect(baseMorph?.[1]).not.toMatch(/position:\s*absolute/u);
+		expect(baseMorph?.[1]).not.toMatch(/left:\s*50%/u);
 	});
 
 	it('shows Workshops as the hub compact label', () => {

@@ -947,29 +947,37 @@
 	 * Touch / coarse pointers and small breakpoints stay on the full header
 	 * so navigation is never hover-trapped (mobile keeps the existing menu).
 	 *
-	 * Collapsed = elements pulled toward the center morph pivot + scaled down.
+	 * Collapsed = elements pulled toward the center morph pivot + scaled down;
+	 * Workshops is absolute-centered (hidden) under the PBL name for the crossfade.
 	 * Expand (hover/focus-within) = radiate outward (translate away + scale up)
-	 * while the center label crossfades PBL name -> Workshops in place.
+	 * while PBL fades out and Workshops settles into its normal nav flex slot.
 	 */
 	@media (hover: hover) and (pointer: fine) {
-		/* Workshops shares the absolute center slot with the PBL label (fine pointer only). */
+		/*
+		 * Morph slot stays in normal flex flow. Workshops is only absolutely
+		 * centered while collapsed; on expand it returns to this slot so it
+		 * sits between Events and MariTools with no overlap.
+		 */
 		.site-header.is-compact-pbl .wide-navigation .pbl-morph-slot,
 		.site-header.is-compact-pbl .compact-navigation .pbl-morph-slot {
 			position: static;
 			z-index: 2;
 			flex: 0 0 auto;
-			width: 5.75rem;
-			min-height: 2.75rem;
 		}
 
+		/* Expanded default: Workshops in-flow (nav-link already position:relative). */
 		.site-header.is-compact-pbl .wide-navigation .pbl-morph-target,
 		.site-header.is-compact-pbl .compact-navigation .pbl-morph-target {
-			position: absolute;
-			top: 50%;
-			left: 50%;
+			position: relative;
+			top: auto;
+			left: auto;
 			z-index: 2;
-			transform: translate(-50%, -50%);
+			transform: none;
 			transform-origin: center center;
+			/* Opacity-only morph: position/transform snap so expand cannot leave a centered ghost. */
+			transition:
+				opacity var(--pbl-header-motion) var(--ease-out),
+				visibility 0s linear 0s;
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) {
@@ -1014,14 +1022,17 @@
 			transition-delay: 0s;
 		}
 
+		/* Collapsed only: park Workshops on the absolute center for the PBL crossfade. */
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .pbl-morph-target {
+			position: absolute;
+			top: 50%;
+			left: 50%;
 			opacity: 0;
 			transform: translate(-50%, -50%) scale(0.94);
 			visibility: hidden;
 			pointer-events: none;
 			transition:
 				opacity var(--pbl-header-motion) var(--ease-out),
-				transform var(--pbl-header-motion) var(--ease-out),
 				visibility 0s linear var(--pbl-header-motion);
 		}
 
@@ -1166,6 +1177,18 @@
 		.site-header.is-compact-pbl:is(:hover, :focus-within) .header-contact,
 		.site-header.is-compact-pbl:is(:hover, :focus-within) .header-socials {
 			transition-delay: 20ms;
+		}
+
+		/* Expanded: force Workshops back into the nav flex slot (no absolute center). */
+		.site-header.is-compact-pbl:is(:hover, :focus-within) .wide-navigation .pbl-morph-target,
+		.site-header.is-compact-pbl:is(:hover, :focus-within) .compact-navigation .pbl-morph-target {
+			position: relative;
+			top: auto;
+			left: auto;
+			transform: none;
+			opacity: 1;
+			visibility: visible;
+			pointer-events: auto;
 		}
 	}
 
