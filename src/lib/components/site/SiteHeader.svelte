@@ -710,6 +710,7 @@
 		min-height: 2.75rem;
 		padding: 0.7rem 1.05rem;
 		border: 1px solid var(--club-blue);
+		border-radius: 0;
 		background: var(--club-blue);
 		color: #fff;
 		font-size: 0.8125rem;
@@ -720,7 +721,8 @@
 		margin-inline-start: 0.45rem;
 		transition:
 			background-color var(--motion-fast) var(--ease-out),
-			border-color var(--motion-fast) var(--ease-out);
+			border-color var(--motion-fast) var(--ease-out),
+			border-radius var(--motion-fast) var(--ease-out);
 	}
 
 	.signup-link:hover {
@@ -880,14 +882,17 @@
 		transform: translate(-50%, -50%) scale(0.96);
 		visibility: hidden;
 		transition:
-			opacity var(--pbl-header-motion, 280ms) var(--ease-out),
-			transform var(--pbl-header-motion, 280ms) var(--ease-out),
-			visibility 0s linear var(--pbl-header-motion, 280ms);
+			opacity var(--pbl-header-motion, 360ms) var(--pbl-header-ease, var(--ease-out)),
+			transform var(--pbl-header-motion, 360ms) var(--pbl-header-ease, var(--ease-out)),
+			visibility 0s linear var(--pbl-header-motion, 360ms);
 	}
 
 	.site-header.is-compact-pbl {
-		--pbl-header-motion: 280ms;
-		transition: height var(--pbl-header-motion) var(--ease-out);
+		--pbl-header-motion: 360ms;
+		--pbl-header-ease: cubic-bezier(0.22, 1, 0.36, 1);
+		transition:
+			height var(--pbl-header-motion) var(--pbl-header-ease),
+			border-radius var(--pbl-header-motion) var(--pbl-header-ease);
 	}
 
 	.site-header.is-compact-pbl .header-frame {
@@ -908,17 +913,19 @@
 	.site-header.is-compact-pbl .identity-button,
 	.site-header.is-compact-pbl .pbl-morph-target {
 		transition:
-			opacity var(--pbl-header-motion) var(--ease-out),
-			transform var(--pbl-header-motion) var(--ease-out),
+			opacity var(--pbl-header-motion) var(--pbl-header-ease),
+			transform var(--pbl-header-motion) var(--pbl-header-ease),
 			visibility 0s linear 0s,
-			min-height var(--pbl-header-motion) var(--ease-out),
-			padding var(--pbl-header-motion) var(--ease-out),
-			width var(--pbl-header-motion) var(--ease-out),
-			height var(--pbl-header-motion) var(--ease-out),
-			max-width var(--pbl-header-motion) var(--ease-out),
-			gap var(--pbl-header-motion) var(--ease-out),
-			font-size var(--pbl-header-motion) var(--ease-out),
-			margin var(--pbl-header-motion) var(--ease-out);
+			min-height var(--pbl-header-motion) var(--pbl-header-ease),
+			padding var(--pbl-header-motion) var(--pbl-header-ease),
+			width var(--pbl-header-motion) var(--pbl-header-ease),
+			height var(--pbl-header-motion) var(--pbl-header-ease),
+			max-width var(--pbl-header-motion) var(--pbl-header-ease),
+			max-height var(--pbl-header-motion) var(--pbl-header-ease),
+			gap var(--pbl-header-motion) var(--pbl-header-ease),
+			font-size var(--pbl-header-motion) var(--pbl-header-ease),
+			margin var(--pbl-header-motion) var(--pbl-header-ease),
+			border-radius var(--pbl-header-motion) var(--pbl-header-ease);
 	}
 
 	.site-header.is-compact-pbl .header-cluster-left {
@@ -976,7 +983,7 @@
 			transform-origin: center center;
 			/* Opacity-only morph: position/transform snap so expand cannot leave a centered ghost. */
 			transition:
-				opacity var(--pbl-header-motion) var(--ease-out),
+				opacity var(--pbl-header-motion) var(--pbl-header-ease),
 				visibility 0s linear 0s;
 		}
 
@@ -985,13 +992,18 @@
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-frame {
-			padding-block: 0;
+			align-items: center;
+			align-content: center;
+			/* Even top/bottom breathing room inside the 2rem IDE bar. */
+			padding-block: 0.2rem;
 		}
 
 		/* Left cluster: tiny home mark, tucked toward the pivot. */
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-cluster-left {
-			min-height: 1.5rem;
+			min-height: 0;
+			height: 1.25rem;
 			gap: 0;
+			align-self: center;
 			transform: translateX(2.75rem) scale(0.88);
 		}
 
@@ -1003,19 +1015,25 @@
 			transform: translateX(-0.25rem) scale(0.9);
 			visibility: hidden;
 			transition:
-				opacity var(--pbl-header-motion) var(--ease-out),
-				transform var(--pbl-header-motion) var(--ease-out),
-				max-width var(--pbl-header-motion) var(--ease-out),
+				opacity var(--pbl-header-motion) var(--pbl-header-ease),
+				transform var(--pbl-header-motion) var(--pbl-header-ease),
+				max-width var(--pbl-header-motion) var(--pbl-header-ease),
 				visibility 0s linear var(--pbl-header-motion);
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .brand-mark {
+			display: block;
 			width: 0.9375rem;
 			height: 1rem;
+			object-fit: contain;
+			overflow: visible;
 		}
 
 		/* Center morph: show PBL name; hide Workshops in the same slot. */
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .pbl-context {
+			top: 50%;
+			margin: 0;
+			line-height: 1;
 			opacity: 1;
 			transform: translate(-50%, -50%) scale(1);
 			visibility: visible;
@@ -1032,7 +1050,7 @@
 			visibility: hidden;
 			pointer-events: none;
 			transition:
-				opacity var(--pbl-header-motion) var(--ease-out),
+				opacity var(--pbl-header-motion) var(--pbl-header-ease),
 				visibility 0s linear var(--pbl-header-motion);
 		}
 
@@ -1045,8 +1063,8 @@
 			visibility: hidden;
 			pointer-events: none;
 			transition:
-				opacity var(--pbl-header-motion) var(--ease-out),
-				transform var(--pbl-header-motion) var(--ease-out),
+				opacity var(--pbl-header-motion) var(--pbl-header-ease),
+				transform var(--pbl-header-motion) var(--pbl-header-ease),
 				visibility 0s linear var(--pbl-header-motion);
 		}
 
@@ -1102,17 +1120,25 @@
 			visibility: hidden;
 			pointer-events: none;
 			max-width: 0;
+			max-height: 0;
+			height: 0;
+			min-height: 0;
 			overflow: hidden;
 			margin: 0;
 			padding: 0;
 			transition:
-				opacity var(--pbl-header-motion) var(--ease-out),
-				transform var(--pbl-header-motion) var(--ease-out),
-				max-width var(--pbl-header-motion) var(--ease-out),
+				opacity var(--pbl-header-motion) var(--pbl-header-ease),
+				transform var(--pbl-header-motion) var(--pbl-header-ease),
+				max-width var(--pbl-header-motion) var(--pbl-header-ease),
+				max-height var(--pbl-header-motion) var(--pbl-header-ease),
 				visibility 0s linear var(--pbl-header-motion);
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-cluster-right {
+			align-self: center;
+			align-items: center;
+			min-height: 0;
+			height: 1.25rem;
 			transform: translateX(-1.75rem) scale(0.94);
 			gap: 0;
 		}
@@ -1120,25 +1146,34 @@
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .navigation-link,
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .disclosure-button,
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .header-contact a {
-			min-height: 1.5rem;
+			min-height: 0;
+			height: 1.25rem;
+			padding-block: 0;
+			line-height: 1;
 		}
 
 		/* Compact chip: text-sm type, tight padding, fits ~28-32px bar. */
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .signup-link {
-			min-height: 1.35rem;
-			padding: 0.12rem 0.55rem;
+			align-self: center;
+			min-height: 0;
+			height: 1.25rem;
+			padding: 0 0.55rem;
 			margin-inline-start: 0;
 			border-radius: 999px;
 			font-size: 0.75rem;
 			font-weight: 650;
+			line-height: 1;
 			transform: scale(0.96);
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .identity-button {
-			min-height: 1.35rem;
-			padding: 0.1rem 0.4rem;
+			align-self: center;
+			min-height: 0;
+			height: 1.25rem;
+			padding: 0 0.4rem;
 			gap: 0.3rem;
 			font-size: 0.75rem;
+			line-height: 1;
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .identity-avatar {
@@ -1156,27 +1191,27 @@
 			.wide-navigation
 			.navigation-list
 			> li:first-child {
-			transition-delay: 20ms;
+			transition-delay: 16ms;
 		}
 
 		.site-header.is-compact-pbl:is(:hover, :focus-within)
 			.wide-navigation
 			.navigation-list
 			> li:nth-child(2) {
-			transition-delay: 40ms;
+			transition-delay: 28ms;
 		}
 
 		.site-header.is-compact-pbl:is(:hover, :focus-within)
 			.wide-navigation
 			.navigation-list
 			> li:last-child {
-			transition-delay: 40ms;
+			transition-delay: 28ms;
 		}
 
 		.site-header.is-compact-pbl:is(:hover, :focus-within) .header-cluster-right,
 		.site-header.is-compact-pbl:is(:hover, :focus-within) .header-contact,
 		.site-header.is-compact-pbl:is(:hover, :focus-within) .header-socials {
-			transition-delay: 20ms;
+			transition-delay: 16ms;
 		}
 
 		/* Expanded: force Workshops back into the nav flex slot (no absolute center). */

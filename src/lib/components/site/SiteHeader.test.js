@@ -447,7 +447,19 @@ describe('SiteHeader', () => {
 		expect(siteHeaderSource).toMatch(
 			/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.site-header\.is-compact-pbl[\s\S]*?transition-duration:\s*1ms/u
 		);
-		expect(siteHeaderSource).toMatch(/--pbl-header-motion:\s*280ms/u);
+		expect(siteHeaderSource).toMatch(/--pbl-header-motion:\s*360ms/u);
+		expect(siteHeaderSource).toMatch(/--pbl-header-ease:\s*cubic-bezier\(0\.22, 1, 0\.36, 1\)/u);
+		// Collapsed bar keeps even top/bottom padding; Sign up radius morphs 0 -> pill.
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\) \.header-frame\s*\{[\s\S]*?padding-block:\s*0\.2rem/u
+		);
+		expect(siteHeaderSource).toMatch(/\.signup-link\s*\{[\s\S]*?border-radius:\s*0;/u);
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\) \.signup-link\s*\{[\s\S]*?border-radius:\s*999px/u
+		);
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl[\s\S]*?border-radius var\(--pbl-header-motion\) var\(--pbl-header-ease\)/u
+		);
 		expect(siteHeaderSource).toMatch(/\.pbl-morph-target/u);
 		// Collapsed bar is IDE-density (<=2rem) with a tiny home mark and compact account chip.
 		expect(siteHeaderSource).toMatch(
