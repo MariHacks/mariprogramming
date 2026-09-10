@@ -1,4 +1,5 @@
 import {
+	acceptCompletion,
 	autocompletion,
 	closeBrackets,
 	closeBracketsKeymap,
@@ -357,10 +358,13 @@ export function createPythonCollabEditor(parent, options = {}) {
 				autocompletion({
 					override: [pythonCompletions],
 					activateOnTyping: true,
-					activateOnTypingDelay: 0
+					activateOnTypingDelay: 0,
+					interactionDelay: 0
 				}),
 				tooltips({ parent: document.body }),
 				keymap.of([
+					// Prefer accepting the open completion over indenting.
+					{ key: 'Tab', run: acceptCompletion },
 					indentWithTab,
 					...yUndoManagerKeymap,
 					...closeBracketsKeymap,

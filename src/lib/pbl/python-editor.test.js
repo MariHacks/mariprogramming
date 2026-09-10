@@ -1,4 +1,5 @@
-import { startCompletion } from '@codemirror/autocomplete';
+import { acceptCompletion, startCompletion } from '@codemirror/autocomplete';
+import { indentMore } from '@codemirror/commands';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createPythonCollabEditor } from './python-editor.js';
 
@@ -209,5 +210,45 @@ describe('python collab editor', () => {
 		expect(editor.view.dom.querySelector('.cm-tooltip-autocomplete')).toBeNull();
 		editor.destroy();
 		expect(document.body.querySelector('.cm-tooltip-autocomplete')).toBeNull();
+	});
+
+	it('suggests declared buffer names like lower_bound in the popup', async () => {
+		const source = 'lower_bound = 11.9\nlow';
+		const editor = mount({ source });
+		editor.view.dispatch({ selection: { anchor: source.length } });
+		startCompletion(editor.view);
+		await vi.waitFor(() => {
+			const popup = document.body.querySelector('.cm-tooltip-autocomplete');
+			expect(popup).toBeTruthy();
+			expect(popup?.textContent ?? '').toContain('lower_bound');
+		});
+		editor.destroy();
+	});
+
+	it('accepts the selected completion with Tab when the popup is open', async () => {
+		const source = 'lower_bound = 11.9\nlow';
+		const editor = mount({ source });
+		editor.view.dispatch({ selection: { anchor: source.length } });
+		startCompletion(editor.view);
+		await vi.waitFor(() => {
+			expect(document.body.querySelector('.cm-tooltip-autocomplete')?.textContent ?? '').toContain(
+				'lower_bound'
+			);
+		});
+		// Same command bound to Tab ahead of indentWithTab in the editor keymap.
+		expect(acceptCompletion(editor.view)).toBe(true);
+		expect(editor.getSource()).toBe('lower_bound = 11.9\nlower_bound');
+		expect(document.body.querySelector('.cm-tooltip-autocomplete')).toBeNull();
+		editor.destroy();
+	});
+
+	it('still indents with Tab when no completion popup is open', () => {
+		const editor = mount({ source: '' });
+		editor.view.focus();
+		editor.view.dispatch({ selection: { anchor: 0 } });
+		expect(acceptCompletion(editor.view)).toBe(false);
+		expect(indentMore(editor.view)).toBe(true);
+		expect(editor.getSource()).toBe('    ');
+		editor.destroy();
 	});
 });
