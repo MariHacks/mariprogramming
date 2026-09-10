@@ -34,6 +34,13 @@ export function createWorkshopController(options) {
 	let emit = idle;
 	/** Local navigation only — never synced as shared currentStep. */
 	let viewStep = 0;
+	/** Bumps when the editor must replace (not merge) its document. */
+	let editorEpoch = 0;
+	/**
+	 * After selectStep, ignore poll live source/yjs until our replace flush lands
+	 * (server still holds the previous step's live buffer briefly).
+	 */
+	let replacePending = false;
 	/** @type {any} */
 	let room = {
 		code: options.code,
@@ -68,6 +75,7 @@ export function createWorkshopController(options) {
 		return {
 			...room,
 			viewStep,
+			editorEpoch,
 			currentStep: viewStep,
 			step: getScienceStep(viewStep) ?? SCIENCE_STEPS[0],
 			steps: SCIENCE_STEPS,
@@ -202,17 +210,24 @@ export function createWorkshopController(options) {
 
 		const remoteEditing = Number(next.editingStep);
 		const key = String(viewStep);
+		const remoteOnSameStep = Number.isInteger(remoteEditing) && remoteEditing === viewStep;
 		const remoteOnOtherStep = Number.isInteger(remoteEditing) && remoteEditing !== viewStep;
+		// Polls omit editingStep; while replacePending, live fields are still the prior step.
+		const holdLocalEditor = replacePending && !remoteOnSameStep;
 
-		if (remoteOnOtherStep) {
-			// Teammate is on another step — keep our editor, take their maps.
+		if (remoteOnOtherStep || holdLocalEditor) {
+			// Teammate on another step, or our step switch in flight — keep our editor.
 			merged.source = prevSource;
 			merged.yjsState = prevYjs;
-			merged.awarenessState = prevAwareness;
+			// Accept awareness unless mid-replace (avoids caret flicker during step swap).
+			merged.awarenessState =
+				typeof next.awarenessState === 'string' && !holdLocalEditor
+					? next.awarenessState
+					: prevAwareness;
 			merged.stepSources = { ...merged.stepSources, [key]: prevSource };
 			if (prevYjs) merged.stepYjs = { ...merged.stepYjs, [key]: prevYjs };
-		} else {
-			// Same step (or legacy payload without editingStep): apply live editor fields.
+		} else if (remoteOnSameStep) {
+			// Explicit same-step sync from a peer (or our own update echo).
 			if (typeof next.source === 'string') {
 				merged.source = next.source;
 				merged.stepSources = { ...merged.stepSources, [key]: next.source };
@@ -226,6 +241,38 @@ export function createWorkshopController(options) {
 				}
 			} else if (typeof merged.stepYjs[key] === 'string' && merged.stepYjs[key]) {
 				merged.yjsState = merged.stepYjs[key];
+			}
+			if (replacePending) replacePending = false;
+		} else {
+			// Legacy / poll without editingStep: apply live CRDT for collab. When the
+			// payload also includes step maps and they disagree with live source, the
+			// live field is another step's buffer — keep our per-step slot instead.
+			const remoteHasStepMaps =
+				next.stepSources !== undefined || next.stepYjs !== undefined;
+			const mapSource = merged.stepSources[key];
+			const mapYjs = merged.stepYjs[key];
+			const liveSource = typeof next.source === 'string' ? next.source : null;
+			const liveYjs = typeof next.yjsState === 'string' ? next.yjsState : null;
+			const mapMatchesLive =
+				liveSource === null ||
+				typeof mapSource !== 'string' ||
+				mapSource === liveSource;
+			if (!remoteHasStepMaps || mapMatchesLive) {
+				if (liveSource !== null) {
+					merged.source = liveSource;
+					merged.stepSources = { ...merged.stepSources, [key]: liveSource };
+				} else if (typeof mapSource === 'string') {
+					merged.source = mapSource;
+				}
+				if (liveYjs !== null) {
+					merged.yjsState = liveYjs;
+					if (liveYjs) merged.stepYjs = { ...merged.stepYjs, [key]: liveYjs };
+				} else if (typeof mapYjs === 'string' && mapYjs) {
+					merged.yjsState = mapYjs;
+				}
+			} else {
+				merged.source = mapSource;
+				merged.yjsState = typeof mapYjs === 'string' && mapYjs ? mapYjs : prevYjs;
 			}
 		}
 
@@ -294,7 +341,7 @@ export function createWorkshopController(options) {
 		setCollab({ source, yjsState: room.yjsState, awarenessState: room.awarenessState });
 	}
 
-	/** @param {{ source?: string, yjsState?: string, awarenessState?: string }} payload */
+	/** @param {{ source?: string, yjsState?: string, awarenessState?: string, replaceEditor?: boolean }} payload */
 	function setCollab(payload) {
 		if (blocked) return;
 		ensureMaps();
@@ -302,6 +349,11 @@ export function createWorkshopController(options) {
 		const source = payload.source ?? room.source;
 		const yjsState = payload.yjsState ?? room.yjsState;
 		const awarenessState = payload.awarenessState ?? room.awarenessState;
+		const replaceEditor = payload.replaceEditor === true;
+		if (replaceEditor) {
+			editorEpoch += 1;
+			replacePending = true;
+		}
 		room = {
 			...room,
 			source,
@@ -317,8 +369,14 @@ export function createWorkshopController(options) {
 			awarenessState: room.awarenessState,
 			stepSources: room.stepSources,
 			stepYjs: room.stepYjs,
-			editingStep: viewStep
+			editingStep: viewStep,
+			...(replaceEditor ? { replaceEditor: true } : {})
 		});
+		if (replaceEditor) {
+			void sync.flush().finally(() => {
+				replacePending = false;
+			});
+		}
 		publish();
 	}
 
@@ -336,6 +394,8 @@ export function createWorkshopController(options) {
 		persistViewStep();
 		viewStep = stepId;
 		loadViewStep(stepId);
+		editorEpoch += 1;
+		replacePending = true;
 		sync.update({
 			stepSources: room.stepSources,
 			stepYjs: room.stepYjs,
@@ -344,7 +404,9 @@ export function createWorkshopController(options) {
 			editingStep: viewStep,
 			replaceEditor: true
 		});
-		void sync.flush();
+		void sync.flush().finally(() => {
+			replacePending = false;
+		});
 		publish();
 	}
 
@@ -363,10 +425,17 @@ export function createWorkshopController(options) {
 		// Normalize NBSP (U+00A0) from paste/docs — Python rejects it as invalid.
 		const sourceSnapshot = String(room.source ?? '').replace(/\u00a0/gu, ' ');
 		if (sourceSnapshot !== room.source) {
+			let cleanedYjs = room.yjsState;
+			try {
+				cleanedYjs = encodeSourceAsYjs(sourceSnapshot);
+			} catch {
+				cleanedYjs = room.yjsState;
+			}
 			setCollab({
 				source: sourceSnapshot,
-				yjsState: room.yjsState,
-				awarenessState: room.awarenessState
+				yjsState: cleanedYjs,
+				awarenessState: room.awarenessState,
+				replaceEditor: true
 			});
 		}
 		const stepSnapshot = viewStep;
@@ -443,21 +512,29 @@ export function createWorkshopController(options) {
 		};
 		ensureMaps();
 		const stepKey = String(stepId);
+		const sourceText = String(source ?? '');
 		let stepSources = {
 			...room.stepSources,
-			[stepKey]: String(source ?? '')
+			[stepKey]: sourceText
 		};
-		let stepYjs = { ...room.stepYjs };
-		try {
-			stepYjs[stepKey] = encodeSourceAsYjs(String(source ?? ''));
-		} catch {
-			stepYjs[stepKey] = room.yjsState ?? '';
+		// Keep the live collaborative CRDT. A fresh encodeSourceAsYjs snapshot merged
+		// onto the open editor duplicates the program; store the live encode instead.
+		let stepYjs = {
+			...room.stepYjs,
+			[stepKey]: room.yjsState || ''
+		};
+		if (!stepYjs[stepKey] && sourceText) {
+			try {
+				stepYjs[stepKey] = encodeSourceAsYjs(sourceText);
+			} catch {
+				stepYjs[stepKey] = '';
+			}
 		}
 
 		// Unlocking copies the passed step's code into the newly unlocked step.
 		if (result.passed && unlockedStep > previousUnlocked) {
 			const nextKey = String(unlockedStep);
-			stepSources = { ...stepSources, [nextKey]: String(source ?? '') };
+			stepSources = { ...stepSources, [nextKey]: sourceText };
 			stepYjs = { ...stepYjs, [nextKey]: stepYjs[stepKey] };
 		}
 
@@ -465,10 +542,10 @@ export function createWorkshopController(options) {
 			...room,
 			unlockedStep,
 			lastCheck,
-			source: String(source ?? room.source),
+			source: sourceText || room.source,
 			stepSources,
-			stepYjs,
-			yjsState: stepYjs[String(viewStep)] ?? room.yjsState
+			stepYjs
+			// yjsState stays the live editor CRDT — do not replace with a foreign snapshot
 		};
 		runClearedAt = null;
 		sync.update({

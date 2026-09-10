@@ -8,7 +8,9 @@ import {
 	PYTHON_YTEXT,
 	applyRemoteAwareness,
 	applyRemoteYjs,
+	awarenessUserKey,
 	bytesToBase64,
+	dropAwarenessMatchingLocalUser,
 	encodeLocalAwareness,
 	mergeAwarenessStates,
 	mergeYjsStates,
@@ -16,7 +18,8 @@ import {
 	teammateColor,
 	teammateName,
 	collabUserFromProfile,
-	encodeSourceAsYjs
+	encodeSourceAsYjs,
+	sourceFromYjsState
 } from './yjs-collab.js';
 
 describe('yjs collab merge', () => {
@@ -86,10 +89,14 @@ describe('yjs collab merge', () => {
 		const user = collabUserFromProfile({
 			name: 'Zhich',
 			email: 'zhich@example.com',
-			userId: 'user-1'
+			userId: 'user-1',
+			memberId: 'mem-1'
 		});
 		expect(user.name).toBe('Zhich');
 		expect(user.color).toMatch(/^#/u);
+		expect(user.userId).toBe('user-1');
+		expect(user.memberId).toBe('mem-1');
+		expect(awarenessUserKey(user)).toBe('m:mem-1');
 		expect(collabUserFromProfile({ email: 'ada@marihacks.com' }).name).toBe('ada');
 	});
 
@@ -139,4 +146,63 @@ describe('yjs collab merge', () => {
 		local.destroy();
 		remote.destroy();
 	});
+
+	it('dedupes awareness by user identity keeping the newest client only', () => {
+		const olderDoc = new Y.Doc();
+		const older = new Awareness(olderDoc);
+		older.setLocalStateField('user', {
+			name: 'Helen Chen',
+			color: '#0b4cf4',
+			memberId: 'helen'
+		});
+		const olderEncoded = encodeLocalAwareness(older);
+		const newerDoc = new Y.Doc();
+		const newer = new Awareness(newerDoc);
+		newer.setLocalStateField('user', {
+			name: 'Helen Chen',
+			color: '#0b4cf4',
+			memberId: 'helen'
+		});
+		const now = Date.now();
+		// First merge establishes Helen; second clientID for same member should replace.
+		const once = mergeAwarenessStates('', olderEncoded, now);
+		const twice = mergeAwarenessStates(once, encodeLocalAwareness(newer), now + 5);
+		const viewDoc = new Y.Doc();
+		const view = new Awareness(viewDoc);
+		view.setLocalState(null);
+		applyRemoteAwareness(view, twice);
+		const helenClients = [...view.getStates().entries()].filter(
+			([, state]) => state.user?.memberId === 'helen'
+		);
+		expect(helenClients).toHaveLength(1);
+		older.destroy();
+		newer.destroy();
+		view.destroy();
+		olderDoc.destroy();
+		newerDoc.destroy();
+		viewDoc.destroy();
+	});
+
+	it('does not re-apply the local user as a remote caret', () => {
+		const localDoc = new Y.Doc();
+		const local = new Awareness(localDoc);
+		const me = { name: 'Zhich Gaming', color: '#0f766e', memberId: 'zhich' };
+		local.setLocalStateField('user', me);
+		const staleDoc = new Y.Doc();
+		const stale = new Awareness(staleDoc);
+		stale.setLocalStateField('user', me);
+		applyRemoteAwareness(local, encodeLocalAwareness(stale), 'remote', { localUser: me });
+		const remoteSelves = [...local.getStates().entries()].filter(
+			([clientId, state]) =>
+				clientId !== local.clientID && awarenessUserKey(state.user) === awarenessUserKey(me)
+		);
+		expect(remoteSelves).toHaveLength(0);
+		dropAwarenessMatchingLocalUser(local, me);
+		expect(sourceFromYjsState(encodeSourceAsYjs('print(9)'))).toBe('print(9)');
+		local.destroy();
+		stale.destroy();
+		localDoc.destroy();
+		staleDoc.destroy();
+	});
 });
+

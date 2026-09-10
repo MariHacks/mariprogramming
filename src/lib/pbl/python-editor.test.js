@@ -2,6 +2,9 @@ import { acceptCompletion, startCompletion } from '@codemirror/autocomplete';
 import { indentMore } from '@codemirror/commands';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createPythonCollabEditor } from './python-editor.js';
+import { encodeSourceAsYjs, encodeLocalAwareness } from './yjs-collab.js';
+import * as Y from 'yjs';
+import { Awareness } from 'y-protocols/awareness';
 
 function layoutBox() {
 	return {
@@ -251,4 +254,33 @@ describe('python collab editor', () => {
 		expect(editor.getSource()).toBe('    ');
 		editor.destroy();
 	});
+
+	it('replaceYjsState swaps the whole doc; applyYjsState of a foreign snapshot would duplicate', () => {
+		const editor = mount({ source: 'print("A")' });
+		const foreign = encodeSourceAsYjs('print("A")');
+		editor.applyYjsState(foreign);
+		expect(editor.getSource()).toBe('print("A")print("A")');
+		editor.replaceYjsState(encodeSourceAsYjs('print("B")'));
+		expect(editor.getSource()).toBe('print("B")');
+		editor.replaceYjsState('', 'print("C")');
+		expect(editor.getSource()).toBe('print("C")');
+		editor.destroy();
+	});
+
+	it('does not paint the local user when their prior clientID returns via awareness', () => {
+		const me = { name: 'Zhich Gaming', color: '#0f766e', colorLight: '#0f766e33', memberId: 'zhich' };
+		const editor = mount({ source: 'print(1)', user: me });
+		const staleDoc = new Y.Doc();
+		const stale = new Awareness(staleDoc);
+		stale.setLocalStateField('user', me);
+		editor.applyAwarenessState(encodeLocalAwareness(stale));
+		const remoteSelves = [...editor.awareness.getStates().entries()].filter(
+			([clientId, state]) => clientId !== editor.awareness.clientID && state.user?.memberId === 'zhich'
+		);
+		expect(remoteSelves).toHaveLength(0);
+		stale.destroy();
+		staleDoc.destroy();
+		editor.destroy();
+	});
+
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createWorkshopController } from './workshop-controller.js';
+import { encodeSourceAsYjs } from './yjs-collab.js';
 
 function harness(overrides = {}) {
 	const host = {
@@ -529,4 +530,87 @@ describe('workshop controller', () => {
 		controller.destroy();
 	});
 
+	it('restores step A source after editing step B (no newer-step bleed)', async () => {
+		const { controller, sync, onState } = harness({
+			runCheck: async () => ({ passed: true, message: 'ok' })
+		});
+		await controller.join();
+		controller.setCollab({
+			source: 'print("step-A")',
+			yjsState: encodeSourceAsYjs('print("step-A")'),
+			awarenessState: ''
+		});
+		await controller.run();
+		expect(controller.getState().unlockedStep).toBe(1);
+		controller.selectStep(1);
+		expect(controller.getState().viewStep).toBe(1);
+		controller.setCollab({
+			source: 'print("step-B-newer")',
+			yjsState: encodeSourceAsYjs('print("step-B-newer")'),
+			awarenessState: ''
+		});
+		// Poll without editingStep still holding live step-B on the server.
+		onState()({
+			source: 'print("step-B-newer")',
+			yjsState: encodeSourceAsYjs('print("step-B-newer")'),
+			stepSources: {
+				'0': 'print("step-A")',
+				'1': 'print("step-B-newer")'
+			},
+			stepYjs: {
+				'0': encodeSourceAsYjs('print("step-A")'),
+				'1': encodeSourceAsYjs('print("step-B-newer")')
+			},
+			unlockedStep: 1,
+			version: 9
+		});
+		controller.selectStep(0);
+		expect(controller.getState().viewStep).toBe(0);
+		expect(controller.getState().source).toBe('print("step-A")');
+		expect(controller.getState().source).not.toContain('step-B-newer');
+		expect(controller.getState().editorEpoch).toBeGreaterThan(0);
+		// Another poll with live B must not overwrite A while maps disagree.
+		onState()({
+			source: 'print("step-B-newer")',
+			yjsState: encodeSourceAsYjs('print("step-B-newer")'),
+			stepSources: {
+				'0': 'print("step-A")',
+				'1': 'print("step-B-newer")'
+			},
+			unlockedStep: 1,
+			version: 10
+		});
+		expect(controller.getState().source).toBe('print("step-A")');
+		expect(sync.flush).toHaveBeenCalled();
+		controller.destroy();
+	});
+
+	it('Run does not duplicate source via a fresh Yjs snapshot', async () => {
+		const { controller } = harness({
+			runCheck: async () => ({ passed: true, message: 'ok' })
+		});
+		await controller.join();
+		const program = 'print("once")';
+		controller.setCollab({
+			source: program,
+			yjsState: encodeSourceAsYjs(program),
+			awarenessState: ''
+		});
+		const before = controller.getState().source;
+		await controller.run();
+		const after = controller.getState().source;
+		expect(after).toBe(before);
+		expect(after).toBe(program);
+		expect(after).not.toBe(program + program);
+		controller.setCollab({
+			source: 'print("nbsp\u00a0here")',
+			yjsState: encodeSourceAsYjs('print("nbsp\u00a0here")'),
+			awarenessState: ''
+		});
+		await controller.run();
+		const cleaned = controller.getState().source;
+		expect(cleaned).toBe('print("nbsp here")');
+		expect(cleaned.match(/print/g)?.length).toBe(1);
+		controller.destroy();
+	});
 });

@@ -87,11 +87,31 @@ export function collabUserFromProfile(profile) {
 		(typeof profile?.name === 'string' && profile.name.trim()) ||
 		(typeof profile?.email === 'string' && profile.email.trim()) ||
 		seed;
-	return {
+	/** @type {{ name: string, color: string, colorLight: string, memberId?: string, userId?: string }} */
+	const user = {
 		name: teammateName(name),
 		color: colors.color,
 		colorLight: colors.colorLight
 	};
+	if (typeof profile?.memberId === 'string' && profile.memberId) user.memberId = profile.memberId;
+	if (typeof profile?.userId === 'string' && profile.userId) user.userId = profile.userId;
+	return user;
+}
+
+/**
+ * Stable identity key for awareness cursor dedupe.
+ * Prefer memberId, then userId, else name+color.
+ * @param {unknown} user
+ */
+export function awarenessUserKey(user) {
+	if (!user || typeof user !== 'object') return '';
+	const record = /** @type {Record<string, unknown>} */ (user);
+	if (typeof record.memberId === 'string' && record.memberId.trim()) return `m:${record.memberId.trim()}`;
+	if (typeof record.userId === 'string' && record.userId.trim()) return `u:${record.userId.trim()}`;
+	const name = typeof record.name === 'string' ? record.name.trim() : '';
+	const color = typeof record.color === 'string' ? record.color.trim() : '';
+	if (!name && !color) return '';
+	return `n:${name}|${color}`;
 }
 
 
@@ -160,6 +180,24 @@ export function mergeAwarenessStates(stored, incoming, nowMs) {
 			}
 		});
 		if (stale.length > 0) removeAwarenessStates(awareness, stale, 'timeout');
+		// One caret per person: keep the newest clientID for each identity key.
+		/** @type {Map<string, { clientId: number, lastUpdated: number }>} */
+		const bestByUser = new Map();
+		const drop = [];
+		awareness.getStates().forEach((state, clientId) => {
+			if (clientId === awareness.clientID) return;
+			const key = awarenessUserKey(state?.user);
+			const lastUpdated = awareness.meta.get(clientId)?.lastUpdated ?? 0;
+			if (!key) return;
+			const prev = bestByUser.get(key);
+			if (!prev || lastUpdated >= prev.lastUpdated) {
+				if (prev) drop.push(prev.clientId);
+				bestByUser.set(key, { clientId, lastUpdated });
+			} else {
+				drop.push(clientId);
+			}
+		});
+		if (drop.length > 0) removeAwarenessStates(awareness, drop, 'dedupe');
 		const ids = [...awareness.getStates().keys()].filter((id) => id !== awareness.clientID);
 		if (ids.length === 0) return '';
 		return bytesToBase64(encodeAwarenessUpdate(awareness, ids));
@@ -174,9 +212,48 @@ export function mergeAwarenessStates(stored, incoming, nowMs) {
  * @param {string} encoded
  * @param {string} origin
  */
-export function applyRemoteAwareness(awareness, encoded, origin = 'remote') {
+/**
+ * Drop remote awareness entries that are the same person as `localUser`
+ * (refresh / multi-tab leaves old clientIDs that y-codemirror would paint as remote).
+ * @param {Awareness} awareness
+ * @param {{ name?: string, color?: string, memberId?: string, userId?: string } | null | undefined} localUser
+ */
+export function dropAwarenessMatchingLocalUser(awareness, localUser) {
+	const localKey = awarenessUserKey(localUser ?? awareness.getLocalState()?.user);
+	if (!localKey) return;
+	const drop = [];
+	awareness.getStates().forEach((state, clientId) => {
+		if (clientId === awareness.clientID) return;
+		if (awarenessUserKey(state?.user) === localKey) drop.push(clientId);
+	});
+	if (drop.length > 0) removeAwarenessStates(awareness, drop, 'local-user');
+}
+
+/**
+ * @param {Awareness} awareness
+ * @param {string} encoded
+ * @param {string} origin
+ * @param {{ localUser?: { name?: string, color?: string, memberId?: string, userId?: string } | null }} [options]
+ */
+export function applyRemoteAwareness(awareness, encoded, origin = 'remote', options = {}) {
 	if (!encoded) return;
 	applyAwarenessUpdate(awareness, base64ToBytes(encoded), origin);
+	dropAwarenessMatchingLocalUser(awareness, options.localUser);
+}
+
+/**
+ * Decode a Yjs snapshot to plain source text (for replace semantics).
+ * @param {string} encoded
+ */
+export function sourceFromYjsState(encoded) {
+	if (!encoded) return '';
+	const doc = new Y.Doc();
+	try {
+		Y.applyUpdate(doc, base64ToBytes(encoded));
+		return doc.getText(PYTHON_YTEXT).toString();
+	} finally {
+		doc.destroy();
+	}
 }
 
 /** @param {Y.Doc} doc @param {string} encoded */

@@ -21,10 +21,20 @@
 	export let user = null;
 	/** @type {(payload: { source: string, yjsState: string, awarenessState: string }) => void} */
 	export let onCollab = () => {};
+	/**
+	 * When this changes, treat yjsState/source as a full document replace
+	 * (step switch / snapshot), not a peer CRDT merge.
+	 * @type {string | number}
+	 */
+	export let editorEpoch = 0;
 
 	let host = /** @type {HTMLDivElement | null} */ (null);
 	/** @type {ReturnType<typeof createPythonCollabEditor> | null} */
 	let editor = null;
+	/** @type {string | number | null} */
+	let appliedEpoch = null;
+	let appliedYjs = '';
+	let appliedAwareness = '';
 
 	$: themeMode = normalizeEditorTheme(theme);
 	$: palette = monokaiPalette(themeMode);
@@ -43,14 +53,29 @@
 			}
 		});
 		editor = current;
+		appliedEpoch = editorEpoch;
+		appliedYjs = yjsState;
+		appliedAwareness = awarenessState;
 		return () => {
 			current.destroy();
 			if (editor === current) editor = null;
 		};
 	});
 
-	$: if (editor) editor.applyYjsState(yjsState);
-	$: if (editor) editor.applyAwarenessState(awarenessState);
+	$: if (editor) {
+		if (appliedEpoch !== editorEpoch) {
+			editor.replaceYjsState(yjsState, source);
+			appliedEpoch = editorEpoch;
+			appliedYjs = yjsState;
+		} else if (yjsState !== appliedYjs) {
+			editor.applyYjsState(yjsState);
+			appliedYjs = yjsState;
+		}
+	}
+	$: if (editor && awarenessState !== appliedAwareness) {
+		editor.applyAwarenessState(awarenessState);
+		appliedAwareness = awarenessState;
+	}
 	$: if (editor) editor.setEditable(editable);
 	$: if (editor) editor.setTheme(themeMode);
 </script>
