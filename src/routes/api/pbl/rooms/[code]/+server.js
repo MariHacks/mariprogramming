@@ -37,12 +37,15 @@ export function _createPblRoomEndpoint(dependencies = {}) {
 					memberId: membership.memberId,
 					version: body.version,
 					source: body.source,
-					currentStep: body.currentStep,
 					unlockedStep: body.unlockedStep,
 					openedHints: body.openedHints,
 					lastCheck: body.lastCheck,
 					yjsState: body.yjsState,
-					awarenessState: body.awarenessState
+					awarenessState: body.awarenessState,
+					stepSources: body.stepSources,
+					stepYjs: body.stepYjs,
+					editingStep: body.editingStep,
+					replaceEditor: body.replaceEditor
 				})
 			);
 			return pblJson(room, 200, membership.setCookie ? { 'set-cookie': membership.setCookie } : {});

@@ -83,6 +83,14 @@ function memoryRepo(seed = roomRow()) {
 			if (!row) return null;
 			Object.assign(row, patch);
 			return { ...row };
+		},
+		async insertSubmission(values) {
+			const row = { id: 'sub-1', createdAt: NOW, ...values };
+			(this.submissions ??= []).push(row);
+			return row;
+		},
+		async listSubmissions(roomId) {
+			return (this.submissions ?? []).filter((row) => row.roomId === roomId);
 		}
 	};
 }
@@ -176,13 +184,15 @@ describe('PBL room store', () => {
 			memberId: MEMBER,
 			version: 1,
 			source: 'print("team")',
-			currentStep: 1,
+			editingStep: 1,
 			unlockedStep: 1,
 			openedHints: { '0': 2 },
 			lastCheck: { step: 0, passed: true, message: 'ok', at: NOW.toISOString() }
 		});
 		expect(updated.source).toBe('print("team")');
 		expect(updated.currentStep).toBe(1);
+		expect(updated.unlockedStep).toBe(1);
+		expect(updated.stepSources['1']).toBe('print("team")');
 		expect(updated.openedHints).toEqual({ '0': 2 });
 		await expect(
 			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 1, source: 'stale' })
@@ -191,7 +201,7 @@ describe('PBL room store', () => {
 			store.updateRoom({ code: 'AB23JK', memberId: 'b'.repeat(32), version: 2, source: 'x' })
 		).rejects.toMatchObject({ status: 403 });
 		await expect(
-			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, currentStep: 8 })
+			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, editingStep: 8 })
 		).rejects.toMatchObject({ message: 'That step is still locked.' });
 		await expect(
 			store.updateRoom({
@@ -205,7 +215,7 @@ describe('PBL room store', () => {
 			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, unlockedStep: 0 })
 		).rejects.toMatchObject({ message: 'Invalid step.' });
 		await expect(
-			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, currentStep: -1 })
+			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, editingStep: -1 })
 		).rejects.toMatchObject({ message: 'Invalid step.' });
 		await expect(
 			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 1.5, source: 'x' })
@@ -404,9 +414,7 @@ describe('PBL room store', () => {
 		expect(rooms[0]).toMatchObject({
 			code: 'AB23JK',
 			teamName: 'Lab table 3',
-			currentStep: 1,
 			unlockedStep: 2,
-			source: 'print(1)',
 			members: [
 				{
 					memberId: MEMBER,
@@ -416,6 +424,33 @@ describe('PBL room store', () => {
 				}
 			]
 		});
+		expect(rooms[0].currentStep).toBeUndefined();
+		expect(rooms[0].source).toBeUndefined();
+	});
+
+	it('records step submissions and loads a staff room detail', async () => {
+		const repo = memoryRepo(
+			roomRow({
+				unlockedStep: 1,
+				stepSources: { '0': 'print(0)', '1': 'print(1)' },
+				source: 'print(1)'
+			})
+		);
+		const store = createPblStore(repo, { now: () => NOW });
+		const saved = await store.recordSubmission({
+			code: 'AB23JK',
+			memberId: MEMBER,
+			step: 0,
+			source: 'print(0)',
+			passed: true,
+			message: 'ok'
+		});
+		expect(saved).toMatchObject({ step: 0, passed: true, message: 'ok' });
+		const detail = await store.getStaffRoom('AB23JK');
+		expect(detail.unlockedStep).toBe(1);
+		expect(detail.stepSources['0']).toBe('print(0)');
+		expect(detail.submissions).toHaveLength(1);
+		expect(detail.currentStep).toBeUndefined();
 	});
 
 	it('stores userId and refuses a second join for the same account', async () => {

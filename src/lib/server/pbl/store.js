@@ -6,12 +6,19 @@ import {
 	MAX_SOURCE_CHARS,
 	canAcceptMember,
 	normalizeOpenedHints,
+	normalizeStepSources,
+	normalizeStepYjs,
 	normalizeTeamName,
 	publicRoomView
 } from '$lib/pbl/room-state.js';
 import { SCIENCE_STARTER_SOURCE, SCIENCE_STEP_COUNT } from '$lib/pbl/science-workshop.js';
-import { mergeAwarenessStates, mergeYjsStates, normalizeYjsState } from '$lib/pbl/yjs-collab.js';
-import { pblRoomMembers, pblRooms, user } from '../db/schema';
+import {
+	encodeSourceAsYjs,
+	mergeAwarenessStates,
+	mergeYjsStates,
+	normalizeYjsState
+} from '$lib/pbl/yjs-collab.js';
+import { pblRoomMembers, pblRooms, pblStepSubmissions, user } from '../db/schema';
 import { generateRoomCode } from './ids.js';
 
 export class PblInputError extends Error {
@@ -75,7 +82,9 @@ export function roomFromRow(row, viewerMemberId) {
 			version: row.version,
 			driverMemberId: row.driverMemberId ?? null,
 			yjsState: row.yjsState ?? '',
-			awarenessState: row.awarenessState ?? ''
+			awarenessState: row.awarenessState ?? '',
+			stepSources: row.stepSources ?? {},
+			stepYjs: row.stepYjs ?? {}
 		},
 		viewerMemberId
 	);
@@ -156,6 +165,18 @@ export function createDrizzlePblRepository(transaction) {
 				.from(pblRoomMembers)
 				.leftJoin(user, eq(pblRoomMembers.userId, user.id))
 				.where(inArray(pblRoomMembers.roomId, roomIds));
+		},
+		/** @param {Record<string, unknown>} values */
+		async insertSubmission(values) {
+			return oneRow(await transaction.insert(pblStepSubmissions).values(values).returning());
+		},
+		/** @param {string} roomId */
+		async listSubmissions(roomId) {
+			return transaction
+				.select()
+				.from(pblStepSubmissions)
+				.where(eq(pblStepSubmissions.roomId, roomId))
+				.orderBy(desc(pblStepSubmissions.createdAt));
 		}
 	};
 }
@@ -169,6 +190,8 @@ export function createMemoryPblRepository() {
 	const rooms = [];
 	/** @type {any[]} */
 	const members = [];
+	/** @type {any[]} */
+	const submissions = [];
 	return {
 		/** @param {Record<string, unknown>} values */
 		async insertRoom(values) {
@@ -231,6 +254,22 @@ export function createMemoryPblRepository() {
 					email: row.email ?? null,
 					name: row.name ?? null
 				}));
+		},
+		/** @param {Record<string, unknown>} values */
+		async insertSubmission(values) {
+			const row = { id: randomUUID(), createdAt: new Date(), ...values };
+			submissions.push(row);
+			return row;
+		},
+		/** @param {string} roomId */
+		async listSubmissions(roomId) {
+			return submissions
+				.filter((row) => row.roomId === roomId)
+				.sort((a, b) => {
+					const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
+					const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
+					return bTime - aTime;
+				});
 		}
 	};
 }
@@ -291,7 +330,9 @@ export function createPblStore(repository, clock = {}) {
 				version: 1,
 				driverMemberId: input.memberId,
 				yjsState: '',
-				awarenessState: ''
+				awarenessState: '',
+				stepSources: { '0': SCIENCE_STARTER_SOURCE },
+				stepYjs: {}
 			});
 			if (!row) throw new PblInputError('Could not create the team room.', 503);
 			await repository.insertMember({
@@ -346,12 +387,15 @@ export function createPblStore(repository, clock = {}) {
 		 *   memberId: string,
 		 *   version: unknown,
 		 *   source?: unknown,
-		 *   currentStep?: unknown,
 		 *   unlockedStep?: unknown,
 		 *   openedHints?: unknown,
 		 *   lastCheck?: unknown,
 		 *   yjsState?: unknown,
-		 *   awarenessState?: unknown
+		 *   awarenessState?: unknown,
+		 *   stepSources?: unknown,
+		 *   stepYjs?: unknown,
+		 *   editingStep?: unknown,
+		 *   replaceEditor?: unknown
 		 * }} input
 		 */
 		async updateRoom(input) {
@@ -370,11 +414,48 @@ export function createPblStore(repository, clock = {}) {
 			if (yjsIncoming === null) throw new PblInputError('Invalid editor sync.');
 			const awarenessIncoming = normalizeYjsState(input.awarenessState);
 			if (awarenessIncoming === null) throw new PblInputError('Invalid editor sync.');
+
+			let stepSources = normalizeStepSources(row.stepSources);
+			let stepYjs = normalizeStepYjs(row.stepYjs);
+			if (input.stepSources !== undefined) {
+				stepSources = {
+					...stepSources,
+					...normalizeStepSources(input.stepSources)
+				};
+			}
+			if (input.stepYjs !== undefined) {
+				stepYjs = {
+					...stepYjs,
+					...normalizeStepYjs(input.stepYjs)
+				};
+			}
+
+			const editingStep = Number.isInteger(input.editingStep) ? input.editingStep : null;
+			if (editingStep !== null) {
+				if (editingStep < 0 || editingStep >= SCIENCE_STEP_COUNT) {
+					throw new PblInputError('Invalid step.');
+				}
+				const unlockedGate = Number(input.unlockedStep ?? row.unlockedStep);
+				if (editingStep > unlockedGate) throw new PblInputError('That step is still locked.');
+			}
+
+			const replaceEditor = input.replaceEditor === true;
+			const stepKey = editingStep !== null ? String(editingStep) : null;
+
 			if (yjsIncoming) {
 				try {
-					const merged = mergeYjsStates(row.yjsState || '', yjsIncoming);
+					const priorYjs = replaceEditor
+						? ''
+						: stepKey
+							? stepYjs[stepKey] || row.yjsState || ''
+							: row.yjsState || '';
+					const merged = mergeYjsStates(priorYjs, yjsIncoming);
 					patch.yjsState = merged.yjsState;
 					patch.source = merged.source;
+					if (stepKey) {
+						stepYjs = { ...stepYjs, [stepKey]: merged.yjsState };
+						stepSources = { ...stepSources, [stepKey]: merged.source };
+					}
 				} catch (error) {
 					throw new PblInputError(error instanceof Error ? error.message : 'Invalid editor sync.');
 				}
@@ -383,7 +464,22 @@ export function createPblStore(repository, clock = {}) {
 					throw new PblInputError('The program is too long to sync.');
 				}
 				patch.source = input.source;
+				if (stepKey) {
+					stepSources = { ...stepSources, [stepKey]: input.source };
+					if (replaceEditor || !stepYjs[stepKey]) {
+						try {
+							const encoded = encodeSourceAsYjs(input.source);
+							stepYjs = { ...stepYjs, [stepKey]: encoded };
+							patch.yjsState = encoded;
+						} catch (error) {
+							throw new PblInputError(
+								error instanceof Error ? error.message : 'Invalid editor sync.'
+							);
+						}
+					}
+				}
 			}
+
 			if (awarenessIncoming) {
 				patch.awarenessState = mergeAwarenessStates(
 					row.awarenessState || '',
@@ -400,18 +496,121 @@ export function createPblStore(repository, clock = {}) {
 				}
 				patch.unlockedStep = Math.min(SCIENCE_STEP_COUNT - 1, input.unlockedStep);
 			}
-			if (input.currentStep !== undefined) {
-				if (!Number.isInteger(input.currentStep) || input.currentStep < 0) {
-					throw new PblInputError('Invalid step.');
-				}
-				const unlocked = Number(patch.unlockedStep ?? row.unlockedStep);
-				if (input.currentStep > unlocked) throw new PblInputError('That step is still locked.');
-				patch.currentStep = input.currentStep;
-				if (input.currentStep !== row.currentStep) patch.stepEnteredAt = now();
+
+			patch.stepSources = stepSources;
+			patch.stepYjs = stepYjs;
+			// Shared progress is unlockedStep only — keep DB currentStep aligned for legacy checks.
+			const unlocked = Number(patch.unlockedStep ?? row.unlockedStep);
+			if (unlocked !== row.currentStep) {
+				patch.currentStep = unlocked;
+				patch.stepEnteredAt = now();
+			} else {
+				patch.currentStep = unlocked;
 			}
+
 			const updated = await repository.updateRoom(row.code, row.version, patch);
 			if (!updated) throw new PblConflictError(roomFromRow(row, input.memberId));
 			return roomFromRow(updated, input.memberId);
+		},
+
+		/**
+		 * @param {{
+		 *   code: unknown,
+		 *   memberId: string,
+		 *   step: unknown,
+		 *   source: unknown,
+		 *   passed: unknown,
+		 *   message?: unknown
+		 * }} input
+		 */
+		async recordSubmission(input) {
+			const room = await this.getRoom(input.code);
+			const row = await repository.findRoomByCode(room.code);
+			if (!row) throw new PblNotFoundError();
+			const member = await repository.findMember(row.id, input.memberId);
+			if (!member) throw new PblInputError('Join this team before editing.', 403);
+			if (!Number.isInteger(input.step) || input.step < 0 || input.step >= SCIENCE_STEP_COUNT) {
+				throw new PblInputError('Invalid step.');
+			}
+			if (typeof input.source !== 'string' || input.source.length > MAX_SOURCE_CHARS) {
+				throw new PblInputError('The program is too long to sync.');
+			}
+			if (typeof input.passed !== 'boolean') throw new PblInputError('Invalid check result.');
+			const message =
+				typeof input.message === 'string' ? input.message.slice(0, 2000) : null;
+			const saved = await repository.insertSubmission({
+				roomId: row.id,
+				step: input.step,
+				source: input.source,
+				passed: input.passed,
+				message,
+				memberId: input.memberId
+			});
+			if (!saved) throw new PblInputError('Could not save the submission.', 503);
+			return {
+				id: saved.id,
+				step: saved.step,
+				passed: saved.passed,
+				message: saved.message ?? null,
+				createdAt:
+					saved.createdAt instanceof Date
+						? saved.createdAt.toISOString()
+						: String(saved.createdAt ?? now().toISOString())
+			};
+		},
+
+		/** @param {unknown} code */
+		async getStaffRoom(code) {
+			const normalized = (await this.getRoom(code)).code;
+			const row = await repository.findRoomByCode(normalized);
+			if (!row) throw new PblNotFoundError();
+			const memberRows = await repository.listMembersWithUsers([row.id]);
+			const submissions = repository.listSubmissions
+				? await repository.listSubmissions(row.id)
+				: [];
+			return {
+				code: row.code,
+				pblId: row.pblId,
+				teamName: row.teamName,
+				source: row.source ?? '',
+				unlockedStep: row.unlockedStep,
+				lastCheck: row.lastCheck ?? null,
+				memberCount: row.memberCount,
+				stepSources: normalizeStepSources(row.stepSources),
+				stepYjs: normalizeStepYjs(row.stepYjs),
+				updatedAt:
+					row.updatedAt instanceof Date
+						? row.updatedAt.toISOString()
+						: row.updatedAt
+							? String(row.updatedAt)
+							: null,
+				members: memberRows.map((member) => ({
+					memberId: member.memberId,
+					userId: member.userId ?? null,
+					email: member.email ?? null,
+					name: member.name ?? null,
+					joinedAt:
+						member.joinedAt instanceof Date
+							? member.joinedAt.toISOString()
+							: member.joinedAt
+								? String(member.joinedAt)
+								: null
+				})),
+				submissions: submissions.map((item) => ({
+					id: item.id,
+					step: item.step,
+					source: item.source ?? '',
+					passed: Boolean(item.passed),
+					message: item.message ?? null,
+					memberId: item.memberId ?? null,
+					createdAt:
+						item.createdAt instanceof Date
+							? item.createdAt.toISOString()
+							: item.createdAt
+								? String(item.createdAt)
+								: null
+				}))
+			};
 		},
 
 		async listStaffRooms() {
@@ -442,11 +641,10 @@ export function createPblStore(repository, clock = {}) {
 					code: row.code,
 					pblId: row.pblId,
 					teamName: row.teamName,
-					source: row.source ?? '',
-					currentStep: row.currentStep,
 					unlockedStep: row.unlockedStep,
 					lastCheck: row.lastCheck ?? null,
 					memberCount: row.memberCount,
+					stepCount: Object.keys(normalizeStepSources(row.stepSources)).length,
 					updatedAt:
 						row.updatedAt instanceof Date
 							? row.updatedAt.toISOString()
