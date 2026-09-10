@@ -33,6 +33,9 @@
 	let copied = false;
 	/** @type {ReturnType<typeof setTimeout> | undefined} */
 	let copyReset;
+	let rosterOpen = false;
+	let ejectingMemberId = '';
+	let rosterError = '';
 	/** @type {'lesson' | 'code' | 'output'} */
 	let pane = 'lesson';
 	/** @type {'testcase' | 'output'} */
@@ -108,6 +111,46 @@
 		}
 	}
 
+	function openRoster() {
+		rosterError = '';
+		rosterOpen = true;
+	}
+
+	function closeRoster() {
+		if (ejectingMemberId) return;
+		rosterOpen = false;
+		rosterError = '';
+	}
+
+	/** @param {KeyboardEvent} event */
+	function onRosterKeydown(event) {
+		if (event.key === 'Escape') closeRoster();
+	}
+
+	/** @param {any} member */
+	function memberLabel(member) {
+		if (member?.name) return member.name;
+		if (member?.email) return member.email;
+		if (member?.userId) return member.userId;
+		return 'Teammate';
+	}
+
+	/** @param {string} memberId */
+	async function ejectTeammate(memberId) {
+		if (!controller || !state?.isDriver || !memberId) return;
+		if (memberId === state.driverMemberId) return;
+		ejectingMemberId = memberId;
+		rosterError = '';
+		try {
+			const next = await controller.ejectMember(memberId);
+			if (!next) {
+				rosterError = state?.roomError || 'Could not remove that teammate.';
+			}
+		} finally {
+			ejectingMemberId = '';
+		}
+	}
+
 	function runProgram() {
 		consoleTab = 'output';
 		pane = 'output';
@@ -177,6 +220,8 @@
 		window.addEventListener('pointerup', onUp);
 	}
 </script>
+
+<svelte:window on:keydown={onRosterKeydown} />
 
 <svelte:head>
 	<title>PBL 1 studio | {clubContent.name}</title>
@@ -281,9 +326,13 @@
 							>
 								{copied ? 'Copied' : state.code}
 							</button>
-							<span
+							<button
+								type="button"
 								class="team-chip team-chip-count"
-								aria-label={`${state.memberCount} of 10 on this team`}
+								aria-label={`Open team roster, ${state.memberCount} of 10 on this team`}
+								aria-haspopup="dialog"
+								aria-expanded={rosterOpen}
+								on:click={openRoster}
 							>
 								<svg class="person-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
 									<path
@@ -292,7 +341,7 @@
 									/>
 								</svg>
 								{state.memberCount}/10
-							</span>
+							</button>
 						</div>
 					</div>
 				</header>
@@ -452,6 +501,64 @@
 		<p class="loading">Joining the team room…</p>
 	{/if}
 {/if}
+
+{#if rosterOpen && state}
+	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+	<div class="roster-backdrop" on:click={closeRoster}>
+		<div
+			class="roster-panel"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="roster-title"
+			tabindex="-1"
+			on:click|stopPropagation
+		>
+			<header class="roster-header">
+				<div>
+					<p class="roster-eyebrow">Team roster</p>
+					<h2 id="roster-title">{state.teamName || 'Team room'}</h2>
+					<p class="roster-meta">{state.memberCount}/10 members</p>
+				</div>
+				<button type="button" class="roster-close" aria-label="Close team roster" on:click={closeRoster}>
+					Close
+				</button>
+			</header>
+			{#if rosterError}
+				<p class="roster-error" role="alert">{rosterError}</p>
+			{/if}
+			{#if state.members?.length}
+				<ul class="roster-list">
+					{#each state.members as member (member.memberId)}
+						<li class="roster-item">
+							<div class="roster-person">
+								<span class="roster-name">{memberLabel(member)}</span>
+								{#if member.memberId === state.driverMemberId}
+									<span class="roster-badge">Leader</span>
+								{/if}
+							</div>
+							{#if state.isDriver && member.memberId !== state.driverMemberId}
+								<button
+									type="button"
+									class="roster-eject"
+									disabled={Boolean(ejectingMemberId)}
+									on:click={() => ejectTeammate(member.memberId)}
+								>
+									{ejectingMemberId === member.memberId ? 'Removing…' : 'Remove'}
+								</button>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="roster-empty">Member list is still loading.</p>
+			{/if}
+			{#if !state.isDriver}
+				<p class="roster-note">Only the team leader can remove teammates.</p>
+			{/if}
+		</div>
+	</div>
+{/if}
+
 
 <style>
 	:global(html.pbl-studio),
@@ -624,9 +731,14 @@
 		cursor: pointer;
 	}
 
-	.team-chip-code:focus-visible {
+	.team-chip-code:focus-visible,
+	.team-chip-count:focus-visible {
 		outline: 2px solid var(--club-blue);
 		outline-offset: 2px;
+	}
+
+	.team-chip-count {
+		cursor: pointer;
 	}
 
 	.person-icon {
@@ -1188,4 +1300,147 @@
 		}
 
 	}
+
+	.roster-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 40;
+		display: grid;
+		place-items: center;
+		padding: 1rem;
+		background: rgb(15 23 42 / 45%);
+	}
+
+	.roster-panel {
+		width: min(24rem, 100%);
+		max-height: min(28rem, calc(100vh - 2rem));
+		overflow: auto;
+		border: 1px solid rgb(var(--midnight-rgb) / 14%);
+		border-radius: 0.75rem;
+		background: #fff;
+		box-shadow: 0 18px 40px rgb(15 23 42 / 18%);
+		padding: 1rem 1rem 0.85rem;
+	}
+
+	.roster-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 0.75rem;
+		margin-bottom: 0.85rem;
+	}
+
+	.roster-eyebrow {
+		margin: 0 0 0.2rem;
+		color: var(--quiet-steel);
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.roster-header h2 {
+		margin: 0;
+		font-size: 1.05rem;
+		line-height: 1.25;
+	}
+
+	.roster-meta {
+		margin: 0.25rem 0 0;
+		color: var(--quiet-steel);
+		font-size: 0.8rem;
+	}
+
+	.roster-close {
+		border: 1px solid rgb(var(--midnight-rgb) / 14%);
+		border-radius: 0.4rem;
+		background: rgb(var(--midnight-rgb) / 4%);
+		color: inherit;
+		font-size: 0.8rem;
+		font-weight: 650;
+		min-height: 2rem;
+		padding: 0.25rem 0.65rem;
+		cursor: pointer;
+	}
+
+	.roster-error {
+		margin: 0 0 0.75rem;
+		padding: 0.55rem 0.65rem;
+		border-radius: 0.4rem;
+		background: #fdecec;
+		color: #9b1c1c;
+		font-size: 0.82rem;
+	}
+
+	.roster-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: grid;
+		gap: 0.45rem;
+	}
+
+	.roster-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.65rem;
+		padding: 0.55rem 0.6rem;
+		border: 1px solid rgb(var(--midnight-rgb) / 10%);
+		border-radius: 0.45rem;
+		background: rgb(var(--midnight-rgb) / 3%);
+	}
+
+	.roster-person {
+		min-width: 0;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.35rem;
+	}
+
+	.roster-name {
+		font-size: 0.88rem;
+		font-weight: 650;
+		overflow-wrap: anywhere;
+	}
+
+	.roster-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.08rem 0.4rem;
+		border-radius: 999px;
+		background: rgb(37 99 235 / 12%);
+		color: var(--club-blue);
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+		text-transform: uppercase;
+	}
+
+	.roster-eject {
+		flex-shrink: 0;
+		border: 1px solid rgb(185 28 28 / 28%);
+		border-radius: 0.35rem;
+		background: #fff5f5;
+		color: #9b1c1c;
+		font-size: 0.78rem;
+		font-weight: 700;
+		min-height: 1.85rem;
+		padding: 0.2rem 0.55rem;
+		cursor: pointer;
+	}
+
+	.roster-eject:disabled {
+		opacity: 0.55;
+		cursor: wait;
+	}
+
+	.roster-empty,
+	.roster-note {
+		margin: 0.65rem 0 0;
+		color: var(--quiet-steel);
+		font-size: 0.8rem;
+	}
+
 </style>
