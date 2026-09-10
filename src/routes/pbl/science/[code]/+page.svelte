@@ -596,9 +596,12 @@
 
 	.toolbar {
 		display: flex;
+		flex: 0 0 auto;
 		flex-wrap: wrap;
 		align-items: center;
+		align-self: stretch;
 		justify-content: space-between;
+		height: auto;
 		padding: 0.45rem 0.85rem;
 		gap: 0.65rem;
 		background: #221f22;
@@ -628,6 +631,9 @@
 	}
 
 	.toolbar button:not(.run) {
+		flex: 0 0 auto;
+		align-self: center;
+		height: auto;
 		min-height: 2.15rem;
 		margin-inline-start: 0.35rem;
 		border: 0;
@@ -638,6 +644,9 @@
 	}
 
 	.run {
+		flex: 0 0 auto;
+		align-self: center;
+		height: auto;
 		min-height: 2.35rem;
 		padding-inline: 1.1rem;
 	}
@@ -680,18 +689,28 @@
 	}
 
 	.console {
-		display: grid;
+		display: flex;
+		flex-direction: column;
+		align-content: flex-start;
+		min-height: 0;
 		border-block-start: 1px solid #3e3b3f;
 		background: #221f22;
 	}
 
 	.console-tabs {
 		display: flex;
+		flex: 0 0 auto;
+		align-items: center;
+		align-self: flex-start;
 		gap: 0.15rem;
 		padding: 0.35rem 0.55rem 0;
+		height: auto;
 	}
 
 	.console-tabs button {
+		flex: 0 0 auto;
+		align-self: flex-start;
+		height: auto;
 		min-height: 2.15rem;
 		padding: 0.3rem 0.75rem;
 		border: 0;
@@ -708,6 +727,7 @@
 	}
 
 	.output {
+		flex: 1 1 auto;
 		min-height: 7rem;
 		border: 0;
 		border-radius: 0;
@@ -744,13 +764,18 @@
 		.pane-switch {
 			display: flex;
 			flex-wrap: wrap;
+			align-items: center;
+			align-self: flex-start;
 			grid-column: 1 / -1;
+			height: auto;
 			background: #fff;
 			border-block-end: var(--rule);
 		}
 
 		.pane-switch button {
-			flex: 1;
+			flex: 1 1 0;
+			align-self: center;
+			height: auto;
 			min-height: 2.75rem;
 			border: 0;
 			background: #fff;
@@ -783,7 +808,7 @@
 
 	@media (min-width: 64rem) {
 		.studio {
-			grid-template-columns: var(--lesson-width, 20rem) 0.5rem minmax(0, 1fr);
+			grid-template-columns: var(--lesson-width, 20rem) 1px minmax(0, 1fr);
 		}
 
 		.lesson {
@@ -792,18 +817,32 @@
 			overflow: hidden;
 		}
 
+		.split-x,
+		.split-y {
+			position: relative;
+			z-index: 2;
+		}
+
+		/* Expand hit target without reserving gutter layout space. */
+		.split-x::before,
+		.split-y::before {
+			content: '';
+			position: absolute;
+		}
+
 		.split-x {
 			display: block;
 			cursor: col-resize;
-			background:
-				linear-gradient(#d7d9de, #d7d9de) center / 2px 100% no-repeat;
+			background: #d7d9de;
+		}
+
+		.split-x::before {
+			inset: 0 -5px;
 		}
 
 		.split-x:hover,
 		.split-x:active {
-			background:
-				linear-gradient(rgb(var(--club-blue-rgb) / 55%), rgb(var(--club-blue-rgb) / 55%))
-					center / 2px 100% no-repeat;
+			background: rgb(var(--club-blue-rgb) / 55%);
 		}
 
 		.work {
@@ -812,16 +851,19 @@
 
 		.split-y {
 			display: block;
-			flex: 0 0 0.5rem;
+			flex: 0 0 1px;
+			height: 1px;
 			cursor: row-resize;
-			background:
-				linear-gradient(#3e3b3f, #3e3b3f) center / 100% 2px no-repeat;
+			background: #3e3b3f;
+		}
+
+		.split-y::before {
+			inset: -5px 0;
 		}
 
 		.split-y:hover,
 		.split-y:active {
-			background:
-				linear-gradient(#78dce8, #78dce8) center / 100% 2px no-repeat;
+			background: #78dce8;
 		}
 
 		.work-bottom {
@@ -832,6 +874,7 @@
 
 		.console {
 			flex: 1 1 auto;
+			min-height: 0;
 		}
 
 		.console[data-tab='testcase'] .output {
