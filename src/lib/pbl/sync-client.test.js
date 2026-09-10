@@ -359,3 +359,70 @@ describe('room sync client', () => {
 		await sync.pull();
 	});
 });
+
+	it('does not wipe a newer local lastCheck on a double 409 conflict', async () => {
+		const states = [];
+		const bodies = [];
+		const sync = createRoomSync({
+			code: 'AB23JK',
+			onState: (state) => states.push(state),
+			fetch: async (url, init) => {
+				if ((init?.method ?? 'GET') === 'PUT') {
+					bodies.push(JSON.parse(String(init?.body ?? '{}')));
+					return new Response(
+						JSON.stringify({
+							conflict: true,
+							room: {
+								code: 'AB23JK',
+								source: 'from-server',
+								version: 5,
+								unlockedStep: 0,
+								lastCheck: {
+									step: 0,
+									passed: false,
+									message: 'old fail',
+									at: '2026-09-08T15:00:00.000Z'
+								}
+							}
+						}),
+						{ status: 409 }
+					);
+				}
+				return new Response(
+					JSON.stringify({
+						code: 'AB23JK',
+						source: 'start',
+						version: 3,
+						unlockedStep: 0,
+						lastCheck: {
+							step: 0,
+							passed: false,
+							message: 'old fail',
+							at: '2026-09-08T15:00:00.000Z'
+						}
+					})
+				);
+			}
+		});
+		await sync.join();
+		sync.update({
+			source: 'print("fixed")',
+			unlockedStep: 1,
+			lastCheck: {
+				step: 0,
+				passed: true,
+				message: 'Printed a custom message. Starter text is gone.',
+				at: '2026-09-08T15:01:00.000Z'
+			}
+		});
+		await sync.flush();
+		expect(bodies.length).toBeGreaterThanOrEqual(2);
+		expect(states.at(-1)?.source).toBe('from-server');
+		expect(states.at(-1)?.lastCheck).toMatchObject({
+			passed: true,
+			message: 'Printed a custom message. Starter text is gone.',
+			at: '2026-09-08T15:01:00.000Z'
+		});
+		expect(states.at(-1)?.unlockedStep).toBe(1);
+		sync.stop();
+	});

@@ -30,6 +30,45 @@ export function normalizeOpenedHints(value) {
 	return opened;
 }
 
+
+/**
+ * @param {{ at?: string } | null | undefined} candidate
+ * @param {{ at?: string } | null | undefined} baseline
+ */
+export function isNewerLastCheck(candidate, baseline) {
+	if (!candidate || typeof candidate !== 'object') return false;
+	if (!baseline || typeof baseline !== 'object') return true;
+	const nextAt = Date.parse(/** @type {{ at?: string }} */ (candidate).at ?? '');
+	const prevAt = Date.parse(/** @type {{ at?: string }} */ (baseline).at ?? '');
+	if (Number.isFinite(nextAt) && Number.isFinite(prevAt)) return nextAt > prevAt;
+	if (Number.isFinite(nextAt) && !Number.isFinite(prevAt)) return true;
+	return false;
+}
+
+/**
+ * Keep a fresher local lastCheck (and unlock progress) when server state is older.
+ * @param {Record<string, unknown>} serverRoom
+ * @param {Record<string, unknown> | null | undefined} localRoom
+ */
+export function mergeRoomPreferringNewerLastCheck(serverRoom, localRoom) {
+	if (!serverRoom || typeof serverRoom !== 'object') return serverRoom;
+	const localCheck = localRoom && typeof localRoom === 'object' ? localRoom.lastCheck : null;
+	const serverCheck = serverRoom.lastCheck;
+	if (!isNewerLastCheck(/** @type {any} */ (localCheck), /** @type {any} */ (serverCheck))) {
+		return serverRoom;
+	}
+	const merged = { ...serverRoom, lastCheck: localCheck };
+	const localUnlocked = Number(localRoom?.unlockedStep);
+	const serverUnlocked = Number(serverRoom.unlockedStep);
+	if (
+		Number.isFinite(localUnlocked) &&
+		(!Number.isFinite(serverUnlocked) || localUnlocked > serverUnlocked)
+	) {
+		merged.unlockedStep = localUnlocked;
+	}
+	return merged;
+}
+
 /**
  * @param {{
  *   code: string,
