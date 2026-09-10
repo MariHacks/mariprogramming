@@ -43,6 +43,9 @@ export function createWorkshopController(options) {
 	let replacePending = false;
 	/** @type {string | null} */
 	let pinnedStepSource = null;
+	/** Stable Yjs snapshot for the pin — encode once, never re-mint on poll. */
+	/** @type {string} */
+	let pinnedYjs = '';
 	let pinUntil = 0;
 	/** @type {any} */
 	let room = {
@@ -155,8 +158,13 @@ export function createWorkshopController(options) {
 				yjsState = '';
 			}
 		}
+		// Pin source + the one-shot Yjs encode. Polls must reuse this snapshot —
+		// re-encoding each poll mints a foreign CRDT that applyYjsState merges
+		// into duplicates (first-open starter drip).
 		pinnedStepSource = source;
+		pinnedYjs = yjsState;
 		pinUntil = Date.now() + 400;
+		editorEpoch += 1;
 		room = {
 			...room,
 			source,
@@ -295,16 +303,15 @@ export function createWorkshopController(options) {
 		delete merged.currentStep;
 		merged.editingStep = viewStep;
 		// Hold the post-hop buffer until the user types — blocks stale live CRDT bleed.
+		// Reuse the pin-time Yjs bytes; never encodeSourceAsYjs here (foreign snapshots drip).
 		if (pinnedStepSource !== null) {
 			const keyPin = String(viewStep);
 			merged.source = pinnedStepSource;
 			merged.stepSources = { ...merged.stepSources, [keyPin]: pinnedStepSource };
-			try {
-				const encoded = encodeSourceAsYjs(pinnedStepSource);
-				merged.yjsState = encoded;
-				merged.stepYjs = { ...merged.stepYjs, [keyPin]: encoded };
-			} catch {
-				/* keep existing yjs */
+			const stableYjs = pinnedYjs || prevYjs;
+			if (stableYjs) {
+				merged.yjsState = stableYjs;
+				merged.stepYjs = { ...merged.stepYjs, [keyPin]: stableYjs };
 			}
 		}
 		room = merged;
@@ -381,14 +388,22 @@ export function createWorkshopController(options) {
 		const source = payload.source ?? room.source;
 		const yjsState = payload.yjsState ?? room.yjsState;
 		const awarenessState = payload.awarenessState ?? room.awarenessState;
-		// Keep hop pin briefly so remount onCollab echoes cannot clobber the loaded slot.
+		// Hop pin: polls reuse pinnedYjs. Remount onCollab echoes (other step's buffer)
+		// are dropped during pinUntil; real edits clear the pin and apply.
 		if (!replaceEditor) {
-			if (pinnedStepSource !== null && Date.now() < pinUntil && source !== pinnedStepSource) {
-				// Drop remount garbage during the hop pin window.
-				return;
+			if (
+				pinnedStepSource !== null &&
+				Date.now() < pinUntil &&
+				source !== pinnedStepSource
+			) {
+				const looksLikeOtherStep = Object.entries(room.stepSources || {}).some(
+					([k, v]) => Number(k) !== viewStep && v === source
+				);
+				if (looksLikeOtherStep) return;
 			}
 			if (pinnedStepSource !== null && source !== pinnedStepSource) {
 				pinnedStepSource = null;
+				pinnedYjs = '';
 			}
 		}
 		if (replaceEditor) {
@@ -437,8 +452,7 @@ export function createWorkshopController(options) {
 		replacePending = true;
 		persistViewStep();
 		viewStep = stepId;
-		loadViewStep(stepId);
-		editorEpoch += 1;
+		loadViewStep(stepId); // bumps editorEpoch + pins stable yjs
 		sync.update({
 			stepSources: room.stepSources,
 			stepYjs: room.stepYjs,
