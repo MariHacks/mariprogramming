@@ -128,6 +128,16 @@ export function createDrizzlePblRepository(transaction) {
 				await transaction.select().from(pblRooms).where(eq(pblRooms.code, code)).limit(1)
 			);
 		},
+		/** Lightweight poll: version only (no yjs / step maps). @param {string} code */
+		async findRoomVersion(code) {
+			return oneRow(
+				await transaction
+					.select({ code: pblRooms.code, version: pblRooms.version })
+					.from(pblRooms)
+					.where(eq(pblRooms.code, code))
+					.limit(1)
+			);
+		},
 		/**
 		 * @param {string} roomId
 		 * @param {string} memberId
@@ -265,6 +275,12 @@ export function createMemoryPblRepository() {
 		/** @param {string} code */
 		async findRoomByCode(code) {
 			return rooms.find((row) => row.code === code) ?? null;
+		},
+		/** @param {string} code */
+		async findRoomVersion(code) {
+			const row = rooms.find((item) => item.code === code);
+			if (!row) return null;
+			return { code: row.code, version: row.version };
 		},
 		/**
 		 * @param {string} roomId
@@ -470,6 +486,19 @@ export function createPblStore(repository, clock = {}) {
 		 * @param {string} [viewerMemberId]
 		 * @param {string} [userId] signed-in club user — used to rebind a stale/missing cookie
 		 */
+		/**
+		 * Cheap version probe for conditional polls (avoids shipping yjs blobs).
+		 * @param {unknown} code
+		 * @returns {Promise<number>}
+		 */
+		async getRoomVersion(code) {
+			const normalized = normalizeRoomCode(code);
+			if (!normalized) throw new PblInputError('That room code is not valid.');
+			const row = await repository.findRoomVersion(normalized);
+			if (!row) throw new PblNotFoundError();
+			return Number(row.version) || 0;
+		},
+
 		async getRoom(code, viewerMemberId, userId) {
 			const normalized = normalizeRoomCode(code);
 			if (!normalized) throw new PblInputError('That room code is not valid.');

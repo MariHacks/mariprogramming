@@ -464,4 +464,37 @@ describe('room sync client', () => {
 		sync.stop();
 	});
 
+	it('skips applyRoom on 304 polls and sends known version', async () => {
+		vi.useFakeTimers();
+		/** @type {any[]} */
+		const states = [];
+		/** @type {Array<{ url: string, init?: RequestInit }>} */
+		const calls = [];
+		const sync = createRoomSync({
+			code: 'AB23JK',
+			pollMs: 1000,
+			onState: (state) => states.push(state),
+			fetch: async (url, init) => {
+				calls.push({ url: String(url), init });
+				const method = init?.method ?? 'GET';
+				if (String(url).endsWith('/join')) {
+					return new Response(JSON.stringify({ code: 'AB23JK', source: 'print(1)', version: 3 }));
+				}
+				if (method === 'GET') {
+					const headers = new Headers(init?.headers);
+					expect(headers.get('x-pbl-version')).toBe('3');
+					return new Response(null, { status: 304 });
+				}
+				return new Response('{}', { status: 500 });
+			}
+		});
+		await sync.join();
+		const afterJoin = states.length;
+		sync.start();
+		await vi.advanceTimersByTimeAsync(1000);
+		await Promise.resolve();
+		expect(states.length).toBe(afterJoin);
+		sync.stop();
+	});
+
 });

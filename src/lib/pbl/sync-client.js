@@ -3,7 +3,10 @@ import {
 	mergeRoomPreferringNewerLastCheck
 } from './room-state.js';
 
-const POLL_MS = 250;
+/** Active collab poll — was 250ms; 1s still feels live, ~4× less Neon churn. */
+const POLL_MS = 1000;
+/** Back off further when the tab is hidden. */
+const HIDDEN_POLL_MS = 15000;
 const PUSH_MS = 400;
 
 /**
@@ -11,6 +14,7 @@ const PUSH_MS = 400;
  *   code: string,
  *   fetch?: typeof fetch,
  *   pollMs?: number,
+ *   hiddenPollMs?: number,
  *   pushMs?: number,
  *   onState: (state: any) => void,
  *   onError?: (message: string) => void
@@ -18,7 +22,8 @@ const PUSH_MS = 400;
  */
 export function createRoomSync(options) {
 	const fetchImpl = options.fetch ?? fetch;
-	const pollMs = options.pollMs ?? POLL_MS;
+	const activePollMs = options.pollMs ?? POLL_MS;
+	const hiddenPollMs = options.hiddenPollMs ?? HIDDEN_POLL_MS;
 	const pushMs = options.pushMs ?? PUSH_MS;
 	let version = 0;
 	let dirty = false;
@@ -29,9 +34,17 @@ export function createRoomSync(options) {
 	/** @type {Record<string, unknown>} */
 	let local = {};
 	let stopped = false;
+	/** @type {(() => void) | null} */
+	let onVisibility = null;
+
+	function currentPollMs() {
+		if (typeof document !== 'undefined' && document.hidden) return hiddenPollMs;
+		return activePollMs;
+	}
 
 	async function request(path, init) {
 		const response = await fetchImpl(path, init);
+		if (response.status === 304) return { unchanged: true };
 		const payload = await response.json().catch(() => ({}));
 		if (!response.ok) {
 			const message =
@@ -92,10 +105,15 @@ export function createRoomSync(options) {
 
 	async function pull() {
 		if (stopped) return;
-		const payload = await request(`/api/pbl/rooms/${options.code}`, {
-			headers: { accept: 'application/json' }
-		});
-		if (payload && !dirty) applyRoom(payload);
+		/** @type {Record<string, string>} */
+		const headers = { accept: 'application/json' };
+		if (version > 0) {
+			headers['x-pbl-version'] = String(version);
+			headers['if-none-match'] = `"${version}"`;
+		}
+		const payload = await request(`/api/pbl/rooms/${options.code}`, { headers });
+		if (!payload || payload.unchanged) return;
+		if (!dirty) applyRoom(payload);
 	}
 
 	/** @param {Record<string, unknown>} base @param {Record<string, unknown>} server */
@@ -182,17 +200,30 @@ export function createRoomSync(options) {
 			method: 'POST',
 			headers: { accept: 'application/json' }
 		});
-		if (!payload) return null;
+		if (!payload || payload.unchanged) return null;
 		await applyRoom(payload);
 		return payload;
+	}
+
+	function armPoll() {
+		if (pollTimer) clearInterval(pollTimer);
+		pollTimer = setInterval(() => {
+			void pull();
+		}, currentPollMs());
 	}
 
 	function start() {
 		stopped = false;
 		void pull();
-		pollTimer = setInterval(() => {
-			void pull();
-		}, pollMs);
+		armPoll();
+		if (typeof document !== 'undefined' && !onVisibility) {
+			onVisibility = () => {
+				if (stopped) return;
+				armPoll();
+				if (!document.hidden) void pull();
+			};
+			document.addEventListener('visibilitychange', onVisibility);
+		}
 	}
 
 	function stop() {
@@ -201,6 +232,10 @@ export function createRoomSync(options) {
 		if (pushTimer) clearTimeout(pushTimer);
 		pollTimer = null;
 		pushTimer = null;
+		if (onVisibility && typeof document !== 'undefined') {
+			document.removeEventListener('visibilitychange', onVisibility);
+			onVisibility = null;
+		}
 	}
 
 	return { start, stop, update, join, pull, flush };
