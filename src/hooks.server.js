@@ -113,12 +113,14 @@ export function createHandle({
 		const finalize = (response) => applyRoutePolicy(response, event.url.pathname);
 		const authPath = isPath(event.url.pathname, AUTH_PATH);
 		const staffPath = isPath(event.url.pathname, STAFF_PATH);
+		const pblSessionPath =
+			isPath(event.url.pathname, '/api/pbl') || isPath(event.url.pathname, '/pbl');
 		const publicStaffSignIn = event.url.pathname === PUBLIC_STAFF_SIGN_IN_PATH;
 		const sessionCookie = hasStaffSessionCookie(event.request);
 		const skipAuth =
 			isBuilding ||
 			(publicStaffSignIn && !sessionCookie) ||
-			(!authPath && !staffPath && !sessionCookie);
+			(!authPath && !staffPath && !pblSessionPath && !sessionCookie);
 
 		if (skipAuth) {
 			return finalize(await render(event));

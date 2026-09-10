@@ -8,7 +8,8 @@ import {
 	memberFromRequest,
 	pblErrorResponse,
 	pblJson,
-	readPblJson
+	readPblJson,
+	requirePblSession
 } from './http.js';
 
 const ID = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -98,6 +99,16 @@ describe('PBL HTTP helpers', () => {
 		).rejects.toMatchObject({ status: 413 });
 	});
 
+	it('requires a MariTools session user id', () => {
+		expect(() => requirePblSession({ maritools: null })).toThrow();
+		try {
+			requirePblSession({ maritools: null });
+		} catch (error) {
+			expect(error).toMatchObject({ status: 401 });
+		}
+		expect(requirePblSession({ maritools: { userId: 'u1' } })).toEqual({ userId: 'u1' });
+	});
+
 	it('reuses or mints a member cookie', () => {
 		const existing = memberFromRequest(
 			new Request('https://club.example/api/pbl/rooms', {
@@ -161,7 +172,12 @@ describe('PBL HTTP helpers', () => {
 			}
 		});
 		const room = await runtime.withStore((store) =>
-			store.createRoom({ pblId: 'science', teamName: 'Preview lab', memberId: ID })
+			store.createRoom({
+				pblId: 'science',
+				teamName: 'Preview lab',
+				memberId: ID,
+				userId: 'user-preview'
+			})
 		);
 		expect(room.teamName).toBe('Preview lab');
 		expect(room.joinable).toBe(true);

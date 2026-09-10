@@ -126,6 +126,27 @@ describe('server authentication hook', () => {
 		expect(response.headers.get('cache-control')).toBe('private, no-store');
 	});
 
+	it('loads club session on PBL routes even without a session cookie', async () => {
+		const setup = harness({
+			session: {
+				user: { id: 'user-123', email: 'lab@marihacks.com', emailVerified: true },
+				session: {
+					id: 'session-123',
+					userId: 'user-123',
+					expiresAt: new Date('2030-01-01T00:00:00.000Z')
+				}
+			},
+			account: { providerId: 'google', accountId: 'google-subject-123', userId: 'user-123' }
+		});
+		const current = event('/pbl/science');
+		await setup.handle({ event: current, resolve: setup.resolve });
+		expect(setup.withAuth).toHaveBeenCalledOnce();
+		expect(current.locals.maritools?.userId).toBe('user-123');
+		const api = event('/api/pbl/rooms');
+		await setup.handle({ event: api, resolve: setup.resolve });
+		expect(setup.withAuth).toHaveBeenCalledTimes(2);
+	});
+
 	it('keeps an ordinary public request without a staff cookie independent of auth configuration', async () => {
 		const setup = harness({ runtimeError: new Error('database-url-secret') });
 		const current = event('/events');

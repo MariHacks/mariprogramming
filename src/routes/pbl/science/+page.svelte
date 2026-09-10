@@ -1,18 +1,47 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/stores';
 	import SectionIntro from '$lib/components/site/SectionIntro.svelte';
 	import { clubContent } from '$lib/content/club';
 	import { SCIENCE_PBL_ID } from '$lib/pbl/catalog.js';
 	import { normalizeRoomCode } from '$lib/pbl/room-code.js';
+	import { requestStudentAuthorization } from '$lib/auth/student-sign-in.js';
+
+	/** @type {{ signedIn?: boolean, email?: string | null }} */
+	export let data;
+
+	$: signedIn = Boolean(data?.signedIn);
+	$: accountHref = resolve('/tools/account', {});
 
 	let teamName = '';
 	let joinCode = '';
 	let error = '';
 	let busy = false;
+	let signingIn = false;
+
+	async function startSignIn() {
+		error = '';
+		signingIn = true;
+		try {
+			const callbackURL = `${$page.url.origin}${$page.url.pathname}`;
+			const url = await requestStudentAuthorization(callbackURL);
+			window.location.assign(url);
+		} catch (err) {
+			signingIn = false;
+			error =
+				err instanceof Error && err.message
+					? err.message
+					: 'Sign-in is unavailable. Try again from your club account page.';
+		}
+	}
 
 	async function createRoom() {
 		error = '';
+		if (!signedIn) {
+			error = 'Sign in with your club Google account before creating a team.';
+			return;
+		}
 		busy = true;
 		try {
 			const response = await fetch('/api/pbl/rooms', {
@@ -35,6 +64,10 @@
 
 	async function joinRoom() {
 		error = '';
+		if (!signedIn) {
+			error = 'Sign in with your club Google account before joining a team.';
+			return;
+		}
 		const code = normalizeRoomCode(joinCode);
 		if (!code) {
 			error = 'Enter a 6-character room code.';
@@ -83,23 +116,43 @@
 			</ul>
 		</div>
 
-		<div class="join-panels">
+		{#if !signedIn}
+			<div class="sign-in-card" role="region" aria-labelledby="pbl-sign-in-title">
+				<h2 id="pbl-sign-in-title">Club account required</h2>
+				<p>
+					Create or join a workshop team with the same Google account you use for MariTools. That
+					way staff can see who is on each team.
+				</p>
+				<div class="sign-in-actions">
+					<button class="button-primary" type="button" disabled={signingIn} on:click={startSignIn}>
+						{signingIn ? 'Opening Google…' : 'Sign in with Google'}
+					</button>
+					<a class="quiet-link" href={accountHref}>Open club account page <span aria-hidden="true">→</span></a>
+				</div>
+			</div>
+		{:else}
+			<p class="signed-in-note">
+				Signed in{data.email ? ` as ${data.email}` : ''}. You can create or join a team below.
+			</p>
+		{/if}
+
+		<div class="join-panels" class:disabled-panels={!signedIn}>
 			<form class="panel" on:submit|preventDefault={createRoom} aria-labelledby="create-title">
 				<h2 id="create-title">Create a team</h2>
 				<label>
 					Team name
-					<input bind:value={teamName} name="teamName" maxlength="80" required />
+					<input bind:value={teamName} name="teamName" maxlength="80" required disabled={!signedIn || busy} />
 				</label>
-				<button class="button-primary" type="submit" disabled={busy}>Create room</button>
+				<button class="button-primary" type="submit" disabled={!signedIn || busy}>Create room</button>
 			</form>
 
 			<form class="panel" on:submit|preventDefault={joinRoom} aria-labelledby="join-title">
 				<h2 id="join-title">Join a team</h2>
 				<label>
 					Room code
-					<input bind:value={joinCode} name="joinCode" maxlength="12" autocomplete="off" />
+					<input bind:value={joinCode} name="joinCode" maxlength="12" autocomplete="off" disabled={!signedIn || busy} />
 				</label>
-				<button class="button-secondary" type="submit" disabled={busy}>Join room</button>
+				<button class="button-secondary" type="submit" disabled={!signedIn || busy}>Join room</button>
 			</form>
 		</div>
 
@@ -119,6 +172,44 @@
 </section>
 
 <style>
+
+	.sign-in-card {
+		display: grid;
+		gap: 0.75rem;
+		padding: 1.15rem 1.35rem 1.25rem;
+		border: var(--rule);
+		border-radius: 0.5rem;
+		background: #fff;
+	}
+
+	.sign-in-card h2 {
+		font-size: var(--text-xl);
+	}
+
+	.sign-in-card p {
+		margin: 0;
+		color: var(--quiet-steel);
+		font-size: var(--text-sm);
+		line-height: 1.55;
+	}
+
+	.sign-in-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.85rem 1.25rem;
+	}
+
+	.signed-in-note {
+		margin: 0;
+		color: var(--quiet-steel);
+		font-size: var(--text-sm);
+	}
+
+	.disabled-panels {
+		opacity: 0.72;
+	}
+
 	.join-frame {
 		gap: clamp(1.75rem, 4vw, 2.75rem);
 	}
