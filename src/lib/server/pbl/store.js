@@ -19,7 +19,8 @@ import {
 	mergeYjsStates,
 	normalizeYjsState
 } from '$lib/pbl/yjs-collab.js';
-import { pblRoomMembers, pblRooms, pblStepSubmissions, user } from '../db/schema';
+import { mtStudentProfiles, pblRoomMembers, pblRooms, pblStepSubmissions, user } from '../db/schema';
+import { isStaffAccount } from '../maritools/community.js';
 import { generateRoomCode } from './ids.js';
 
 export class PblInputError extends Error {
@@ -60,6 +61,23 @@ export class PblConflictError extends Error {
 /** @param {any} rows */
 function oneRow(rows) {
 	return Array.isArray(rows) && rows[0] ? rows[0] : null;
+}
+
+
+const EXECUTIVE_ROLES = new Set(['moderator', 'staff', 'executive']);
+const MAX_SCIENCE_UNLOCKED_STEP = SCIENCE_STEP_COUNT - 1;
+
+/**
+ * Club owners who should get every Science workshop step unlocked.
+ * UI “Executive” maps to MariTools `moderator`; also staff, legacy executive, and staff emails.
+ * @param {{ role?: string | null, email?: string | null } | null | undefined} actor
+ */
+export function isExecutiveOwner(actor) {
+	if (!actor) return false;
+	const role = typeof actor.role === 'string' ? actor.role : null;
+	const email = typeof actor.email === 'string' ? actor.email : null;
+	if (role && EXECUTIVE_ROLES.has(role)) return true;
+	return isStaffAccount(email, role);
 }
 
 /** @param {any} row @param {string} [viewerMemberId] */
@@ -182,6 +200,28 @@ export function createDrizzlePblRepository(transaction) {
 				.orderBy(desc(pblStepSubmissions.createdAt));
 		},
 		/**
+		 * @param {string} userId
+		 * @returns {Promise<{ role: string | null, email: string | null } | null>}
+		 */
+		async findClubActor(userId) {
+			if (typeof userId !== 'string' || userId.length === 0) return null;
+			const rows = await transaction
+				.select({
+					role: mtStudentProfiles.role,
+					email: user.email
+				})
+				.from(user)
+				.leftJoin(mtStudentProfiles, eq(mtStudentProfiles.userId, user.id))
+				.where(eq(user.id, userId))
+				.limit(1);
+			const row = oneRow(rows);
+			if (!row) return null;
+			return {
+				role: typeof row.role === 'string' ? row.role : null,
+				email: typeof row.email === 'string' ? row.email : null
+			};
+		},
+		/**
 		 * @param {string} roomId
 		 * @param {string} memberId
 		 */
@@ -289,6 +329,10 @@ export function createMemoryPblRepository() {
 					return bTime - aTime;
 				});
 		},
+		/** @param {string} userId */
+		async findClubActor(_userId) {
+			return null;
+		},
 		/**
 		 * @param {string} roomId
 		 * @param {string} memberId
@@ -327,11 +371,47 @@ export function _resetSharedMemoryPblRepository() {
 
 /**
  * @param {any} repository
- * @param {{ now?: () => Date, createCode?: () => string }} [clock]
+ * @param {{
+ *   now?: () => Date,
+ *   createCode?: () => string,
+ *   findClubActor?: (userId: string) => Promise<{ role: string | null, email: string | null } | null>
+ * }} [clock]
  */
 export function createPblStore(repository, clock = {}) {
 	const now = clock.now ?? (() => new Date());
 	const createCode = clock.createCode ?? generateRoomCode;
+
+	/** @param {string} userId */
+	async function resolveClubActor(userId) {
+		if (typeof clock.findClubActor === 'function') {
+			return clock.findClubActor(userId);
+		}
+		if (typeof repository.findClubActor === 'function') {
+			return repository.findClubActor(userId);
+		}
+		return null;
+	}
+
+	/**
+	 * Persist full Science unlock when the room driver is an executive owner.
+	 * @param {any} row
+	 */
+	async function elevateExecutiveUnlock(row) {
+		if (!row || Number(row.unlockedStep) >= MAX_SCIENCE_UNLOCKED_STEP) return row;
+		const driverMemberId = row.driverMemberId;
+		if (typeof driverMemberId !== 'string' || driverMemberId.length === 0) return row;
+		const driver = await repository.findMember(row.id, driverMemberId);
+		const driverUserId = driver?.userId;
+		if (typeof driverUserId !== 'string' || driverUserId.length === 0) return row;
+		const actor = await resolveClubActor(driverUserId);
+		if (!isExecutiveOwner(actor)) return row;
+		const updated = await repository.updateRoom(row.code, row.version, {
+			unlockedStep: MAX_SCIENCE_UNLOCKED_STEP,
+			version: row.version + 1,
+			updatedAt: now()
+		});
+		return updated ?? row;
+	}
 
 	async function uniqueCode() {
 		for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -354,6 +434,8 @@ export function createPblStore(repository, clock = {}) {
 			if (typeof input.userId !== 'string' || input.userId.length === 0) {
 				throw new PblInputError('Sign in with your club Google account to create a team.', 401);
 			}
+			const creator = await resolveClubActor(input.userId);
+			const unlockedStep = isExecutiveOwner(creator) ? MAX_SCIENCE_UNLOCKED_STEP : 0;
 			const enteredAt = now();
 			const row = await repository.insertRoom({
 				code: await uniqueCode(),
@@ -361,7 +443,7 @@ export function createPblStore(repository, clock = {}) {
 				teamName,
 				source: SCIENCE_STARTER_SOURCE,
 				currentStep: 0,
-				unlockedStep: 0,
+				unlockedStep,
 				lastCheck: null,
 				lastRun: null,
 				openedHints: {},
@@ -387,8 +469,9 @@ export function createPblStore(repository, clock = {}) {
 		async getRoom(code, viewerMemberId) {
 			const normalized = normalizeRoomCode(code);
 			if (!normalized) throw new PblInputError('That room code is not valid.');
-			const row = await repository.findRoomByCode(normalized);
+			let row = await repository.findRoomByCode(normalized);
 			if (!row) throw new PblNotFoundError();
+			row = await elevateExecutiveUnlock(row);
 			if (viewerMemberId) {
 				const membership = await repository.findMember(row.id, viewerMemberId);
 				if (!membership) {

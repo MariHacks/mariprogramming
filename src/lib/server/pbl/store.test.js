@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SCIENCE_STARTER_SOURCE } from '$lib/pbl/science-workshop.js';
+import { SCIENCE_STARTER_SOURCE, SCIENCE_STEP_COUNT } from '$lib/pbl/science-workshop.js';
 import {
 	PblConflictError,
 	PblFullError,
@@ -10,6 +10,7 @@ import {
 	createMemoryPblRepository,
 	createPblStore,
 	getSharedMemoryPblRepository,
+	isExecutiveOwner,
 	roomFromRow
 } from './store.js';
 
@@ -91,6 +92,9 @@ function memoryRepo(seed = roomRow()) {
 		},
 		async listSubmissions(roomId) {
 			return (this.submissions ?? []).filter((row) => row.roomId === roomId);
+		},
+		async findClubActor(_userId) {
+			return null;
 		},
 		async deleteMember(roomId, memberId) {
 			const index = members.findIndex((row) => row.roomId === roomId && row.memberId === memberId);
@@ -566,5 +570,73 @@ describe('PBL room store', () => {
 			})
 		).rejects.toBeInstanceOf(PblInputError);
 	});
+
+
+	it('keeps unlockedStep at 0 when a student creates a room', async () => {
+		const repo = createMemoryPblRepository();
+		const store = createPblStore(repo, {
+			now: () => NOW,
+			createCode: () => 'AB23JK',
+			findClubActor: async () => ({ role: 'student', email: 'student@marihacks.com' })
+		});
+		const room = await store.createRoom({
+			pblId: 'science',
+			teamName: 'Student lab',
+			memberId: MEMBER,
+			userId: USER
+		});
+		expect(room.unlockedStep).toBe(0);
+		expect(isExecutiveOwner({ role: 'student', email: 'student@marihacks.com' })).toBe(false);
+	});
+
+	it.each(['moderator', 'staff', 'executive'])(
+		'unlocks every Science step when a %s creates a room',
+		async (role) => {
+			const repo = createMemoryPblRepository();
+			const store = createPblStore(repo, {
+				now: () => NOW,
+				createCode: () => 'AB23JK',
+				findClubActor: async () => ({ role, email: 'exec@marihacks.com' })
+			});
+			const room = await store.createRoom({
+				pblId: 'science',
+				teamName: 'Exec lab',
+				memberId: MEMBER,
+				userId: USER
+			});
+			expect(room.unlockedStep).toBe(SCIENCE_STEP_COUNT - 1);
+		}
+	);
+
+	it('unlocks when the creator is a staff email even without an executive role', async () => {
+		const repo = createMemoryPblRepository();
+		const store = createPblStore(repo, {
+			now: () => NOW,
+			createCode: () => 'AB23JK',
+			findClubActor: async () => ({ role: 'student', email: 'team@marihacks.com' })
+		});
+		const room = await store.createRoom({
+			pblId: 'science',
+			teamName: 'Team lab',
+			memberId: MEMBER,
+			userId: USER
+		});
+		expect(room.unlockedStep).toBe(SCIENCE_STEP_COUNT - 1);
+	});
+
+	it('elevates and persists unlockedStep when getRoom sees an executive driver', async () => {
+		const repo = memoryRepo(roomRow({ unlockedStep: 0, version: 1 }));
+		repo.findClubActor = async (userId) =>
+			userId === USER ? { role: 'moderator', email: 'mod@marihacks.com' } : null;
+		const store = createPblStore(repo, { now: () => NOW });
+		const room = await store.getRoom('AB23JK');
+		expect(room.unlockedStep).toBe(SCIENCE_STEP_COUNT - 1);
+		expect(repo.rooms[0].unlockedStep).toBe(SCIENCE_STEP_COUNT - 1);
+		expect(repo.rooms[0].version).toBe(2);
+		const again = await store.getRoom('AB23JK');
+		expect(again.unlockedStep).toBe(SCIENCE_STEP_COUNT - 1);
+		expect(repo.rooms[0].version).toBe(2);
+	});
+
 
 });
