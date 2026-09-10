@@ -198,6 +198,16 @@
 					<p class="minutes">{state.step.minutes} min</p>
 				</div>
 				<p class="body">{state.step.body}</p>
+				{#if state.step.outputNotes}
+					<section class="examples" aria-label="Output">
+						<h2>Output</h2>
+						<ul class="notes">
+							{#each state.step.outputNotes as note (note)}
+								<li>{note}</li>
+							{/each}
+						</ul>
+					</section>
+				{/if}
 				{#if state.step.notes}
 					<section class="examples" aria-label="Notes">
 						<h2>Examples</h2>
