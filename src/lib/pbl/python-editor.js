@@ -96,19 +96,21 @@ export const MONOKAI_LIGHT = Object.freeze({
  * @returns {EditorThemeMode}
  */
 export function normalizeEditorTheme(value) {
-	return value === 'light' ? 'light' : 'dark';
+	return value === 'dark' ? 'dark' : 'light';
 }
 
 /**
- * Durable preference: localStorage when available, else dark.
+ * Durable preference: localStorage when available, else light.
  * @returns {EditorThemeMode}
  */
 export function readStoredEditorTheme() {
 	try {
-		if (typeof localStorage === 'undefined') return 'dark';
-		return normalizeEditorTheme(localStorage.getItem(EDITOR_THEME_KEY));
+		if (typeof localStorage === 'undefined') return 'light';
+		const stored = localStorage.getItem(EDITOR_THEME_KEY);
+		if (stored === null) return 'light';
+		return normalizeEditorTheme(stored);
 	} catch {
-		return 'dark';
+		return 'light';
 	}
 }
 
@@ -288,7 +290,7 @@ function monokaiPythonHighlight(palette) {
 /**
  * @param {EditorThemeMode} mode
  */
-export function monokaiProOpenTheme(mode = 'dark') {
+export function monokaiProOpenTheme(mode = 'light') {
 	const dark = normalizeEditorTheme(mode) !== 'light';
 	const palette = monokaiPalette(mode);
 	return [monokaiChrome(palette, dark), monokaiPythonHighlight(palette)];
@@ -331,7 +333,7 @@ export function createPythonCollabEditor(parent, options = {}) {
 	const aria = new Compartment();
 	const theme = new Compartment();
 	let canEdit = options.editable !== false;
-	let themeMode = normalizeEditorTheme(options.theme ?? 'dark');
+	let themeMode = normalizeEditorTheme(options.theme ?? 'light');
 	let applyingRemote = false;
 
 	function encode() {

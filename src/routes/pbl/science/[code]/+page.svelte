@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { clubContent } from '$lib/content/club';
 	import PythonEditor from '$lib/pbl/PythonEditor.svelte';
+	import { collabUserFromProfile } from '$lib/pbl/yjs-collab.js';
 	import LessonRichText from '$lib/pbl/LessonRichText.svelte';
 	import {
 		monokaiPalette,
@@ -12,10 +13,13 @@
 	} from '$lib/pbl/python-editor.js';
 	import { createWorkshopController } from '$lib/pbl/workshop-controller.js';
 
+	/** @type {{ data: { collabUser?: { userId?: string, email?: string, name?: string | null } | null } }} */
+	export let data = { collabUser: null };
+
 	const LESSON_WIDTH_KEY = 'pbl-studio-lesson-width';
 	const CONSOLE_HEIGHT_KEY = 'pbl-studio-console-height';
-	const LESSON_MIN = 240;
-	const LESSON_MAX = 560;
+	const LESSON_MIN = 280;
+	const LESSON_MAX = 640;
 	const CONSOLE_MIN = 140;
 	const CONSOLE_MAX = 480;
 
@@ -33,10 +37,10 @@
 	let pane = 'lesson';
 	/** @type {'testcase' | 'output'} */
 	let consoleTab = 'output';
-	let lessonWidth = 320;
+	let lessonWidth = 400;
 	let consoleHeight = 220;
 	/** @type {'dark' | 'light'} */
-	let editorTheme = typeof window !== 'undefined' ? readStoredEditorTheme() : 'dark';
+	let editorTheme = typeof window !== 'undefined' ? readStoredEditorTheme() : 'light';
 	let ready = false;
 
 	$: editorPalette = monokaiPalette(editorTheme);
@@ -54,6 +58,8 @@
 		state.lastCheck.step === state.currentStep;
 
 	onMount(() => {
+		document.documentElement.classList.add('pbl-studio');
+		document.body.classList.add('pbl-studio');
 		try {
 			const storedLesson = Number(sessionStorage.getItem(LESSON_WIDTH_KEY));
 			if (Number.isFinite(storedLesson)) {
@@ -77,6 +83,8 @@
 			ready = true;
 		});
 		return () => {
+			document.documentElement.classList.remove('pbl-studio');
+			document.body.classList.remove('pbl-studio');
 			stop();
 		};
 	});
@@ -369,6 +377,7 @@
 						awarenessState={state.awarenessState ?? ''}
 						editable={!state.readOnly}
 						theme={editorTheme}
+						user={collabUserFromProfile(data?.collabUser)}
 						onCollab={(payload) => controller?.setCollab(payload)}
 					/>
 				</div>
@@ -441,9 +450,22 @@
 {/if}
 
 <style>
+	:global(html.pbl-studio),
+	:global(body.pbl-studio) {
+		height: 100%;
+		overflow: hidden;
+	}
+
+	:global(body.pbl-studio .site-footer) {
+		display: none;
+	}
+
 	.studio {
 		display: grid;
-		min-height: calc(100svh - 4.5rem);
+		height: calc(100dvh - 4.5rem);
+		min-height: calc(100dvh - 4.5rem);
+		max-height: calc(100dvh - 4.5rem);
+		overflow: hidden;
 		background: #f4f5f7;
 	}
 
@@ -733,6 +755,8 @@
 	.work {
 		display: flex;
 		flex-direction: column;
+		min-height: 0;
+		overflow: hidden;
 		background: var(--pbl-editor-bg, #2d2a2e);
 		color: var(--pbl-editor-ink, #fcfcfa);
 	}
@@ -794,7 +818,7 @@
 		flex: 1 1 auto;
 		flex-direction: column;
 		min-width: 0;
-		min-height: 14rem;
+		min-height: 0;
 		overflow: hidden;
 		/* Isolate from sibling .error margins — CM gutters must not shift. */
 		background: var(--pbl-editor-bg, #2d2a2e);
@@ -804,6 +828,7 @@
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
+		overflow: auto;
 	}
 
 	.stdin-label {
@@ -1017,7 +1042,8 @@
 
 	@media (min-width: 64rem) {
 		.studio {
-			grid-template-columns: var(--lesson-width, 20rem) 1px minmax(0, 1fr);
+			grid-template-columns: var(--lesson-width, 25rem) 1px minmax(0, 1fr);
+			overflow: hidden;
 		}
 
 		.lesson {

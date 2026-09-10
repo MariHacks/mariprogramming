@@ -5,7 +5,7 @@
 		monokaiPalette,
 		normalizeEditorTheme
 	} from '$lib/pbl/python-editor.js';
-	import { teammateColor, teammateName } from '$lib/pbl/yjs-collab.js';
+	import { collabUserFromProfile } from '$lib/pbl/yjs-collab.js';
 
 	/** @type {string} */
 	export let source = '';
@@ -16,7 +16,7 @@
 	/** @type {boolean} */
 	export let editable = true;
 	/** @type {'dark' | 'light'} */
-	export let theme = 'dark';
+	export let theme = 'light';
 	/** @type {{ name: string, color: string, colorLight: string } | null} */
 	export let user = null;
 	/** @type {(payload: { source: string, yjsState: string, awarenessState: string }) => void} */
@@ -31,22 +31,13 @@
 
 	onMount(() => {
 		if (!host) return;
-		const seed =
-			typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-				? crypto.randomUUID()
-				: String(Date.now());
-		const colors = teammateColor(seed);
 		const current = createPythonCollabEditor(host, {
 			source,
 			yjsState,
 			awarenessState,
 			editable,
 			theme: themeMode,
-			user: user ?? {
-				name: teammateName(seed),
-				color: colors.color,
-				colorLight: colors.colorLight
-			},
+			user: user ?? collabUserFromProfile(null),
 			onChange(payload) {
 				onCollab(payload);
 			}
@@ -142,5 +133,42 @@
 	.python-host :global(.cm-activeLine),
 	.python-host :global(.cm-activeLineGutter) {
 		background-color: var(--pbl-editor-active-line, #ffffff14);
+	}
+
+	/* VS Code Live Share–style remote carets: thin bar + always-visible name pill */
+	.python-host :global(.cm-ySelectionCaret) {
+		position: relative;
+		border-left: 2px solid currentColor;
+		border-right: none;
+		margin-left: -1px;
+		margin-right: 0;
+		box-sizing: border-box;
+	}
+	.python-host :global(.cm-ySelectionCaretDot) {
+		display: none;
+	}
+	.python-host :global(.cm-ySelectionInfo) {
+		position: absolute;
+		top: -1.4em;
+		left: -1px;
+		z-index: 12;
+		padding: 0.12em 0.45em;
+		border-radius: 0.3rem 0.3rem 0.3rem 0;
+		font-family: var(--font-sans), system-ui, sans-serif;
+		font-size: 11px;
+		font-style: normal;
+		font-weight: 650;
+		line-height: 1.25;
+		letter-spacing: 0.01em;
+		color: #fff;
+		background-color: inherit;
+		opacity: 1 !important;
+		pointer-events: none;
+		white-space: nowrap;
+		box-shadow: 0 1px 2px rgb(0 0 0 / 28%);
+		transition: none;
+	}
+	.python-host :global(.cm-ySelection) {
+		opacity: 0.35;
 	}
 </style>

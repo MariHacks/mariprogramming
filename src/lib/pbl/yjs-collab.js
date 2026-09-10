@@ -53,10 +53,44 @@ export function teammateColor(seed) {
 	return TEAMMATE_COLORS[index];
 }
 
-/** @param {unknown} memberId */
-export function teammateName(memberId) {
-	const id = typeof memberId === 'string' && memberId ? memberId : 'guest';
-	return `Teammate ${id.slice(0, 4)}`;
+/**
+ * Prefer a real account display name / email local-part; fall back to a short id label.
+ * @param {unknown} identity name string, email, or opaque id
+ */
+export function teammateName(identity) {
+	if (typeof identity === 'string') {
+		const trimmed = identity.trim();
+		if (trimmed.includes('@')) {
+			const local = trimmed.split('@')[0]?.trim();
+			if (local) return local.slice(0, 40);
+		}
+		if (trimmed.length > 0 && !/^[0-9a-f]{8,}$/iu.test(trimmed)) {
+			return trimmed.slice(0, 40);
+		}
+		if (trimmed.length > 0) return `Teammate ${trimmed.slice(0, 4)}`;
+	}
+	return 'Teammate';
+}
+
+/**
+ * @param {{ name?: string | null, email?: string | null, userId?: string | null, memberId?: string | null } | null | undefined} profile
+ */
+export function collabUserFromProfile(profile) {
+	const seed =
+		(typeof profile?.userId === 'string' && profile.userId) ||
+		(typeof profile?.memberId === 'string' && profile.memberId) ||
+		(typeof profile?.email === 'string' && profile.email) ||
+		'guest';
+	const colors = teammateColor(seed);
+	const name =
+		(typeof profile?.name === 'string' && profile.name.trim()) ||
+		(typeof profile?.email === 'string' && profile.email.trim()) ||
+		seed;
+	return {
+		name: teammateName(name),
+		color: colors.color,
+		colorLight: colors.colorLight
+	};
 }
 
 /**
