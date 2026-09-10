@@ -326,4 +326,32 @@ test.describe.serial('PBL 1 student workshop', () => {
 		await saveProof(rec, '11-hints-and-monokai');
 		await keepVideo(context, rec, '11-hints-and-monokai');
 	});
+
+	test('shows a Python autocomplete suggestion popup', async ({ page, browser }) => {
+		test.setTimeout(60000);
+		await page.goto('/pbl/science');
+		const origin = new URL(page.url()).origin;
+		const { context, page: rec } = await recordedPage(browser, origin);
+		await rec.goto('/pbl/science');
+		await rec.getByLabel('Team name').fill('Autocomplete table');
+		await rec.getByRole('button', { name: 'Create room' }).click();
+		await expect(rec).toHaveURL(/\/pbl\/science\/[A-Z0-9]{6}$/);
+		await expect(rec.getByRole('heading', { name: 'Get something running' })).toBeVisible({
+			timeout: 30000
+		});
+		await expect(rec.locator('.cm-editor')).toBeVisible();
+		await expect(pythonBox(rec)).toHaveAttribute('aria-readonly', 'false', { timeout: 20000 });
+		await pythonBox(rec).click();
+		await rec.keyboard.press('Control+A');
+		await rec.keyboard.press('Backspace');
+		await pythonBox(rec).pressSequentially('pr', { delay: 40 });
+		const popup = rec.locator('.cm-tooltip-autocomplete');
+		if (!(await popup.isVisible().catch(() => false))) {
+			await rec.keyboard.press('Control+Space');
+		}
+		await expect(popup).toBeVisible({ timeout: 5000 });
+		await expect(popup).toContainText('print');
+		await saveProof(rec, '12-python-autocomplete');
+		await keepVideo(context, rec, '12-python-autocomplete');
+	});
 });

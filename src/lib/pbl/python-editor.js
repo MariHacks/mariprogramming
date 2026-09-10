@@ -24,7 +24,8 @@ import {
 	highlightActiveLineGutter,
 	keymap,
 	lineNumbers,
-	rectangularSelection
+	rectangularSelection,
+	tooltips
 } from '@codemirror/view';
 import { tags as highlightTags } from '@lezer/highlight';
 import { yCollab, yUndoManagerKeymap } from 'y-codemirror.next';
@@ -202,7 +203,8 @@ function monokaiChrome(palette, dark) {
 			'.cm-tooltip': {
 				backgroundColor: palette.bgGutter,
 				color: palette.ink,
-				border: `1px solid ${palette.rule}`
+				border: `1px solid ${palette.rule}`,
+				zIndex: '40'
 			},
 			'.cm-tooltip-autocomplete > ul > li[aria-selected]': {
 				backgroundColor: palette.line,
@@ -349,7 +351,12 @@ export function createPythonCollabEditor(parent, options = {}) {
 				foldGutter(),
 				python(),
 				indentUnit.of('    '),
-				autocompletion({ override: [pythonCompletions] }),
+				autocompletion({
+					override: [pythonCompletions],
+					activateOnTyping: true,
+					activateOnTypingDelay: 0
+				}),
+				tooltips({ parent: document.body }),
 				keymap.of([
 					indentWithTab,
 					...yUndoManagerKeymap,

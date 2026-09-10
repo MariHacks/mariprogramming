@@ -1,3 +1,4 @@
+import { startCompletion } from '@codemirror/autocomplete';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createPythonCollabEditor } from './python-editor.js';
 
@@ -157,4 +158,18 @@ describe('python collab editor', () => {
 		editor.destroy();
 	});
 
+
+	it('mounts the print suggestion popup on the document body', async () => {
+		const editor = mount({ source: 'pr' });
+		editor.view.dispatch({ selection: { anchor: 2 } });
+		startCompletion(editor.view);
+		await vi.waitFor(() => {
+			const popup = document.body.querySelector('.cm-tooltip-autocomplete');
+			expect(popup).toBeTruthy();
+			expect(popup?.textContent ?? '').toContain('print');
+		});
+		expect(editor.view.dom.querySelector('.cm-tooltip-autocomplete')).toBeNull();
+		editor.destroy();
+		expect(document.body.querySelector('.cm-tooltip-autocomplete')).toBeNull();
+	});
 });
