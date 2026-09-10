@@ -6,9 +6,15 @@
 	import PythonEditor from '$lib/pbl/PythonEditor.svelte';
 	import { createWorkshopController } from '$lib/pbl/workshop-controller.js';
 
+	const LESSON_WIDTH_KEY = 'pbl-studio-lesson-width';
+	const CONSOLE_HEIGHT_KEY = 'pbl-studio-console-height';
+	const LESSON_MIN = 240;
+	const LESSON_MAX = 560;
+	const CONSOLE_MIN = 140;
+	const CONSOLE_MAX = 480;
+
 	$: code = $page.params.code;
 	$: sharePath = `/pbl/science/${code}`;
-	$: facilitatorPath = `/pbl/science/${code}/facilitator`;
 
 	/** @type {any} */
 	let state = null;
@@ -19,8 +25,35 @@
 	let pane = 'lesson';
 	/** @type {'testcase' | 'output'} */
 	let consoleTab = 'output';
+	let lessonWidth = 320;
+	let consoleHeight = 220;
+
+	$: canGoNext =
+		!!state &&
+		state.blocked !== 'full' &&
+		state.currentStep < state.steps.length - 1 &&
+		(state.unlockedStep > state.currentStep ||
+			(state.lastCheck?.passed === true && state.lastCheck.step === state.currentStep));
+	$: showFinished =
+		!!state &&
+		state.currentStep >= state.steps.length - 1 &&
+		state.lastCheck?.passed === true &&
+		state.lastCheck.step === state.currentStep;
 
 	onMount(() => {
+		try {
+			const storedLesson = Number(sessionStorage.getItem(LESSON_WIDTH_KEY));
+			if (Number.isFinite(storedLesson)) {
+				lessonWidth = Math.min(LESSON_MAX, Math.max(LESSON_MIN, storedLesson));
+			}
+			const storedConsole = Number(sessionStorage.getItem(CONSOLE_HEIGHT_KEY));
+			if (Number.isFinite(storedConsole)) {
+				consoleHeight = Math.min(CONSOLE_MAX, Math.max(CONSOLE_MIN, storedConsole));
+			}
+		} catch {
+			/* sessionStorage may be unavailable */
+		}
+
 		controller = createWorkshopController({ code });
 		const stop = controller.subscribe((next) => {
 			state = next;
@@ -48,6 +81,63 @@
 		consoleTab = 'output';
 		void controller?.run();
 	}
+
+	function goNext() {
+		if (!state || !canGoNext) return;
+		controller?.selectStep(state.currentStep + 1);
+	}
+
+	/** @param {PointerEvent} event */
+	function startLessonResize(event) {
+		if (event.button !== 0) return;
+		event.preventDefault();
+		const startX = event.clientX;
+		const startWidth = lessonWidth;
+		/** @param {PointerEvent} move */
+		function onMove(move) {
+			lessonWidth = Math.min(
+				LESSON_MAX,
+				Math.max(LESSON_MIN, startWidth + (move.clientX - startX))
+			);
+		}
+		function onUp() {
+			try {
+				sessionStorage.setItem(LESSON_WIDTH_KEY, String(Math.round(lessonWidth)));
+			} catch {
+				/* ignore */
+			}
+			window.removeEventListener('pointermove', onMove);
+			window.removeEventListener('pointerup', onUp);
+		}
+		window.addEventListener('pointermove', onMove);
+		window.addEventListener('pointerup', onUp);
+	}
+
+	/** @param {PointerEvent} event */
+	function startConsoleResize(event) {
+		if (event.button !== 0) return;
+		event.preventDefault();
+		const startY = event.clientY;
+		const startHeight = consoleHeight;
+		/** @param {PointerEvent} move */
+		function onMove(move) {
+			consoleHeight = Math.min(
+				CONSOLE_MAX,
+				Math.max(CONSOLE_MIN, startHeight - (move.clientY - startY))
+			);
+		}
+		function onUp() {
+			try {
+				sessionStorage.setItem(CONSOLE_HEIGHT_KEY, String(Math.round(consoleHeight)));
+			} catch {
+				/* ignore */
+			}
+			window.removeEventListener('pointermove', onMove);
+			window.removeEventListener('pointerup', onUp);
+		}
+		window.addEventListener('pointermove', onMove);
+		window.addEventListener('pointerup', onUp);
+	}
 </script>
 
 <svelte:head>
@@ -57,7 +147,12 @@
 </svelte:head>
 
 {#if state}
-	<section class="studio" aria-label="Workshop studio" data-pane={pane}>
+	<section
+		class="studio"
+		aria-label="Workshop studio"
+		data-pane={pane}
+		style="--lesson-width: {lessonWidth}px; --console-height: {consoleHeight}px"
+	>
 		<nav class="pane-switch" aria-label="Studio sections">
 			<button type="button" class:current={pane === 'lesson'} on:click={() => (pane = 'lesson')}>
 				Lesson
@@ -72,20 +167,6 @@
 
 		<aside class="lesson">
 			<p class="eyebrow">PBL 1 · {state.teamName || 'Team room'} · {state.code}</p>
-			<ol class="steps">
-				{#each state.steps as step (step.id)}
-					<li>
-						<button
-							type="button"
-							class:current={step.id === state.currentStep}
-							disabled={state.blocked === 'full' || step.id > state.unlockedStep}
-							on:click={() => controller?.selectStep(step.id)}
-						>
-							{step.id}
-						</button>
-					</li>
-				{/each}
-			</ol>
 			<div class="title-row">
 				<h1>{state.step.title}</h1>
 				<p class="minutes">{state.step.minutes} min</p>
@@ -137,8 +218,43 @@
 			{#if state.step.stretch && state.currentStep === 11}
 				<p class="stretch">{state.step.stretch}</p>
 			{/if}
-			<a class="quiet-link" href={resolve(facilitatorPath, {})}>Facilitator view</a>
+			<div class="lesson-footer">
+				{#if state.currentStep < state.steps.length - 1}
+					<button
+						class="button-primary next-step"
+						type="button"
+						disabled={!canGoNext}
+						on:click={goNext}
+					>
+						Next
+					</button>
+				{:else if showFinished}
+					<p class="finished" role="status">Finished</p>
+				{/if}
+				<ol class="steps">
+					{#each state.steps as step (step.id)}
+						<li>
+							<button
+								type="button"
+								class:current={step.id === state.currentStep}
+								disabled={state.blocked === 'full' || step.id > state.unlockedStep}
+								on:click={() => controller?.selectStep(step.id)}
+							>
+								{step.id}
+							</button>
+						</li>
+					{/each}
+				</ol>
+			</div>
 		</aside>
+
+		<div
+			class="split-x"
+			role="separator"
+			aria-orientation="vertical"
+			aria-label="Resize lesson and code"
+			on:pointerdown={startLessonResize}
+		></div>
 
 		<section class="work" aria-label="Python editor">
 			<div class="toolbar">
@@ -169,7 +285,6 @@
 				{#if state.roomError}
 					<p class="error" role="alert">{state.roomError}</p>
 				{/if}
-				<p class="drive">Everyone can type.</p>
 				<div class="editor-shell">
 					<PythonEditor
 						source={state.source}
@@ -179,51 +294,60 @@
 						onCollab={(payload) => controller?.setCollab(payload)}
 					/>
 				</div>
-				<p class="next-action">{state.nextAction}</p>
-				<div class="console" data-tab={consoleTab}>
-					<div class="console-tabs" role="tablist" aria-label="Program console">
-						<button
-							type="button"
-							role="tab"
-							aria-selected={consoleTab === 'testcase'}
-							on:click={() => (consoleTab = 'testcase')}
-						>
-							Testcase
-						</button>
-						<button
-							type="button"
-							role="tab"
-							aria-selected={consoleTab === 'output'}
-							on:click={() => (consoleTab = 'output')}
-						>
-							Output
-						</button>
+				<div
+					class="split-y"
+					role="separator"
+					aria-orientation="horizontal"
+					aria-label="Resize editor and output"
+					on:pointerdown={startConsoleResize}
+				></div>
+				<div class="work-bottom">
+					<p class="next-action">{state.nextAction}</p>
+					<div class="console" data-tab={consoleTab}>
+						<div class="console-tabs" role="tablist" aria-label="Program console">
+							<button
+								type="button"
+								role="tab"
+								aria-selected={consoleTab === 'testcase'}
+								on:click={() => (consoleTab = 'testcase')}
+							>
+								Testcase
+							</button>
+							<button
+								type="button"
+								role="tab"
+								aria-selected={consoleTab === 'output'}
+								on:click={() => (consoleTab = 'output')}
+							>
+								Output
+							</button>
+						</div>
+						<label class="stdin-label">
+							Program input, one line per input()
+							<textarea
+								class="stdin"
+								value={state.stdinText}
+								on:input={(event) => controller?.setStdin(event.currentTarget.value)}
+							></textarea>
+						</label>
+						{#if state.pythonError}
+							<p class="error" role="status">{state.pythonError}</p>
+						{/if}
+						<pre class="output" aria-label="Program output">{state.output ||
+								'Output appears here.'}</pre>
 					</div>
-					<label class="stdin-label">
-						Program input, one line per input()
-						<textarea
-							class="stdin"
-							value={state.stdinText}
-							on:input={(event) => controller?.setStdin(event.currentTarget.value)}
-						></textarea>
-					</label>
-					{#if state.pythonError}
-						<p class="error" role="status">{state.pythonError}</p>
+					{#if Object.keys(state.files).length}
+						<section class="files" aria-label="Generated files">
+							<h2>Generated files</h2>
+							{#each Object.entries(state.files) as [name, contents] (name)}
+								<article>
+									<h3>{name}</h3>
+									<pre>{contents}</pre>
+								</article>
+							{/each}
+						</section>
 					{/if}
-					<pre class="output" aria-label="Program output">{state.output ||
-							'Output appears here.'}</pre>
 				</div>
-				{#if Object.keys(state.files).length}
-					<section class="files" aria-label="Generated files">
-						<h2>Generated files</h2>
-						{#each Object.entries(state.files) as [name, contents] (name)}
-							<article>
-								<h3>{name}</h3>
-								<pre>{contents}</pre>
-							</article>
-						{/each}
-					</section>
-				{/if}
 			{/if}
 		</section>
 	</section>
@@ -261,6 +385,35 @@
 		font-weight: 700;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
+	}
+
+	.lesson-footer {
+		display: grid;
+		gap: 0.75rem;
+		margin-top: 0.35rem;
+		padding-top: 0.85rem;
+		border-block-start: var(--rule);
+	}
+
+	.next-step {
+		justify-self: start;
+		min-height: 2.5rem;
+		padding-inline: 1.25rem;
+	}
+
+	.next-step:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
+	.finished {
+		margin: 0;
+		padding: 0.55rem 0.75rem;
+		border-radius: 0.35rem;
+		background: #ecf8ef;
+		color: #157347;
+		font-size: 0.875rem;
+		font-weight: 700;
 	}
 
 	.steps {
@@ -411,29 +564,15 @@
 		font-weight: 650;
 	}
 
-	.drive {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		align-self: stretch;
-		box-sizing: border-box;
-		width: 100%;
-		margin: 0;
-		padding: 0.45rem 1rem;
-		gap: 0.5rem;
-		border-block-end: 1px solid #3e3b3f;
-		background: #2d2a2e;
-		color: #fcfcfa;
-		font-size: 0.8125rem;
-		font-weight: 650;
-		letter-spacing: 0;
-		text-transform: none;
-	}
-
-
-
 	.pane-switch {
 		display: none;
+	}
+
+	.split-x,
+	.split-y {
+		display: none;
+		touch-action: none;
+		user-select: none;
 	}
 
 	.work {
@@ -496,6 +635,12 @@
 		min-width: 0;
 		min-height: 14rem;
 		overflow: hidden;
+	}
+
+	.work-bottom {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
 	}
 
 	.stdin-label {
@@ -610,14 +755,12 @@
 		}
 
 		.studio[data-pane='code'] .lesson,
-		.studio[data-pane='code'] .console,
-		.studio[data-pane='code'] .files {
+		.studio[data-pane='code'] .work-bottom {
 			display: none;
 		}
 
 		.studio[data-pane='output'] .lesson,
-		.studio[data-pane='output'] .editor-shell,
-		.studio[data-pane='output'] .drive {
+		.studio[data-pane='output'] .editor-shell {
 			display: none;
 		}
 
@@ -628,17 +771,51 @@
 
 	@media (min-width: 64rem) {
 		.studio {
-			grid-template-columns: minmax(18rem, 0.4fr) minmax(0, 1.6fr);
+			grid-template-columns: var(--lesson-width, 20rem) 0.4rem minmax(0, 1fr);
 		}
 
 		.lesson {
 			border-block-end: 0;
-			border-inline-end: var(--rule);
+			border-inline-end: 0;
 			overflow: auto;
+		}
+
+		.split-x {
+			display: block;
+			cursor: col-resize;
+			background: #d7d9de;
+			border-inline-end: 1px solid #c2c5cc;
+		}
+
+		.split-x:hover,
+		.split-x:active {
+			background: rgb(var(--club-blue-rgb) / 35%);
 		}
 
 		.work {
 			overflow: hidden;
+		}
+
+		.split-y {
+			display: block;
+			flex: 0 0 0.4rem;
+			cursor: row-resize;
+			background: #3e3b3f;
+		}
+
+		.split-y:hover,
+		.split-y:active {
+			background: #78dce8;
+		}
+
+		.work-bottom {
+			flex: 0 0 var(--console-height, 14rem);
+			max-height: var(--console-height, 14rem);
+			overflow: auto;
+		}
+
+		.console {
+			flex: 1 1 auto;
 		}
 
 		.console[data-tab='testcase'] .output {
