@@ -6,7 +6,7 @@ import {
 	readPblJson,
 	requirePblSession
 } from '$lib/server/pbl/http.js';
-import { readMemberId } from '$lib/server/pbl/cookie.js';
+import { memberCookie, readMemberId } from '$lib/server/pbl/cookie.js';
 
 export const prerender = false;
 
@@ -18,10 +18,29 @@ export function _createPblRoomEndpoint(dependencies = {}) {
 	async function GET(event) {
 		try {
 			const viewer = readMemberId(event.request.headers.get('cookie'));
+			const userId = event.locals?.maritools?.userId;
 			const room = await runtime.withStore((store) =>
-				store.getRoom(event.params.code, viewer ?? undefined)
+				store.getRoom(
+					event.params.code,
+					viewer ?? undefined,
+					typeof userId === 'string' && userId ? userId : undefined
+				)
 			);
-			return pblJson(room);
+			/** @type {Record<string, string>} */
+			const headers = {};
+			const rebound =
+				room &&
+				typeof room === 'object' &&
+				typeof room.memberId === 'string' &&
+				room.memberId &&
+				room.memberId !== viewer
+					? room.memberId
+					: null;
+			if (rebound) {
+				const secure = event.url.protocol === 'https:';
+				headers['set-cookie'] = memberCookie(rebound, { secure });
+			}
+			return pblJson(room, 200, headers);
 		} catch (error) {
 			return pblErrorResponse(error);
 		}

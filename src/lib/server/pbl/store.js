@@ -465,18 +465,20 @@ export function createPblStore(repository, clock = {}) {
 			return roomFromRow(row, input.memberId);
 		},
 
-		/** @param {unknown} code @param {string} [viewerMemberId] */
-		async getRoom(code, viewerMemberId) {
+		/**
+		 * @param {unknown} code
+		 * @param {string} [viewerMemberId]
+		 * @param {string} [userId] signed-in club user — used to rebind a stale/missing cookie
+		 */
+		async getRoom(code, viewerMemberId, userId) {
 			const normalized = normalizeRoomCode(code);
 			if (!normalized) throw new PblInputError('That room code is not valid.');
 			let row = await repository.findRoomByCode(normalized);
 			if (!row) throw new PblNotFoundError();
 			row = await elevateExecutiveUnlock(row);
-			if (viewerMemberId) {
-				const membership = await repository.findMember(row.id, viewerMemberId);
-				if (!membership) {
-					throw new PblInputError('You were removed from this team.', 403);
-				}
+
+			/** @param {string} memberId */
+			const memberView = async (memberId) => {
 				const memberRows = await repository.listMembersWithUsers([row.id]);
 				const members = memberRows.map((member) => ({
 					memberId: member.memberId,
@@ -484,8 +486,33 @@ export function createPblStore(repository, clock = {}) {
 					email: member.email ?? null,
 					name: member.name ?? null
 				}));
-				return roomFromRow({ ...row, members }, viewerMemberId);
+				return {
+					...roomFromRow({ ...row, members }, memberId),
+					memberId
+				};
+			};
+
+			const signedIn = typeof userId === 'string' && userId.length > 0 ? userId : null;
+
+			if (viewerMemberId) {
+				const membership = await repository.findMember(row.id, viewerMemberId);
+				if (membership) {
+					return memberView(viewerMemberId);
+				}
+				// Stale pbl_member cookie: same Google user still on the roster → rebind.
+				if (signedIn) {
+					const byUser = await repository.findMemberByUser(row.id, signedIn);
+					if (byUser) return memberView(byUser.memberId);
+				}
+				throw new PblInputError('You were removed from this team.', 403);
 			}
+
+			// Missing cookie but signed-in member still has a row → rebind instead of public view.
+			if (signedIn) {
+				const byUser = await repository.findMemberByUser(row.id, signedIn);
+				if (byUser) return memberView(byUser.memberId);
+			}
+
 			return roomFromRow(row, viewerMemberId);
 		},
 

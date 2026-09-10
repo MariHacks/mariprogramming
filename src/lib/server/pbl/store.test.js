@@ -512,6 +512,40 @@ describe('PBL room store', () => {
 		expect(publicView.members).toBeUndefined();
 	});
 
+	it('rebinds getRoom when cookie is stale but the same userId still has a membership', async () => {
+		const repo = memoryRepo(roomRow({ memberCount: 1 }));
+		const store = createPblStore(repo, { now: () => NOW });
+		const stale = 'b'.repeat(32);
+		const room = await store.getRoom('AB23JK', stale, USER);
+		expect(room.memberId).toBe(MEMBER);
+		expect(room.isDriver).toBe(true);
+		expect(room.members).toEqual([
+			expect.objectContaining({ memberId: MEMBER, userId: USER })
+		]);
+	});
+
+	it('rebinds getRoom when cookie is missing but the signed-in user is a member', async () => {
+		const repo = memoryRepo(roomRow({ memberCount: 1 }));
+		const store = createPblStore(repo, { now: () => NOW });
+		const room = await store.getRoom('AB23JK', undefined, USER);
+		expect(room.memberId).toBe(MEMBER);
+		expect(room.members?.[0]?.memberId).toBe(MEMBER);
+	});
+
+	it('still 403s getRoom when membership is truly gone for this userId', async () => {
+		const repo = memoryRepo(roomRow({ memberCount: 1 }));
+		const store = createPblStore(repo, { now: () => NOW });
+		const stale = 'b'.repeat(32);
+		await expect(store.getRoom('AB23JK', stale, 'someone-else')).rejects.toMatchObject({
+			status: 403,
+			message: /removed from this team/i
+		});
+		await expect(store.getRoom('AB23JK', stale)).rejects.toMatchObject({
+			status: 403,
+			message: /removed from this team/i
+		});
+	});
+
 	it('lets the leader eject a teammate but not themselves or the driver', async () => {
 		const other = 'b'.repeat(32);
 		const repo = memoryRepo(roomRow({ memberCount: 2 }));

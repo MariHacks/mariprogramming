@@ -420,6 +420,42 @@ async function waitAccepted(page, timeoutMs = 120000) {
 }
 
 /**
+ * Apply Set-Cookie `pbl_member` from an API response into Playwright storageState
+ * so the studio context opens with the same membership the create minted.
+ * @param {import('@playwright/test').BrowserContextOptions['storageState']} storageState
+ * @param {import('@playwright/test').APIResponse} response
+ */
+function applyPblMemberSetCookie(storageState, response) {
+	if (!storageState || !Array.isArray(storageState.cookies)) return;
+	const headers = typeof response.headersArray === 'function' ? response.headersArray() : [];
+	/** @type {string[]} */
+	let setCookies = headers
+		.filter((h) => h.name.toLowerCase() === 'set-cookie')
+		.map((h) => h.value);
+	// Fallback when headersArray is unavailable
+	if (setCookies.length === 0) {
+		const single = response.headers?.()['set-cookie'];
+		if (typeof single === 'string' && single) setCookies = [single];
+	}
+	const host = new URL(baseURL).hostname;
+	for (const raw of setCookies) {
+		const match = /(?:^|,\s*)pbl_member=([0-9a-f]{32})/iu.exec(raw);
+		if (!match) continue;
+		storageState.cookies = storageState.cookies.filter((c) => c.name !== 'pbl_member');
+		storageState.cookies.push({
+			name: 'pbl_member',
+			value: match[1],
+			domain: host,
+			path: '/',
+			httpOnly: true,
+			secure: false,
+			sameSite: 'Lax'
+		});
+		return;
+	}
+}
+
+/**
  * @param {import('@playwright/test').APIRequestContext} request
  * @param {import('@playwright/test').BrowserContextOptions['storageState']} storageState
  * @param {string} teamName
@@ -438,6 +474,9 @@ async function createRoomViaApi(request, storageState, teamName) {
 	if (!res.ok()) {
 		throw new Error(`create room failed ${res.status()}: ${JSON.stringify(payload)}`);
 	}
+	// Belt and suspenders: keep the minted membership on the studio storageState
+	// so polls never see a second minted memberId and false-"removed".
+	applyPblMemberSetCookie(storageState, res);
 	return /** @type {{ code: string, unlockedStep?: number }} */ (payload);
 }
 
