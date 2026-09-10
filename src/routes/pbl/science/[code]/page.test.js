@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/svelte';
+import { cleanup, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -73,6 +73,7 @@ afterEach(() => {
 	cleanup();
 	studio.patch = {};
 	selectStep.mockClear();
+	run.mockClear();
 });
 
 describe('PBL studio page', () => {
@@ -99,6 +100,24 @@ describe('PBL studio page', () => {
 		expect(next).toBeEnabled();
 		await user.click(next);
 		expect(selectStep).toHaveBeenCalledWith(1);
+	});
+
+	it('keeps Lesson Code Output chips and opens output after Run', async () => {
+		const user = userEvent.setup();
+		const { container } = render(StudioPage);
+		const studio = container.querySelector('.studio');
+		const panes = screen.getByRole('navigation', { name: 'Studio sections' });
+		const paneButtons = within(panes);
+		expect(studio).toHaveAttribute('data-pane', 'lesson');
+		expect(paneButtons.getAllByRole('button')).toHaveLength(3);
+		await user.click(paneButtons.getByRole('button', { name: 'Code' }));
+		expect(studio).toHaveAttribute('data-pane', 'code');
+		await user.click(screen.getByRole('button', { name: 'Run' }));
+		expect(run).toHaveBeenCalled();
+		expect(studio).toHaveAttribute('data-pane', 'output');
+		await user.click(paneButtons.getByRole('button', { name: 'Lesson' }));
+		expect(studio).toHaveAttribute('data-pane', 'lesson');
+		expect(screen.queryByRole('link', { name: 'Facilitator view' })).toBeNull();
 	});
 
 	it('hides the editor when the team is full', () => {

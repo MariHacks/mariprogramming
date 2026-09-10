@@ -79,6 +79,7 @@
 
 	function runProgram() {
 		consoleTab = 'output';
+		pane = 'output';
 		void controller?.run();
 	}
 
@@ -772,31 +773,60 @@
 		margin: 0.75rem 1rem;
 	}
 
+	.console[data-tab='testcase'] .output {
+		display: none;
+	}
+
+	.console[data-tab='output'] .stdin-label {
+		display: none;
+	}
+
 	@media (max-width: 63.99rem) {
+		.studio {
+			grid-template-rows: auto minmax(0, 1fr);
+			height: calc(100svh - 4.5rem);
+			min-height: calc(100svh - 4.5rem);
+			overflow: hidden;
+		}
+
 		.pane-switch {
 			display: flex;
 			flex-wrap: wrap;
 			align-items: center;
-			align-self: flex-start;
+			align-self: stretch;
 			grid-column: 1 / -1;
+			gap: 0.25rem;
 			height: auto;
+			padding: 0.35rem 0.55rem;
 			background: #fff;
 			border-block-end: var(--rule);
 		}
 
 		.pane-switch button {
-			flex: 1 1 0;
+			flex: 0 0 auto;
 			align-self: center;
 			height: auto;
-			min-height: 2.75rem;
+			min-height: 0;
+			padding: 0.35rem 0.75rem;
 			border: 0;
-			background: #fff;
+			border-radius: 0.35rem;
+			background: transparent;
+			color: var(--quiet-steel);
+			font-size: 0.875rem;
+			font-weight: 500;
+			line-height: 1.35;
 			cursor: pointer;
 		}
 
 		.pane-switch button.current {
+			background: rgb(var(--club-blue-rgb) / 10%);
 			color: var(--club-blue);
 			font-weight: 700;
+		}
+
+		.lesson,
+		.work {
+			overflow: hidden;
 		}
 
 		.studio[data-pane='lesson'] .work {
@@ -813,8 +843,26 @@
 			display: none;
 		}
 
+		.studio[data-pane='output'] .toolbar {
+			flex: 0 0 auto;
+		}
+
+		.studio[data-pane='output'] .work-bottom,
+		.studio[data-pane='output'] .console {
+			flex: 1 1 auto;
+			min-height: 0;
+		}
+
+		.studio[data-pane='output'] .work-bottom {
+			overflow: auto;
+		}
+
+		.studio[data-pane='output'] .output {
+			min-height: 12rem;
+		}
+
 		.editor-shell {
-			min-height: 16rem;
+			min-height: 0;
 		}
 	}
 
@@ -889,12 +937,5 @@
 			min-height: 0;
 		}
 
-		.console[data-tab='testcase'] .output {
-			display: none;
-		}
-
-		.console[data-tab='output'] .stdin-label {
-			display: none;
-		}
 	}
 </style>
