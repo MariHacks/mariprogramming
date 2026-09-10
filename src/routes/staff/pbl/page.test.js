@@ -41,14 +41,27 @@ describe('staff PBL teams page', () => {
 		expect(screen.getByText('AB23JK')).toBeInTheDocument();
 		expect(screen.getByText('ada@marihacks.com')).toBeInTheDocument();
 		expect(screen.getByText('Anonymous device')).toBeInTheDocument();
+		expect(screen.queryByText('user-1')).not.toBeInTheDocument();
 		expect(screen.getByText(/Step 2 · passed · Nice work/)).toBeInTheDocument();
 		expect(screen.queryByText('Current step')).not.toBeInTheDocument();
-		expect(screen.getByText('Unlocked step')).toBeInTheDocument();
-		expect(screen.getByRole('link', { name: /View step sources/i })).toBeInTheDocument();
+		expect(screen.getByText('Unlocked')).toBeInTheDocument();
+		expect(screen.getByText('3 / 12')).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: /Lab table 3/i })).toHaveAttribute(
+			'href',
+			expect.stringContaining('/staff/pbl/AB23JK')
+		);
+		expect(screen.getByText('Open team')).toBeInTheDocument();
 	});
 
 	it('explains when no teams exist', () => {
 		render(StaffPblPage, { data: { rooms: [], unavailable: false } });
 		expect(screen.getByRole('status')).toHaveTextContent('No PBL teams yet');
+	});
+
+	it('explains when workshop data is unavailable', () => {
+		render(StaffPblPage, { data: { rooms: [], unavailable: true } });
+		expect(screen.getByRole('status')).toHaveTextContent(
+			'Workshop room data is unavailable right now'
+		);
 	});
 });
