@@ -64,9 +64,10 @@
 
 <style>
 	.python-host {
-		display: grid;
+		display: flex;
+		flex-direction: column;
 		min-width: 0;
-		min-height: 12rem;
+		min-height: 0;
 		height: 100%;
 		overflow: hidden;
 		/* Stable shell bg before CodeMirror paints — avoids theme flicker. */
@@ -81,8 +82,10 @@
 
 	.python-host :global(.cm-editor) {
 		display: flex !important;
+		flex: 1 1 auto;
 		flex-direction: column;
-		height: 100%;
+		height: 100% !important;
+		min-height: 0;
 		outline: none;
 		background: var(--pbl-editor-bg, #2d2a2e);
 	}
@@ -94,9 +97,9 @@
 	.python-host :global(.cm-scroller) {
 		display: flex !important;
 		align-items: flex-start !important;
-		flex: 1 1 auto;
-		min-height: 0;
-		overflow: auto;
+		flex: 1 1 auto !important;
+		min-height: 0 !important;
+		overflow: auto !important;
 	}
 
 	/* Layout + colors only — font/line metrics come from monokaiChrome theme. */
@@ -138,7 +141,8 @@
 	/* VS Code Live Share–style remote carets: thin bar + always-visible name pill */
 	.python-host :global(.cm-ySelectionCaret) {
 		position: relative;
-		border-left: 2px solid currentColor;
+		border-left-width: 2px;
+		border-left-style: solid;
 		border-right: none;
 		margin-left: -1px;
 		margin-right: 0;
@@ -149,26 +153,28 @@
 	}
 	.python-host :global(.cm-ySelectionInfo) {
 		position: absolute;
-		top: -1.4em;
+		top: -1.45em;
 		left: -1px;
 		z-index: 12;
-		padding: 0.12em 0.45em;
+		padding: 0.15em 0.5em;
 		border-radius: 0.3rem 0.3rem 0.3rem 0;
 		font-family: var(--font-sans), system-ui, sans-serif;
 		font-size: 11px;
 		font-style: normal;
-		font-weight: 650;
+		font-weight: 700;
 		line-height: 1.25;
 		letter-spacing: 0.01em;
-		color: #fff;
-		background-color: inherit;
+		color: #fff !important;
+		-webkit-text-fill-color: #fff;
+		/* Caret sets background-color inline to the user color; inherit it. */
+		background-color: inherit !important;
 		opacity: 1 !important;
 		pointer-events: none;
 		white-space: nowrap;
-		box-shadow: 0 1px 2px rgb(0 0 0 / 28%);
-		transition: none;
+		box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+		transition: none !important;
 	}
 	.python-host :global(.cm-ySelection) {
-		opacity: 0.35;
+		opacity: 0.28;
 	}
 </style>

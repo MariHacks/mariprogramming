@@ -177,7 +177,12 @@ export function createWorkshopController(options) {
 
 	async function run() {
 		if (blocked) return snapshot();
-		const sourceSnapshot = room.source;
+		// Normalize NBSP (U+00A0) from paste/docs — Python rejects it as invalid.
+		const sourceSnapshot = String(room.source ?? '').replace(/\u00a0/gu, ' ');
+		if (sourceSnapshot !== room.source) {
+			room = { ...room, source: sourceSnapshot };
+			sync.update({ source: sourceSnapshot, yjsState: room.yjsState, awarenessState: room.awarenessState });
+		}
 		const stepSnapshot = room.currentStep;
 		running = true;
 		pythonError = '';
@@ -189,7 +194,7 @@ export function createWorkshopController(options) {
 		publish();
 		const stdin = stdinText
 			.split('\n')
-			.map((line) => line.replace(/\r$/u, ''))
+			.map((line) => line.replace(/\r$/u, '').replace(/\u00a0/gu, ' '))
 			.filter((line, index, lines) => line.length > 0 || index < lines.length - 1);
 		const result = await host.run(sourceSnapshot, { stdin });
 		output = `${result.stdout ?? ''}${result.stderr ?? ''}`;

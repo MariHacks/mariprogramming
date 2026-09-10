@@ -1170,16 +1170,19 @@
 			align-self: center;
 			min-height: 0;
 			height: 1.25rem;
-			padding: 0 0.4rem;
+			padding: 0 0.35rem 0 0;
 			gap: 0.3rem;
 			font-size: 0.75rem;
 			line-height: 1;
+			overflow: hidden;
 		}
 
 		.site-header.is-compact-pbl:not(:hover):not(:focus-within) .identity-avatar {
-			width: 1.15rem;
-			height: 1.15rem;
+			width: 1.25rem;
+			height: 1.25rem;
 			font-size: 0.5rem;
+			flex: 0 0 auto;
+			overflow: hidden;
 		}
 
 		/* Expanded: stagger wings slightly as they radiate out from center. */
