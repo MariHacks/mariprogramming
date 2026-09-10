@@ -411,19 +411,21 @@
 								<span class="console-status">{state.nextAction}</span>
 							{/if}
 						</div>
-						<label class="stdin-label">
-							Program input, one line per input()
-							<textarea
-								class="stdin"
-								value={state.stdinText}
-								on:input={(event) => controller?.setStdin(event.currentTarget.value)}
-							></textarea>
-						</label>
-						{#if state.pythonError}
-							<p class="error" role="status">{state.pythonError}</p>
-						{/if}
-						<pre class="output" aria-label="Program output">{state.output ||
-								'Output appears here.'}</pre>
+						<div class="console-body">
+							<label class="stdin-label">
+								Program input, one line per input()
+								<textarea
+									class="stdin"
+									value={state.stdinText}
+									on:input={(event) => controller?.setStdin(event.currentTarget.value)}
+								></textarea>
+							</label>
+							{#if state.pythonError}
+								<p class="error" role="status">{state.pythonError}</p>
+							{/if}
+							<pre class="output" aria-label="Program output">{state.output ||
+									'Output appears here.'}</pre>
+						</div>
 					</div>
 					{#if Object.keys(state.files).length}
 						<section class="files" aria-label="Generated files">
@@ -453,6 +455,29 @@
 	:global(html.pbl-studio),
 	:global(body.pbl-studio) {
 		height: 100%;
+		max-height: 100dvh;
+		overflow: hidden;
+		margin: 0;
+	}
+
+	:global(body.pbl-studio .sveltekit-body) {
+		display: flex;
+		flex-direction: column;
+		height: 100dvh;
+		max-height: 100dvh;
+	\min-height: 0;
+		overflow: hidden;
+	}
+
+	:global(body.pbl-studio .site-header) {
+		flex: 0 0 auto;
+	}
+
+	:global(body.pbl-studio #main-content) {
+		flex: 1 1 auto;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
 		overflow: hidden;
 	}
 
@@ -460,11 +485,36 @@
 		display: none;
 	}
 
+	/* Thin, flush scrollbars on studio panes */
+	.studio :global(*) {
+		scrollbar-width: thin;
+		scrollbar-color: rgb(var(--midnight-rgb) / 35%) transparent;
+	}
+
+	.studio :global(*::-webkit-scrollbar) {
+		width: 6px;
+		height: 6px;
+	}
+
+	.studio :global(*::-webkit-scrollbar-track) {
+		background: transparent;
+	}
+
+	.studio :global(*::-webkit-scrollbar-thumb) {
+		border-radius: 999px;
+		background: rgb(var(--midnight-rgb) / 32%);
+	}
+
+	.studio :global(*::-webkit-scrollbar-thumb:hover) {
+		background: rgb(var(--midnight-rgb) / 48%);
+	}
+
 	.studio {
 		display: grid;
-		height: calc(100dvh - 4.5rem);
-		min-height: calc(100dvh - 4.5rem);
-		max-height: calc(100dvh - 4.5rem);
+		flex: 1 1 auto;
+		height: 100%;
+	\min-height: 0;
+	\max-height: none;
 		overflow: hidden;
 		background: #f4f5f7;
 	}
@@ -479,9 +529,10 @@
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
-		padding: 1.1rem 1.25rem 1.5rem;
+		padding: 0;
 		border-block-end: var(--rule);
 		background: #fff;
+		overflow: hidden;
 	}
 
 	.lesson-scroll {
@@ -491,6 +542,7 @@
 		display: grid;
 		align-content: start;
 		gap: 0.85rem;
+		padding: 1.1rem 1rem 1.5rem 1.25rem;
 	}
 
 	.minutes {
@@ -505,8 +557,8 @@
 		flex: 0 0 auto;
 		display: grid;
 		gap: 0.55rem;
-		margin-top: 0.75rem;
-		padding-top: 0.85rem;
+		margin-top: 0;
+		padding: 0.85rem 1.25rem 1.1rem;
 		border-block-start: var(--rule);
 	}
 
@@ -824,11 +876,17 @@
 		background: var(--pbl-editor-bg, #2d2a2e);
 	}
 
+	.editor-shell :global(.python-host) {
+		flex: 1 1 auto;
+		height: 100%;
+		min-height: 0;
+	}
+
 	.work-bottom {
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
-		overflow: auto;
+		overflow: hidden;
 	}
 
 	.stdin-label {
@@ -857,11 +915,21 @@
 
 	.console {
 		display: flex;
+		flex: 1 1 auto;
 		flex-direction: column;
 		align-content: flex-start;
 		min-height: 0;
+		overflow: hidden;
 		border-block-start: 1px solid var(--pbl-editor-rule, #3e3b3f);
 		background: var(--pbl-editor-panel, #221f22);
+	}
+
+	.console-body {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow: auto;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.console-tabs {
@@ -958,8 +1026,8 @@
 	@media (max-width: 63.99rem) {
 		.studio {
 			grid-template-rows: auto minmax(0, 1fr);
-			height: calc(100svh - 4.5rem);
-			min-height: calc(100svh - 4.5rem);
+			height: 100%;
+			min-height: 0;
 			overflow: hidden;
 		}
 
@@ -1028,6 +1096,10 @@
 		}
 
 		.studio[data-pane='output'] .work-bottom {
+			overflow: hidden;
+		}
+
+		.studio[data-pane='output'] .console-body {
 			overflow: auto;
 		}
 
@@ -1104,12 +1176,13 @@
 		.work-bottom {
 			flex: 0 0 var(--console-height, 14rem);
 			max-height: var(--console-height, 14rem);
-			overflow: auto;
+			overflow: hidden;
 		}
 
 		.console {
 			flex: 1 1 auto;
 			min-height: 0;
+			overflow: hidden;
 		}
 
 	}
