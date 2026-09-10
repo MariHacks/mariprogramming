@@ -26,7 +26,12 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 0,
 		title: 'Get something running',
 		minutes: 4,
-		body: 'Press Run once so you see the starter print. Then edit the text inside the quotes to any other sentence and Run again. To pass, the program must print something other than the original "Experiment loaded" line. This step only proves the shared editor and Run button work for your team.',
+		body: `Press Run once so you see the starter print. Then change the text inside the quotes to any other sentence and Run again.
+
+This step only proves the shared editor and Run button work for your team. Your edit should be what prints.
+
+Output (one line, your own wording):
+Lab table 3 is live`,
 		starter: SCIENCE_STARTER_SOURCE,
 		hints: Object.freeze([
 			'Change the quoted sentence, then Run. Leaving the starter text fails the check.',
@@ -38,7 +43,13 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 1,
 		title: 'Values, variables, types, expressions',
 		minutes: 6,
-		body: 'A lab reading is 12.1 with uncertainty 0.2. Store those two numbers in variables (for example reading and uncertainty), compute a lower bound (reading minus uncertainty) and an upper bound (reading plus uncertainty), and print both bounds. Why store them first: you will reuse the values, and the checker looks for stored numbers plus printed bounds, not bare print(11.9) with no variables. To pass: keep 12.1 and 0.2 in variables, and print bounds near 11.9 and 12.3. Your own variable names are fine.',
+		body: `A lab reading is 12.1 with uncertainty 0.2. Store both numbers in variables (any names), compute lower and upper bounds from them (reading minus / plus uncertainty), then print the bounds.
+
+Store the inputs first so you reuse them and derive the bounds from the formula, instead of hardcoding magic numbers like 11.9 by hand.
+
+Output (exactly two lines):
+11.9
+12.3`,
 		notes: Object.freeze([
 			'Types you will meet: int 3, float 3.14, str "lab", bool True',
 			'= assigns a value. == compares two values.'
@@ -53,7 +64,15 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 2,
 		title: 'Collections, indexing, len()',
 		minutes: 7,
-		body: `Replace the single reading with a list of the six lab values, for example readings = ${READINGS_LITERAL}. Print the first value, the last value, and how many items are in the list. Also print one slice (for example readings[0:2]) so you can see that the end index is exclusive. To pass: a six-item list starting at 12.1 and ending at 11.9, plus output that shows 12.1, 11.9, and 6.`,
+		body: `Replace the single reading with a list of the six lab values, for example readings = ${READINGS_LITERAL}. Print the first value, the last value, and how many items are in the list. Also print one slice (for example readings[0:2]) so you can see that the end index is exclusive.
+
+A list keeps related measurements together so you index and count instead of juggling six separate variables.
+
+Output (one value per line works well; include a slice too):
+12.1
+11.9
+6
+[12.1, 11.8]`,
 		hints: Object.freeze([
 			'Index 0 is the first item, -1 is the last, and len(...) counts how many there are.',
 			'print(readings[0])\nprint(readings[-1])\nprint(len(readings))',
@@ -64,7 +83,23 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 3,
 		title: 'For loops and range()',
 		minutes: 8,
-		body: 'Print every value in your readings list with a for loop that walks the list directly. Then print them again with a trial number using range(len(...)), so each line shows a 1-based trial index and the reading. To pass: every number from the list must appear in the output at least once. Loops matter here because the list will keep growing and you should not copy-paste print lines.',
+		body: `Print every value in your readings list with a for loop that walks the list directly. Then print them again with a trial number using range(len(...)), so each line shows a 1-based trial index and the reading.
+
+Loops beat copy-paste prints: when the list grows, one loop still covers every item.
+
+Output (first pass: one reading per line; second pass: index and value, space-separated):
+12.1
+11.8
+12.3
+48.7
+12.0
+11.9
+1 12.1
+2 11.8
+3 12.3
+4 48.7
+5 12.0
+6 11.9`,
 		hints: Object.freeze([
 			'One loop can walk the values. A second loop can walk indexes from range(len(readings)).',
 			'for reading in readings:\n    print(reading)',
@@ -75,7 +110,17 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 4,
 		title: 'Conditionals and booleans',
 		minutes: 8,
-		body: 'Valid readings sit between 10 and 20 inclusive. For each value in the list, print the number and the word valid or discard beside it. 48.7 is a bad point on purpose so you can practice the reject path. To pass: both words appear in the output, 48.7 is on a line that says discard, and normal points such as 12.1 still show as valid.',
+		body: `Valid readings sit between 10 and 20 inclusive. For each value in the list, print the number and the word valid or discard beside it. 48.7 is a bad point on purpose so you can practice the reject path.
+
+Decide with a condition before you treat a value as good data. Same habit labs use when a sensor reading is impossible.
+
+Output (six lines, number then label, space-separated; order follows the list):
+12.1 valid
+11.8 valid
+12.3 valid
+48.7 discard
+12.0 valid
+11.9 valid`,
 		notes: Object.freeze(['elif and not are available if you want them. You do not have to use them.']),
 		hints: Object.freeze([
 			'Ask whether each reading sits inside 10 to 20, then print a label next to it.',
@@ -87,7 +132,12 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 5,
 		title: 'Algorithms and mutable lists',
 		minutes: 10,
-		body: 'Make an empty list (for example valid_readings = []). Loop the readings, and append only the accepted ones (still 10 to 20). Then total and average that new list with a loop before you reach for shortcuts. After the loop version works, sum(), min(), and max() are fine. To pass: keep the five normal points (no 48.7) and an average near 12.02.',
+		body: `Make an empty list (for example valid_readings = []). Loop the readings and append only the accepted ones (still 10 to 20). Total and average that new list with a loop before you reach for shortcuts. After the loop version works, sum(), min(), and max() are fine.
+
+Filter before you aggregate. Averaging a list that still holds 48.7 silently poisons the result.
+
+Output (one line, the filtered average):
+12.02`,
 		hints: Object.freeze([
 			'Keep a fresh list of accepted readings, then divide their total by how many you kept.',
 			'valid_readings.append(reading)',
@@ -98,7 +148,12 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 6,
 		title: 'Functions',
 		minutes: 10,
-		body: 'Move the range test into a function (for example is_valid(reading, max_value)) and move the average loop into a function that takes a list and returns a number (average, mean, or avg is fine). The main program should call those functions and still print the filtered average. To pass: both functions exist, the range test accepts 12.1 and rejects 48.7 when max_value is 20, and the average still ignores the outlier.',
+		body: `Move the range test into a function (for example is_valid(reading, max_value)) and move the average loop into a function that takes a list and returns a number (average, mean, or avg is fine). Call those functions from the main program and still print the filtered average.
+
+Functions package reusable logic so the main program stays short and you can run the same check on new data later.
+
+Output (one line, filtered average):
+12.02`,
 		hints: Object.freeze([
 			'Put the range test and the average loop in functions, then call them from the main program.',
 			'def is_valid(reading, max_value):\n    return 10 <= reading <= max_value',
@@ -109,7 +164,12 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 7,
 		title: 'input(), type conversion, while',
 		minutes: 8,
-		body: 'Ask for a maximum accepted value with input(). input() always returns a string, so convert with float(). Keep asking in a while loop while that number is not greater than zero. Put each answer on its own line in Program input before you Run (the checker tries 20, then 5, then a bad -1 followed by 20). To pass: at least one input() call, a filter that changes when the threshold changes, and a second prompt when the first value is not positive.',
+		body: `Ask for a maximum accepted value with input(). input() always returns a string, so convert with float(). Keep asking in a while loop while that number is not greater than zero. Put each answer on its own line in Program input before you Run. Try thresholds like 20, then 5, and a bad -1 followed by 20 so the retry path runs.
+
+Validate input before you trust it. A while loop lets you re-prompt until the threshold is usable, then use that value in the filter.
+
+Output (one line after a valid threshold; for max 20):
+12.02`,
 		hints: Object.freeze([
 			'Read the threshold as text, convert it to a float, and ask again if it is not greater than zero.',
 			'max_value = float(input("Maximum accepted value: "))\nwhile max_value <= 0:\n    max_value = float(input("Maximum accepted value: "))',
@@ -120,7 +180,12 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 8,
 		title: 'Imports',
 		minutes: 6,
-		body: 'Import math and use math.sqrt to print a sample standard deviation of the valid readings only. import math brings the whole module; from math import sqrt brings one name. The formula sits in the notes so the math is not the lesson. To pass: a non-negative spread that stays small (under 2). Including 48.7 would blow the value up.',
+		body: `Import math and use math.sqrt to print a sample standard deviation of the valid readings only. import math brings the whole module; from math import sqrt brings one name. The formula sits in the notes so the math is not the lesson.
+
+Reuse the filtered list. Including the outlier would inflate the spread and hide how tight the good readings really are.
+
+Output (one line, a small non-negative number under 2):
+0.19`,
 		notes: Object.freeze([
 			'sample standard deviation: sqrt(sum((x - average) ** 2 for x in values) / (len(values) - 1))'
 		]),
@@ -134,7 +199,12 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 9,
 		title: 'Dictionaries and methods',
 		minutes: 8,
-		body: 'Build a dictionary (for example summary) with keys valid_count, average, and standard_deviation holding your calculated results. Print one value by key (for example summary["average"]). Then add one new key of your choice, such as unit. To pass: valid_count near 5, average near the filtered mean, a non-negative standard_deviation, a printed lookup by key, and at least four keys total.',
+		body: `Build a dictionary (for example summary) with keys valid_count, average, and standard_deviation holding your calculated results. Print one value by key (for example summary["average"]). Then add one new key of your choice, such as unit.
+
+Dicts name related results so you look up by meaning instead of remembering which loose variable was which.
+
+Output (print one lookup by key; average near):
+12.02`,
 		hints: Object.freeze([
 			'A dictionary stores named results. Look one up with square brackets, then assign a new key.',
 			'summary = {"valid_count": len(valid_readings), "average": average, "standard_deviation": standard_deviation}',
@@ -145,7 +215,12 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 10,
 		title: 'Formatting and files',
 		minutes: 5,
-		body: 'Build an f-string report from the numbers you already calculated (average, counts, spread). Print that report, then write the same text to a .txt file with open(..., "w"). The browser runtime uses a virtual disk; file contents show under Generated files. To pass: a .txt file whose contents include calculated results such as the filtered average, not a hard-coded filler sentence.',
+		body: `Build an f-string report from the numbers you already calculated (average, counts, spread). Print that report, then write the same text to a .txt file with open(..., "w"). The browser runtime uses a virtual disk; file contents show under Generated files.
+
+Build the string from live variables so the file matches the computation. A hard-coded filler sentence goes stale the moment the data changes.
+
+Output (same text in the console and the .txt file; include the average):
+average=12.02 valid_count=5`,
 		hints: Object.freeze([
 			'Build the report from calculated numbers, print it, then open a file and write the same text.',
 			'report = f"average={average} valid_count={len(valid_readings)}"\nprint(report)',
@@ -156,7 +231,12 @@ export const SCIENCE_STEPS = Object.freeze([
 		id: 11,
 		title: 'Final boss',
 		minutes: 10,
-		body: `No recipe this time. Fresh data, for example readings = ${FINAL_READINGS_LITERAL}. Ask for a maximum valid reading, keep the accepted values, average them, store the results in a dictionary (for example summary), and print a short report. Reuse functions where it helps. To pass: an input() prompt, 26.1 discarded when the max is 20, an average near 12.52, a results dictionary, and printed output.`,
+		body: `No recipe this time. Fresh data, for example readings = ${FINAL_READINGS_LITERAL}. Ask for a maximum valid reading, keep the accepted values, average them, store the results in a dictionary (for example summary), and print a short report. Reuse functions where it helps.
+
+You are stitching earlier habits: input, filter, aggregate, store, report. Same analyzer shape, new numbers.
+
+Output (with max 20; 26.1 discarded; average near 12.52). Example:
+{'average': 12.52, 'valid_count': 5}`,
 		stretch:
 			'Optional stretch: plot the readings and mark the discarded outlier if matplotlib loads. Nested lists, reading values from a file, or repeating the analysis on another list are also fair stretch work.',
 		hints: Object.freeze([

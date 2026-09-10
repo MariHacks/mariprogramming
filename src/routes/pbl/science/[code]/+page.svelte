@@ -612,6 +612,7 @@
 		max-width: 42rem;
 		font-size: 0.9375rem;
 		line-height: 1.55;
+		white-space: pre-line;
 	}
 
 	.examples h2,

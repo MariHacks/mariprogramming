@@ -45,4 +45,13 @@ describe('PBL 1 science workshop', () => {
 			expect(blob).not.toMatch(/[\u2013\u2014]/u);
 		}
 	});
+
+	it('uses multi-paragraph bodies with Output specs and no checker-as-why copy', () => {
+		for (const step of SCIENCE_STEPS) {
+			expect(step.body).toMatch(/\n\n/);
+			expect(step.body.split(/\n\n/).length).toBeGreaterThanOrEqual(3);
+			expect(step.body).toMatch(/^Output\b/m);
+			expect(step.body).not.toMatch(/\bchecker\b|\bgrader\b|to pass/i);
+		}
+	});
 });
