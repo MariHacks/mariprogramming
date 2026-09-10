@@ -3,6 +3,7 @@ import migrationSql0021 from '../../../../drizzle/0021_pbl_room_driver.sql?raw';
 import migrationSql0022 from '../../../../drizzle/0022_pbl_yjs_state.sql?raw';
 import migrationSql0023 from '../../../../drizzle/0023_pbl_room_member_user.sql?raw';
 import migrationSql0024 from '../../../../drizzle/0024_pbl_step_sources.sql?raw';
+import migrationSql0025 from '../../../../drizzle/0025_pbl_last_run.sql?raw';
 import { readMigrationEnvironment, readPblEnvironment } from '../config/environment.js';
 import { createRequestPool } from '../db/transaction.js';
 
@@ -56,6 +57,10 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 			const stepSubs = await client.query(
 				"SELECT to_regclass('public.pbl_step_submissions')::text AS table_name"
 			);
+			const lastRun = await client.query(
+				`SELECT column_name FROM information_schema.columns
+				 WHERE table_schema = 'public' AND table_name = 'pbl_rooms' AND column_name = 'last_run'`
+			);
 			/** @type {string[]} */
 			const statements = [];
 			if (!driver.rows[0]?.column_name)
@@ -65,6 +70,8 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 				statements.push(...splitMigrationStatements(migrationSql0023));
 			if (!stepSources.rows[0]?.column_name || !stepSubs.rows[0]?.table_name)
 				statements.push(...splitMigrationStatements(migrationSql0024));
+			if (!lastRun.rows[0]?.column_name)
+				statements.push(...splitMigrationStatements(migrationSql0025));
 			if (statements.length === 0) return;
 			await client.query('BEGIN');
 			try {
@@ -87,7 +94,8 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 			...splitMigrationStatements(migrationSql0021),
 			...splitMigrationStatements(migrationSql0022),
 			...splitMigrationStatements(migrationSql0023),
-			...splitMigrationStatements(migrationSql0024)
+			...splitMigrationStatements(migrationSql0024),
+			...splitMigrationStatements(migrationSql0025)
 		];
 		await client.query('BEGIN');
 		try {

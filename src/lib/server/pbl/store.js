@@ -5,6 +5,7 @@ import { normalizeRoomCode } from '$lib/pbl/room-code.js';
 import {
 	MAX_SOURCE_CHARS,
 	canAcceptMember,
+	normalizeLastRun,
 	normalizeOpenedHints,
 	normalizeStepSources,
 	normalizeStepYjs,
@@ -73,6 +74,7 @@ export function roomFromRow(row, viewerMemberId) {
 			currentStep: row.currentStep,
 			unlockedStep: row.unlockedStep,
 			lastCheck: row.lastCheck ?? null,
+			lastRun: row.lastRun ?? null,
 			openedHints: normalizeOpenedHints(row.openedHints),
 			stepEnteredAt:
 				row.stepEnteredAt instanceof Date
@@ -360,6 +362,7 @@ export function createPblStore(repository, clock = {}) {
 				currentStep: 0,
 				unlockedStep: 0,
 				lastCheck: null,
+				lastRun: null,
 				openedHints: {},
 				stepEnteredAt: enteredAt,
 				memberCount: 1,
@@ -440,6 +443,7 @@ export function createPblStore(repository, clock = {}) {
 		 *   unlockedStep?: unknown,
 		 *   openedHints?: unknown,
 		 *   lastCheck?: unknown,
+		 *   lastRun?: unknown,
 		 *   yjsState?: unknown,
 		 *   awarenessState?: unknown,
 		 *   stepSources?: unknown,
@@ -540,6 +544,15 @@ export function createPblStore(repository, clock = {}) {
 			if (input.openedHints !== undefined)
 				patch.openedHints = normalizeOpenedHints(input.openedHints);
 			if (input.lastCheck !== undefined) patch.lastCheck = input.lastCheck;
+			if (input.lastRun !== undefined) {
+				if (input.lastRun === null) {
+					patch.lastRun = null;
+				} else {
+					const normalizedRun = normalizeLastRun(input.lastRun);
+					if (!normalizedRun) throw new PblInputError('Invalid run output.');
+					patch.lastRun = normalizedRun;
+				}
+			}
 			if (input.unlockedStep !== undefined) {
 				if (!Number.isInteger(input.unlockedStep) || input.unlockedStep < row.unlockedStep) {
 					throw new PblInputError('Invalid step.');
@@ -626,6 +639,7 @@ export function createPblStore(repository, clock = {}) {
 				unlockedStep: row.unlockedStep,
 				driverMemberId: row.driverMemberId ?? null,
 				lastCheck: row.lastCheck ?? null,
+				lastRun: normalizeLastRun(row.lastRun),
 				memberCount: row.memberCount,
 				stepSources: normalizeStepSources(row.stepSources),
 				stepYjs: normalizeStepYjs(row.stepYjs),

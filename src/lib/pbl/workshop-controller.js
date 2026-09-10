@@ -42,6 +42,7 @@ export function createWorkshopController(options) {
 		unlockedStep: 0,
 		openedHints: {},
 		lastCheck: null,
+		lastRun: null,
 		memberCount: 1,
 		version: 0,
 		stepEnteredAt: now(),
@@ -89,6 +90,21 @@ export function createWorkshopController(options) {
 
 	function publish() {
 		emit(snapshot());
+	}
+
+	/**
+	 * Adopt a shared lastRun into local terminal fields (output / error / running).
+	 * @param {{ output?: string, error?: string, step?: number, at?: string, running?: boolean } | null | undefined} lastRun
+	 */
+	function applySharedLastRun(lastRun) {
+		if (!lastRun || typeof lastRun !== 'object') {
+			room = { ...room, lastRun: null };
+			return;
+		}
+		room = { ...room, lastRun };
+		output = typeof lastRun.output === 'string' ? lastRun.output : '';
+		pythonError = typeof lastRun.error === 'string' ? lastRun.error : '';
+		running = Boolean(lastRun.running);
 	}
 
 	function ensureMaps() {
@@ -170,6 +186,20 @@ export function createWorkshopController(options) {
 			}
 		}
 
+		const incomingRun = next.lastRun;
+		const keepLocalRun = !isNewerLastCheck(
+			/** @type {any} */ (incomingRun),
+			/** @type {any} */ (room.lastRun)
+		);
+		if (keepLocalRun) {
+			merged.lastRun = room.lastRun;
+		} else if (incomingRun && typeof incomingRun === 'object') {
+			merged.lastRun = incomingRun;
+			output = typeof incomingRun.output === 'string' ? incomingRun.output : '';
+			pythonError = typeof incomingRun.error === 'string' ? incomingRun.error : '';
+			running = Boolean(incomingRun.running);
+		}
+
 		const remoteEditing = Number(next.editingStep);
 		const key = String(viewStep);
 		const remoteOnOtherStep = Number.isInteger(remoteEditing) && remoteEditing !== viewStep;
@@ -249,6 +279,9 @@ export function createWorkshopController(options) {
 			room.stepSources = { ...room.stepSources, '0': room.source };
 		}
 		loadViewStep(viewStep);
+		if (joined.lastRun && typeof joined.lastRun === 'object') {
+			applySharedLastRun(/** @type {any} */ (joined.lastRun));
+		}
 		readOnly = blocked === 'full';
 		sync.start();
 		publish();
@@ -337,23 +370,38 @@ export function createWorkshopController(options) {
 			});
 		}
 		const stepSnapshot = viewStep;
-		running = true;
-		pythonError = '';
 		runClearedAt = now();
+		const startingRun = {
+			output: '',
+			error: '',
+			step: stepSnapshot,
+			at: runClearedAt,
+			running: true
+		};
+		applySharedLastRun(startingRun);
+		/** @type {Record<string, unknown>} */
+		const startPatch = { lastRun: startingRun };
 		if (!room.lastCheck || room.lastCheck.step === stepSnapshot) {
 			room = { ...room, lastCheck: null };
-			sync.update({ lastCheck: null });
+			startPatch.lastCheck = null;
 		}
+		sync.update(startPatch);
 		publish();
 		const stdin = stdinText
 			.split('\n')
 			.map((line) => line.replace(/\r$/u, '').replace(/\u00a0/gu, ' '))
 			.filter((line, index, lines) => line.length > 0 || index < lines.length - 1);
 		const result = await host.run(sourceSnapshot, { stdin });
-		output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
+		const finishedRun = {
+			output: `${result.stdout ?? ''}${result.stderr ?? ''}`,
+			error: result.error ? String(result.error) : '',
+			step: stepSnapshot,
+			at: now(),
+			running: false
+		};
 		files = result.files ?? {};
-		if (result.error) pythonError = result.error;
-		running = false;
+		applySharedLastRun(finishedRun);
+		sync.update({ lastRun: finishedRun });
 		publish();
 		if (!result.error) await checkCurrent(sourceSnapshot, stepSnapshot);
 		else runClearedAt = null;

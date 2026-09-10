@@ -88,7 +88,8 @@ describe('consolidated database schema', () => {
 				'yjs_state',
 				'awareness_state',
 				'step_sources',
-				'step_yjs'
+				'step_yjs',
+				'last_run'
 			])
 		);
 		expect(tableName(schema.pblStepSubmissions)).toBe('pbl_step_submissions');

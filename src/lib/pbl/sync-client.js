@@ -115,6 +115,13 @@ export function createRoomSync(options) {
 		) {
 			next.lastCheck = base.lastCheck;
 		}
+		if (isNewerLastCheck(/** @type {any} */ (server.lastRun), /** @type {any} */ (base.lastRun))) {
+			next.lastRun = server.lastRun;
+		} else if (
+			isNewerLastCheck(/** @type {any} */ (base.lastRun), /** @type {any} */ (server.lastRun))
+		) {
+			next.lastRun = base.lastRun;
+		}
 		return next;
 	}
 
@@ -128,6 +135,7 @@ export function createRoomSync(options) {
 			unlockedStep: local.unlockedStep,
 			openedHints: local.openedHints,
 			lastCheck: local.lastCheck,
+			lastRun: local.lastRun,
 			source: local.source,
 			yjsState: local.yjsState,
 			awarenessState: local.awarenessState,

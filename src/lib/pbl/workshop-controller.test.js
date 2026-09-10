@@ -238,7 +238,6 @@ describe('workshop controller', () => {
 		await inner.run();
 		inner.destroy();
 	});
-});
 
 	it('fail then pass updates the status message to Accepted', async () => {
 		let tick = 0;
@@ -433,3 +432,64 @@ describe('workshop controller', () => {
 		});
 		controller.destroy();
 	});
+
+	it('syncs lastRun when running and adopts a newer remote terminal', async () => {
+		const { controller, host, sync, onState } = harness();
+		host.run.mockResolvedValueOnce({
+			stdout: 'hello\n',
+			stderr: '',
+			error: null,
+			globals: {},
+			files: {},
+			inputCount: 0
+		});
+		await controller.join();
+		await controller.run();
+		const runUpdates = sync.update.mock.calls.map((call) => call[0]).filter((p) => p.lastRun);
+		expect(runUpdates.length).toBeGreaterThanOrEqual(2);
+		expect(runUpdates[0].lastRun).toMatchObject({ running: true, step: 0, output: '' });
+		expect(runUpdates.at(-1).lastRun).toMatchObject({
+			running: false,
+			output: 'hello\n',
+			error: ''
+		});
+		expect(controller.getState().output).toBe('hello\n');
+		expect(controller.getState().lastRun?.output).toBe('hello\n');
+
+		onState()({
+			lastRun: {
+				output: 'from-teammate\n',
+				error: '',
+				step: 0,
+				at: '2026-09-08T16:00:00.000Z',
+				running: false
+			}
+		});
+		expect(controller.getState().output).toBe('from-teammate\n');
+		expect(controller.getState().running).toBe(false);
+
+		onState()({
+			lastRun: {
+				output: '',
+				error: '',
+				step: 0,
+				at: '2026-09-08T16:00:01.000Z',
+				running: true
+			}
+		});
+		expect(controller.getState().running).toBe(true);
+		expect(controller.getState().output).toBe('');
+		controller.destroy();
+	});
+
+	it('does not push shared currentStep when syncing lastRun', async () => {
+		const { controller, sync } = harness();
+		await controller.join();
+		await controller.run();
+		const payloads = sync.update.mock.calls.map((call) => call[0]);
+		expect(payloads.some((p) => p.lastRun)).toBe(true);
+		expect(payloads.some((p) => 'currentStep' in p)).toBe(false);
+		controller.destroy();
+	});
+
+});

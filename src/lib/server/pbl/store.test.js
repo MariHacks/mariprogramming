@@ -524,4 +524,32 @@ describe('PBL room store', () => {
 		expect(repo.rooms).toHaveLength(0);
 	});
 
+
+	it('persists lastRun on updateRoom and exposes it on the public room', async () => {
+		const repo = createMemoryPblRepository();
+		const store = createPblStore(repo, { now: () => NOW, createCode: () => 'AB23JK' });
+		await store.createRoom({ pblId: 'science', teamName: 'Lab table 3', memberId: MEMBER, userId: USER });
+		const updated = await store.updateRoom({
+			code: 'AB23JK',
+			memberId: MEMBER,
+			version: 1,
+			lastRun: {
+				output: 'Lab table 3\n',
+				error: '',
+				step: 0,
+				at: NOW.toISOString(),
+				running: false
+			}
+		});
+		expect(updated.lastRun).toMatchObject({ output: 'Lab table 3\n', running: false, step: 0 });
+		await expect(
+			store.updateRoom({
+				code: 'AB23JK',
+				memberId: MEMBER,
+				version: 2,
+				lastRun: { output: 'x', step: 0, running: false }
+			})
+		).rejects.toBeInstanceOf(PblInputError);
+	});
+
 });

@@ -37,6 +37,13 @@ export const pblRooms = pgTable(
 		awarenessState: text('awareness_state').default('').notNull(),
 		stepSources: jsonb('step_sources').$type<Record<string, string>>().default({}).notNull(),
 		stepYjs: jsonb('step_yjs').$type<Record<string, string>>().default({}).notNull(),
+		lastRun: jsonb('last_run').$type<{
+			output: string;
+			error: string;
+			step: number;
+			at: string;
+			running: boolean;
+		} | null>(),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()

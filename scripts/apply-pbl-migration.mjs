@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Apply drizzle/0020_pbl_rooms.sql through 0024 when missing.
+ * Apply drizzle/0020_pbl_rooms.sql through 0025 when missing.
  * Requires MIGRATION_DATABASE_URL or DATABASE_URL. Does not print connection details.
  */
 import { readFileSync } from 'node:fs';
@@ -44,6 +44,7 @@ try {
 			await applyFile(client, 'drizzle/0022_pbl_yjs_state.sql');
 			await applyFile(client, 'drizzle/0023_pbl_room_member_user.sql');
 			await applyFile(client, 'drizzle/0024_pbl_step_sources.sql');
+			await applyFile(client, 'drizzle/0025_pbl_last_run.sql');
 			try {
 				await client.query(
 					'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pbl_rooms, pbl_room_members, pbl_step_submissions TO mariprogramming_runtime'
@@ -58,7 +59,7 @@ try {
 				}
 			}
 			await client.query('COMMIT');
-			console.log(`ok: applied 0020 (${count} statements), 0021, 0022, 0023, and 0024`);
+			console.log(`ok: applied 0020 (${count} statements), 0021, 0022, 0023, 0024, and 0025`);
 		} catch (error) {
 			await client.query('ROLLBACK');
 			throw error;
@@ -83,11 +84,16 @@ try {
 		const stepSubs = await client.query(
 			"SELECT to_regclass('public.pbl_step_submissions')::text AS table_name"
 		);
+		const lastRun = await client.query(
+			`SELECT column_name FROM information_schema.columns
+			 WHERE table_schema = 'public' AND table_name = 'pbl_rooms' AND column_name = 'last_run'`
+		);
 		const needsDriver = !driver.rows[0]?.column_name;
 		const needsYjs = !yjs.rows[0]?.column_name;
 		const needsMemberUser = !memberUser.rows[0]?.column_name;
 		const needsStepSources = !stepSources.rows[0]?.column_name || !stepSubs.rows[0]?.table_name;
-		if (needsDriver || needsYjs || needsMemberUser || needsStepSources) {
+		const needsLastRun = !lastRun.rows[0]?.column_name;
+		if (needsDriver || needsYjs || needsMemberUser || needsStepSources || needsLastRun) {
 			await client.query('BEGIN');
 			try {
 				if (needsDriver) await applyFile(client, 'drizzle/0021_pbl_room_driver.sql');
@@ -109,14 +115,15 @@ try {
 						}
 					}
 				}
+				if (needsLastRun) await applyFile(client, 'drizzle/0025_pbl_last_run.sql');
 				await client.query('COMMIT');
-				console.log('ok: applied missing pbl room columns / step sources');
+				console.log('ok: applied missing pbl room columns / step sources / last_run');
 			} catch (error) {
 				await client.query('ROLLBACK');
 				throw error;
 			}
 		} else {
-			console.log('ok: pbl_rooms columns through step_sources already present');
+			console.log('ok: pbl_rooms columns through last_run already present');
 		}
 	}
 } catch (error) {

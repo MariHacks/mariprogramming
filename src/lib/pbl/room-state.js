@@ -68,6 +68,35 @@ export function normalizeStepYjs(value) {
  * @param {{ at?: string } | null | undefined} candidate
  * @param {{ at?: string } | null | undefined} baseline
  */
+export const MAX_RUN_OUTPUT_CHARS = 100000;
+export const MAX_RUN_ERROR_CHARS = 4000;
+
+/**
+ * Shared terminal snapshot for the team: output, error, step, at, running.
+ * @param {unknown} value
+ * @returns {{ output: string, error: string, step: number, at: string, running: boolean } | null}
+ */
+export function normalizeLastRun(value) {
+	if (value === null || value === undefined) return null;
+	if (typeof value !== 'object' || Array.isArray(value)) return null;
+	const record = /** @type {Record<string, unknown>} */ (value);
+	const step = Number(record.step);
+	if (!Number.isInteger(step) || step < 0 || step > 99) return null;
+	const at = typeof record.at === 'string' ? record.at : '';
+	if (!at || !Number.isFinite(Date.parse(at))) return null;
+	const output =
+		typeof record.output === 'string' ? record.output.slice(0, MAX_RUN_OUTPUT_CHARS) : '';
+	const error =
+		typeof record.error === 'string' ? record.error.slice(0, MAX_RUN_ERROR_CHARS) : '';
+	return {
+		output,
+		error,
+		step,
+		at,
+		running: Boolean(record.running)
+	};
+}
+
 export function isNewerLastCheck(candidate, baseline) {
 	if (!candidate || typeof candidate !== 'object') return false;
 	if (!baseline || typeof baseline !== 'object') return true;
@@ -87,17 +116,33 @@ export function mergeRoomPreferringNewerLastCheck(serverRoom, localRoom) {
 	if (!serverRoom || typeof serverRoom !== 'object') return serverRoom;
 	const localCheck = localRoom && typeof localRoom === 'object' ? localRoom.lastCheck : null;
 	const serverCheck = serverRoom.lastCheck;
-	if (!isNewerLastCheck(/** @type {any} */ (localCheck), /** @type {any} */ (serverCheck))) {
+	const localRun = localRoom && typeof localRoom === 'object' ? localRoom.lastRun : null;
+	const serverRun = serverRoom.lastRun;
+	const keepLocalCheck = isNewerLastCheck(
+		/** @type {any} */ (localCheck),
+		/** @type {any} */ (serverCheck)
+	);
+	const keepLocalRun = isNewerLastCheck(
+		/** @type {any} */ (localRun),
+		/** @type {any} */ (serverRun)
+	);
+	if (!keepLocalCheck && !keepLocalRun) {
 		return serverRoom;
 	}
-	const merged = { ...serverRoom, lastCheck: localCheck };
-	const localUnlocked = Number(localRoom?.unlockedStep);
-	const serverUnlocked = Number(serverRoom.unlockedStep);
-	if (
-		Number.isFinite(localUnlocked) &&
-		(!Number.isFinite(serverUnlocked) || localUnlocked > serverUnlocked)
-	) {
-		merged.unlockedStep = localUnlocked;
+	const merged = { ...serverRoom };
+	if (keepLocalCheck) {
+		merged.lastCheck = localCheck;
+		const localUnlocked = Number(localRoom?.unlockedStep);
+		const serverUnlocked = Number(serverRoom.unlockedStep);
+		if (
+			Number.isFinite(localUnlocked) &&
+			(!Number.isFinite(serverUnlocked) || localUnlocked > serverUnlocked)
+		) {
+			merged.unlockedStep = localUnlocked;
+		}
+	}
+	if (keepLocalRun) {
+		merged.lastRun = localRun;
 	}
 	return merged;
 }
@@ -120,6 +165,7 @@ export function mergeRoomPreferringNewerLastCheck(serverRoom, localRoom) {
  *   awarenessState?: string,
  *   stepSources?: Record<string, string>,
  *   stepYjs?: Record<string, string>,
+ *   lastRun?: { output: string, error: string, step: number, at: string, running: boolean } | null,
  *   members?: Array<{ memberId: string, userId?: string | null, email?: string | null, name?: string | null }>,
  * }} row
  * @param {string} [viewerMemberId]
@@ -137,6 +183,7 @@ export function publicRoomView(row, viewerMemberId) {
 		currentStep: unlockedStep,
 		unlockedStep,
 		lastCheck: row.lastCheck,
+		lastRun: normalizeLastRun(row.lastRun),
 		openedHints: row.openedHints,
 		stepEnteredAt: row.stepEnteredAt,
 		memberCount: row.memberCount,

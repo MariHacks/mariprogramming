@@ -40,6 +40,7 @@ export function _createPblRoomEndpoint(dependencies = {}) {
 					unlockedStep: body.unlockedStep,
 					openedHints: body.openedHints,
 					lastCheck: body.lastCheck,
+					lastRun: body.lastRun,
 					yjsState: body.yjsState,
 					awarenessState: body.awarenessState,
 					stepSources: body.stepSources,
