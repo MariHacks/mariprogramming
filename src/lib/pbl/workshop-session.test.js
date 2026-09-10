@@ -26,7 +26,12 @@ describe('workshop session helpers', () => {
 	it('unlocks the next step only after a passing check', () => {
 		expect(nextUnlockedStep(2, false)).toBe(2);
 		expect(nextUnlockedStep(2, true)).toBe(3);
+		expect(nextUnlockedStep(2, true, 2)).toBe(3);
 		expect(nextUnlockedStep(11, true)).toBe(11);
+		// Re-pass an earlier step — unlock stays put.
+		expect(nextUnlockedStep(5, true, 2)).toBe(5);
+		expect(nextUnlockedStep(5, true, 0)).toBe(5);
+		expect(nextUnlockedStep(5, true, 5)).toBe(6);
 	});
 
 	it('labels time on the current step', () => {

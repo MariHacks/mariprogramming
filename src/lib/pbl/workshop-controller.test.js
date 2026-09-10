@@ -680,6 +680,33 @@ describe('workshop controller', () => {
 		controller.destroy();
 	});
 
+	it('re-running a completed step does not unlock further steps', async () => {
+		const { controller, onState } = harness({
+			runCheck: async () => ({ passed: true, message: 'ok' })
+		});
+		await controller.join();
+		await controller.run();
+		expect(controller.getState().unlockedStep).toBe(1);
+		// Jump back to step 0 with unlock already at 1.
+		controller.selectStep(0);
+		await controller.run();
+		expect(controller.getState().unlockedStep).toBe(1);
+		await controller.run();
+		expect(controller.getState().unlockedStep).toBe(1);
+		// Frontier clear still advances once.
+		onState()({
+			source: controller.getState().source,
+			yjsState: controller.getState().yjsState,
+			stepSources: controller.getState().stepSources,
+			unlockedStep: 1,
+			version: 40
+		});
+		controller.selectStep(1);
+		await controller.run();
+		expect(controller.getState().unlockedStep).toBe(2);
+		controller.destroy();
+	});
+
 	it('Run does not duplicate source via a fresh Yjs snapshot', async () => {
 		const { controller } = harness({
 			runCheck: async () => ({ passed: true, message: 'ok' })
