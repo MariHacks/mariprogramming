@@ -138,7 +138,7 @@
 		background-color: var(--pbl-editor-active-line, #ffffff14);
 	}
 
-	/* VS Code Live Share–style remote carets: thin bar + always-visible name pill */
+	/* Live Share carets: colored bar + solid midnight name pill (always readable on light). */
 	.python-host :global(.cm-ySelectionCaret) {
 		position: relative;
 		border-left-width: 2px;
@@ -153,28 +153,31 @@
 	}
 	.python-host :global(.cm-ySelectionInfo) {
 		position: absolute;
-		top: -1.45em;
+		top: -1.5em;
 		left: -1px;
 		z-index: 12;
-		padding: 0.15em 0.5em;
-		border-radius: 0.3rem 0.3rem 0.3rem 0;
+		padding: 0.18em 0.55em 0.18em 0.45em;
+		border-radius: 0.28rem;
 		font-family: var(--font-sans), system-ui, sans-serif;
 		font-size: 11px;
 		font-style: normal;
 		font-weight: 700;
 		line-height: 1.25;
 		letter-spacing: 0.01em;
+		/* Never inherit a washed fill — solid night + colored edge from caret border-color. */
 		color: #fff !important;
 		-webkit-text-fill-color: #fff;
-		/* Caret sets background-color inline to the user color; inherit it. */
-		background-color: inherit !important;
+		background-color: #061431 !important;
+		border: 1px solid;
+		border-color: inherit !important;
+		border-left-width: 3px;
 		opacity: 1 !important;
 		pointer-events: none;
 		white-space: nowrap;
-		box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+		box-shadow: 0 2px 6px rgb(6 20 49 / 35%);
 		transition: none !important;
 	}
 	.python-host :global(.cm-ySelection) {
-		opacity: 0.28;
+		opacity: 0.32;
 	}
 </style>

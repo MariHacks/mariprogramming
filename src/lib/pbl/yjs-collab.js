@@ -12,12 +12,13 @@ export const MAX_YJS_STATE_CHARS = 200000;
 export const AWARENESS_TTL_MS = 30000;
 
 export const TEAMMATE_COLORS = Object.freeze([
-	Object.freeze({ color: '#ff6188', colorLight: '#ff618833' }),
-	Object.freeze({ color: '#a9dc76', colorLight: '#a9dc7633' }),
-	Object.freeze({ color: '#78dce8', colorLight: '#78dce833' }),
-	Object.freeze({ color: '#ffd866', colorLight: '#ffd86633' }),
-	Object.freeze({ color: '#ab9df2', colorLight: '#ab9df233' }),
-	Object.freeze({ color: '#fc9867', colorLight: '#fc986733' })
+	// Solid, high-contrast on light Monokai; colorLight is soft selection wash.
+	Object.freeze({ color: '#0b4cf4', colorLight: '#0b4cf433' }), // club blue
+	Object.freeze({ color: '#df5b48', colorLight: '#df5b4833' }), // coral
+	Object.freeze({ color: '#0f766e', colorLight: '#0f766e33' }), // teal
+	Object.freeze({ color: '#7c3aed', colorLight: '#7c3aed33' }), // violet
+	Object.freeze({ color: '#c2410c', colorLight: '#c2410c33' }), // burnt orange
+	Object.freeze({ color: '#0369a1', colorLight: '#0369a133' }) // sky
 ]);
 
 /** @param {Uint8Array | ArrayLike<number>} bytes */
@@ -91,6 +92,25 @@ export function collabUserFromProfile(profile) {
 		color: colors.color,
 		colorLight: colors.colorLight
 	};
+}
+
+
+/**
+ * Build a fresh Yjs update that contains only `source` (for step copy / replace).
+ * @param {string} source
+ */
+export function encodeSourceAsYjs(source) {
+	const doc = new Y.Doc();
+	try {
+		const text = typeof source === 'string' ? source : '';
+		if (text.length > MAX_SOURCE_CHARS) {
+			throw new Error('The program is too long to sync.');
+		}
+		if (text) doc.getText(PYTHON_YTEXT).insert(0, text);
+		return bytesToBase64(Y.encodeStateAsUpdate(doc));
+	} finally {
+		doc.destroy();
+	}
 }
 
 /**

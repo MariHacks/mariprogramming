@@ -30,6 +30,40 @@ export function normalizeOpenedHints(value) {
 	return opened;
 }
 
+export const MAX_STEP_YJS_CHARS = 200000;
+
+/** @param {unknown} value */
+export function normalizeStepSources(value) {
+	/** @type {Record<string, string>} */
+	const sources = {};
+	if (value === null || value === undefined) return sources;
+	if (typeof value !== 'object' || Array.isArray(value)) return sources;
+	for (const [step, source] of Object.entries(value)) {
+		if (!/^[0-9]{1,2}$/u.test(step)) continue;
+		if (typeof source !== 'string' || source.length > MAX_SOURCE_CHARS) continue;
+		sources[step] = source;
+	}
+	return sources;
+}
+
+/** @param {unknown} value */
+export function normalizeStepYjs(value) {
+	/** @type {Record<string, string>} */
+	const encoded = {};
+	if (value === null || value === undefined) return encoded;
+	if (typeof value !== 'object' || Array.isArray(value)) return encoded;
+	for (const [step, state] of Object.entries(value)) {
+		if (!/^[0-9]{1,2}$/u.test(step)) continue;
+		if (typeof state !== 'string') continue;
+		if (state.length > MAX_STEP_YJS_CHARS) continue;
+		if (state !== '' && !/^[A-Za-z0-9+/]*={0,2}$/u.test(state)) continue;
+		encoded[step] = state;
+	}
+	return encoded;
+}
+
+
+
 
 /**
  * @param {{ at?: string } | null | undefined} candidate
@@ -84,18 +118,24 @@ export function mergeRoomPreferringNewerLastCheck(serverRoom, localRoom) {
  *   version: number,
  *   driverMemberId?: string | null,
  *   yjsState?: string,
- *   awarenessState?: string
+ *   awarenessState?: string,
+ *   stepSources?: Record<string, string>,
+ *   stepYjs?: Record<string, string>
  * }} row
  * @param {string} [viewerMemberId]
  */
 export function publicRoomView(row, viewerMemberId) {
+	const unlockedStep = Number.isInteger(row.unlockedStep) ? row.unlockedStep : 0;
+	const stepSources = normalizeStepSources(row.stepSources);
+	const stepYjs = normalizeStepYjs(row.stepYjs);
 	return {
 		code: row.code,
 		pblId: row.pblId,
 		teamName: row.teamName,
 		source: row.source,
-		currentStep: row.currentStep,
-		unlockedStep: row.unlockedStep,
+		// Compat only — clients must treat view step as local; progress is unlockedStep.
+		currentStep: unlockedStep,
+		unlockedStep,
 		lastCheck: row.lastCheck,
 		openedHints: row.openedHints,
 		stepEnteredAt: row.stepEnteredAt,
@@ -103,6 +143,8 @@ export function publicRoomView(row, viewerMemberId) {
 		version: row.version,
 		yjsState: typeof row.yjsState === 'string' ? row.yjsState : '',
 		awarenessState: typeof row.awarenessState === 'string' ? row.awarenessState : '',
+		stepSources,
+		stepYjs,
 		joinable: canAcceptMember(row.memberCount),
 		isDriver: Boolean(viewerMemberId)
 	};
