@@ -112,6 +112,19 @@ export function createDrizzlePblRepository(transaction) {
 			);
 		},
 		/**
+		 * @param {string} roomId
+		 * @param {string} userId
+		 */
+		async findMemberByUser(roomId, userId) {
+			return oneRow(
+				await transaction
+					.select()
+					.from(pblRoomMembers)
+					.where(and(eq(pblRoomMembers.roomId, roomId), eq(pblRoomMembers.userId, userId)))
+					.limit(1)
+			);
+		},
+		/**
 		 * @param {string} code
 		 * @param {number} expectedVersion
 		 * @param {Record<string, unknown>} patch
@@ -161,6 +174,13 @@ export function createMemoryPblRepository() {
 			return members.find((row) => row.roomId === roomId && row.memberId === memberId) ?? null;
 		},
 		/**
+		 * @param {string} roomId
+		 * @param {string} userId
+		 */
+		async findMemberByUser(roomId, userId) {
+			return members.find((row) => row.roomId === roomId && row.userId === userId) ?? null;
+		},
+		/**
 		 * @param {string} code
 		 * @param {number} expectedVersion
 		 * @param {Record<string, unknown>} patch
@@ -205,13 +225,16 @@ export function createPblStore(repository, clock = {}) {
 
 	return {
 		/**
-		 * @param {{ pblId: unknown, teamName: unknown, memberId: string }} input
+		 * @param {{ pblId: unknown, teamName: unknown, memberId: string, userId: string }} input
 		 */
 		async createRoom(input) {
 			const catalogEntry = getPblById(input.pblId);
 			if (!catalogEntry) throw new PblInputError('Unknown workshop.');
 			const teamName = normalizeTeamName(input.teamName);
 			if (!teamName) throw new PblInputError('Enter a team name.');
+			if (typeof input.userId !== 'string' || input.userId.length === 0) {
+				throw new PblInputError('Sign in with your club Google account to create a team.', 401);
+			}
 			const enteredAt = now();
 			const row = await repository.insertRoom({
 				code: await uniqueCode(),
@@ -230,7 +253,11 @@ export function createPblStore(repository, clock = {}) {
 				awarenessState: ''
 			});
 			if (!row) throw new PblInputError('Could not create the team room.', 503);
-			await repository.insertMember({ roomId: row.id, memberId: input.memberId });
+			await repository.insertMember({
+				roomId: row.id,
+				memberId: input.memberId,
+				userId: input.userId
+			});
 			return roomFromRow(row, input.memberId);
 		},
 
@@ -244,12 +271,17 @@ export function createPblStore(repository, clock = {}) {
 		},
 
 		/**
-		 * @param {{ code: unknown, memberId: string }} input
+		 * @param {{ code: unknown, memberId: string, userId: string }} input
 		 */
 		async joinRoom(input) {
+			if (typeof input.userId !== 'string' || input.userId.length === 0) {
+				throw new PblInputError('Sign in with your club Google account to join a team.', 401);
+			}
 			const room = await this.getRoom(input.code);
 			const row = await repository.findRoomByCode(room.code);
 			if (!row) throw new PblNotFoundError();
+			const byUser = await repository.findMemberByUser(row.id, input.userId);
+			if (byUser) return roomFromRow(row, input.memberId);
 			const existing = await repository.findMember(row.id, input.memberId);
 			if (existing) return roomFromRow(row, input.memberId);
 			if (!canAcceptMember(row.memberCount)) throw new PblFullError();
@@ -259,7 +291,11 @@ export function createPblStore(repository, clock = {}) {
 				updatedAt: now()
 			});
 			if (!updated) throw new PblConflictError(roomFromRow(row, input.memberId));
-			await repository.insertMember({ roomId: row.id, memberId: input.memberId });
+			await repository.insertMember({
+				roomId: row.id,
+				memberId: input.memberId,
+				userId: input.userId
+			});
 			return roomFromRow(updated, input.memberId);
 		},
 

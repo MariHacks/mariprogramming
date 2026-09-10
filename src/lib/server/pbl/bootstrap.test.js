@@ -43,6 +43,8 @@ describe('PBL schema bootstrap', () => {
 			if (String(sql).includes('driver_member_id'))
 				return { rows: [{ column_name: 'driver_member_id' }] };
 			if (String(sql).includes('yjs_state')) return { rows: [{ column_name: 'yjs_state' }] };
+			if (String(sql).includes("table_name = 'pbl_room_members'") || String(sql).includes('user_id'))
+				return { rows: [{ column_name: 'user_id' }] };
 			return { rows: [] };
 		});
 		const { pool } = poolHarness(query);
@@ -102,6 +104,24 @@ describe('PBL schema bootstrap', () => {
 			ensurePblSchema('postgresql://u:p@localhost/db', { createPool: () => pool })
 		).rejects.toThrow('cannot alter');
 		expect(query).toHaveBeenCalledWith('ROLLBACK');
+	});
+
+	it('adds member user_id when rooms already have driver and yjs columns', async () => {
+		const query = vi.fn(async (sql) => {
+			if (String(sql).includes('to_regclass')) return { rows: [{ table_name: 'pbl_rooms' }] };
+			if (String(sql).includes('driver_member_id'))
+				return { rows: [{ column_name: 'driver_member_id' }] };
+			if (String(sql).includes('yjs_state')) return { rows: [{ column_name: 'yjs_state' }] };
+			if (String(sql).includes("table_name = 'pbl_room_members'")) return { rows: [] };
+			return { rows: [] };
+		});
+		const { pool } = poolHarness(query);
+		await ensurePblSchema('postgresql://u:p@localhost/db', { createPool: () => pool });
+		expect(
+			query.mock.calls.some(
+				(call) => String(call[0]).includes('user_id') && String(call[0]).includes('ALTER')
+			)
+		).toBe(true);
 	});
 
 	it('adds yjs_state when the rooms table already has a driver column', async () => {
