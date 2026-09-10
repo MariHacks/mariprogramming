@@ -11,6 +11,8 @@
 
 	let confirmingDisband = false;
 	let disbandConfirm = '';
+	/** @type {string | null} */
+	let pendingAction = null;
 
 	$: room = data.room;
 	$: stepSources = room?.stepSources ?? {};
@@ -58,6 +60,20 @@
 		if (member?.userId) return member.userId;
 		return 'Anonymous device';
 	}
+
+	/** @param {string} actionKey */
+	function enhanceAction(actionKey) {
+		return () => {
+			pendingAction = actionKey;
+			return async ({ update, result }) => {
+				await update();
+				pendingAction = null;
+				if (actionKey === 'disband' && result.type !== 'redirect') {
+					confirmingDisband = true;
+				}
+			};
+		};
+	}
 </script>
 
 <svelte:head>
@@ -74,7 +90,7 @@
 	{:else}
 		<header class="page-header">
 			<div>
-				<p class="eyebrow">{workshopLabel(room.pblId)}</p>
+				<p class="workshop">{workshopLabel(room.pblId)}</p>
 				<h1>{room.teamName}</h1>
 				<p class="lede">
 					Code <span class="code">{room.code}</span>
@@ -103,45 +119,128 @@
 			</p>
 		{/if}
 
-		<section class="panel" aria-label="Members">
-			<h2>Members</h2>
-			<p class="quiet">
-				Staff can eject anyone except the current leader, transfer leadership, then remove the old
-				leader if needed.
-			</p>
+		<section class="team-controls" aria-labelledby="team-controls-title">
+			<header>
+				<h2 id="team-controls-title">Team controls</h2>
+				<p>
+					Staff override for roster changes. Unlocked step is the only shared progress marker.
+				</p>
+			</header>
+
 			{#if room.members?.length}
-				<ul class="members">
-					{#each room.members as member (member.memberId)}
-						<li>
-							<div class="member-main">
-								<span class="member-email">{memberLabel(member)}</span>
+				{#each room.members as member (member.memberId)}
+					<div class="control-group">
+						<div class="control-copy">
+							<h3>
+								{memberLabel(member)}
 								{#if member.memberId === room.driverMemberId}
 									<span class="badge">Leader</span>
 								{/if}
+							</h3>
+							<p>
 								{#if member.userId}
-									<span class="member-id">{member.userId}</span>
-								{/if}
-							</div>
-							<div class="member-actions">
-								{#if member.memberId !== room.driverMemberId}
-									<form method="POST" action="?/transferLeader" use:enhance>
-										<input type="hidden" name="memberId" value={member.memberId} />
-										<button type="submit" class="secondary-button">Make leader</button>
-									</form>
-									<form method="POST" action="?/ejectMember" use:enhance>
-										<input type="hidden" name="memberId" value={member.memberId} />
-										<button type="submit" class="danger-button">Eject</button>
-									</form>
+									Club account <span class="mono">{member.userId}</span>
 								{:else}
-									<span class="quiet leader-hint">Transfer leadership before ejecting</span>
+									Device member — no club account linked
 								{/if}
+							</p>
+						</div>
+						{#if member.memberId === room.driverMemberId}
+							<p class="leader-hint">Transfer leadership before ejecting</p>
+						{:else}
+							<div class="control-actions">
+								<form method="POST" action="?/transferLeader" use:enhance={enhanceAction(`transfer-${member.memberId}`)}>
+									<input type="hidden" name="memberId" value={member.memberId} />
+									<button
+										type="submit"
+										class="secondary-button"
+										disabled={pendingAction !== null}
+									>
+										{pendingAction === `transfer-${member.memberId}` ? 'Transferring…' : 'Make leader'}
+									</button>
+								</form>
+								<form method="POST" action="?/ejectMember" use:enhance={enhanceAction(`eject-${member.memberId}`)}>
+									<input type="hidden" name="memberId" value={member.memberId} />
+									<button
+										type="submit"
+										class="danger-button"
+										disabled={pendingAction !== null}
+									>
+										{pendingAction === `eject-${member.memberId}` ? 'Ejecting…' : 'Eject'}
+									</button>
+								</form>
 							</div>
-						</li>
-					{/each}
-				</ul>
+						{/if}
+					</div>
+				{/each}
 			{:else}
-				<p class="quiet">No member accounts linked yet.</p>
+				<p class="empty-note">No member accounts linked yet.</p>
 			{/if}
+
+			<div class="control-group danger-control">
+				<div class="control-copy">
+					<h3 id="disband-title">Disband team</h3>
+					<p>
+						Permanently deletes this room, members, and stored step work. Students will need a new
+						code.
+					</p>
+				</div>
+				{#if !confirmingDisband}
+					<button
+						type="button"
+						class="danger-button"
+						disabled={pendingAction !== null}
+						on:click={() => {
+							confirmingDisband = true;
+							disbandConfirm = '';
+						}}
+					>
+						Disband team
+					</button>
+				{:else}
+					<form
+						method="POST"
+						action="?/disbandTeam"
+						class="disband-form"
+						aria-labelledby="disband-title"
+						use:enhance={enhanceAction('disband')}
+					>
+						<label for="disband-confirm">
+							Type room code <span class="code">{room.code}</span> to confirm
+						</label>
+						<input
+							id="disband-confirm"
+							name="confirm"
+							type="text"
+							autocomplete="off"
+							spellcheck="false"
+							placeholder={room.code}
+							bind:value={disbandConfirm}
+							disabled={pendingAction !== null}
+						/>
+						<div class="control-actions">
+							<button
+								type="submit"
+								class="danger-button"
+								disabled={!canConfirmDisband || pendingAction !== null}
+							>
+								{pendingAction === 'disband' ? 'Disbanding…' : 'Confirm disband'}
+							</button>
+							<button
+								type="button"
+								class="secondary-button"
+								disabled={pendingAction !== null}
+								on:click={() => {
+									confirmingDisband = false;
+									disbandConfirm = '';
+								}}
+							>
+								Cancel
+							</button>
+						</div>
+					</form>
+				{/if}
+			</div>
 		</section>
 
 		<section class="panel" aria-label="Per-step source">
@@ -192,60 +291,6 @@
 				</ul>
 			{/if}
 		</section>
-
-		<section class="panel danger-panel" aria-labelledby="disband-title">
-			<h2 id="disband-title">Disband team</h2>
-			<p class="quiet">
-				Permanently deletes this room, members, and stored step work. Students will need a new code.
-			</p>
-			{#if !confirmingDisband}
-				<button type="button" class="danger-button" on:click={() => (confirmingDisband = true)}>
-					Disband team
-				</button>
-			{:else}
-				<form
-					method="POST"
-					action="?/disbandTeam"
-					class="disband-form"
-					use:enhance={() => {
-						return async ({ update, result }) => {
-							await update();
-							if (result.type !== 'redirect') {
-								confirmingDisband = true;
-							}
-						};
-					}}
-				>
-					<label for="disband-confirm">
-						Type room code <span class="code">{room.code}</span> to confirm
-					</label>
-					<input
-						id="disband-confirm"
-						name="confirm"
-						type="text"
-						autocomplete="off"
-						spellcheck="false"
-						placeholder={room.code}
-						bind:value={disbandConfirm}
-					/>
-					<div class="disband-actions">
-						<button type="submit" class="danger-button" disabled={!canConfirmDisband}>
-							Confirm disband
-						</button>
-						<button
-							type="button"
-							class="secondary-button"
-							on:click={() => {
-								confirmingDisband = false;
-								disbandConfirm = '';
-							}}
-						>
-							Cancel
-						</button>
-					</div>
-				</form>
-			{/if}
-		</section>
 	{/if}
 </section>
 
@@ -253,13 +298,19 @@
 	.staff-page {
 		display: grid;
 		gap: 1.25rem;
-		padding: 1.5rem var(--page-gutter) 2.5rem;
+		max-width: 72rem;
+		margin: 0 auto;
+		padding: 1.5rem var(--page-gutter) 3rem;
+		min-width: 0;
 	}
 
 	.back a {
-		color: var(--quiet-steel);
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.75rem;
+		color: var(--club-blue);
 		font-size: var(--text-sm);
-		font-weight: 650;
+		font-weight: 700;
 		text-decoration: none;
 	}
 
@@ -267,29 +318,41 @@
 		text-decoration: underline;
 	}
 
-	.eyebrow {
+	.back a:focus-visible,
+	.secondary-button:focus-visible,
+	.danger-button:focus-visible,
+	.disband-form input:focus-visible,
+	.source summary:focus-visible,
+	.subs details summary:focus-visible {
+		outline: 2px solid var(--club-blue);
+		outline-offset: 2px;
+	}
+
+	.workshop {
 		margin: 0 0 0.35rem;
 		color: var(--quiet-steel);
-		font-size: 0.72rem;
+		font-size: 0.82rem;
 		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
 	}
 
 	h1 {
 		margin: 0;
-		font-size: clamp(1.5rem, 2vw, 1.9rem);
+		font-size: clamp(1.65rem, 2.4vw, 2.1rem);
+		line-height: 1.15;
+		letter-spacing: -0.02em;
+		overflow-wrap: anywhere;
 	}
 
 	h2 {
 		margin: 0 0 0.5rem;
-		font-size: 1.05rem;
+		font-size: 1.15rem;
 	}
 
 	.lede,
 	.quiet,
 	.banner,
-	.msg {
+	.msg,
+	.empty-note {
 		margin: 0;
 		color: var(--quiet-steel);
 		font-size: var(--text-sm);
@@ -297,125 +360,148 @@
 	}
 
 	.lede {
-		margin-top: 0.4rem;
+		margin-top: 0.45rem;
 	}
 
 	.unlocked-note {
 		margin-top: 0.55rem;
-		max-width: 40rem;
+		max-width: 42rem;
 	}
 
 	.banner {
 		padding: 1rem 1.15rem;
-		border: var(--rule);
-		border-radius: 0.45rem;
+		border: var(--rule-strong);
 		background: #fff;
 	}
 
 	.control-error,
 	.control-ok {
 		margin: 0;
-		padding: 0.75rem 1rem;
-		border-radius: 0.45rem;
+		padding: 0.85rem 1rem;
 		font-size: var(--text-sm);
 		font-weight: 650;
 	}
 
 	.control-error {
-		border: 1px solid #f3c1bb;
-		background: #fff5f4;
-		color: #b42318;
+		border: 1px solid #c73b4a;
+		background: #fff5f6;
+		color: #9d2936;
 	}
 
 	.control-ok {
-		border: 1px solid #b7e1d8;
+		border: 1px solid #0f766e;
 		background: #f2fbf8;
 		color: #0f766e;
 	}
 
-	.code {
+	.code,
+	.mono,
+	.when {
 		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 		font-weight: 700;
 		color: var(--midnight);
 	}
 
-	.panel {
-		display: grid;
-		gap: 0.65rem;
-		padding: 1.1rem 1.2rem;
-		border: var(--rule);
-		border-radius: 0.5rem;
+	.when,
+	.mono {
+		font-weight: 500;
+		color: var(--quiet-steel);
+		font-size: 0.78rem;
+	}
+
+	.team-controls {
+		border: var(--rule-strong);
 		background: #fff;
 	}
 
-	.danger-panel {
-		border-color: #f3c1bb;
+	.team-controls > header {
+		padding: 1.15rem 1.35rem;
+		border-bottom: var(--rule-strong);
 	}
 
-	.members,
-	.subs {
-		display: grid;
-		gap: 0.55rem;
+	.team-controls > header h2,
+	.team-controls > header p {
 		margin: 0;
-		padding: 0;
-		list-style: none;
 	}
 
-	.members li {
+	.team-controls > header p {
+		margin-top: 0.4rem;
+		color: var(--quiet-steel);
+		font-size: var(--text-sm);
+		line-height: 1.45;
+		max-width: 48rem;
+	}
+
+	.control-group {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.55rem 1rem;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0.45rem 0;
+		gap: 1.25rem;
+		min-height: 5.25rem;
+		padding: 1rem 1.35rem;
 		border-bottom: var(--rule);
 	}
 
-	.members li:last-child {
+	.control-group:last-child {
 		border-bottom: 0;
-		padding-bottom: 0;
 	}
 
-	.member-main {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.35rem 0.65rem;
-		align-items: baseline;
+	.control-copy {
 		min-width: 0;
 	}
 
-	.member-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-		align-items: center;
+	.control-copy h3,
+	.control-copy p {
+		margin: 0;
 	}
 
-	.member-email {
-		font-weight: 650;
+	.control-copy h3 {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem 0.55rem;
+		align-items: center;
+		font-size: 1rem;
+		font-weight: 700;
+	}
+
+	.control-copy p {
+		margin-top: 0.35rem;
+		color: var(--quiet-steel);
+		font-size: var(--text-sm);
+		line-height: 1.4;
 	}
 
 	.badge {
-		display: inline-block;
-		padding: 0.1rem 0.4rem;
-		border-radius: 999px;
-		background: #e8eefc;
-		color: #0b4cf4;
+		display: inline-flex;
+		align-items: center;
+		padding: 0.15rem 0.45rem;
+		border: var(--rule-strong);
+		background: #edf4ff;
+		color: var(--club-blue);
 		font-size: 0.7rem;
-		font-weight: 700;
-		letter-spacing: 0.02em;
+		font-weight: 800;
+		letter-spacing: 0.04em;
 		text-transform: uppercase;
 	}
 
-	.member-id,
-	.when {
-		color: var(--quiet-steel);
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-		font-size: 0.78rem;
+	.control-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		align-items: center;
+		justify-content: flex-end;
 	}
 
 	.leader-hint {
-		font-size: 0.78rem;
+		margin: 0;
+		color: var(--quiet-steel);
+		font-size: 0.82rem;
+		font-weight: 650;
+		text-align: right;
+	}
+
+	.empty-note {
+		padding: 1.15rem 1.35rem;
 	}
 
 	.secondary-button,
@@ -423,32 +509,30 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		min-height: 2.5rem;
-		padding: 0.35rem 0.8rem;
-		border-radius: 0.4rem;
-		border: var(--rule);
+		min-height: 2.75rem;
+		padding: 0.65rem 1rem;
+		border: var(--rule-strong);
 		background: #fff;
 		color: var(--midnight);
 		font: inherit;
-		font-size: 0.85rem;
-		font-weight: 700;
+		font-weight: 750;
 		cursor: pointer;
 	}
 
-	.secondary-button:hover {
+	.secondary-button:hover:not(:disabled) {
 		background: #f5f7fb;
 	}
 
 	.danger-button {
-		border-color: #f3c1bb;
-		background: #fff5f4;
-		color: #b42318;
+		border-color: #c73b4a;
+		color: #9d2936;
 	}
 
 	.danger-button:hover:not(:disabled) {
-		background: #ffe8e5;
+		background: #fff5f6;
 	}
 
+	.secondary-button:disabled,
 	.danger-button:disabled {
 		opacity: 0.45;
 		cursor: not-allowed;
@@ -457,34 +541,51 @@
 	.disband-form {
 		display: grid;
 		gap: 0.55rem;
-		max-width: 24rem;
+		min-width: min(100%, 22rem);
 	}
 
 	.disband-form label {
 		font-size: var(--text-sm);
-		font-weight: 650;
+		font-weight: 700;
 	}
 
 	.disband-form input {
-		min-height: 2.5rem;
-		padding: 0.4rem 0.65rem;
-		border: var(--rule);
-		border-radius: 0.4rem;
+		min-height: 2.75rem;
+		padding: 0.55rem 0.75rem;
+		border: var(--rule-strong);
+		background: #fff;
 		font: inherit;
 		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
 	}
 
-	.disband-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.45rem;
+	.panel {
+		display: grid;
+		gap: 0.65rem;
+		padding: 1.1rem 1.2rem;
+		border: var(--rule);
+		background: #fff;
+	}
+
+	.subs {
+		display: grid;
+		gap: 0.75rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
 
 	.subs li {
 		display: grid;
 		gap: 0.35rem;
+		padding-bottom: 0.75rem;
+		border-bottom: var(--rule);
+	}
+
+	.subs li:last-child {
+		padding-bottom: 0;
+		border-bottom: 0;
 	}
 
 	.subs li header {
@@ -501,7 +602,7 @@
 	}
 
 	.fail {
-		color: #b42318;
+		color: #9d2936;
 		font-weight: 700;
 		font-size: 0.85rem;
 	}
@@ -516,10 +617,38 @@
 		margin: 0.65rem 0 0;
 		padding: 0.85rem 1rem;
 		overflow: auto;
-		border-radius: 0.4rem;
 		background: #272822;
 		color: #f8f8f2;
 		font-size: 0.82rem;
 		line-height: 1.45;
+	}
+
+	@media (max-width: 40rem) {
+		.staff-page {
+			padding-block: 1.25rem 2.5rem;
+			gap: 1rem;
+		}
+
+		.control-group {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 0.85rem;
+			padding: 1rem;
+		}
+
+		.leader-hint {
+			text-align: left;
+		}
+
+		.control-actions,
+		.control-actions form,
+		.control-actions button,
+		.danger-control > .danger-button {
+			width: 100%;
+		}
+
+		.disband-form {
+			width: 100%;
+		}
 	}
 </style>

@@ -45,6 +45,7 @@ describe('staff PBL team detail page', () => {
 			}
 		});
 		expect(screen.getByRole('heading', { level: 1, name: 'Lab table 3' })).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Team controls' })).toBeInTheDocument();
 		expect(screen.getByText('Leader')).toBeInTheDocument();
 		expect(screen.getByText(/unlocked step only/i)).toBeInTheDocument();
 		expect(screen.getByText(/no shared “current step” location/i)).toBeInTheDocument();
