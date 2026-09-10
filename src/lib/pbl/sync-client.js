@@ -1,4 +1,4 @@
-const POLL_MS = 1000;
+const POLL_MS = 250;
 const PUSH_MS = 400;
 
 /**
