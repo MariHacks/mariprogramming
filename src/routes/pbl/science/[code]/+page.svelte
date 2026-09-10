@@ -371,15 +371,17 @@
 					<p class="error" role="alert">{state.roomError}</p>
 				{/if}
 				<div class="editor-shell">
-					<PythonEditor
-						source={state.source}
-						yjsState={state.yjsState ?? ''}
-						awarenessState={state.awarenessState ?? ''}
-						editable={!state.readOnly}
-						theme={editorTheme}
-						user={collabUserFromProfile(data?.collabUser)}
-						onCollab={(payload) => controller?.setCollab(payload)}
-					/>
+					{#key state.viewStep ?? state.currentStep}
+						<PythonEditor
+							source={state.source}
+							yjsState={state.yjsState ?? ''}
+							awarenessState={state.awarenessState ?? ''}
+							editable={!state.readOnly}
+							theme={editorTheme}
+							user={collabUserFromProfile(data?.collabUser)}
+							onCollab={(payload) => controller?.setCollab(payload)}
+						/>
+					{/key}
 				</div>
 				<div
 					class="split-y"

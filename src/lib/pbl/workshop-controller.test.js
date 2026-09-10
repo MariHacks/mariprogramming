@@ -88,11 +88,13 @@ describe('workshop controller', () => {
 		expect(controller.getState().pythonError).toBe('boom');
 		expect(controller.getState().unlockedStep).toBe(0);
 		controller.setSource('print("team")');
-		expect(sync.update).toHaveBeenCalledWith({
-			source: 'print("team")',
-			yjsState: '',
-			awarenessState: ''
-		});
+		expect(sync.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				source: 'print("team")',
+				editingStep: 0,
+				stepSources: expect.objectContaining({ '0': 'print("team")' })
+			})
+		);
 		onState()({ source: 'print(1)', currentStep: 99, unlockedStep: 0, openedHints: null });
 		expect(controller.getState().step.title).toBe('Get something running');
 		controller.openHint(1);
@@ -123,6 +125,30 @@ describe('workshop controller', () => {
 		full.controller.destroy();
 	});
 
+
+	it('keeps viewStep local and copies code forward on unlock', async () => {
+		const { controller, sync } = harness({
+			runCheck: async () => ({ passed: true, message: 'ok' })
+		});
+		await controller.join();
+		sync.update.mockClear();
+		controller.selectStep(0);
+		expect(controller.getState().viewStep).toBe(0);
+		await controller.run();
+		expect(controller.getState().unlockedStep).toBe(1);
+		expect(controller.getState().stepSources['1']).toBeTruthy();
+		sync.update.mockClear();
+		controller.selectStep(1);
+		expect(controller.getState().currentStep).toBe(1);
+		expect(controller.getState().viewStep).toBe(1);
+		const payloads = sync.update.mock.calls.map((call) => call[0]);
+		expect(payloads.some((p) => 'currentStep' in p)).toBe(false);
+		expect(payloads.at(-1)).toMatchObject({
+			editingStep: 1,
+			replaceEditor: true
+		});
+		controller.destroy();
+	});
 	it('pushes source from every joined member', async () => {
 		/** @type {any} */
 		let inner;
@@ -150,27 +176,35 @@ describe('workshop controller', () => {
 		});
 		await teammate.controller.join();
 		teammate.controller.setSource('print("from B")');
-		expect(inner.update).toHaveBeenCalledWith({
-			source: 'print("from B")',
-			yjsState: '',
-			awarenessState: ''
-		});
+		expect(inner.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				source: 'print("from B")',
+				editingStep: 0,
+				stepSources: expect.objectContaining({ '0': 'print("from B")' })
+			})
+		);
 		teammate.controller.setCollab({});
-		expect(inner.update).toHaveBeenCalledWith({
-			source: 'print("from B")',
-			yjsState: '',
-			awarenessState: ''
-		});
+		expect(inner.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				source: 'print("from B")',
+				editingStep: 0
+			})
+		);
 		teammate.controller.setCollab({
 			source: 'print("from B")\nprint("from A")',
 			yjsState: 'abc=',
 			awarenessState: 'def='
 		});
-		expect(inner.update).toHaveBeenCalledWith({
-			source: 'print("from B")\nprint("from A")',
-			yjsState: 'abc=',
-			awarenessState: 'def='
-		});
+		expect(inner.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				source: 'print("from B")\nprint("from A")',
+				yjsState: 'abc=',
+				awarenessState: 'def=',
+				editingStep: 0,
+				stepSources: expect.objectContaining({ '0': 'print("from B")\nprint("from A")' }),
+				stepYjs: expect.objectContaining({ '0': 'abc=' })
+			})
+		);
 		teammate.controller.destroy();
 	});
 

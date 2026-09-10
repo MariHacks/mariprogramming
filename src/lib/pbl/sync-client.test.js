@@ -140,7 +140,8 @@ describe('room sync client', () => {
 		expect(bodies[1]).toMatchObject({ version: 4, source: 'from-a-edit' });
 		expect(states.at(-1)?.source).toBe('from-b');
 		expect(states.at(-1)?.version).toBe(4);
-		expect(states.at(-1)?.currentStep).toBe(1);
+		expect(states.at(-1)?.unlockedStep ?? 0).toBeDefined();
+		expect('currentStep' in (states.at(-1) ?? {})).toBe(false);
 		expect(errors).toEqual([]);
 		sync.stop();
 	});
@@ -234,10 +235,17 @@ describe('room sync client', () => {
 			}
 		});
 		await sync.join();
-		sync.update({ currentStep: 0, source: 'print(1)' });
+		sync.update({
+			editingStep: 0,
+			source: 'print(1)',
+			stepSources: { '0': 'print(1)' },
+			stepYjs: {}
+		});
 		await sync.flush();
 		expect(bodies[0].source).toBe('print(1)');
-		expect(bodies[0].currentStep).toBe(0);
+		expect(bodies[0].editingStep).toBe(0);
+		expect(bodies[0].currentStep).toBeUndefined();
+		expect(bodies[0].stepSources).toEqual({ '0': 'print(1)' });
 		sync.stop();
 	});
 
