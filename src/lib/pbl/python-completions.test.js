@@ -1,7 +1,7 @@
 import { CompletionContext } from '@codemirror/autocomplete';
 import { EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
-import { collectDocumentIdentifiers, pythonCompletions } from './python-completions.js';
+import { PYTHON_SYMBOLS, collectDocumentIdentifiers, pythonCompletions } from './python-completions.js';
 
 /** @param {string} doc @param {number} pos @param {boolean} explicit */
 function contextAt(doc, pos, explicit) {
@@ -18,8 +18,23 @@ describe('python completions', () => {
 	it('lists symbols when the user asks explicitly after a space', () => {
 		const result = pythonCompletions(contextAt('x ', 2, true));
 		expect(result?.from).toBe(2);
-		expect(result?.options.map((item) => item.label)).toContain('len');
-		expect(result?.options.map((item) => item.label)).toContain('readings');
+		const labels = result?.options.map((item) => item.label) ?? [];
+		expect(labels).toContain('len');
+		expect(labels).toContain('print');
+		expect(labels).not.toContain('readings');
+		expect(labels).not.toContain('valid_readings');
+		expect(labels).not.toContain('is_valid');
+	});
+
+	it('does not hardcode workshop variable names in PYTHON_SYMBOLS', () => {
+		const labels = PYTHON_SYMBOLS.map((item) => item.label);
+		expect(labels).not.toContain('readings');
+		expect(labels).not.toContain('valid_readings');
+		expect(labels).not.toContain('lower_bound');
+		expect(labels).not.toContain('upper_bound');
+		expect(labels).not.toContain('is_valid');
+		expect(labels).toContain('print');
+		expect(labels).toContain('len');
 	});
 
 	it('stays quiet when the caret is not in a name', () => {

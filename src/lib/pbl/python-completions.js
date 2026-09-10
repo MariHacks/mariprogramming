@@ -9,7 +9,6 @@ export const PYTHON_SYMBOLS = Object.freeze([
 	Object.freeze({ label: 'True', type: 'constant' }),
 	Object.freeze({ label: 'and', type: 'keyword' }),
 	Object.freeze({ label: 'append', type: 'method' }),
-	Object.freeze({ label: 'average', type: 'function' }),
 	Object.freeze({ label: 'bool', type: 'function' }),
 	Object.freeze({ label: 'break', type: 'keyword' }),
 	Object.freeze({ label: 'continue', type: 'keyword' }),
@@ -25,7 +24,6 @@ export const PYTHON_SYMBOLS = Object.freeze([
 	Object.freeze({ label: 'in', type: 'keyword' }),
 	Object.freeze({ label: 'input', type: 'function' }),
 	Object.freeze({ label: 'int', type: 'function' }),
-	Object.freeze({ label: 'is_valid', type: 'function' }),
 	Object.freeze({ label: 'len', type: 'function' }),
 	Object.freeze({ label: 'list', type: 'function' }),
 	Object.freeze({ label: 'math', type: 'namespace' }),
@@ -36,11 +34,9 @@ export const PYTHON_SYMBOLS = Object.freeze([
 	Object.freeze({ label: 'or', type: 'keyword' }),
 	Object.freeze({ label: 'print', type: 'function', detail: 'print(...)' }),
 	Object.freeze({ label: 'range', type: 'function' }),
-	Object.freeze({ label: 'readings', type: 'variable' }),
 	Object.freeze({ label: 'return', type: 'keyword' }),
 	Object.freeze({ label: 'str', type: 'function' }),
 	Object.freeze({ label: 'sum', type: 'function' }),
-	Object.freeze({ label: 'valid_readings', type: 'variable' }),
 	Object.freeze({ label: 'while', type: 'keyword' })
 ]);
 

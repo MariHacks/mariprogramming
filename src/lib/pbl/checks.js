@@ -101,10 +101,16 @@ function hasCloseValue(globals, expected, epsilon = 0.05) {
 
 /** @param {Record<string, unknown>} globals */
 function findReadingsList(globals) {
-	const preferred = globals.readings;
-	if (Array.isArray(preferred) && preferred.length === SCIENCE_READINGS.length) return preferred;
 	for (const value of Object.values(globals)) {
 		if (!Array.isArray(value) || value.length !== SCIENCE_READINGS.length) continue;
+		let matches = true;
+		for (let i = 0; i < SCIENCE_READINGS.length; i += 1) {
+			if (!closeTo(value[i], SCIENCE_READINGS[i])) {
+				matches = false;
+				break;
+			}
+		}
+		if (matches) return value;
 		const first = asFiniteNumber(value[0]);
 		const last = asFiniteNumber(value[value.length - 1]);
 		if (closeTo(first, 12.1) && closeTo(last, 11.9)) return value;
@@ -129,14 +135,19 @@ function findKeptList(globals) {
 
 /** @param {Record<string, unknown>} globals */
 function findSummary(globals) {
-	const preferred = globals.summary;
-	if (preferred && typeof preferred === 'object' && !Array.isArray(preferred)) return preferred;
+	/** @type {Record<string, unknown> | null} */
+	let fallback = null;
 	for (const value of Object.values(globals)) {
 		if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+		if (isFunctionMarker(value)) continue;
 		const record = /** @type {Record<string, unknown>} */ (value);
-		if ('valid_count' in record && 'average' in record) return record;
+		fallback = fallback || record;
+		const hasCount =
+			'valid_count' in record || 'count' in record || 'n' in record || 'size' in record;
+		const hasAverage = 'average' in record || 'avg' in record || 'mean' in record;
+		if (hasCount && hasAverage) return record;
 	}
-	return null;
+	return fallback;
 }
 
 /** @param {CheckResult} result */
@@ -181,13 +192,8 @@ function gradeStep1(trials) {
 	if (!mentions(output, '11.9') || !mentions(output, '12.3')) {
 		return fail('Print both bounds. With 12.1 ± 0.2 they should be about 11.9 and 12.3.');
 	}
-	// Optional formula check when the student used the example names reading/uncertainty.
-	if (
-		asFiniteNumber(g.reading) !== null &&
-		asFiniteNumber(g.uncertainty) !== null &&
-		overridden &&
-		!crashed(overridden)
-	) {
+	// Formula check: runner rewrites reading/uncertainty *or* Assigns of 12.1/0.2.
+	if (overridden && !crashed(overridden)) {
 		const og = globalsOf(overridden);
 		const overriddenOut = text(overridden);
 		const followed =
@@ -225,22 +231,22 @@ function gradeStep2(trials) {
 		return fail('Print the last value (11.9). It never appeared in the output.');
 	}
 	if (!mentions(output, '6')) {
-		return fail('Print len(readings) so 6 appears in the output.');
+		return fail('Print the list length so 6 appears in the output.');
 	}
-	return pass('First, last, and length printed from readings.');
+	return pass('First, last, and length printed from the list.');
 }
 
 /** @param {PythonRunResult[]} trials */
 function gradeStep3(trials) {
 	const trial = trials[0];
 	if (!trial || crashed(trial)) {
-		return fail('The program crashed. Loop over readings and print every value.');
+		return fail('The program crashed. Loop over the readings list and print every value.');
 	}
 	const output = stdoutOf(trial);
 	for (const reading of SCIENCE_READINGS) {
 		const matches = output.match(new RegExp(String(reading).replace('.', '\\.'), 'gu')) || [];
 		if (matches.length < 1) {
-			return fail(`Missing reading ${reading} in the output. Print every item from readings.`);
+			return fail(`Missing reading ${reading} in the output. Print every item from the list.`);
 		}
 	}
 	return pass('Every reading printed at least once.');
@@ -299,20 +305,23 @@ function gradeStep5(trials) {
 function gradeStep6(trials) {
 	const trial = trials[0];
 	if (!trial || crashed(trial)) {
-		return fail('The program crashed. Define is_valid and an average function, then call them.');
+		return fail('The program crashed. Define a validity check and an average function, then call them.');
 	}
 	const globals = globalsOf(trial);
-	if (!isFunctionMarker(globals.is_valid)) {
-		return fail('Missing function is_valid(reading, max_value). Define it with def and call it.');
+	const functionCount = Object.values(globals).filter(isFunctionMarker).length;
+	if (functionCount < 1) {
+		return fail('Define a validity check and an average function with def, then call them.');
 	}
-	const averageFn = ['average', 'mean', 'compute_average', 'avg'].some((name) =>
-		isFunctionMarker(globals[name])
-	);
-	if (!averageFn) {
+	const averageFn =
+		['average', 'mean', 'compute_average', 'avg'].some((name) => isFunctionMarker(globals[name])) ||
+		Object.entries(globals).some(
+			([name, value]) => isFunctionMarker(value) && /avg|mean|average/i.test(name)
+		);
+	if (!averageFn && !closeTo(globals.probed_average, VALID_AVERAGE, 0.08)) {
 		return fail('Missing an average function that takes a list and returns a number.');
 	}
 	if (globals.is_valid_ok !== true || globals.is_valid_outlier !== false) {
-		return fail('is_valid(12.1, 20) should be True and is_valid(48.7, 20) should be False.');
+		return fail('The check function should accept 12.1 and reject 48.7 when max_value is 20.');
 	}
 	if (!closeTo(globals.probed_average, VALID_AVERAGE, 0.08)) {
 		return fail('The average function still looks wrong. It should ignore 48.7 and land near 12.02.');
@@ -357,13 +366,13 @@ function gradeStep8(trials) {
 	const g = globalsOf(trial);
 	const stdev = firstNumber(g.standard_deviation, g.stdev, g.std, extractPrintedAverage(stdoutOf(trial)));
 	if (stdev === null) {
-		return fail('No standard deviation found. Store it in standard_deviation (or print the number).');
+		return fail('No standard deviation found. Store it in a variable or print the number.');
 	}
 	if (stdev < 0) {
 		return fail('Standard deviation cannot be negative. Check the formula and the values you passed to sqrt.');
 	}
 	if (stdev === 0 || stdev >= 2) {
-		return fail('Spread looks wrong. Use only valid_readings; including 48.7 makes the value much larger.');
+		return fail('Spread looks wrong. Use only the accepted readings; including 48.7 makes the value much larger.');
 	}
 	return pass('Standard deviation is non-negative and ignores the outlier.');
 }
@@ -379,21 +388,23 @@ function gradeStep9(trials) {
 		return fail('Build a results dict (for example summary) with valid_count, average, and standard_deviation.');
 	}
 	const record = /** @type {Record<string, unknown>} */ (summary);
-	if (!closeTo(record.valid_count, 5, 0.1)) {
-		return fail('valid_count should be 5 (the accepted readings).');
+	const count = firstNumber(record.valid_count, record.count, record.n, record.size);
+	if (count === null || !closeTo(count, 5, 0.1)) {
+		return fail('The results dict should store 5 accepted readings (for example valid_count).');
 	}
-	if (!closeTo(record.average, VALID_AVERAGE, 0.08)) {
-		return fail('average in the results dict should be the filtered mean near 12.02.');
+	const average = firstNumber(record.average, record.avg, record.mean);
+	if (average === null || !closeTo(average, VALID_AVERAGE, 0.08)) {
+		return fail('The results dict should hold the filtered mean near 12.02.');
 	}
-	const stdev = asFiniteNumber(record.standard_deviation);
+	const stdev = firstNumber(record.standard_deviation, record.stdev, record.std, record.sd);
 	if (stdev === null) {
-		return fail('Store standard_deviation (or the calculated spread) on the results dict.');
+		return fail('Store the calculated spread on the results dict.');
 	}
 	if (stdev < 0) {
-		return fail('standard_deviation on the results dict should be non-negative.');
+		return fail('The spread on the results dict should be non-negative.');
 	}
 	const printed = trial.stdout || '';
-	if (!printed.includes('summary[') && !mentions(printed, String(record.average))) {
+	if (!printed.includes('[') && !mentions(printed, String(average))) {
 		return fail('Print one value from the results dict by key, for example print(summary["average"]).');
 	}
 	if (Object.keys(record).length < 4) {
@@ -435,16 +446,16 @@ function gradeStep11(trials) {
 	if (inputCountOf(trial) < 1) {
 		return fail('Ask for a maximum valid reading with input().');
 	}
-	const kept =
-		trial.globals?.valid_readings || trial.globals?.accepted || trial.globals?.filtered;
+	const globals = globalsOf(trial);
+	const kept = findKeptList(globals);
 	if (Array.isArray(kept) && kept.some((value) => closeTo(value, 26.1))) {
 		return fail('26.1 should be discarded when the maximum is 20.');
 	}
-	const average = firstNumber(averageValue(globalsOf(trial)), extractPrintedAverage(stdoutOf(trial)));
+	const average = firstNumber(averageValue(globals), extractPrintedAverage(stdoutOf(trial)));
 	if (!closeTo(average, FINAL_AVERAGE, 0.08)) {
 		return fail('Average only the accepted values from the new readings (near 12.52 when max is 20).');
 	}
-	const summary = findSummary(globalsOf(trial)) || trial.globals?.summary;
+	const summary = findSummary(globals);
 	if (!summary || typeof summary !== 'object' || Array.isArray(summary)) {
 		return fail('Store the results in a dictionary (for example summary).');
 	}

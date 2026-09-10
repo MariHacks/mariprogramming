@@ -70,6 +70,62 @@ describe('science step checks', () => {
 		).toBe(true);
 	});
 
+
+	it('accepts student-chosen names for lists, filters, functions, and summaries', () => {
+		expect(
+			gradeScienceStep(2, [
+				{
+					stdout: '12.1\n11.9\n6\n',
+					globals: { data: [12.1, 11.8, 12.3, 48.7, 12.0, 11.9] }
+				}
+			]).passed
+		).toBe(true);
+		expect(
+			gradeScienceStep(5, [
+				{
+					stdout: '12.02\n',
+					globals: { kept: [12.1, 11.8, 12.3, 12.0, 11.9], mean: 12.02 }
+				}
+			]).passed
+		).toBe(true);
+		expect(
+			gradeScienceStep(6, [
+				{
+					globals: {
+						ok_reading: { kind: 'function' },
+						mean: { kind: 'function' },
+						is_valid_ok: true,
+						is_valid_outlier: false,
+						probed_average: SCIENCE_VALID_AVERAGE
+					}
+				}
+			]).passed
+		).toBe(true);
+		expect(
+			gradeScienceStep(9, [
+				{
+					stdout: '12.02\n',
+					globals: {
+						stats: { valid_count: 5, average: 12.02, standard_deviation: 0.19, unit: 'mm' }
+					}
+				}
+			]).passed
+		).toBe(true);
+		expect(
+			gradeScienceStep(11, [
+				{
+					stdout: `average=${SCIENCE_FINAL_AVERAGE}`,
+					inputCount: 1,
+					globals: {
+						kept: [12.4, 12.6, 12.5, 12.8, 12.3],
+						mean: SCIENCE_FINAL_AVERAGE,
+						report: { average: SCIENCE_FINAL_AVERAGE }
+					}
+				}
+			]).passed
+		).toBe(true);
+	});
+
 	it('unlocks later steps from measured behavior', () => {
 		expect(
 			gradeScienceStep(2, [
