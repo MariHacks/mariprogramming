@@ -2,6 +2,7 @@ import migrationSql0020 from '../../../../drizzle/0020_pbl_rooms.sql?raw';
 import migrationSql0021 from '../../../../drizzle/0021_pbl_room_driver.sql?raw';
 import migrationSql0022 from '../../../../drizzle/0022_pbl_yjs_state.sql?raw';
 import migrationSql0023 from '../../../../drizzle/0023_pbl_room_member_user.sql?raw';
+import migrationSql0024 from '../../../../drizzle/0024_pbl_step_sources.sql?raw';
 import { readMigrationEnvironment, readPblEnvironment } from '../config/environment.js';
 import { createRequestPool } from '../db/transaction.js';
 
@@ -48,6 +49,13 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 				`SELECT column_name FROM information_schema.columns
 				 WHERE table_schema = 'public' AND table_name = 'pbl_room_members' AND column_name = 'user_id'`
 			);
+			const stepSources = await client.query(
+				`SELECT column_name FROM information_schema.columns
+				 WHERE table_schema = 'public' AND table_name = 'pbl_rooms' AND column_name = 'step_sources'`
+			);
+			const stepSubs = await client.query(
+				"SELECT to_regclass('public.pbl_step_submissions')::text AS table_name"
+			);
 			/** @type {string[]} */
 			const statements = [];
 			if (!driver.rows[0]?.column_name)
@@ -55,6 +63,8 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 			if (!yjs.rows[0]?.column_name) statements.push(...splitMigrationStatements(migrationSql0022));
 			if (!memberUser.rows[0]?.column_name)
 				statements.push(...splitMigrationStatements(migrationSql0023));
+			if (!stepSources.rows[0]?.column_name || !stepSubs.rows[0]?.table_name)
+				statements.push(...splitMigrationStatements(migrationSql0024));
 			if (statements.length === 0) return;
 			await client.query('BEGIN');
 			try {
@@ -76,7 +86,8 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 			...splitMigrationStatements(migrationSql0020),
 			...splitMigrationStatements(migrationSql0021),
 			...splitMigrationStatements(migrationSql0022),
-			...splitMigrationStatements(migrationSql0023)
+			...splitMigrationStatements(migrationSql0023),
+			...splitMigrationStatements(migrationSql0024)
 		];
 		await client.query('BEGIN');
 		try {
@@ -85,7 +96,7 @@ export async function ensurePblSchema(databaseUrl, dependencies = {}) {
 			}
 			try {
 				await client.query(
-					'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pbl_rooms, pbl_room_members TO mariprogramming_runtime'
+					'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pbl_rooms, pbl_room_members, pbl_step_submissions TO mariprogramming_runtime'
 				);
 			} catch (error) {
 				if (

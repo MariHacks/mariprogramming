@@ -39,11 +39,15 @@ describe('PBL schema bootstrap', () => {
 
 	it('skips work when pbl_rooms already exists', async () => {
 		const query = vi.fn(async (sql) => {
-			if (String(sql).includes('to_regclass')) return { rows: [{ table_name: 'pbl_rooms' }] };
-			if (String(sql).includes('driver_member_id'))
+			const text = String(sql);
+			if (text.includes("to_regclass('public.pbl_step_submissions')"))
+				return { rows: [{ table_name: 'pbl_step_submissions' }] };
+			if (text.includes('to_regclass')) return { rows: [{ table_name: 'pbl_rooms' }] };
+			if (text.includes('driver_member_id'))
 				return { rows: [{ column_name: 'driver_member_id' }] };
-			if (String(sql).includes('yjs_state')) return { rows: [{ column_name: 'yjs_state' }] };
-			if (String(sql).includes("table_name = 'pbl_room_members'") || String(sql).includes('user_id'))
+			if (text.includes('step_sources')) return { rows: [{ column_name: 'step_sources' }] };
+			if (text.includes('yjs_state')) return { rows: [{ column_name: 'yjs_state' }] };
+			if (text.includes("table_name = 'pbl_room_members'") || text.includes('user_id'))
 				return { rows: [{ column_name: 'user_id' }] };
 			return { rows: [] };
 		});

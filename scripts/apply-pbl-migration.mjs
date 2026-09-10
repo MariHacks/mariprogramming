@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Apply drizzle/0020_pbl_rooms.sql through 0023 when missing.
+ * Apply drizzle/0020_pbl_rooms.sql through 0024 when missing.
  * Requires MIGRATION_DATABASE_URL or DATABASE_URL. Does not print connection details.
  */
 import { readFileSync } from 'node:fs';
@@ -43,9 +43,10 @@ try {
 			await applyFile(client, 'drizzle/0021_pbl_room_driver.sql');
 			await applyFile(client, 'drizzle/0022_pbl_yjs_state.sql');
 			await applyFile(client, 'drizzle/0023_pbl_room_member_user.sql');
+			await applyFile(client, 'drizzle/0024_pbl_step_sources.sql');
 			try {
 				await client.query(
-					'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pbl_rooms, pbl_room_members TO mariprogramming_runtime'
+					'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pbl_rooms, pbl_room_members, pbl_step_submissions TO mariprogramming_runtime'
 				);
 			} catch (error) {
 				if (
@@ -57,7 +58,7 @@ try {
 				}
 			}
 			await client.query('COMMIT');
-			console.log(`ok: applied 0020 (${count} statements), 0021, 0022, and 0023`);
+			console.log(`ok: applied 0020 (${count} statements), 0021, 0022, 0023, and 0024`);
 		} catch (error) {
 			await client.query('ROLLBACK');
 			throw error;
@@ -75,23 +76,47 @@ try {
 			`SELECT column_name FROM information_schema.columns
 			 WHERE table_schema = 'public' AND table_name = 'pbl_room_members' AND column_name = 'user_id'`
 		);
+		const stepSources = await client.query(
+			`SELECT column_name FROM information_schema.columns
+			 WHERE table_schema = 'public' AND table_name = 'pbl_rooms' AND column_name = 'step_sources'`
+		);
+		const stepSubs = await client.query(
+			"SELECT to_regclass('public.pbl_step_submissions')::text AS table_name"
+		);
 		const needsDriver = !driver.rows[0]?.column_name;
 		const needsYjs = !yjs.rows[0]?.column_name;
 		const needsMemberUser = !memberUser.rows[0]?.column_name;
-		if (needsDriver || needsYjs || needsMemberUser) {
+		const needsStepSources = !stepSources.rows[0]?.column_name || !stepSubs.rows[0]?.table_name;
+		if (needsDriver || needsYjs || needsMemberUser || needsStepSources) {
 			await client.query('BEGIN');
 			try {
 				if (needsDriver) await applyFile(client, 'drizzle/0021_pbl_room_driver.sql');
 				if (needsYjs) await applyFile(client, 'drizzle/0022_pbl_yjs_state.sql');
 				if (needsMemberUser) await applyFile(client, 'drizzle/0023_pbl_room_member_user.sql');
+				if (needsStepSources) {
+					await applyFile(client, 'drizzle/0024_pbl_step_sources.sql');
+					try {
+						await client.query(
+							'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pbl_step_submissions TO mariprogramming_runtime'
+						);
+					} catch (error) {
+						if (
+							!String(error instanceof Error ? error.message : error).includes(
+								'mariprogramming_runtime'
+							)
+						) {
+							throw error;
+						}
+					}
+				}
 				await client.query('COMMIT');
-				console.log('ok: applied missing pbl room columns');
+				console.log('ok: applied missing pbl room columns / step sources');
 			} catch (error) {
 				await client.query('ROLLBACK');
 				throw error;
 			}
 		} else {
-			console.log('ok: pbl_rooms columns through member user_id already present');
+			console.log('ok: pbl_rooms columns through step_sources already present');
 		}
 	}
 } catch (error) {

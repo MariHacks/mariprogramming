@@ -86,9 +86,19 @@ describe('consolidated database schema', () => {
 				'opened_hints',
 				'driver_member_id',
 				'yjs_state',
-				'awareness_state'
+				'awareness_state',
+				'step_sources',
+				'step_yjs'
 			])
 		);
+		expect(tableName(schema.pblStepSubmissions)).toBe('pbl_step_submissions');
+		expect(getTableConfig(schema.pblStepSubmissions).columns.map((column) => column.name)).toEqual(
+			expect.arrayContaining(['room_id', 'step', 'source', 'passed', 'message', 'member_id', 'created_at'])
+		);
+		expect(indexNames(schema.pblStepSubmissions)).toEqual([
+			'pbl_step_submissions_room_idx',
+			'pbl_step_submissions_room_step_idx'
+		]);
 		expect(indexNames(schema.pblRooms)).toEqual(['pbl_rooms_code_unique_idx', 'pbl_rooms_pbl_id_idx']);
 		expect(checkNames(schema.pblRooms)).toEqual([
 			'pbl_rooms_member_count_range',
