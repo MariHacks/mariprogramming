@@ -69,15 +69,15 @@ describe('workshop session helpers', () => {
 		).toBe('This team is full.');
 		expect(
 			studioNextAction({
-				lastCheck: { passed: false, message: 'Change the message, then run again.' }
+				lastCheck: { passed: false, message: 'Still printing "Experiment loaded". Change the quoted text, then Run again.' }
 			})
-		).toBe('Not yet. Change the message, then run again.');
+		).toBe('Still printing "Experiment loaded". Change the quoted text, then Run again.');
 		expect(
 			studioNextAction({
-				lastCheck: { step: 0, passed: false, message: 'Change the message, then run again.' },
+				lastCheck: { step: 0, passed: false, message: 'Still printing "Experiment loaded". Change the quoted text, then Run again.' },
 				currentStep: 0
 			})
-		).toBe('Not yet. Change the message, then run again.');
+		).toBe('Still printing "Experiment loaded". Change the quoted text, then Run again.');
 		expect(studioNextAction({ lastCheck: { passed: true }, currentStep: 0 })).toBe(
 			'Open the next step.'
 		);

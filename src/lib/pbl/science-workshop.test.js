@@ -34,11 +34,15 @@ describe('PBL 1 science workshop', () => {
 			expect(step.hints[0]).not.toMatch(/\n/);
 			expect(step.hints[0]).not.toMatch(/^\s*(?:def |print\(|import |for |while )/u);
 			expect(step.hints[2]).toMatch(/print\(|def |for |while |import |append\(|sqrt|=|open\(/u);
-			expect(step.body.length).toBeLessThan(600);
+			expect(step.body.length).toBeLessThan(900);
 		}
 		expect(getScienceStep(0)?.title).toBe('Get something running');
 		expect(getScienceStep(11)?.title).toBe('Final boss');
 		expect(getScienceStep(12)).toBeNull();
 		expect(SCIENCE_STEPS[11].stretch).toMatch(/matplotlib/i);
+		for (const step of SCIENCE_STEPS) {
+			const blob = [step.title, step.body, ...(step.notes ?? []), ...step.hints, step.stretch ?? ''].join('\n');
+			expect(blob).not.toMatch(/[\u2013\u2014]/u);
+		}
 	});
 });

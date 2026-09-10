@@ -7,7 +7,7 @@ export const PBL_CATALOG = Object.freeze([
 		series: 'PBL 1',
 		href: '/pbl/science',
 		summary:
-			'A student with little or no Python builds one scientific data-analyzer that keeps growing.'
+			'Little or no Python needed. Your team builds one scientific data analyzer that grows step by step.'
 	})
 ]);
 

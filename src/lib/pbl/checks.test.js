@@ -26,21 +26,46 @@ describe('science step checks', () => {
 		).toBe(false);
 		expect(gradeScienceStep(0, [{ stdout: 'Lab table 3 is live\n' }])).toEqual({
 			passed: true,
-			message: 'The program printed your message.'
+			message: 'Printed a custom message. Starter text is gone.'
 		});
 	});
 
-	it('rejects hardcoded bounds by re-running with different reading values', () => {
+	it('grades step 1 by stored values and printed bounds, not fixed names', () => {
+		const missingVars = gradeScienceStep(1, [{ globals: {}, stdout: '11.9\n12.3\n' }]);
+		expect(missingVars.passed).toBe(false);
+		expect(missingVars.message).toMatch(/variable/i);
+
+		const customNames = gradeScienceStep(1, [
+			{
+				stdout: '11.9\n12.3\n',
+				globals: { value: 12.1, err: 0.2, low: 11.9, high: 12.3 }
+			}
+		]);
+		expect(customNames.passed).toBe(true);
+
 		expect(
 			gradeScienceStep(1, [
-				{ globals: { lower_bound: 11.9, upper_bound: 12.3 } },
-				{ globals: { lower_bound: 11.9, upper_bound: 12.3 } }
+				{
+					stdout: '11.9\n12.3\n',
+					globals: { reading: 12.1, uncertainty: 0.2, lower_bound: 11.9, upper_bound: 12.3 }
+				},
+				{
+					stdout: '11.9\n12.3\n',
+					globals: { reading: 20, uncertainty: 1, lower_bound: 11.9, upper_bound: 12.3 }
+				}
 			]).passed
 		).toBe(false);
+
 		expect(
 			gradeScienceStep(1, [
-				{ globals: { lower_bound: 11.9, upper_bound: 12.3 } },
-				{ globals: { lower_bound: 19, upper_bound: 21 } }
+				{
+					stdout: '11.9\n12.3\n',
+					globals: { reading: 12.1, uncertainty: 0.2, lower_bound: 11.9, upper_bound: 12.3 }
+				},
+				{
+					stdout: '19\n21\n',
+					globals: { reading: 20, uncertainty: 1, lower_bound: 19, upper_bound: 21 }
+				}
 			]).passed
 		).toBe(true);
 	});

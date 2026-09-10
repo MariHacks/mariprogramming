@@ -72,7 +72,7 @@ export function studioNextAction(state) {
 		return '';
 	}
 	if (check.passed === false) {
-		return `Not yet. ${check.message ?? ''}`.trim();
+		return (check.message ?? '').trim();
 	}
 	if (check.passed && current < SCIENCE_STEP_COUNT - 1) {
 		return 'Open the next step.';

@@ -64,7 +64,7 @@
 	<title>PBL 1 | {clubContent.name}</title>
 	<meta
 		name="description"
-		content="Speedrun Programming in Science. Create or join a team room and build one data-analyzer in the browser."
+		content="Speedrun Programming in Science. Create or join a team room and build one data analyzer in the browser."
 	/>
 </svelte:head>
 
@@ -74,11 +74,11 @@
 			<p class="series-label">PBL 1</p>
 			<SectionIntro
 				title="Speedrun Programming in Science"
-				summary="Build one growing program together. Create a team or join with a code. Up to 10 people share the same Python editor."
+				summary="Build one growing program together. Create a team or join with a room code. Up to 10 people share the same Python editor."
 			/>
 			<ul class="facts">
 				<li>In-browser Python. No install.</li>
-				<li>Checks after Run. Three hints per step.</li>
+				<li>Each Run is checked. Three hints per step if you get stuck.</li>
 				<li>Everyone types at once. Colored cursors show who is where.</li>
 			</ul>
 		</div>

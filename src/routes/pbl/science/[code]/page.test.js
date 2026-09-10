@@ -37,7 +37,7 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 					currentStep: 0,
 					unlockedStep: 0,
 					openedHints: { '0': 1 },
-					lastCheck: { passed: true, message: 'The program printed your message.', step: 0 },
+					lastCheck: { passed: true, message: 'Printed a custom message. Starter text is gone.', step: 0 },
 					memberCount: 2,
 					stdinText: '',
 					output: 'hi\n',
@@ -130,7 +130,7 @@ describe('PBL studio page', () => {
 		render(StudioPage);
 		expect(screen.getByRole('heading', { level: 1, name: 'Get something running' })).toBeVisible();
 		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveTextContent('print("hi")');
-		expect(screen.getByRole('status')).toHaveTextContent('The program printed your message.');
+		expect(screen.getByRole('status')).toHaveTextContent('Printed a custom message. Starter text is gone.');
 		expect(screen.getByRole('heading', { name: 'report.txt' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Syntax' })).toBeEnabled();
 		expect(screen.getByRole('button', { name: 'Partial code' })).toBeDisabled();
@@ -210,7 +210,7 @@ describe('PBL studio page', () => {
 			currentStep: 2,
 			unlockedStep: 2,
 			lastCheck: { passed: false, message: 'Try again.', step: 2 },
-			nextAction: 'Not yet. Try again.',
+			nextAction: 'Try again.',
 			step: SCIENCE_STEPS[2],
 			files: {}
 		};
@@ -240,14 +240,14 @@ describe('PBL studio page', () => {
 			currentStep: 1,
 			unlockedStep: 1,
 			openedHints: {},
-			lastCheck: { passed: true, message: 'The program printed your message.', step: 0 },
+			lastCheck: { passed: true, message: 'Printed a custom message. Starter text is gone.', step: 0 },
 			nextAction: '',
 			step: SCIENCE_STEPS[1],
 			files: {}
 		};
 		render(StudioPage);
 		expect(screen.queryByText('Accepted')).toBeNull();
-		expect(screen.queryByText('The program printed your message.')).toBeNull();
+		expect(screen.queryByText('Printed a custom message. Starter text is gone.')).toBeNull();
 		expect(screen.queryByText('Open the next step.')).toBeNull();
 		expect(screen.queryByRole('status')).toBeNull();
 	});

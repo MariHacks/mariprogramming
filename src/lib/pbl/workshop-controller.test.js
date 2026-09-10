@@ -43,7 +43,7 @@ function harness(overrides = {}) {
 			options.onError?.('keep going');
 			return sync;
 		},
-		runCheck: async () => ({ passed: true, message: 'The program printed your message.' }),
+		runCheck: async () => ({ passed: true, message: 'Printed a custom message. Starter text is gone.' }),
 		...overrides
 	});
 	return { controller, host, sync, onState: () => onState };
