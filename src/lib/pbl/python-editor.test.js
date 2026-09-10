@@ -158,6 +158,44 @@ describe('python collab editor', () => {
 		editor.destroy();
 	});
 
+	it('keeps gutter and content vertical metrics aligned in both themes', () => {
+		const editor = mount({ source: 'print("Experiment loaded")\n' });
+
+		/** @param {import('@codemirror/view').EditorView} view */
+		function assertAligned(view) {
+			const content = view.contentDOM;
+			const gutters = view.dom.querySelector('.cm-gutters');
+			const line = content.querySelector('.cm-line');
+			const gutterEls = [
+				...view.dom.querySelectorAll('.cm-lineNumbers .cm-gutterElement')
+			].filter((el) => /** @type {HTMLElement} */ (el).style.visibility !== 'hidden');
+			expect(gutters).toBeTruthy();
+			expect(line).toBeTruthy();
+			expect(gutterEls.length).toBeGreaterThan(0);
+			const contentStyle = getComputedStyle(content);
+			const guttersStyle = getComputedStyle(/** @type {Element} */ (gutters));
+			const gutterElStyle = getComputedStyle(gutterEls[0]);
+			const lineStyle = getComputedStyle(/** @type {Element} */ (line));
+			expect(contentStyle.fontSize).toBe('14px');
+			expect(lineStyle.fontSize).toBe(contentStyle.fontSize);
+			expect(gutterElStyle.fontSize).toBe(contentStyle.fontSize);
+			expect(guttersStyle.fontSize).toBe(contentStyle.fontSize);
+			expect(lineStyle.lineHeight).toBe(contentStyle.lineHeight);
+			expect(gutterElStyle.lineHeight).toBe(contentStyle.lineHeight);
+			expect(contentStyle.paddingTop).toBe('8px');
+			expect(contentStyle.paddingBottom).toBe('8px');
+			// Padding only on content — CM offsets gutter elements via documentPadding.
+			expect(guttersStyle.paddingTop).toBe('0px');
+			expect(guttersStyle.paddingBottom).toBe('0px');
+		}
+
+		assertAligned(editor.view);
+		editor.setTheme('light');
+		assertAligned(editor.view);
+		editor.setTheme('dark');
+		assertAligned(editor.view);
+		editor.destroy();
+	});
 
 	it('mounts the print suggestion popup on the document body', async () => {
 		const editor = mount({ source: 'pr' });

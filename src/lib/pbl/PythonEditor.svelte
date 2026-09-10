@@ -93,8 +93,6 @@
 		flex-direction: column;
 		height: 100%;
 		outline: none;
-		font-size: 14px;
-		letter-spacing: 0;
 		background: var(--pbl-editor-bg, #2d2a2e);
 	}
 
@@ -110,33 +108,22 @@
 		overflow: auto;
 	}
 
+	/* Layout + colors only — font/line metrics come from monokaiChrome theme. */
 	.python-host :global(.cm-gutters) {
 		display: flex !important;
 		flex-direction: row;
 		flex-shrink: 0;
 		width: auto !important;
 		height: 100%;
+		padding: 0;
 		background-color: var(--pbl-editor-gutter, #221f22);
 		color: var(--pbl-editor-comment, #727072);
-		font-family: var(--font-mono);
-		font-size: 14px;
-		font-weight: 400;
-		letter-spacing: 0;
-		line-height: 1.55;
 	}
 
 	.python-host :global(.cm-gutter) {
 		display: flex !important;
 		flex-direction: column;
 		flex-shrink: 0;
-	}
-
-	.python-host :global(.cm-gutterElement) {
-		font-family: var(--font-mono);
-		font-size: 14px;
-		font-weight: 400;
-		letter-spacing: 0;
-		line-height: 1.55;
 	}
 
 	.python-host :global(.cm-content) {

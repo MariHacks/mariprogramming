@@ -125,7 +125,9 @@ export function monokaiPalette(mode) {
 }
 
 /**
- * Shared editor chrome (14px gutter + content metrics stay aligned).
+ * Shared editor chrome. Vertical padding lives only on `.cm-content`;
+ * CodeMirror offsets gutter elements via documentPadding — do not pad `.cm-gutters`.
+ * Keep font-size + line-height identical on content, lines, and gutter elements.
  * @param {typeof MONOKAI_DARK} palette
  * @param {boolean} dark
  */
@@ -173,7 +175,8 @@ function monokaiChrome(palette, dark) {
 				fontWeight: '400',
 				letterSpacing: '0',
 				lineHeight: '1.55',
-				padding: '8px 0'
+				// CM syncs gutter markers to content padding — extra CSS padding drifts them.
+				padding: '0'
 			},
 			'.cm-gutterElement': {
 				fontSize: '14px',

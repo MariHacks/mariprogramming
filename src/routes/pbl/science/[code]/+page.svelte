@@ -704,10 +704,13 @@
 	}
 
 	.editor-shell {
+		display: flex;
 		flex: 1 1 auto;
+		flex-direction: column;
 		min-width: 0;
 		min-height: 14rem;
 		overflow: hidden;
+		/* Isolate from sibling .error margins — CM gutters must not shift. */
 		background: var(--pbl-editor-bg, #2d2a2e);
 	}
 
@@ -815,7 +818,9 @@
 		color: var(--pbl-editor-muted, #c8c4c6);
 	}
 
+	/* Room/sync errors sit above .editor-shell (never inside CM scroller). */
 	.error {
+		flex: 0 0 auto;
 		margin: 0.5rem 1rem;
 		color: var(--pbl-editor-red, #ff6188);
 		font-size: 0.875rem;
