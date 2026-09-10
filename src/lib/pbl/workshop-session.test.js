@@ -62,12 +62,37 @@ describe('workshop session helpers', () => {
 		expect(studioNextAction({ blocked: 'full' })).toBe('This team is full.');
 		expect(
 			studioNextAction({
+				blocked: 'full',
+				lastCheck: { step: 0, passed: true },
+				currentStep: 1
+			})
+		).toBe('This team is full.');
+		expect(
+			studioNextAction({
 				lastCheck: { passed: false, message: 'Change the message, then run again.' }
+			})
+		).toBe('Not yet. Change the message, then run again.');
+		expect(
+			studioNextAction({
+				lastCheck: { step: 0, passed: false, message: 'Change the message, then run again.' },
+				currentStep: 0
 			})
 		).toBe('Not yet. Change the message, then run again.');
 		expect(studioNextAction({ lastCheck: { passed: true }, currentStep: 0 })).toBe(
 			'Open the next step.'
 		);
+		expect(
+			studioNextAction({ lastCheck: { step: 0, passed: true }, currentStep: 0 })
+		).toBe('Open the next step.');
+		expect(
+			studioNextAction({ lastCheck: { step: 0, passed: true }, currentStep: 1 })
+		).toBe('');
+		expect(
+			studioNextAction({
+				lastCheck: { step: 0, passed: false, message: 'Try again.' },
+				currentStep: 1
+			})
+		).toBe('');
 		expect(studioNextAction({ lastCheck: null, currentStep: 0 })).toBe('');
 	});
 });

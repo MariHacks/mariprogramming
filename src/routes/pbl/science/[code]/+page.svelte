@@ -230,7 +230,7 @@
 						<pre class="hint">{state.step.hints[2]}</pre>
 					{/if}
 				</div>
-				{#if state.lastCheck}
+				{#if state.lastCheck && state.lastCheck.step === state.currentStep}
 					<p
 						class="check"
 						class:pass={state.lastCheck.passed}

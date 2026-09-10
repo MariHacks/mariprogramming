@@ -233,4 +233,22 @@ describe('PBL studio page', () => {
 		expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
 		expect(screen.getByText('Finished')).toBeVisible();
 	});
+
+	it('hides Accepted banner and next-step status after advancing', async () => {
+		const { SCIENCE_STEPS } = await import('$lib/pbl/science-workshop.js');
+		studio.patch = {
+			currentStep: 1,
+			unlockedStep: 1,
+			openedHints: {},
+			lastCheck: { passed: true, message: 'The program printed your message.', step: 0 },
+			nextAction: '',
+			step: SCIENCE_STEPS[1],
+			files: {}
+		};
+		render(StudioPage);
+		expect(screen.queryByText('Accepted')).toBeNull();
+		expect(screen.queryByText('The program printed your message.')).toBeNull();
+		expect(screen.queryByText('Open the next step.')).toBeNull();
+		expect(screen.queryByRole('status')).toBeNull();
+	});
 });
