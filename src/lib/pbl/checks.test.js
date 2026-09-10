@@ -70,6 +70,26 @@ describe('science step checks', () => {
 		).toBe(true);
 	});
 
+	it('accepts IEEE float noise on printed step 1 bounds', () => {
+		expect(
+			gradeScienceStep(1, [
+				{
+					stdout: '11.9\n12.299999999999999\n',
+					globals: {
+						reading: 12.1,
+						uncertainty: 0.2,
+						lower_bound: 11.9,
+						upper_bound: 12.299999999999999
+					}
+				},
+				{
+					stdout: '19\n21\n',
+					globals: { reading: 20, uncertainty: 1, lower_bound: 19, upper_bound: 21 }
+				}
+			])
+		).toMatchObject({ passed: true });
+	});
+
 
 	it('accepts student-chosen names for lists, filters, functions, and summaries', () => {
 		expect(

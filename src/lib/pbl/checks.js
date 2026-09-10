@@ -70,6 +70,18 @@ function mentions(haystack, needle) {
 	return haystack.toLowerCase().includes(String(needle).toLowerCase());
 }
 
+/** @param {string} text */
+function extractPrintedNumbers(text) {
+	const matches = String(text).match(/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/gu);
+	if (!matches) return [];
+	return matches.map(Number).filter((value) => Number.isFinite(value));
+}
+
+/** @param {string} text @param {number} expected @param {number} [epsilon] */
+function hasClosePrinted(text, expected, epsilon = 0.05) {
+	return extractPrintedNumbers(text).some((value) => closeTo(value, expected, epsilon));
+}
+
 /** @param {unknown} value */
 function isFunctionMarker(value) {
 	return Boolean(
@@ -189,7 +201,7 @@ function gradeStep1(trials) {
 	if (!hasCloseValue(g, 0.2)) {
 		return fail('Store the uncertainty 0.2 in a variable (any name).');
 	}
-	if (!mentions(output, '11.9') || !mentions(output, '12.3')) {
+	if (!hasClosePrinted(output, 11.9) || !hasClosePrinted(output, 12.3)) {
 		return fail('Print both bounds. With 12.1 ± 0.2 they should be about 11.9 and 12.3.');
 	}
 	// Formula check: runner rewrites reading/uncertainty *or* Assigns of 12.1/0.2.
@@ -198,7 +210,7 @@ function gradeStep1(trials) {
 		const overriddenOut = text(overridden);
 		const followed =
 			(hasCloseValue(og, 19) && hasCloseValue(og, 21)) ||
-			(mentions(overriddenOut, '19') && mentions(overriddenOut, '21'));
+			(hasClosePrinted(overriddenOut, 19) && hasClosePrinted(overriddenOut, 21));
 		if (!followed) {
 			return fail(
 				'Bounds look hard-coded. Compute them from your reading and uncertainty variables (for example reading - uncertainty).'
@@ -224,13 +236,13 @@ function gradeStep2(trials) {
 	if (!closeTo(first, 12.1) || !closeTo(last, 11.9)) {
 		return fail('The list should start at 12.1 and end at 11.9.');
 	}
-	if (!mentions(output, '12.1')) {
+	if (!hasClosePrinted(output, 12.1)) {
 		return fail('Print the first value (12.1). It never appeared in the output.');
 	}
-	if (!mentions(output, '11.9')) {
+	if (!hasClosePrinted(output, 11.9)) {
 		return fail('Print the last value (11.9). It never appeared in the output.');
 	}
-	if (!mentions(output, '6')) {
+	if (!hasClosePrinted(output, 6, 0.1)) {
 		return fail('Print the list length so 6 appears in the output.');
 	}
 	return pass('First, last, and length printed from the list.');
@@ -404,7 +416,7 @@ function gradeStep9(trials) {
 		return fail('The spread on the results dict should be non-negative.');
 	}
 	const printed = trial.stdout || '';
-	if (!printed.includes('[') && !mentions(printed, String(average))) {
+	if (!printed.includes('[') && (average === null || !hasClosePrinted(printed, average, 0.08))) {
 		return fail('Print one value from the results dict by key, for example print(summary["average"]).');
 	}
 	if (Object.keys(record).length < 4) {
