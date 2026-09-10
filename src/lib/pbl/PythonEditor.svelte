@@ -101,7 +101,7 @@
 		background-color: #221f22;
 		color: #727072;
 		font-family: var(--font-mono);
-		font-size: 12px;
+		font-size: 14px;
 		font-weight: 400;
 		letter-spacing: 0;
 		line-height: 1.55;
@@ -115,7 +115,7 @@
 
 	.python-host :global(.cm-gutterElement) {
 		font-family: var(--font-mono);
-		font-size: 12px;
+		font-size: 14px;
 		font-weight: 400;
 		letter-spacing: 0;
 		line-height: 1.55;
