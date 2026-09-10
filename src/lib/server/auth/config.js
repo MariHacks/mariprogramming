@@ -95,6 +95,10 @@ function allowedSignInDestinations(canonicalOrigin) {
 		{
 			callbackURL: `${canonicalOrigin}/tools/account`,
 			errorCallbackURL: `${canonicalOrigin}/tools/account?state=unavailable`
+		},
+		{
+			callbackURL: `${canonicalOrigin}/pbl/science`,
+			errorCallbackURL: `${canonicalOrigin}/tools/account?state=unavailable`
 		}
 	];
 }

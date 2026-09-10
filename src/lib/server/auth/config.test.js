@@ -665,6 +665,20 @@ describe('Better Auth runtime contract', () => {
 		expect((await response.json()).url).toContain('accounts.google.com');
 	});
 
+	it('allows the PBL science workshop callback pair', async () => {
+		const auth = betterAuth(createOptions());
+		const response = await auth.handler(
+			signInRequest({
+				provider: 'google',
+				callbackURL: `${productionEnvironment.appOrigin}/pbl/science`,
+				errorCallbackURL: `${productionEnvironment.appOrigin}/tools/account?state=unavailable`,
+				disableRedirect: true
+			})
+		);
+		expect(response.status).toBeLessThan(400);
+		expect((await response.json()).url).toContain('accounts.google.com');
+	});
+
 	it.each([
 		['missing callback', { callbackURL: undefined }],
 		['another internal callback', { callbackURL: `${productionEnvironment.appOrigin}/events` }],
