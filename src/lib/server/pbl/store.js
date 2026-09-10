@@ -597,10 +597,12 @@ export function createPblStore(repository, clock = {}) {
 
 			if (yjsIncoming) {
 				try {
+					// Never fall back to the live room yjsState for a different step slot —
+					// that merges the previous step's CRDT into the newly opened buffer.
 					const priorYjs = replaceEditor
 						? ''
 						: stepKey
-							? stepYjs[stepKey] || row.yjsState || ''
+							? stepYjs[stepKey] || ''
 							: row.yjsState || '';
 					const merged = mergeYjsStates(priorYjs, yjsIncoming);
 					patch.yjsState = merged.yjsState;

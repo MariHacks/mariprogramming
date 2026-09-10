@@ -41,6 +41,9 @@ export function createWorkshopController(options) {
 	 * (server still holds the previous step's live buffer briefly).
 	 */
 	let replacePending = false;
+	/** @type {string | null} */
+	let pinnedStepSource = null;
+	let pinUntil = 0;
 	/** @type {any} */
 	let room = {
 		code: options.code,
@@ -136,25 +139,29 @@ export function createWorkshopController(options) {
 		ensureMaps();
 		const key = String(stepId);
 		const storedSource = room.stepSources[key];
-		const storedYjs = room.stepYjs[key] ?? '';
 		let source =
 			typeof storedSource === 'string'
 				? storedSource
 				: stepId === 0
 					? SCIENCE_STARTER_SOURCE
 					: '';
-		let yjsState = storedYjs;
-		if (!yjsState && source) {
+		// Always re-encode from the text map on hop. Trusting a stale stepYjs slot is what
+		// made hop-backs show another step's buffer while stepSources stayed correct.
+		let yjsState = '';
+		if (source) {
 			try {
 				yjsState = encodeSourceAsYjs(source);
 			} catch {
 				yjsState = '';
 			}
 		}
+		pinnedStepSource = source;
+		pinUntil = Date.now() + 400;
 		room = {
 			...room,
 			source,
 			yjsState,
+			stepYjs: { ...room.stepYjs, [key]: yjsState },
 			editingStep: stepId
 		};
 	}
@@ -212,20 +219,29 @@ export function createWorkshopController(options) {
 		const key = String(viewStep);
 		const remoteOnSameStep = Number.isInteger(remoteEditing) && remoteEditing === viewStep;
 		const remoteOnOtherStep = Number.isInteger(remoteEditing) && remoteEditing !== viewStep;
-		// Polls omit editingStep; while replacePending, live fields are still the prior step.
+		// Polls omit editingStep; while replacePending, live fields may still be the prior step.
 		const holdLocalEditor = replacePending && !remoteOnSameStep;
 
-		if (remoteOnOtherStep || holdLocalEditor) {
-			// Teammate on another step, or our step switch in flight — keep our editor.
-			merged.source = prevSource;
-			merged.yjsState = prevYjs;
-			// Accept awareness unless mid-replace (avoids caret flicker during step swap).
+		if (replacePending && !remoteOnSameStep) {
+			// Step switch in flight: never let a stale live CRDT (or optimistic echo) overwrite
+			// the per-step slot we just loaded. Prefer the map, fall back to post-load prev.
+			const mapSource = merged.stepSources[key];
+			const mapYjs = merged.stepYjs[key];
+			merged.source = typeof mapSource === 'string' ? mapSource : prevSource;
+			merged.yjsState =
+				typeof mapYjs === 'string' && mapYjs ? mapYjs : prevYjs;
+			merged.awarenessState = prevAwareness;
+			// Do not clear replacePending here — selectStep/setCollab flush.finally owns that.
+		} else if (remoteOnOtherStep || holdLocalEditor) {
+			// Teammate on another step — keep our editor without clobbering our step slot
+			// with a mismatched live payload.
+			const mapSource = merged.stepSources[key];
+			const mapYjs = merged.stepYjs[key];
+			merged.source = typeof mapSource === 'string' ? mapSource : prevSource;
+			merged.yjsState =
+				typeof mapYjs === 'string' && mapYjs ? mapYjs : prevYjs;
 			merged.awarenessState =
-				typeof next.awarenessState === 'string' && !holdLocalEditor
-					? next.awarenessState
-					: prevAwareness;
-			merged.stepSources = { ...merged.stepSources, [key]: prevSource };
-			if (prevYjs) merged.stepYjs = { ...merged.stepYjs, [key]: prevYjs };
+				typeof next.awarenessState === 'string' ? next.awarenessState : prevAwareness;
 		} else if (remoteOnSameStep) {
 			// Explicit same-step sync from a peer (or our own update echo).
 			if (typeof next.source === 'string') {
@@ -242,7 +258,6 @@ export function createWorkshopController(options) {
 			} else if (typeof merged.stepYjs[key] === 'string' && merged.stepYjs[key]) {
 				merged.yjsState = merged.stepYjs[key];
 			}
-			if (replacePending) replacePending = false;
 		} else {
 			// Legacy / poll without editingStep: apply live CRDT for collab. When the
 			// payload also includes step maps and they disagree with live source, the
@@ -279,6 +294,19 @@ export function createWorkshopController(options) {
 		// Never adopt remote currentStep as local navigation.
 		delete merged.currentStep;
 		merged.editingStep = viewStep;
+		// Hold the post-hop buffer until the user types — blocks stale live CRDT bleed.
+		if (pinnedStepSource !== null) {
+			const keyPin = String(viewStep);
+			merged.source = pinnedStepSource;
+			merged.stepSources = { ...merged.stepSources, [keyPin]: pinnedStepSource };
+			try {
+				const encoded = encodeSourceAsYjs(pinnedStepSource);
+				merged.yjsState = encoded;
+				merged.stepYjs = { ...merged.stepYjs, [keyPin]: encoded };
+			} catch {
+				/* keep existing yjs */
+			}
+		}
 		room = merged;
 		readOnly = blocked === 'full';
 		publish();
@@ -353,6 +381,16 @@ export function createWorkshopController(options) {
 		const source = payload.source ?? room.source;
 		const yjsState = payload.yjsState ?? room.yjsState;
 		const awarenessState = payload.awarenessState ?? room.awarenessState;
+		// Keep hop pin briefly so remount onCollab echoes cannot clobber the loaded slot.
+		if (!replaceEditor) {
+			if (pinnedStepSource !== null && Date.now() < pinUntil && source !== pinnedStepSource) {
+				// Drop remount garbage during the hop pin window.
+				return;
+			}
+			if (pinnedStepSource !== null && source !== pinnedStepSource) {
+				pinnedStepSource = null;
+			}
+		}
 		if (replaceEditor) {
 			editorEpoch += 1;
 			replacePending = true;
