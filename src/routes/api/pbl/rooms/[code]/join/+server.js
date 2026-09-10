@@ -1,3 +1,4 @@
+import { memberCookie } from '$lib/server/pbl/cookie.js';
 import {
 	createPblRuntime,
 	memberFromRequest,
@@ -22,7 +23,14 @@ export function _createPblJoinEndpoint(dependencies = {}) {
 					userId
 				})
 			);
-			return pblJson(room, 200, membership.setCookie ? { 'set-cookie': membership.setCookie } : {});
+			const canonical =
+				room && typeof room === 'object' && typeof room.memberId === 'string' && room.memberId
+					? room.memberId
+					: membership.memberId;
+			const secure = event.url.protocol === 'https:';
+			// Always re-bind pbl_member to the membership row for this user so a
+			// second tab can PUT awareness/source after rejoin.
+			return pblJson(room, 200, { 'set-cookie': memberCookie(canonical, { secure }) });
 		} catch (error) {
 			return pblErrorResponse(error);
 		}

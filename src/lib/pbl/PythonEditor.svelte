@@ -41,6 +41,7 @@
 
 	onMount(() => {
 		if (!host) return;
+		let alive = true;
 		const current = createPythonCollabEditor(host, {
 			source,
 			yjsState,
@@ -49,6 +50,7 @@
 			theme: themeMode,
 			user: user ?? collabUserFromProfile(null),
 			onChange(payload) {
+				if (!alive) return;
 				onCollab(payload);
 			}
 		});
@@ -57,6 +59,7 @@
 		appliedYjs = yjsState;
 		appliedAwareness = awarenessState;
 		return () => {
+			alive = false;
 			current.destroy();
 			if (editor === current) editor = null;
 		};

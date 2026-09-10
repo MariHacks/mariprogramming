@@ -530,6 +530,36 @@ describe('workshop controller', () => {
 		controller.destroy();
 	});
 
+	it('ignores stale setCollab from prior editor during step switch', async () => {
+		const { controller } = harness({
+			runCheck: async () => ({ passed: true, message: 'ok' })
+		});
+		await controller.join();
+		controller.setCollab({
+			source: 'print("step-A")',
+			yjsState: encodeSourceAsYjs('print("step-A")'),
+			awarenessState: ''
+		});
+		await controller.run();
+		controller.selectStep(1);
+		controller.setCollab({
+			source: 'print("step-B")',
+			yjsState: encodeSourceAsYjs('print("step-B")'),
+			awarenessState: ''
+		});
+		controller.selectStep(0);
+		// Late emission from the destroyed step-B editor must not clobber A.
+		controller.setCollab({
+			source: 'print("step-B")',
+			yjsState: encodeSourceAsYjs('print("step-B")'),
+			awarenessState: ''
+		});
+		expect(controller.getState().viewStep).toBe(0);
+		expect(controller.getState().source).toBe('print("step-A")');
+		expect(controller.getState().source).not.toContain('step-B');
+		controller.destroy();
+	});
+
 	it('restores step A source after editing step B (no newer-step bleed)', async () => {
 		const { controller, sync, onState } = harness({
 			runCheck: async () => ({ passed: true, message: 'ok' })

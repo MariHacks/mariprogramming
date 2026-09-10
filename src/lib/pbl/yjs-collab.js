@@ -180,24 +180,7 @@ export function mergeAwarenessStates(stored, incoming, nowMs) {
 			}
 		});
 		if (stale.length > 0) removeAwarenessStates(awareness, stale, 'timeout');
-		// One caret per person: keep the newest clientID for each identity key.
-		/** @type {Map<string, { clientId: number, lastUpdated: number }>} */
-		const bestByUser = new Map();
-		const drop = [];
-		awareness.getStates().forEach((state, clientId) => {
-			if (clientId === awareness.clientID) return;
-			const key = awarenessUserKey(state?.user);
-			const lastUpdated = awareness.meta.get(clientId)?.lastUpdated ?? 0;
-			if (!key) return;
-			const prev = bestByUser.get(key);
-			if (!prev || lastUpdated >= prev.lastUpdated) {
-				if (prev) drop.push(prev.clientId);
-				bestByUser.set(key, { clientId, lastUpdated });
-			} else {
-				drop.push(clientId);
-			}
-		});
-		if (drop.length > 0) removeAwarenessStates(awareness, drop, 'dedupe');
+		dedupeAwarenessByUser(awareness);
 		const ids = [...awareness.getStates().keys()].filter((id) => id !== awareness.clientID);
 		if (ids.length === 0) return '';
 		return bytesToBase64(encodeAwarenessUpdate(awareness, ids));
@@ -208,10 +191,29 @@ export function mergeAwarenessStates(stored, incoming, nowMs) {
 }
 
 /**
+ * Keep one remote caret per person (newest clientID wins).
  * @param {Awareness} awareness
- * @param {string} encoded
- * @param {string} origin
  */
+export function dedupeAwarenessByUser(awareness) {
+	/** @type {Map<string, { clientId: number, lastUpdated: number }>} */
+	const bestByUser = new Map();
+	const drop = [];
+	awareness.getStates().forEach((state, clientId) => {
+		if (clientId === awareness.clientID) return;
+		const key = awarenessUserKey(state?.user);
+		const lastUpdated = awareness.meta.get(clientId)?.lastUpdated ?? 0;
+		if (!key) return;
+		const prev = bestByUser.get(key);
+		if (!prev || lastUpdated >= prev.lastUpdated) {
+			if (prev) drop.push(prev.clientId);
+			bestByUser.set(key, { clientId, lastUpdated });
+		} else {
+			drop.push(clientId);
+		}
+	});
+	if (drop.length > 0) removeAwarenessStates(awareness, drop, 'dedupe');
+}
+
 /**
  * Drop remote awareness entries that are the same person as `localUser`
  * (refresh / multi-tab leaves old clientIDs that y-codemirror would paint as remote).
@@ -230,6 +232,9 @@ export function dropAwarenessMatchingLocalUser(awareness, localUser) {
 }
 
 /**
+ * Replace remote awareness from a polled snapshot.
+ * HTTP sync is a full peer set, not an incremental CRDT — clear prior remotes first
+ * so removed/deduped clientIDs cannot linger as stacked carets.
  * @param {Awareness} awareness
  * @param {string} encoded
  * @param {string} origin
@@ -237,8 +242,11 @@ export function dropAwarenessMatchingLocalUser(awareness, localUser) {
  */
 export function applyRemoteAwareness(awareness, encoded, origin = 'remote', options = {}) {
 	if (!encoded) return;
+	const priorRemotes = [...awareness.getStates().keys()].filter((id) => id !== awareness.clientID);
+	if (priorRemotes.length > 0) removeAwarenessStates(awareness, priorRemotes, origin);
 	applyAwarenessUpdate(awareness, base64ToBytes(encoded), origin);
 	dropAwarenessMatchingLocalUser(awareness, options.localUser);
+	dedupeAwarenessByUser(awareness);
 }
 
 /**

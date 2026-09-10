@@ -344,12 +344,15 @@ export function createWorkshopController(options) {
 	/** @param {{ source?: string, yjsState?: string, awarenessState?: string, replaceEditor?: boolean }} payload */
 	function setCollab(payload) {
 		if (blocked) return;
+		const replaceEditor = payload.replaceEditor === true;
+		// Ignore stale editor onCollab while a step replace is in flight (old
+		// CodeMirror instance can emit after viewStep already moved).
+		if (replacePending && !replaceEditor) return;
 		ensureMaps();
 		const key = String(viewStep);
 		const source = payload.source ?? room.source;
 		const yjsState = payload.yjsState ?? room.yjsState;
 		const awarenessState = payload.awarenessState ?? room.awarenessState;
-		const replaceEditor = payload.replaceEditor === true;
 		if (replaceEditor) {
 			editorEpoch += 1;
 			replacePending = true;
@@ -391,11 +394,13 @@ export function createWorkshopController(options) {
 		if (blocked) return;
 		if (!canOpenStep(stepId, room.unlockedStep)) return;
 		if (stepId === viewStep) return;
+		// Gate setCollab before mutating viewStep so a late onCollab from the
+		// outbound editor cannot write the old buffer into the new step slot.
+		replacePending = true;
 		persistViewStep();
 		viewStep = stepId;
 		loadViewStep(stepId);
 		editorEpoch += 1;
-		replacePending = true;
 		sync.update({
 			stepSources: room.stepSources,
 			stepYjs: room.stepYjs,
