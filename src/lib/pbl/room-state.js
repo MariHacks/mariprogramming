@@ -126,8 +126,30 @@ export function mergeRoomPreferringNewerLastCheck(serverRoom, localRoom) {
 		/** @type {any} */ (localRun),
 		/** @type {any} */ (serverRun)
 	);
+	const localMaps =
+		localRoom && typeof localRoom === 'object'
+			? {
+					stepSources: normalizeStepSources(localRoom.stepSources),
+					stepYjs: normalizeStepYjs(localRoom.stepYjs)
+				}
+			: null;
+	/** Always union per-step buffers — a bare server snapshot can lag and must not wipe local slots. */
+	const withMaps = (base) => {
+		if (!localMaps) return base;
+		return {
+			...base,
+			stepSources: normalizeStepSources({
+				...normalizeStepSources(base.stepSources),
+				...localMaps.stepSources
+			}),
+			stepYjs: normalizeStepYjs({
+				...normalizeStepYjs(base.stepYjs),
+				...localMaps.stepYjs
+			})
+		};
+	};
 	if (!keepLocalCheck && !keepLocalRun) {
-		return serverRoom;
+		return withMaps(serverRoom);
 	}
 	const merged = { ...serverRoom };
 	if (keepLocalCheck) {
@@ -144,7 +166,7 @@ export function mergeRoomPreferringNewerLastCheck(serverRoom, localRoom) {
 	if (keepLocalRun) {
 		merged.lastRun = localRun;
 	}
-	return merged;
+	return withMaps(merged);
 }
 
 /**
