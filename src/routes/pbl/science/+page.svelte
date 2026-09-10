@@ -1,5 +1,5 @@
-page bytes 7268
- { goto } from '$app/navigation';
+<script>
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 	import SectionIntro from '$lib/components/site/SectionIntro.svelte';
