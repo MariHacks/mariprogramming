@@ -77,16 +77,28 @@ afterEach(() => {
 });
 
 describe('PBL studio page', () => {
-	it('ranks team identity over the quiet PBL label and keeps the code in Share', () => {
+	it('keeps team info once in the lesson footer with clear hierarchy', () => {
 		const { container } = render(StudioPage);
-		const lesson = container.querySelector('.lesson');
-		expect(lesson).not.toBeNull();
-		expect(within(lesson).getByText('PBL 1')).toBeVisible();
-		expect(within(lesson).getByText('Lab table 3')).toBeVisible();
-		expect(within(lesson).queryByText('AB23JK')).toBeNull();
-		expect(lesson?.textContent ?? '').not.toMatch(/PBL 1\s*[—·]/u);
-		expect(container.querySelector('.toolbar code')).toHaveTextContent('AB23JK');
-		expect(screen.getByRole('button', { name: 'Copy link' })).toBeVisible();
+		const footer = container.querySelector('.lesson-footer');
+		const toolbar = container.querySelector('.toolbar');
+		expect(footer).not.toBeNull();
+		expect(toolbar).not.toBeNull();
+		const team = within(footer);
+		expect(team.getByText('PBL 1')).toBeVisible();
+		expect(team.getByText('Lab table 3')).toBeVisible();
+		expect(team.getByText('AB23JK')).toBeVisible();
+		expect(team.getByRole('button', { name: 'Copy link' })).toBeVisible();
+		expect(team.getByText('2/10 on this team')).toBeVisible();
+		expect(footer?.textContent ?? '').not.toMatch(/PBL 1\s*[—·]/u);
+		expect(footer?.textContent ?? '').not.toMatch(/Lab table 3\s*[—·]/u);
+		expect(within(toolbar).queryByText('Share')).toBeNull();
+		expect(within(toolbar).queryByText('AB23JK')).toBeNull();
+		expect(within(toolbar).queryByRole('button', { name: 'Copy link' })).toBeNull();
+		expect(within(toolbar).queryByText(/on this team/)).toBeNull();
+		expect(screen.getAllByText('AB23JK')).toHaveLength(1);
+		expect(screen.getAllByText('Lab table 3')).toHaveLength(1);
+		expect(screen.getAllByText('2/10 on this team')).toHaveLength(1);
+		expect(container.querySelector('.lesson-scroll .team-name')).toBeNull();
 	});
 
 	it('shows the lesson and editor for a joined room', async () => {

@@ -185,10 +185,6 @@
 
 		<aside class="lesson">
 			<div class="lesson-scroll">
-				<header class="lesson-identity">
-					<p class="series-label">PBL 1</p>
-					<p class="team-name">{state.teamName || 'Team room'}</p>
-				</header>
 				<div class="title-row">
 					<h1>{state.step.title}</h1>
 					<p class="minutes">{state.step.minutes} min</p>
@@ -242,6 +238,15 @@
 				{/if}
 			</div>
 			<div class="lesson-footer">
+				<header class="team-footer" aria-label="Team">
+					<p class="series-label">PBL 1</p>
+					<p class="team-name">{state.teamName || 'Team room'}</p>
+					<div class="team-share">
+						<code>{state.code}</code>
+						<button type="button" on:click={copyLink}>{copied ? 'Copied' : 'Copy link'}</button>
+					</div>
+					<p class="team-count">{state.memberCount}/10 on this team</p>
+				</header>
 				<ol class="steps">
 					{#each state.steps as step (step.id)}
 						<li>
@@ -286,13 +291,6 @@
 			style="--pbl-editor-bg: {editorPalette.bg}; --pbl-editor-gutter: {editorPalette.bgGutter}; --pbl-editor-ink: {editorPalette.ink}; --pbl-editor-comment: {editorPalette.comment}; --pbl-editor-yellow: {editorPalette.yellow}; --pbl-editor-cyan: {editorPalette.cyan}; --pbl-editor-red: {editorPalette.red}; --pbl-editor-panel: {editorPalette.panel}; --pbl-editor-panel-deep: {editorPalette.panelDeep}; --pbl-editor-muted: {editorPalette.muted}; --pbl-editor-rule: {editorPalette.rule}; --pbl-editor-line: {editorPalette.line}"
 		>
 			<div class="toolbar">
-				<div class="toolbar-meta">
-					<p>
-						Share <code>{state.code}</code>
-						<button type="button" on:click={copyLink}>{copied ? 'Copied' : 'Copy link'}</button>
-					</p>
-					<p>{state.memberCount}/10 on this team</p>
-				</div>
 				<div class="toolbar-actions">
 					<button
 						type="button"
@@ -427,27 +425,6 @@
 		gap: 0.85rem;
 	}
 
-	.lesson-identity {
-		display: grid;
-		gap: 0.15rem;
-	}
-
-	.series-label {
-		margin: 0;
-		color: var(--quiet-steel);
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-	}
-
-	.team-name {
-		margin: 0;
-		font-size: 1.05rem;
-		font-weight: 650;
-		line-height: 1.25;
-	}
-
 	.minutes {
 		color: var(--quiet-steel);
 		font-size: 0.72rem;
@@ -463,6 +440,58 @@
 		margin-top: 0.75rem;
 		padding-top: 0.85rem;
 		border-block-start: var(--rule);
+	}
+
+	.team-footer {
+		display: grid;
+		gap: 0.2rem;
+	}
+
+	.series-label {
+		margin: 0;
+		color: var(--quiet-steel);
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.team-name {
+		margin: 0;
+		font-size: 0.95rem;
+		font-weight: 650;
+		line-height: 1.25;
+	}
+
+	.team-share {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.35rem 0.55rem;
+	}
+
+	.team-share code {
+		font-family: var(--font-mono);
+		font-size: 0.8125rem;
+		font-weight: 650;
+		color: var(--club-blue);
+	}
+
+	.team-share button {
+		border: 0;
+		padding: 0;
+		background: transparent;
+		color: var(--club-blue);
+		font: inherit;
+		font-size: 0.8125rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+
+	.team-count {
+		margin: 0;
+		color: var(--quiet-steel);
+		font-size: 0.75rem;
 	}
 
 	.next-step {
@@ -643,20 +672,13 @@
 		flex-wrap: wrap;
 		align-items: center;
 		align-self: stretch;
-		justify-content: space-between;
+		justify-content: flex-end;
 		height: auto;
 		padding: 0.45rem 0.85rem;
 		gap: 0.65rem;
 		background: var(--pbl-editor-panel, #221f22);
 		border-block-end: 1px solid var(--pbl-editor-rule, #3e3b3f);
 		font-size: 0.8125rem;
-	}
-
-	.toolbar-meta {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.75rem 1.1rem;
 	}
 
 	.toolbar-actions {
@@ -666,20 +688,13 @@
 		gap: 0.45rem 0.65rem;
 	}
 
-	.toolbar code {
-		color: var(--pbl-editor-cyan, #78dce8);
-		font-family: var(--font-mono);
-	}
-
 	.toolbar button:not(.run) {
 		flex: 0 0 auto;
 		align-self: center;
 		height: auto;
 		min-height: 2.15rem;
-		margin-inline-start: 0.35rem;
 		border: 0;
 		background: transparent;
-		color: var(--pbl-editor-cyan, #78dce8);
 		font-weight: 650;
 		cursor: pointer;
 	}
