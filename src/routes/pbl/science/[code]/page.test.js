@@ -251,4 +251,12 @@ describe('PBL studio page', () => {
 		expect(screen.queryByText('Open the next step.')).toBeNull();
 		expect(screen.queryByRole('status')).toBeNull();
 	});
+
+	it('renders python glossary chips in the lesson body', () => {
+		render(StudioPage);
+		const printTerm = screen.getByRole('button', { name: /print: show beginner docs/i });
+		expect(printTerm).toBeVisible();
+		expect(printTerm).toHaveClass('python-term');
+	});
+
 });

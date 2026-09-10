@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { clubContent } from '$lib/content/club';
 	import PythonEditor from '$lib/pbl/PythonEditor.svelte';
+	import LessonRichText from '$lib/pbl/LessonRichText.svelte';
 	import {
 		monokaiPalette,
 		readStoredEditorTheme,
@@ -197,13 +198,13 @@
 					<h1>{state.step.title}</h1>
 					<p class="minutes">{state.step.minutes} min</p>
 				</div>
-				<p class="body">{state.step.body}</p>
+				<p class="body"><LessonRichText text={state.step.body} /></p>
 				{#if state.step.outputNotes}
 					<section class="examples" aria-label="Output">
 						<h2>Output</h2>
 						<ul class="notes">
 							{#each state.step.outputNotes as note (note)}
-								<li>{note}</li>
+								<li><LessonRichText text={note} /></li>
 							{/each}
 						</ul>
 					</section>
@@ -213,7 +214,7 @@
 						<h2>Examples</h2>
 						<ul class="notes">
 							{#each state.step.notes as note (note)}
-								<li>{note}</li>
+								<li><LessonRichText text={note} /></li>
 							{/each}
 						</ul>
 					</section>
@@ -231,13 +232,13 @@
 						</button>
 					{/each}
 					{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 1}
-						<pre class="hint">{state.step.hints[0]}</pre>
+						<pre class="hint"><LessonRichText text={state.step.hints[0]} className="hint-rich" /></pre>
 					{/if}
 					{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 2}
-						<pre class="hint">{state.step.hints[1]}</pre>
+						<pre class="hint"><LessonRichText text={state.step.hints[1]} className="hint-rich" /></pre>
 					{/if}
 					{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 3}
-						<pre class="hint">{state.step.hints[2]}</pre>
+						<pre class="hint"><LessonRichText text={state.step.hints[2]} className="hint-rich" /></pre>
 					{/if}
 				</div>
 				{#if state.lastCheck && state.lastCheck.step === state.currentStep}
@@ -252,7 +253,7 @@
 					</p>
 				{/if}
 				{#if state.step.stretch && state.currentStep === 11}
-					<p class="stretch">{state.step.stretch}</p>
+					<p class="stretch"><LessonRichText text={state.step.stretch} /></p>
 				{/if}
 			</div>
 			<div class="lesson-footer">
@@ -662,6 +663,11 @@
 	.hints button:disabled {
 		opacity: 0.45;
 		cursor: not-allowed;
+	}
+
+	.hint :global(.python-term) {
+		font-family: inherit;
+		font-size: inherit;
 	}
 
 	.hint,
