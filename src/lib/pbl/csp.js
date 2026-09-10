@@ -6,7 +6,8 @@ const PBL_CSP_EXTRAS = Object.freeze({
 	'script-src': Object.freeze(["'wasm-unsafe-eval'", PYODIDE_ORIGIN]),
 	'connect-src': Object.freeze([PYODIDE_ORIGIN]),
 	'worker-src': Object.freeze(["'self'", 'blob:', PYODIDE_ORIGIN]),
-	'wasm-src': Object.freeze(["'self'", PYODIDE_ORIGIN])
+	// CodeMirror injects <style> tags; Firefox also rejects unknown wasm-src.
+	'style-src': Object.freeze(["'unsafe-inline'"])
 });
 
 /** @param {unknown} pathname */

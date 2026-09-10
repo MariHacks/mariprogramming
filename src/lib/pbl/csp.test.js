@@ -27,6 +27,8 @@ describe('PBL Python CSP', () => {
 	it('adds Pyodide sources without rewriting the rest of the site policy', () => {
 		const expanded = expandPblCsp(BASE);
 		expect(expanded).toContain("'wasm-unsafe-eval'");
+		expect(expanded).not.toMatch(/(^|;\\s*)wasm-src\\b/u);
+		expect(expanded).toMatch(/style-src[^;]*'unsafe-inline'/u);
 		expect(expanded).toContain('https://cdn.jsdelivr.net');
 		expect(expanded).toContain('blob:');
 		expect(expanded).toMatch(/worker-src[^;]*https:\/\/cdn\.jsdelivr\.net/u);

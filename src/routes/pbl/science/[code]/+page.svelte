@@ -37,6 +37,7 @@
 	let consoleHeight = 220;
 	/** @type {'dark' | 'light'} */
 	let editorTheme = typeof window !== 'undefined' ? readStoredEditorTheme() : 'dark';
+	let ready = false;
 
 	$: editorPalette = monokaiPalette(editorTheme);
 
@@ -72,7 +73,9 @@
 		const stop = controller.subscribe((next) => {
 			state = next;
 		});
-		void controller.join();
+		void controller.join().finally(() => {
+			ready = true;
+		});
 		return () => {
 			stop();
 		};
@@ -173,7 +176,7 @@
 	<meta name="description" content="Team Python studio for Speedrun Programming in Science." />
 </svelte:head>
 
-{#if state}
+{#if ready && state}
 	<section
 		class="studio"
 		aria-label="Workshop studio"
@@ -429,7 +432,12 @@
 		</section>
 	</section>
 {:else}
-	<p class="loading">Loading the team room.</p>
+	{#if state?.roomError}
+		<p class="loading error" role="alert">{state.roomError}</p>
+		<p class="loading"><a class="quiet-link" href={resolve('/pbl/science', {})}>Back to join</a></p>
+	{:else}
+		<p class="loading">Joining the team room…</p>
+	{/if}
 {/if}
 
 <style>
