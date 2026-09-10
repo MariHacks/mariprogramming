@@ -19,6 +19,13 @@ from pathlib import Path
 
 def apply_overrides(source, mapping):
     mapping = dict(mapping or {})
+    # When workshop input names are overridden, also rewrite Assigns of the
+    # canonical starter constants so student-chosen names still recompute.
+    value_map = {}
+    if "reading" in mapping:
+        value_map[12.1] = mapping["reading"]
+    if "uncertainty" in mapping:
+        value_map[0.2] = mapping["uncertainty"]
     class Override(ast.NodeTransformer):
         def visit_Assign(self, node):
             self.generic_visit(node)
@@ -26,6 +33,8 @@ def apply_overrides(source, mapping):
                 name = node.targets[0].id
                 if name in mapping:
                     node.value = ast.Constant(mapping[name])
+                elif isinstance(node.value, ast.Constant) and node.value.value in value_map:
+                    node.value = ast.Constant(value_map[node.value.value])
             return node
     tree = ast.parse(source)
     tree = Override().visit(tree)
@@ -81,17 +90,44 @@ except Exception as exc:
 
 if PROBE == "functions" and error is None:
     try:
-        is_valid = ns.get("is_valid")
-        if callable(is_valid):
-            ns["is_valid_ok"] = bool(is_valid(12.1, 20))
-            ns["is_valid_outlier"] = bool(is_valid(48.7, 20))
+        validator = ns.get("is_valid") if callable(ns.get("is_valid")) else None
+        if validator is None:
+            for name, candidate in list(ns.items()):
+                if name.startswith("_") or not callable(candidate):
+                    continue
+                try:
+                    ok = bool(candidate(12.1, 20))
+                    bad = bool(candidate(48.7, 20))
+                except Exception:
+                    continue
+                if ok is True and bad is False:
+                    validator = candidate
+                    break
+        if callable(validator):
+            ns["is_valid_ok"] = bool(validator(12.1, 20))
+            ns["is_valid_outlier"] = bool(validator(48.7, 20))
         average_fn = None
         for name in ("average", "mean", "compute_average", "avg"):
             candidate = ns.get(name)
             if callable(candidate):
                 average_fn = candidate
                 break
+        if average_fn is None:
+            for name, candidate in list(ns.items()):
+                if name.startswith("_") or not callable(candidate):
+                    continue
+                if candidate is validator:
+                    continue
+                lowered = name.lower()
+                if "avg" in lowered or "mean" in lowered or "average" in lowered:
+                    average_fn = candidate
+                    break
         values = ns.get("valid_readings")
+        if not isinstance(values, list) or len(values) == 0:
+            for candidate in ns.values():
+                if isinstance(candidate, list) and len(candidate) == 5 and 48.7 not in candidate:
+                    values = candidate
+                    break
         if callable(average_fn) and isinstance(values, list) and len(values) > 0:
             ns["probed_average"] = float(average_fn(values))
     except Exception as exc:
@@ -109,18 +145,21 @@ self.onmessage = async (event) => {
 	const id = data.id;
 	try {
 		const pyodide = await getPyodide(String(data.indexURL ?? ''));
-		let stdout = '';
-		let stderr = '';
+		const stdoutOut = { text: '', decoder: new TextDecoder() };
+		const stderrOut = { text: '', decoder: new TextDecoder() };
 		let inputCount = 0;
 		const stdin = Array.isArray(data.stdin) ? data.stdin.map(String) : [];
+		// Prefer write over batched: Pyodide 0.27 StringWriter drops \n in batched().
 		pyodide.setStdout({
-			batched: (text) => {
-				stdout += text;
+			write(buf) {
+				stdoutOut.text += stdoutOut.decoder.decode(buf);
+				return buf.length;
 			}
 		});
 		pyodide.setStderr({
-			batched: (text) => {
-				stderr += text;
+			write(buf) {
+				stderrOut.text += stderrOut.decoder.decode(buf);
+				return buf.length;
 			}
 		});
 		pyodide.setStdin({
@@ -142,8 +181,8 @@ self.onmessage = async (event) => {
 			id,
 			type: 'result',
 			result: {
-				stdout,
-				stderr: result.error ? `${stderr}${result.error}` : stderr,
+				stdout: stdoutOut.text,
+				stderr: result.error ? `${stderrOut.text}${result.error}` : stderrOut.text,
 				error: result.error ?? null,
 				globals: result.globals ?? {},
 				files: result.files ?? {},

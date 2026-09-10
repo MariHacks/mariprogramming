@@ -11,6 +11,7 @@ import {
 	uuid,
 	varchar
 } from 'drizzle-orm/pg-core';
+import { user } from '../auth/auth-schema.generated';
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).defaultNow().notNull();
 const updatedAt = () => timestamp('updated_at', { withTimezone: true }).defaultNow().notNull();
@@ -31,6 +32,8 @@ export const pblRooms = pgTable(
 		stepEnteredAt: timestamp('step_entered_at', { withTimezone: true }).defaultNow().notNull(),
 		memberCount: integer('member_count').default(1).notNull(),
 		driverMemberId: varchar('driver_member_id', { length: 64 }),
+		yjsState: text('yjs_state').default('').notNull(),
+		awarenessState: text('awareness_state').default('').notNull(),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
@@ -59,10 +62,15 @@ export const pblRoomMembers = pgTable(
 			.notNull()
 			.references(() => pblRooms.id, { onDelete: 'cascade' }),
 		memberId: varchar('member_id', { length: 64 }).notNull(),
+		userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
 		joinedAt: timestamp('joined_at', { withTimezone: true }).defaultNow().notNull()
 	},
 	(table) => [
 		uniqueIndex('pbl_room_members_room_member_unique_idx').on(table.roomId, table.memberId),
-		index('pbl_room_members_room_idx').on(table.roomId)
+		uniqueIndex('pbl_room_members_room_user_unique_idx')
+			.on(table.roomId, table.userId)
+			.where(sql`${table.userId} IS NOT NULL`),
+		index('pbl_room_members_room_idx').on(table.roomId),
+		index('pbl_room_members_user_idx').on(table.userId)
 	]
 );

@@ -1,4 +1,5 @@
 import { createPythonHost } from './python-host.js';
+import { isNewerLastCheck } from './room-state.js';
 import { runScienceCheck } from './run-checks.js';
 import { SCIENCE_STARTER_SOURCE, SCIENCE_STEPS, getScienceStep } from './science-workshop.js';
 import { createRoomSync } from './sync-client.js';
@@ -36,7 +37,9 @@ export function createWorkshopController(options) {
 		memberCount: 1,
 		version: 0,
 		stepEnteredAt: now(),
-		joinable: true
+		joinable: true,
+		yjsState: '',
+		awarenessState: ''
 	};
 	let stdinText = '';
 	let output = '';
@@ -46,7 +49,8 @@ export function createWorkshopController(options) {
 	let roomError = '';
 	let readOnly = false;
 	let blocked = '';
-	let isDriver = true;
+	/** @type {string | null} */
+	let runClearedAt = null;
 
 	function snapshot() {
 		return {
@@ -61,7 +65,7 @@ export function createWorkshopController(options) {
 			roomError,
 			readOnly,
 			blocked,
-			isDriver,
+			isDriver: blocked !== 'full',
 			nextAction: studioNextAction({
 				blocked,
 				lastCheck: room.lastCheck,
@@ -77,9 +81,24 @@ export function createWorkshopController(options) {
 	const sync = (options.createSync ?? createRoomSync)({
 		code: options.code,
 		onState: (next) => {
-			room = { ...room, ...next };
-			if (typeof next.isDriver === 'boolean') isDriver = next.isDriver;
-			readOnly = blocked === 'full' || !isDriver;
+			const merged = { ...room, ...next };
+			const incomingCheck = next?.lastCheck;
+			const keepLocalCheck = runClearedAt
+				? !isNewerLastCheck(incomingCheck, { at: runClearedAt })
+				: !isNewerLastCheck(incomingCheck, room.lastCheck);
+			if (keepLocalCheck) {
+				merged.lastCheck = room.lastCheck;
+				const localUnlocked = Number(room.unlockedStep);
+				const nextUnlocked = Number(next?.unlockedStep);
+				if (
+					Number.isFinite(localUnlocked) &&
+					(!Number.isFinite(nextUnlocked) || localUnlocked > nextUnlocked)
+				) {
+					merged.unlockedStep = localUnlocked;
+				}
+			}
+			room = merged;
+			readOnly = blocked === 'full';
 			publish();
 		},
 		onError: (message) => {
@@ -87,7 +106,6 @@ export function createWorkshopController(options) {
 			if (message.includes('full')) {
 				blocked = 'full';
 				readOnly = true;
-				isDriver = false;
 			}
 			publish();
 		}
@@ -96,14 +114,13 @@ export function createWorkshopController(options) {
 	async function join() {
 		const joined = await sync.join();
 		if (!joined) {
-			readOnly = blocked === 'full' || !isDriver;
+			readOnly = blocked === 'full';
 			if (blocked === 'full') await sync.pull();
 			publish();
 			return snapshot();
 		}
 		room = { ...room, ...joined };
-		if (typeof joined.isDriver === 'boolean') isDriver = joined.isDriver;
-		readOnly = blocked === 'full' || !isDriver;
+		readOnly = blocked === 'full';
 		sync.start();
 		publish();
 		return snapshot();
@@ -111,16 +128,24 @@ export function createWorkshopController(options) {
 
 	/** @param {string} source */
 	function setSource(source) {
-		if (blocked || !isDriver) return;
-		room = { ...room, source };
-		sync.update({ source });
-		publish();
+		if (blocked) return;
+		setCollab({ source, yjsState: room.yjsState, awarenessState: room.awarenessState });
 	}
 
-	function takeDriver() {
+	/** @param {{ source?: string, yjsState?: string, awarenessState?: string }} payload */
+	function setCollab(payload) {
 		if (blocked) return;
-		sync.update({ takeDriver: true });
-		void sync.flush();
+		room = {
+			...room,
+			source: payload.source ?? room.source,
+			yjsState: payload.yjsState ?? room.yjsState,
+			awarenessState: payload.awarenessState ?? room.awarenessState
+		};
+		sync.update({
+			source: room.source,
+			yjsState: room.yjsState,
+			awarenessState: room.awarenessState
+		});
 		publish();
 	}
 
@@ -152,34 +177,47 @@ export function createWorkshopController(options) {
 
 	async function run() {
 		if (blocked) return snapshot();
+		const sourceSnapshot = room.source;
+		const stepSnapshot = room.currentStep;
 		running = true;
 		pythonError = '';
+		runClearedAt = now();
+		if (!room.lastCheck || room.lastCheck.step === stepSnapshot) {
+			room = { ...room, lastCheck: null };
+			sync.update({ lastCheck: null });
+		}
 		publish();
 		const stdin = stdinText
 			.split('\n')
 			.map((line) => line.replace(/\r$/u, ''))
 			.filter((line, index, lines) => line.length > 0 || index < lines.length - 1);
-		const result = await host.run(room.source, { stdin });
+		const result = await host.run(sourceSnapshot, { stdin });
 		output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
 		files = result.files ?? {};
 		if (result.error) pythonError = result.error;
 		running = false;
 		publish();
-		if (!result.error) await checkCurrent();
+		if (!result.error) await checkCurrent(sourceSnapshot, stepSnapshot);
+		else runClearedAt = null;
 		await sync.flush();
 		return snapshot();
 	}
 
-	async function checkCurrent() {
-		const result = await (options.runCheck ?? runScienceCheck)(host, room.currentStep, room.source);
+	/**
+	 * @param {string} [source]
+	 * @param {number} [stepId]
+	 */
+	async function checkCurrent(source = room.source, stepId = room.currentStep) {
+		const result = await (options.runCheck ?? runScienceCheck)(host, stepId, source);
 		const unlockedStep = nextUnlockedStep(room.unlockedStep, result.passed);
 		const lastCheck = {
-			step: room.currentStep,
+			step: stepId,
 			passed: result.passed,
 			message: result.message,
 			at: now()
 		};
 		room = { ...room, unlockedStep, lastCheck };
+		runClearedAt = null;
 		sync.update({ unlockedStep, lastCheck });
 		publish();
 		return result;
@@ -193,7 +231,7 @@ export function createWorkshopController(options) {
 	return {
 		join,
 		setSource,
-		takeDriver,
+		setCollab,
 		setStdin,
 		selectStep,
 		openHint,

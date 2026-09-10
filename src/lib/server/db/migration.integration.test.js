@@ -158,6 +158,7 @@ describe.sequential('committed migration against disposable PostgreSQL', () => {
 		expect(combinedMigration).toContain('mt_student_profiles_username_lower_unique_idx');
 		expect(combinedMigration).toContain('pbl_rooms_code_unique_idx');
 		expect(combinedMigration).toContain('driver_member_id');
+		expect(combinedMigration).toContain('yjs_state');
 	}, 30000);
 
 	afterAll(async () => {

@@ -84,7 +84,9 @@ describe('consolidated database schema', () => {
 				'source',
 				'current_step',
 				'opened_hints',
-				'driver_member_id'
+				'driver_member_id',
+				'yjs_state',
+				'awareness_state'
 			])
 		);
 		expect(indexNames(schema.pblRooms)).toEqual(['pbl_rooms_code_unique_idx', 'pbl_rooms_pbl_id_idx']);
@@ -94,9 +96,14 @@ describe('consolidated database schema', () => {
 			'pbl_rooms_steps_nonnegative',
 			'pbl_rooms_version_positive'
 		]);
+		expect(getTableConfig(schema.pblRoomMembers).columns.map((column) => column.name)).toEqual(
+			expect.arrayContaining(['member_id', 'user_id', 'room_id'])
+		);
 		expect(indexNames(schema.pblRoomMembers)).toEqual([
 			'pbl_room_members_room_idx',
-			'pbl_room_members_room_member_unique_idx'
+			'pbl_room_members_room_member_unique_idx',
+			'pbl_room_members_room_user_unique_idx',
+			'pbl_room_members_user_idx'
 		]);
 	});
 

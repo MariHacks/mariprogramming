@@ -101,10 +101,7 @@ describe('SiteHeader', () => {
 		});
 
 		const identity = container.querySelector('.identity-button');
-		expect(identity?.querySelector('img')).toHaveAttribute(
-			'src',
-			'data:image/png;base64,YXZhdGFy'
-		);
+		expect(identity?.querySelector('img')).toHaveAttribute('src', 'data:image/png;base64,YXZhdGFy');
 		expect(identity).not.toHaveTextContent('MS');
 	});
 
@@ -257,10 +254,9 @@ describe('SiteHeader', () => {
 			'page'
 		);
 		expect(
-			within(screen.getByRole('navigation', { name: 'Primary navigation' })).queryByRole(
-				'link',
-				{ name: 'Workshop archive' }
-			)
+			within(screen.getByRole('navigation', { name: 'Primary navigation' })).queryByRole('link', {
+				name: 'Workshop archive'
+			})
 		).not.toBeInTheDocument();
 		expect(container.querySelectorAll('a[href="/our-workshops"]')).toHaveLength(2);
 	});
@@ -402,5 +398,104 @@ describe('SiteHeader', () => {
 			);
 			expect(link).toHaveAttribute('rel', 'external');
 		}
+	});
+
+	it('leaves compact PBL mode off outside /pbl routes', () => {
+		const { container } = render(SiteHeader, {
+			props: { pathname: '/about-us', compactPbl: false }
+		});
+		const header = container.querySelector('.site-header');
+
+		expect(header).toHaveAttribute('data-compact-pbl', 'false');
+		expect(header).not.toHaveClass('is-compact-pbl');
+		expect(container.querySelector('[data-pbl-context]')).toBeNull();
+		expect(
+			within(container.querySelector('.header-actions')).getByRole('link', { name: 'Report a bug' })
+		).toBeInTheDocument();
+	});
+
+	it('activates compact PBL chrome with the catalog title and morph target', () => {
+		const { container } = render(SiteHeader, {
+			props: { pathname: '/pbl/science', compactPbl: true }
+		});
+		const header = container.querySelector('.site-header');
+		const context = container.querySelector('[data-pbl-context]');
+
+		expect(header).toHaveAttribute('data-compact-pbl', 'true');
+		expect(header).toHaveClass('is-compact-pbl');
+		expect(context).toHaveTextContent('Speedrun Programming in Science');
+		expect(container.querySelectorAll('[data-pbl-morph="workshops"]')).toHaveLength(2);
+		expect(
+			within(container.querySelector('.header-actions')).getByRole('link', { name: 'Sign up' })
+		).toBeInTheDocument();
+	});
+
+	it('keeps a home brand control in compact PBL mode for accessibility', () => {
+		render(SiteHeader, { props: { pathname: '/pbl/science/ABC', compactPbl: true } });
+
+		expect(
+			screen.getByRole('link', { name: 'Marianopolis Programming Club, home' })
+		).toHaveAttribute('href', '/');
+	});
+
+	it('contracts compact PBL motion through hover, focus-within, and reduced-motion CSS', () => {
+		expect(siteHeaderSource).toMatch(/\.is-compact-pbl:not\(:hover\):not\(:focus-within\)/u);
+		expect(siteHeaderSource).toMatch(/@media \(hover: hover\) and \(pointer: fine\)/u);
+		expect(siteHeaderSource).toMatch(
+			/@media \(max-width: 43\.749rem\)[\s\S]*?\.pbl-context\s*\{[\s\S]*?display:\s*none/u
+		);
+		expect(siteHeaderSource).toMatch(
+			/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.site-header\.is-compact-pbl[\s\S]*?transition-duration:\s*1ms/u
+		);
+		expect(siteHeaderSource).toMatch(/--pbl-header-motion:\s*360ms/u);
+		expect(siteHeaderSource).toMatch(/--pbl-header-ease:\s*cubic-bezier\(0\.22, 1, 0\.36, 1\)/u);
+		// Collapsed bar keeps even top/bottom padding; Sign up radius morphs 0 -> pill.
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\) \.header-frame\s*\{[\s\S]*?padding-block:\s*0\.2rem/u
+		);
+		expect(siteHeaderSource).toMatch(/\.signup-link\s*\{[\s\S]*?border-radius:\s*0;/u);
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\) \.signup-link\s*\{[\s\S]*?border-radius:\s*999px/u
+		);
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl[\s\S]*?border-radius var\(--pbl-header-motion\) var\(--pbl-header-ease\)/u
+		);
+		expect(siteHeaderSource).toMatch(/\.pbl-morph-target/u);
+		// Collapsed bar is IDE-density (<=2rem) with a tiny home mark and compact account chip.
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\)\s*\{[\s\S]*?height:\s*2rem/u
+		);
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\) \.brand-mark\s*\{[\s\S]*?width:\s*0\.9375rem/u
+		);
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\) \.signup-link\s*\{[\s\S]*?font-size:\s*0\.75rem/u
+		);
+		expect(siteHeaderSource).toMatch(/header-cluster-left/u);
+		expect(siteHeaderSource).toMatch(/header-cluster-right/u);
+		// Expand radiates from the center morph pivot (translate away + scale up).
+		expect(siteHeaderSource).toMatch(/transform-origin:\s*right center/u);
+		expect(siteHeaderSource).toMatch(/transform-origin:\s*left center/u);
+		expect(siteHeaderSource).toMatch(/translateX\(3\.25rem\) scale\(0\.85\)/u);
+		expect(siteHeaderSource).toMatch(/translateX\(-3\.25rem\) scale\(0\.85\)/u);
+		// Absolute center only while collapsed; expanded Workshops sits in the nav flex slot.
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:not\(:hover\):not\(:focus-within\) \.pbl-morph-target\s*\{[\s\S]*?position:\s*absolute[\s\S]*?left:\s*50%/u
+		);
+		expect(siteHeaderSource).toMatch(
+			/\.is-compact-pbl:is\(:hover, :focus-within\)[\s\S]*?\.pbl-morph-target\s*\{[\s\S]*?position:\s*relative[\s\S]*?transform:\s*none/u
+		);
+		// Base (non-collapsed) morph-target rule must be in-flow, not absolute-centered.
+		const baseMorph = siteHeaderSource.match(
+			/\.is-compact-pbl \.wide-navigation \.pbl-morph-target,[\s\S]*?\.compact-navigation \.pbl-morph-target\s*\{([^}]*)\}/u
+		);
+		expect(baseMorph?.[1]).toMatch(/position:\s*relative/u);
+		expect(baseMorph?.[1]).not.toMatch(/position:\s*absolute/u);
+		expect(baseMorph?.[1]).not.toMatch(/left:\s*50%/u);
+	});
+
+	it('shows Workshops as the hub compact label', () => {
+		const { container } = render(SiteHeader, { props: { pathname: '/pbl', compactPbl: true } });
+		expect(container.querySelector('[data-pbl-context]')).toHaveTextContent('Workshops');
 	});
 });

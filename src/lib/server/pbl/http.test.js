@@ -8,7 +8,8 @@ import {
 	memberFromRequest,
 	pblErrorResponse,
 	pblJson,
-	readPblJson
+	readPblJson,
+	requirePblSession
 } from './http.js';
 
 const ID = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -83,7 +84,7 @@ describe('PBL HTTP helpers', () => {
 				new Request('https://club.example/api/pbl/rooms', {
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
-					body: `{"x":"${'a'.repeat(120001)}"}`
+					body: `{"x":"${'a'.repeat(400001)}"}`
 				})
 			)
 		).rejects.toMatchObject({ status: 413 });
@@ -91,11 +92,21 @@ describe('PBL HTTP helpers', () => {
 			readPblJson(
 				new Request('https://club.example/api/pbl/rooms', {
 					method: 'POST',
-					headers: { 'content-type': 'application/json', 'content-length': '120001' },
+					headers: { 'content-type': 'application/json', 'content-length': '400001' },
 					body: '{}'
 				})
 			)
 		).rejects.toMatchObject({ status: 413 });
+	});
+
+	it('requires a MariTools session user id', () => {
+		expect(() => requirePblSession({ maritools: null })).toThrow();
+		try {
+			requirePblSession({ maritools: null });
+		} catch (error) {
+			expect(error).toMatchObject({ status: 401 });
+		}
+		expect(requirePblSession({ maritools: { userId: 'u1' } })).toEqual({ userId: 'u1' });
 	});
 
 	it('reuses or mints a member cookie', () => {
@@ -161,7 +172,12 @@ describe('PBL HTTP helpers', () => {
 			}
 		});
 		const room = await runtime.withStore((store) =>
-			store.createRoom({ pblId: 'science', teamName: 'Preview lab', memberId: ID })
+			store.createRoom({
+				pblId: 'science',
+				teamName: 'Preview lab',
+				memberId: ID,
+				userId: 'user-preview'
+			})
 		);
 		expect(room.teamName).toBe('Preview lab');
 		expect(room.joinable).toBe(true);

@@ -14,7 +14,7 @@ import {
 	getSharedMemoryPblRepository
 } from './store.js';
 
-const MAX_JSON_BYTES = 120000;
+const MAX_JSON_BYTES = 400000;
 const UNAVAILABLE = 'The workshop room service is unavailable.';
 
 /** @param {unknown} error */
@@ -85,6 +85,23 @@ export async function readPblJson(request) {
  * @param {{ url?: URL }} event
  * @param {{ memberId?: string | null }} [known]
  */
+
+/**
+ * Club Google session required to create or join a PBL team.
+ * @param {App.Locals | { maritools?: { userId?: string } | null } | null | undefined} locals
+ * @returns {{ userId: string }}
+ */
+export function requirePblSession(locals) {
+	const userId = locals?.maritools?.userId;
+	if (typeof userId !== 'string' || userId.length === 0) {
+		throw new PblInputError(
+			'Sign in with your club Google account to create or join a team.',
+			401
+		);
+	}
+	return { userId };
+}
+
 export function memberFromRequest(request, event, known = {}) {
 	const existing = known.memberId ?? readMemberId(request.headers.get('cookie'));
 	if (existing) return { memberId: existing, setCookie: null };

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Apply drizzle/0020_pbl_rooms.sql and drizzle/0021_pbl_room_driver.sql when missing.
+ * Apply drizzle/0020_pbl_rooms.sql through 0023 when missing.
  * Requires MIGRATION_DATABASE_URL or DATABASE_URL. Does not print connection details.
  */
 import { readFileSync } from 'node:fs';
@@ -41,6 +41,8 @@ try {
 		try {
 			const count = await applyFile(client, 'drizzle/0020_pbl_rooms.sql');
 			await applyFile(client, 'drizzle/0021_pbl_room_driver.sql');
+			await applyFile(client, 'drizzle/0022_pbl_yjs_state.sql');
+			await applyFile(client, 'drizzle/0023_pbl_room_member_user.sql');
 			try {
 				await client.query(
 					'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pbl_rooms, pbl_room_members TO mariprogramming_runtime'
@@ -55,28 +57,41 @@ try {
 				}
 			}
 			await client.query('COMMIT');
-			console.log(`ok: applied 0020 (${count} statements) and 0021`);
+			console.log(`ok: applied 0020 (${count} statements), 0021, 0022, and 0023`);
 		} catch (error) {
 			await client.query('ROLLBACK');
 			throw error;
 		}
 	} else {
-		const column = await client.query(
+		const driver = await client.query(
 			`SELECT column_name FROM information_schema.columns
 			 WHERE table_schema = 'public' AND table_name = 'pbl_rooms' AND column_name = 'driver_member_id'`
 		);
-		if (column.rows[0]?.column_name) {
-			console.log('ok: pbl_rooms and driver_member_id already present');
-		} else {
+		const yjs = await client.query(
+			`SELECT column_name FROM information_schema.columns
+			 WHERE table_schema = 'public' AND table_name = 'pbl_rooms' AND column_name = 'yjs_state'`
+		);
+		const memberUser = await client.query(
+			`SELECT column_name FROM information_schema.columns
+			 WHERE table_schema = 'public' AND table_name = 'pbl_room_members' AND column_name = 'user_id'`
+		);
+		const needsDriver = !driver.rows[0]?.column_name;
+		const needsYjs = !yjs.rows[0]?.column_name;
+		const needsMemberUser = !memberUser.rows[0]?.column_name;
+		if (needsDriver || needsYjs || needsMemberUser) {
 			await client.query('BEGIN');
 			try {
-				await applyFile(client, 'drizzle/0021_pbl_room_driver.sql');
+				if (needsDriver) await applyFile(client, 'drizzle/0021_pbl_room_driver.sql');
+				if (needsYjs) await applyFile(client, 'drizzle/0022_pbl_yjs_state.sql');
+				if (needsMemberUser) await applyFile(client, 'drizzle/0023_pbl_room_member_user.sql');
 				await client.query('COMMIT');
-				console.log('ok: applied 0021 driver_member_id');
+				console.log('ok: applied missing pbl room columns');
 			} catch (error) {
 				await client.query('ROLLBACK');
 				throw error;
 			}
+		} else {
+			console.log('ok: pbl_rooms columns through member user_id already present');
 		}
 	}
 } catch (error) {

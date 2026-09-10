@@ -15,6 +15,7 @@ import {
 
 const NOW = new Date('2026-09-08T15:00:00.000Z');
 const MEMBER = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const USER = 'user-lab-3';
 
 function roomRow(overrides = {}) {
 	return {
@@ -39,7 +40,7 @@ function memoryRepo(seed = roomRow()) {
 	/** @type {any[]} */
 	const rooms = [seed];
 	/** @type {any[]} */
-	const members = [{ roomId: seed.id, memberId: MEMBER }];
+	const members = [{ roomId: seed.id, memberId: MEMBER, userId: USER }];
 	return {
 		rooms,
 		members,
@@ -58,6 +59,25 @@ function memoryRepo(seed = roomRow()) {
 		async findMember(roomId, memberId) {
 			return members.find((row) => row.roomId === roomId && row.memberId === memberId) ?? null;
 		},
+		async findMemberByUser(roomId, userId) {
+			return members.find((row) => row.roomId === roomId && row.userId === userId) ?? null;
+		},
+		async listRooms() {
+			return [...rooms];
+		},
+		async listMembersWithUsers(roomIds) {
+			const wanted = new Set(roomIds);
+			return members
+				.filter((row) => wanted.has(row.roomId))
+				.map((row) => ({
+					roomId: row.roomId,
+					memberId: row.memberId,
+					userId: row.userId ?? null,
+					joinedAt: row.joinedAt ?? null,
+					email: row.email ?? null,
+					name: row.name ?? null
+				}));
+		},
 		async updateRoom(code, expectedVersion, patch) {
 			const row = rooms.find((item) => item.code === code && item.version === expectedVersion);
 			if (!row) return null;
@@ -74,7 +94,8 @@ describe('PBL room store', () => {
 		const room = await store.createRoom({
 			pblId: 'science',
 			teamName: '  Lab table 3  ',
-			memberId: MEMBER
+			memberId: MEMBER,
+			userId: USER
 		});
 		expect(room).toMatchObject({
 			code: 'AB23JK',
@@ -86,10 +107,12 @@ describe('PBL room store', () => {
 			isDriver: true
 		});
 		expect(repo.members.at(-1)?.memberId).toBe(MEMBER);
+		expect(repo.members.at(-1)?.userId).toBe(USER);
 		const generated = await createPblStore(memoryRepo(roomRow({ code: 'TAKEN1' }))).createRoom({
 			pblId: 'science',
 			teamName: 'Lab table 4',
-			memberId: MEMBER
+			memberId: MEMBER,
+			userId: USER
 		});
 		expect(generated.code).toHaveLength(6);
 	});
@@ -104,7 +127,8 @@ describe('PBL room store', () => {
 		const room = await store.createRoom({
 			pblId: 'science',
 			teamName: 'Lab table 3',
-			memberId: MEMBER
+			memberId: MEMBER,
+			userId: USER
 		});
 		expect(room.code).toBe('AB23JK');
 	});
@@ -114,17 +138,17 @@ describe('PBL room store', () => {
 		repo.insertRoom = async () => null;
 		const store = createPblStore(repo, { now: () => NOW, createCode: () => 'AB23JK' });
 		await expect(
-			store.createRoom({ pblId: 'science', teamName: 'Lab', memberId: MEMBER })
+			store.createRoom({ pblId: 'science', teamName: 'Lab', memberId: MEMBER, userId: USER })
 		).rejects.toMatchObject({ status: 503 });
 	});
 
 	it('rejects unknown workshops, blank names, and missing rooms', async () => {
 		const store = createPblStore(memoryRepo());
 		await expect(
-			store.createRoom({ pblId: 'nope', teamName: 'Lab', memberId: MEMBER })
+			store.createRoom({ pblId: 'nope', teamName: 'Lab', memberId: MEMBER, userId: USER })
 		).rejects.toBeInstanceOf(PblInputError);
 		await expect(
-			store.createRoom({ pblId: 'science', teamName: '  ', memberId: MEMBER })
+			store.createRoom({ pblId: 'science', teamName: '  ', memberId: MEMBER, userId: USER })
 		).rejects.toBeInstanceOf(PblInputError);
 		await expect(store.getRoom('??????')).rejects.toBeInstanceOf(PblInputError);
 		await expect(store.getRoom('ZZZZZZ')).rejects.toBeInstanceOf(PblNotFoundError);
@@ -133,14 +157,14 @@ describe('PBL room store', () => {
 	it('joins until the tenth person, then refuses', async () => {
 		const repo = memoryRepo(roomRow({ memberCount: 9 }));
 		const store = createPblStore(repo, { now: () => NOW });
-		const first = await store.joinRoom({ code: 'ab23jk', memberId: MEMBER });
+		const first = await store.joinRoom({ code: 'ab23jk', memberId: MEMBER, userId: USER });
 		expect(first.memberCount).toBe(9);
-		const extra = await store.joinRoom({ code: 'AB23JK', memberId: 'b'.repeat(32) });
+		const extra = await store.joinRoom({ code: 'AB23JK', memberId: 'b'.repeat(32), userId: 'user-b' });
 		expect(extra.memberCount).toBe(10);
 		repo.rooms[0].memberCount = 10;
 		repo.rooms[0].version += 1;
 		await expect(
-			store.joinRoom({ code: 'AB23JK', memberId: 'c'.repeat(32) })
+			store.joinRoom({ code: 'AB23JK', memberId: 'c'.repeat(32), userId: 'user-c' })
 		).rejects.toBeInstanceOf(PblFullError);
 	});
 
@@ -214,6 +238,7 @@ describe('PBL room store', () => {
 		expect(await repo.insertMember({ memberId: MEMBER })).toEqual(row);
 		expect(await repo.findRoomByCode('AB23JK')).toEqual(row);
 		expect(await repo.findMember(row.id, MEMBER)).toEqual(row);
+		expect(await repo.findMemberByUser(row.id, USER)).toEqual(row);
 		expect(await repo.updateRoom('AB23JK', 1, { source: 'x' })).toEqual(row);
 		const empty = createDrizzlePblRepository({
 			insert: vi.fn(() => ({
@@ -235,6 +260,9 @@ describe('PBL room store', () => {
 		expect(roomFromRow({ ...row, stepEnteredAt: NOW.toISOString() })?.stepEnteredAt).toBe(
 			NOW.toISOString()
 		);
+		expect(
+			roomFromRow({ ...row, yjsState: 'QQ==', awarenessState: 'QQ==' })?.yjsState
+		).toBe('QQ==');
 	});
 
 	it('treats a vanished room as not found and keeps join counts if the update races', async () => {
@@ -248,7 +276,7 @@ describe('PBL room store', () => {
 			return null;
 		};
 		await expect(
-			store.joinRoom({ code: 'AB23JK', memberId: 'b'.repeat(32) })
+			store.joinRoom({ code: 'AB23JK', memberId: 'b'.repeat(32), userId: 'user-b' })
 		).rejects.toBeInstanceOf(PblNotFoundError);
 		const updater = memoryRepo();
 		let updateLooks = 0;
@@ -270,30 +298,70 @@ describe('PBL room store', () => {
 		updating.updateRoom = async () => null;
 		const joining = createPblStore(updating, { now: () => NOW });
 		await expect(
-			joining.joinRoom({ code: 'AB23JK', memberId: 'b'.repeat(32) })
+			joining.joinRoom({ code: 'AB23JK', memberId: 'b'.repeat(32), userId: 'user-b' })
 		).rejects.toBeInstanceOf(PblConflictError);
 	});
 
-	it('lets only the driver change source until someone takes the keyboard', async () => {
+	it('lets every member change source and merges Yjs updates', async () => {
 		const other = 'b'.repeat(32);
 		const repo = memoryRepo(roomRow({ memberCount: 2 }));
 		repo.members.push({ roomId: repo.rooms[0].id, memberId: other });
 		const store = createPblStore(repo, { now: () => NOW });
-		await expect(
-			store.updateRoom({ code: 'AB23JK', memberId: other, version: 1, source: 'stolen' })
-		).rejects.toMatchObject({ message: 'Someone else has the keyboard.', status: 403 });
-		const taken = await store.updateRoom({
+		const fromOther = await store.updateRoom({
 			code: 'AB23JK',
 			memberId: other,
 			version: 1,
-			takeDriver: true,
-			source: 'now mine'
+			source: 'print("from B")'
 		});
-		expect(taken.isDriver).toBe(true);
-		expect(taken.source).toBe('now mine');
+		expect(fromOther.source).toBe('print("from B")');
+		expect(fromOther.isDriver).toBe(true);
+		const fromFirst = await store.updateRoom({
+			code: 'AB23JK',
+			memberId: MEMBER,
+			version: 2,
+			source: 'print("from A")'
+		});
+		expect(fromFirst.source).toBe('print("from A")');
 		await expect(
-			store.updateRoom({ code: 'AB23JK', memberId: MEMBER, version: 2, source: 'clobber' })
-		).rejects.toMatchObject({ message: 'Someone else has the keyboard.' });
+			store.updateRoom({ code: 'AB23JK', memberId: other, version: 3, yjsState: '%%%' })
+		).rejects.toMatchObject({ message: 'Invalid editor sync.' });
+		await expect(
+			store.updateRoom({ code: 'AB23JK', memberId: other, version: 3, awarenessState: '%%%' })
+		).rejects.toMatchObject({ message: 'Invalid editor sync.' });
+		const Y = await import('yjs');
+		const { Awareness } = await import('y-protocols/awareness');
+		const { PYTHON_YTEXT, bytesToBase64, encodeLocalAwareness } = await import(
+			'$lib/pbl/yjs-collab.js'
+		);
+		const { MAX_SOURCE_CHARS } = await import('$lib/pbl/room-state.js');
+		const left = new Y.Doc();
+		left.getText(PYTHON_YTEXT).insert(0, 'AAA');
+		const awDoc = new Y.Doc();
+		const awareness = new Awareness(awDoc);
+		awareness.setLocalStateField('user', { name: 'Ada', color: '#ff6188' });
+		const merged = await store.updateRoom({
+			code: 'AB23JK',
+			memberId: other,
+			version: 3,
+			yjsState: bytesToBase64(Y.encodeStateAsUpdate(left)),
+			awarenessState: encodeLocalAwareness(awareness)
+		});
+		expect(merged.source).toContain('AAA');
+		expect(merged.awarenessState.length).toBeGreaterThan(0);
+		const huge = new Y.Doc();
+		huge.getText(PYTHON_YTEXT).insert(0, 'x'.repeat(MAX_SOURCE_CHARS + 1));
+		await expect(
+			store.updateRoom({
+				code: 'AB23JK',
+				memberId: other,
+				version: 4,
+				yjsState: bytesToBase64(Y.encodeStateAsUpdate(huge))
+			})
+		).rejects.toMatchObject({ message: 'The program is too long to sync.' });
+		left.destroy();
+		awareness.destroy();
+		awDoc.destroy();
+		huge.destroy();
 	});
 
 	it('keeps rooms in process memory for local preview', async () => {
@@ -305,7 +373,8 @@ describe('PBL room store', () => {
 		const created = await store.createRoom({
 			pblId: 'science',
 			teamName: 'Memory lab',
-			memberId: MEMBER
+			memberId: MEMBER,
+			userId: USER
 		});
 		expect(created.code).toBe('MEM001');
 		expect(await repo.findRoomByCode('NOPE01')).toBeNull();
@@ -317,12 +386,62 @@ describe('PBL room store', () => {
 		expect(await repo.findMember(stored.id, 'missing')).toBeNull();
 	});
 
+	it('lists rooms with member accounts for staff', async () => {
+		const repo = memoryRepo(
+			roomRow({
+				currentStep: 1,
+				unlockedStep: 2,
+				lastCheck: { step: 1, passed: true, message: 'ok' },
+				source: 'print(1)',
+				updatedAt: NOW
+			})
+		);
+		repo.members[0].email = 'lab@marihacks.com';
+		repo.members[0].name = 'Lab';
+		const store = createPblStore(repo, { now: () => NOW });
+		const rooms = await store.listStaffRooms();
+		expect(rooms).toHaveLength(1);
+		expect(rooms[0]).toMatchObject({
+			code: 'AB23JK',
+			teamName: 'Lab table 3',
+			currentStep: 1,
+			unlockedStep: 2,
+			source: 'print(1)',
+			members: [
+				{
+					memberId: MEMBER,
+					userId: USER,
+					email: 'lab@marihacks.com',
+					name: 'Lab'
+				}
+			]
+		});
+	});
+
+	it('stores userId and refuses a second join for the same account', async () => {
+		const repo = memoryRepo(roomRow({ memberCount: 1 }));
+		const store = createPblStore(repo, { now: () => NOW });
+		const again = await store.joinRoom({
+			code: 'AB23JK',
+			memberId: 'b'.repeat(32),
+			userId: USER
+		});
+		expect(again.memberCount).toBe(1);
+		expect(repo.members).toHaveLength(1);
+		await expect(
+			store.createRoom({ pblId: 'science', teamName: 'Lab', memberId: MEMBER, userId: '' })
+		).rejects.toMatchObject({ status: 401 });
+		await expect(
+			store.joinRoom({ code: 'AB23JK', memberId: 'c'.repeat(32), userId: '' })
+		).rejects.toMatchObject({ status: 401 });
+	});
+
 	it('gives up when every generated code is taken', async () => {
 		const repo = memoryRepo();
 		repo.findRoomByCode = async () => roomRow();
 		const store = createPblStore(repo, { createCode: () => 'AB23JK', now: () => NOW });
 		await expect(
-			store.createRoom({ pblId: 'science', teamName: 'Lab', memberId: MEMBER })
+			store.createRoom({ pblId: 'science', teamName: 'Lab', memberId: MEMBER, userId: USER })
 		).rejects.toMatchObject({ status: 503 });
 	});
 });

@@ -135,8 +135,9 @@ describe('room sync client', () => {
 		await sync.join();
 		sync.update({ source: 'from-a-edit' });
 		await sync.flush();
-		expect(bodies).toHaveLength(1);
+		expect(bodies).toHaveLength(2);
 		expect(bodies[0]).toMatchObject({ version: 3, source: 'from-a-edit' });
+		expect(bodies[1]).toMatchObject({ version: 4, source: 'from-a-edit' });
 		expect(states.at(-1)?.source).toBe('from-b');
 		expect(states.at(-1)?.version).toBe(4);
 		expect(states.at(-1)?.currentStep).toBe(1);
@@ -204,7 +205,7 @@ describe('room sync client', () => {
 		await unversioned.join();
 		unversioned.update({ source: 'local-edit' });
 		await unversioned.flush();
-		expect(bodies).toHaveLength(1);
+		expect(bodies).toHaveLength(2);
 		expect(unversionedStates.at(-1)?.source).toBe('server');
 		unversioned.stop();
 
@@ -218,7 +219,7 @@ describe('room sync client', () => {
 		pending.stop();
 	});
 
-	it('omits source on flush when the member is following', async () => {
+	it('sends source from every member on flush', async () => {
 		/** @type {any[]} */
 		const bodies = [];
 		const sync = createRoomSync({
@@ -227,17 +228,15 @@ describe('room sync client', () => {
 			fetch: async (url, init) => {
 				if ((init?.method ?? 'GET') === 'PUT') {
 					bodies.push(JSON.parse(String(init?.body ?? '{}')));
-					return new Response(JSON.stringify({ code: 'AB23JK', version: 2, isDriver: false }));
+					return new Response(JSON.stringify({ code: 'AB23JK', version: 2 }));
 				}
-				return new Response(
-					JSON.stringify({ code: 'AB23JK', source: 'print(1)', version: 1, isDriver: false })
-				);
+				return new Response(JSON.stringify({ code: 'AB23JK', source: 'print(1)', version: 1 }));
 			}
 		});
 		await sync.join();
-		sync.update({ currentStep: 0 });
+		sync.update({ currentStep: 0, source: 'print(1)' });
 		await sync.flush();
-		expect(bodies[0].source).toBeUndefined();
+		expect(bodies[0].source).toBe('print(1)');
 		expect(bodies[0].currentStep).toBe(0);
 		sync.stop();
 	});
@@ -294,7 +293,7 @@ describe('room sync client', () => {
 		sync.stop();
 	});
 
-	it('retries takeDriver after a conflict so a handoff is not dropped', async () => {
+	it('retries a source push after a second conflict still returns the room', async () => {
 		/** @type {any[]} */
 		const bodies = [];
 		/** @type {any[]} */
@@ -306,34 +305,23 @@ describe('room sync client', () => {
 				if ((init?.method ?? 'GET') === 'PUT') {
 					const body = JSON.parse(String(init?.body ?? '{}'));
 					bodies.push(body);
-					if (bodies.length === 1) {
-						return new Response(
-							JSON.stringify({
-								conflict: true,
-								room: { code: 'AB23JK', source: 'from-a', version: 4, isDriver: false }
-							}),
-							{ status: 409 }
-						);
-					}
 					return new Response(
 						JSON.stringify({
-							...body,
-							version: body.version + 1,
-							isDriver: body.takeDriver === true
-						})
+							conflict: true,
+							room: { code: 'AB23JK', source: 'from-a', version: 4 }
+						}),
+						{ status: 409 }
 					);
 				}
-				return new Response(
-					JSON.stringify({ code: 'AB23JK', source: 'start', version: 3, isDriver: false })
-				);
+				return new Response(JSON.stringify({ code: 'AB23JK', source: 'start', version: 3 }));
 			}
 		});
 		await sync.join();
-		sync.update({ takeDriver: true });
+		sync.update({ source: 'from-b' });
 		await sync.flush();
 		expect(bodies).toHaveLength(2);
-		expect(bodies[1]).toMatchObject({ takeDriver: true, version: 4 });
-		expect(states.at(-1)?.isDriver).toBe(true);
+		expect(bodies[1]).toMatchObject({ source: 'from-b', version: 4 });
+		expect(states.at(-1)?.source).toBe('from-a');
 		sync.stop();
 	});
 
@@ -371,3 +359,70 @@ describe('room sync client', () => {
 		await sync.pull();
 	});
 });
+
+	it('does not wipe a newer local lastCheck on a double 409 conflict', async () => {
+		const states = [];
+		const bodies = [];
+		const sync = createRoomSync({
+			code: 'AB23JK',
+			onState: (state) => states.push(state),
+			fetch: async (url, init) => {
+				if ((init?.method ?? 'GET') === 'PUT') {
+					bodies.push(JSON.parse(String(init?.body ?? '{}')));
+					return new Response(
+						JSON.stringify({
+							conflict: true,
+							room: {
+								code: 'AB23JK',
+								source: 'from-server',
+								version: 5,
+								unlockedStep: 0,
+								lastCheck: {
+									step: 0,
+									passed: false,
+									message: 'old fail',
+									at: '2026-09-08T15:00:00.000Z'
+								}
+							}
+						}),
+						{ status: 409 }
+					);
+				}
+				return new Response(
+					JSON.stringify({
+						code: 'AB23JK',
+						source: 'start',
+						version: 3,
+						unlockedStep: 0,
+						lastCheck: {
+							step: 0,
+							passed: false,
+							message: 'old fail',
+							at: '2026-09-08T15:00:00.000Z'
+						}
+					})
+				);
+			}
+		});
+		await sync.join();
+		sync.update({
+			source: 'print("fixed")',
+			unlockedStep: 1,
+			lastCheck: {
+				step: 0,
+				passed: true,
+				message: 'Printed a custom message. Starter text is gone.',
+				at: '2026-09-08T15:01:00.000Z'
+			}
+		});
+		await sync.flush();
+		expect(bodies.length).toBeGreaterThanOrEqual(2);
+		expect(states.at(-1)?.source).toBe('from-server');
+		expect(states.at(-1)?.lastCheck).toMatchObject({
+			passed: true,
+			message: 'Printed a custom message. Starter text is gone.',
+			at: '2026-09-08T15:01:00.000Z'
+		});
+		expect(states.at(-1)?.unlockedStep).toBe(1);
+		sync.stop();
+	});

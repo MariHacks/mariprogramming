@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { getPblById } from '$lib/pbl/catalog.js';
 import { normalizeRoomCode } from '$lib/pbl/room-code.js';
 import {
@@ -10,7 +10,8 @@ import {
 	publicRoomView
 } from '$lib/pbl/room-state.js';
 import { SCIENCE_STARTER_SOURCE, SCIENCE_STEP_COUNT } from '$lib/pbl/science-workshop.js';
-import { pblRoomMembers, pblRooms } from '../db/schema';
+import { mergeAwarenessStates, mergeYjsStates, normalizeYjsState } from '$lib/pbl/yjs-collab.js';
+import { pblRoomMembers, pblRooms, user } from '../db/schema';
 import { generateRoomCode } from './ids.js';
 
 export class PblInputError extends Error {
@@ -72,7 +73,9 @@ export function roomFromRow(row, viewerMemberId) {
 					: String(row.stepEnteredAt),
 			memberCount: row.memberCount,
 			version: row.version,
-			driverMemberId: row.driverMemberId ?? null
+			driverMemberId: row.driverMemberId ?? null,
+			yjsState: row.yjsState ?? '',
+			awarenessState: row.awarenessState ?? ''
 		},
 		viewerMemberId
 	);
@@ -109,6 +112,19 @@ export function createDrizzlePblRepository(transaction) {
 			);
 		},
 		/**
+		 * @param {string} roomId
+		 * @param {string} userId
+		 */
+		async findMemberByUser(roomId, userId) {
+			return oneRow(
+				await transaction
+					.select()
+					.from(pblRoomMembers)
+					.where(and(eq(pblRoomMembers.roomId, roomId), eq(pblRoomMembers.userId, userId)))
+					.limit(1)
+			);
+		},
+		/**
 		 * @param {string} code
 		 * @param {number} expectedVersion
 		 * @param {Record<string, unknown>} patch
@@ -121,6 +137,25 @@ export function createDrizzlePblRepository(transaction) {
 					.where(and(eq(pblRooms.code, code), eq(pblRooms.version, expectedVersion)))
 					.returning()
 			);
+		},
+		async listRooms() {
+			return transaction.select().from(pblRooms).orderBy(desc(pblRooms.updatedAt), desc(pblRooms.code));
+		},
+		/** @param {string[]} roomIds */
+		async listMembersWithUsers(roomIds) {
+			if (!Array.isArray(roomIds) || roomIds.length === 0) return [];
+			return transaction
+				.select({
+					roomId: pblRoomMembers.roomId,
+					memberId: pblRoomMembers.memberId,
+					userId: pblRoomMembers.userId,
+					joinedAt: pblRoomMembers.joinedAt,
+					email: user.email,
+					name: user.name
+				})
+				.from(pblRoomMembers)
+				.leftJoin(user, eq(pblRoomMembers.userId, user.id))
+				.where(inArray(pblRoomMembers.roomId, roomIds));
 		}
 	};
 }
@@ -158,6 +193,13 @@ export function createMemoryPblRepository() {
 			return members.find((row) => row.roomId === roomId && row.memberId === memberId) ?? null;
 		},
 		/**
+		 * @param {string} roomId
+		 * @param {string} userId
+		 */
+		async findMemberByUser(roomId, userId) {
+			return members.find((row) => row.roomId === roomId && row.userId === userId) ?? null;
+		},
+		/**
 		 * @param {string} code
 		 * @param {number} expectedVersion
 		 * @param {Record<string, unknown>} patch
@@ -167,6 +209,28 @@ export function createMemoryPblRepository() {
 			if (!row) return null;
 			Object.assign(row, patch);
 			return { ...row };
+		},
+		async listRooms() {
+			return [...rooms].sort((a, b) => {
+				const aTime = a.updatedAt instanceof Date ? a.updatedAt.getTime() : 0;
+				const bTime = b.updatedAt instanceof Date ? b.updatedAt.getTime() : 0;
+				if (bTime !== aTime) return bTime - aTime;
+				return String(b.code).localeCompare(String(a.code));
+			});
+		},
+		/** @param {string[]} roomIds */
+		async listMembersWithUsers(roomIds) {
+			const wanted = new Set(roomIds);
+			return members
+				.filter((row) => wanted.has(row.roomId))
+				.map((row) => ({
+					roomId: row.roomId,
+					memberId: row.memberId,
+					userId: row.userId ?? null,
+					joinedAt: row.joinedAt ?? null,
+					email: row.email ?? null,
+					name: row.name ?? null
+				}));
 		}
 	};
 }
@@ -202,13 +266,16 @@ export function createPblStore(repository, clock = {}) {
 
 	return {
 		/**
-		 * @param {{ pblId: unknown, teamName: unknown, memberId: string }} input
+		 * @param {{ pblId: unknown, teamName: unknown, memberId: string, userId: string }} input
 		 */
 		async createRoom(input) {
 			const catalogEntry = getPblById(input.pblId);
 			if (!catalogEntry) throw new PblInputError('Unknown workshop.');
 			const teamName = normalizeTeamName(input.teamName);
 			if (!teamName) throw new PblInputError('Enter a team name.');
+			if (typeof input.userId !== 'string' || input.userId.length === 0) {
+				throw new PblInputError('Sign in with your club Google account to create a team.', 401);
+			}
 			const enteredAt = now();
 			const row = await repository.insertRoom({
 				code: await uniqueCode(),
@@ -222,10 +289,16 @@ export function createPblStore(repository, clock = {}) {
 				stepEnteredAt: enteredAt,
 				memberCount: 1,
 				version: 1,
-				driverMemberId: input.memberId
+				driverMemberId: input.memberId,
+				yjsState: '',
+				awarenessState: ''
 			});
 			if (!row) throw new PblInputError('Could not create the team room.', 503);
-			await repository.insertMember({ roomId: row.id, memberId: input.memberId });
+			await repository.insertMember({
+				roomId: row.id,
+				memberId: input.memberId,
+				userId: input.userId
+			});
 			return roomFromRow(row, input.memberId);
 		},
 
@@ -239,12 +312,17 @@ export function createPblStore(repository, clock = {}) {
 		},
 
 		/**
-		 * @param {{ code: unknown, memberId: string }} input
+		 * @param {{ code: unknown, memberId: string, userId: string }} input
 		 */
 		async joinRoom(input) {
+			if (typeof input.userId !== 'string' || input.userId.length === 0) {
+				throw new PblInputError('Sign in with your club Google account to join a team.', 401);
+			}
 			const room = await this.getRoom(input.code);
 			const row = await repository.findRoomByCode(room.code);
 			if (!row) throw new PblNotFoundError();
+			const byUser = await repository.findMemberByUser(row.id, input.userId);
+			if (byUser) return roomFromRow(row, input.memberId);
 			const existing = await repository.findMember(row.id, input.memberId);
 			if (existing) return roomFromRow(row, input.memberId);
 			if (!canAcceptMember(row.memberCount)) throw new PblFullError();
@@ -254,7 +332,11 @@ export function createPblStore(repository, clock = {}) {
 				updatedAt: now()
 			});
 			if (!updated) throw new PblConflictError(roomFromRow(row, input.memberId));
-			await repository.insertMember({ roomId: row.id, memberId: input.memberId });
+			await repository.insertMember({
+				roomId: row.id,
+				memberId: input.memberId,
+				userId: input.userId
+			});
 			return roomFromRow(updated, input.memberId);
 		},
 
@@ -268,7 +350,8 @@ export function createPblStore(repository, clock = {}) {
 		 *   unlockedStep?: unknown,
 		 *   openedHints?: unknown,
 		 *   lastCheck?: unknown,
-		 *   takeDriver?: unknown
+		 *   yjsState?: unknown,
+		 *   awarenessState?: unknown
 		 * }} input
 		 */
 		async updateRoom(input) {
@@ -283,18 +366,30 @@ export function createPblStore(repository, clock = {}) {
 
 			/** @type {Record<string, unknown>} */
 			const patch = { version: row.version + 1, updatedAt: now() };
-			const taking = input.takeDriver === true;
-			if (taking) patch.driverMemberId = input.memberId;
-			if (input.source !== undefined) {
-				const driverId = taking ? input.memberId : row.driverMemberId;
-				if (driverId && driverId !== input.memberId) {
-					throw new PblInputError('Someone else has the keyboard.', 403);
+			const yjsIncoming = normalizeYjsState(input.yjsState);
+			if (yjsIncoming === null) throw new PblInputError('Invalid editor sync.');
+			const awarenessIncoming = normalizeYjsState(input.awarenessState);
+			if (awarenessIncoming === null) throw new PblInputError('Invalid editor sync.');
+			if (yjsIncoming) {
+				try {
+					const merged = mergeYjsStates(row.yjsState || '', yjsIncoming);
+					patch.yjsState = merged.yjsState;
+					patch.source = merged.source;
+				} catch (error) {
+					throw new PblInputError(error instanceof Error ? error.message : 'Invalid editor sync.');
 				}
-				if (!driverId) patch.driverMemberId = input.memberId;
+			} else if (input.source !== undefined) {
 				if (typeof input.source !== 'string' || input.source.length > MAX_SOURCE_CHARS) {
 					throw new PblInputError('The program is too long to sync.');
 				}
 				patch.source = input.source;
+			}
+			if (awarenessIncoming) {
+				patch.awarenessState = mergeAwarenessStates(
+					row.awarenessState || '',
+					awarenessIncoming,
+					now().getTime()
+				);
 			}
 			if (input.openedHints !== undefined)
 				patch.openedHints = normalizeOpenedHints(input.openedHints);
@@ -317,6 +412,50 @@ export function createPblStore(repository, clock = {}) {
 			const updated = await repository.updateRoom(row.code, row.version, patch);
 			if (!updated) throw new PblConflictError(roomFromRow(row, input.memberId));
 			return roomFromRow(updated, input.memberId);
+		},
+
+		async listStaffRooms() {
+			const rows = await repository.listRooms();
+			const roomIds = rows.map((row) => row.id).filter(Boolean);
+			const memberRows = await repository.listMembersWithUsers(roomIds);
+			/** @type {Map<string, any[]>} */
+			const byRoom = new Map();
+			for (const member of memberRows) {
+				const list = byRoom.get(member.roomId) ?? [];
+				list.push({
+					memberId: member.memberId,
+					userId: member.userId ?? null,
+					email: member.email ?? null,
+					name: member.name ?? null,
+					joinedAt:
+						member.joinedAt instanceof Date
+							? member.joinedAt.toISOString()
+							: member.joinedAt
+								? String(member.joinedAt)
+								: null
+				});
+				byRoom.set(member.roomId, list);
+			}
+			return rows.map((row) => {
+				const membersForRoom = byRoom.get(row.id) ?? [];
+				return {
+					code: row.code,
+					pblId: row.pblId,
+					teamName: row.teamName,
+					source: row.source ?? '',
+					currentStep: row.currentStep,
+					unlockedStep: row.unlockedStep,
+					lastCheck: row.lastCheck ?? null,
+					memberCount: row.memberCount,
+					updatedAt:
+						row.updatedAt instanceof Date
+							? row.updatedAt.toISOString()
+							: row.updatedAt
+								? String(row.updatedAt)
+								: null,
+					members: membersForRoom
+				};
+			});
 		}
 	};
 }

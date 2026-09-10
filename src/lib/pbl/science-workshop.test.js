@@ -34,11 +34,40 @@ describe('PBL 1 science workshop', () => {
 			expect(step.hints[0]).not.toMatch(/\n/);
 			expect(step.hints[0]).not.toMatch(/^\s*(?:def |print\(|import |for |while )/u);
 			expect(step.hints[2]).toMatch(/print\(|def |for |while |import |append\(|sqrt|=|open\(/u);
-			expect(step.body.length).toBeLessThan(600);
+			expect(step.body.length).toBeLessThan(900);
 		}
 		expect(getScienceStep(0)?.title).toBe('Get something running');
 		expect(getScienceStep(11)?.title).toBe('Final boss');
 		expect(getScienceStep(12)).toBeNull();
 		expect(SCIENCE_STEPS[11].stretch).toMatch(/matplotlib/i);
+		for (const step of SCIENCE_STEPS) {
+			const blob = [
+				step.title,
+				step.body,
+				...(step.notes ?? []),
+				...(step.outputNotes ?? []),
+				...step.hints,
+				step.stretch ?? ''
+			].join('\n');
+			expect(blob).not.toMatch(/[\u2013\u2014]/u);
+		}
+	});
+
+	it('uses multi-paragraph bodies with structured Output notes and no checker-as-why copy', () => {
+		for (const step of SCIENCE_STEPS) {
+			expect(step.body).toMatch(/\n\n/);
+			expect(step.body.split(/\n\n/).length).toBeGreaterThanOrEqual(2);
+			expect(step.body).not.toMatch(/^Output\b/m);
+			expect(step.outputNotes?.length).toBeGreaterThanOrEqual(1);
+			expect(step.body).not.toMatch(/\bchecker\b|\bgrader\b|to pass/i);
+			const outputBlob = (step.outputNotes ?? []).join('\n');
+			expect(outputBlob).not.toMatch(/(?:^|\n)\s*11\.9\s*(?:$|\n)/);
+			expect(outputBlob).not.toMatch(/(?:^|\n)\s*12\.3\s*(?:$|\n)/);
+			expect(outputBlob).not.toMatch(/(?:^|\n)\s*12\.02\s*(?:$|\n)/);
+			expect(outputBlob).not.toMatch(/(?:^|\n)\s*12\.52\s*(?:$|\n)/);
+			expect(outputBlob).not.toMatch(/(?:^|\n)\s*0\.19\s*(?:$|\n)/);
+		}
+		expect(SCIENCE_STEPS[1].outputNotes?.join('\n')).toMatch(/lower bound/i);
+		expect(SCIENCE_STEPS[1].outputNotes?.join('\n')).toMatch(/upper bound/i);
 	});
 });

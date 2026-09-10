@@ -10,12 +10,14 @@
 	$: reportsActive = data.pathname.startsWith('/staff/reports');
 	$: catalogConflictsActive = data.pathname.startsWith('/staff/catalog-conflicts');
 	$: membersActive = data.pathname.startsWith('/staff/members');
+	$: pblActive = data.pathname.startsWith('/staff/pbl');
 	$: ordersActive =
 		!catalogueActive &&
 		!bookWorkActive &&
 		!reportsActive &&
 		!catalogConflictsActive &&
 		!membersActive &&
+		!pblActive &&
 		data.pathname !== '/staff/sign-in';
 
 	let signingOut = false;
@@ -65,6 +67,11 @@
 					class:active={membersActive}
 					aria-current={membersActive ? 'page' : undefined}
 					href={resolve('/staff/members', {})}>Members</a
+				>
+				<a
+					class:active={pblActive}
+					aria-current={pblActive ? 'page' : undefined}
+					href={resolve('/staff/pbl', {})}>PBL teams</a
 				>
 				<a
 					class:active={reportsActive}

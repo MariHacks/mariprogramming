@@ -60,17 +60,22 @@ export function teamPace(step, lastCheck, stepEnteredAt, nowMs) {
 /**
  * @param {{
  *   blocked?: string,
- *   lastCheck?: { passed?: boolean, message?: string } | null,
+ *   lastCheck?: { step?: number, passed?: boolean, message?: string } | null,
  *   currentStep?: number
  * }} state
  */
 export function studioNextAction(state) {
 	if (state.blocked === 'full') return 'This team is full.';
-	if (state.lastCheck && state.lastCheck.passed === false) {
-		return `Not yet. ${state.lastCheck.message ?? ''}`.trim();
+	const current = state.currentStep ?? 0;
+	const check = state.lastCheck;
+	if (!check || (check.step !== undefined && check.step !== current)) {
+		return '';
 	}
-	if (state.lastCheck?.passed && (state.currentStep ?? 0) < SCIENCE_STEP_COUNT - 1) {
+	if (check.passed === false) {
+		return (check.message ?? '').trim();
+	}
+	if (check.passed && current < SCIENCE_STEP_COUNT - 1) {
 		return 'Open the next step.';
 	}
-	return 'Press Run.';
+	return '';
 }

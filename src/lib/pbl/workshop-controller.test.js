@@ -25,7 +25,9 @@ function harness(overrides = {}) {
 			openedHints: {},
 			memberCount: 2,
 			version: 1,
-			isDriver: true
+			isDriver: true,
+			yjsState: '',
+			awarenessState: ''
 		})),
 		start: vi.fn(),
 		stop: vi.fn(),
@@ -41,7 +43,7 @@ function harness(overrides = {}) {
 			options.onError?.('keep going');
 			return sync;
 		},
-		runCheck: async () => ({ passed: true, message: 'The program printed your message.' }),
+		runCheck: async () => ({ passed: true, message: 'Printed a custom message. Starter text is gone.' }),
 		...overrides
 	});
 	return { controller, host, sync, onState: () => onState };
@@ -86,7 +88,11 @@ describe('workshop controller', () => {
 		expect(controller.getState().pythonError).toBe('boom');
 		expect(controller.getState().unlockedStep).toBe(0);
 		controller.setSource('print("team")');
-		expect(sync.update).toHaveBeenCalledWith({ source: 'print("team")' });
+		expect(sync.update).toHaveBeenCalledWith({
+			source: 'print("team")',
+			yjsState: '',
+			awarenessState: ''
+		});
 		onState()({ source: 'print(1)', currentStep: 99, unlockedStep: 0, openedHints: null });
 		expect(controller.getState().step.title).toBe('Get something running');
 		controller.openHint(1);
@@ -117,10 +123,10 @@ describe('workshop controller', () => {
 		full.controller.destroy();
 	});
 
-	it('does not push source from a follower until they take the keyboard', async () => {
+	it('pushes source from every joined member', async () => {
 		/** @type {any} */
 		let inner;
-		const follower = harness({
+		const teammate = harness({
 			createSync: () => {
 				inner = {
 					join: vi.fn(async () => ({
@@ -131,7 +137,8 @@ describe('workshop controller', () => {
 						openedHints: {},
 						memberCount: 2,
 						version: 1,
-						isDriver: false
+						yjsState: '',
+						awarenessState: ''
 					})),
 					start: vi.fn(),
 					stop: vi.fn(),
@@ -141,13 +148,30 @@ describe('workshop controller', () => {
 				return inner;
 			}
 		});
-		await follower.controller.join();
-		follower.controller.setSource('stolen');
-		expect(inner.update).not.toHaveBeenCalled();
-		expect(follower.controller.getState().source).toBe('print("shared")');
-		follower.controller.takeDriver();
-		expect(inner.update).toHaveBeenCalledWith({ takeDriver: true });
-		follower.controller.destroy();
+		await teammate.controller.join();
+		teammate.controller.setSource('print("from B")');
+		expect(inner.update).toHaveBeenCalledWith({
+			source: 'print("from B")',
+			yjsState: '',
+			awarenessState: ''
+		});
+		teammate.controller.setCollab({});
+		expect(inner.update).toHaveBeenCalledWith({
+			source: 'print("from B")',
+			yjsState: '',
+			awarenessState: ''
+		});
+		teammate.controller.setCollab({
+			source: 'print("from B")\nprint("from A")',
+			yjsState: 'abc=',
+			awarenessState: 'def='
+		});
+		expect(inner.update).toHaveBeenCalledWith({
+			source: 'print("from B")\nprint("from A")',
+			yjsState: 'abc=',
+			awarenessState: 'def='
+		});
+		teammate.controller.destroy();
 	});
 
 	it('can be constructed with default factories and missing output fields', async () => {
@@ -181,3 +205,197 @@ describe('workshop controller', () => {
 		inner.destroy();
 	});
 });
+
+	it('fail then pass updates the status message to Accepted', async () => {
+		let tick = 0;
+		const stamps = [
+			'2026-09-08T15:00:00.000Z',
+			'2026-09-08T15:00:01.000Z',
+			'2026-09-08T15:00:02.000Z',
+			'2026-09-08T15:00:03.000Z',
+			'2026-09-08T15:00:04.000Z'
+		];
+		const outcomes = [
+			{ passed: false, message: 'Still printing Experiment loaded.' },
+			{ passed: true, message: 'Printed a custom message. Starter text is gone.' }
+		];
+		const { controller, sync } = harness({
+			now: () => stamps[Math.min(tick++, stamps.length - 1)],
+			runCheck: async () => outcomes.shift()
+		});
+		await controller.join();
+		await controller.run();
+		expect(controller.getState().lastCheck).toMatchObject({
+			passed: false,
+			message: 'Still printing Experiment loaded.'
+		});
+		expect(controller.getState().nextAction).toBe('Still printing Experiment loaded.');
+		controller.setSource('print("Lab table 3")');
+		await controller.run();
+		expect(controller.getState().lastCheck).toMatchObject({
+			passed: true,
+			message: 'Printed a custom message. Starter text is gone.'
+		});
+		expect(controller.getState().nextAction).toBe('Open the next step.');
+		expect(sync.update.mock.calls.some((call) => call[0].lastCheck === null)).toBe(true);
+		controller.destroy();
+	});
+
+	it('fail then a different fail updates the status message text', async () => {
+		let tick = 0;
+		const stamps = [
+			'2026-09-08T15:10:00.000Z',
+			'2026-09-08T15:10:01.000Z',
+			'2026-09-08T15:10:02.000Z',
+			'2026-09-08T15:10:03.000Z',
+			'2026-09-08T15:10:04.000Z'
+		];
+		const outcomes = [
+			{ passed: false, message: 'Still printing Experiment loaded.' },
+			{ passed: false, message: 'Print a custom message for this step.' }
+		];
+		const { controller } = harness({
+			now: () => stamps[Math.min(tick++, stamps.length - 1)],
+			runCheck: async () => outcomes.shift()
+		});
+		await controller.join();
+		await controller.run();
+		expect(controller.getState().lastCheck?.message).toBe('Still printing Experiment loaded.');
+		await controller.run();
+		expect(controller.getState().lastCheck).toMatchObject({
+			passed: false,
+			message: 'Print a custom message for this step.'
+		});
+		expect(controller.getState().nextAction).toBe('Print a custom message for this step.');
+		controller.destroy();
+	});
+
+	it('grades the source snapshot from Run click even if onState changes room mid-await', async () => {
+		let tick = 0;
+		const stamps = [
+			'2026-09-08T15:20:00.000Z',
+			'2026-09-08T15:20:01.000Z',
+			'2026-09-08T15:20:02.000Z',
+			'2026-09-08T15:20:03.000Z'
+		];
+		/** @type {(source: string) => void} */
+		let resume;
+		const gate = new Promise((resolve) => {
+			resume = resolve;
+		});
+		const seen = [];
+		const { controller, host, onState } = harness({
+			now: () => stamps[Math.min(tick++, stamps.length - 1)],
+			runCheck: async (_host, stepId, source) => {
+				seen.push({ stepId, source });
+				return { passed: true, message: 'Printed a custom message. Starter text is gone.' };
+			}
+		});
+		host.run.mockImplementationOnce(async (source) => {
+			await gate;
+			return {
+				stdout: 'ok\n',
+				stderr: '',
+				error: null,
+				globals: {},
+				files: {},
+				inputCount: 0
+			};
+		});
+		await controller.join();
+		controller.setSource('print("snapshot")');
+		const running = controller.run();
+		onState()({
+			source: 'print("poll-overwrite")',
+			lastCheck: {
+				step: 0,
+				passed: false,
+				message: 'old fail',
+				at: '2026-09-08T15:19:00.000Z'
+			}
+		});
+		expect(controller.getState().lastCheck).toBeNull();
+		resume();
+		await running;
+		expect(host.run).toHaveBeenCalledWith('print("snapshot")', expect.any(Object));
+		expect(seen[0]).toEqual({ stepId: 0, source: 'print("snapshot")' });
+		expect(controller.getState().lastCheck?.passed).toBe(true);
+		controller.destroy();
+	});
+
+	it('mid-run onState with an old lastCheck cannot stick after check completes', async () => {
+		let tick = 0;
+		const stamps = [
+			'2026-09-08T15:30:00.000Z',
+			'2026-09-08T15:30:01.000Z',
+			'2026-09-08T15:30:02.000Z',
+			'2026-09-08T15:30:03.000Z',
+			'2026-09-08T15:30:04.000Z'
+		];
+		/** @type {() => void} */
+		let resume;
+		const gate = new Promise((resolve) => {
+			resume = resolve;
+		});
+		const { controller, host, onState } = harness({
+			now: () => stamps[Math.min(tick++, stamps.length - 1)],
+			runCheck: async () => ({
+				passed: true,
+				message: 'Printed a custom message. Starter text is gone.'
+			})
+		});
+		host.run.mockImplementation(async () => {
+			await gate;
+			return {
+				stdout: 'ok\n',
+				stderr: '',
+				error: null,
+				globals: {},
+				files: {},
+				inputCount: 0
+			};
+		});
+		await controller.join();
+		// Seed an old fail through a completed run path first would need another gate;
+		// inject via onState before the re-run.
+		onState()({
+			lastCheck: {
+				step: 0,
+				passed: false,
+				message: 'old fail',
+				at: '2026-09-08T15:29:00.000Z'
+			}
+		});
+		expect(controller.getState().lastCheck?.message).toBe('old fail');
+		const running = controller.run();
+		expect(controller.getState().lastCheck).toBeNull();
+		onState()({
+			lastCheck: {
+				step: 0,
+				passed: false,
+				message: 'old fail',
+				at: '2026-09-08T15:29:00.000Z'
+			},
+			source: 'print("still old")'
+		});
+		expect(controller.getState().lastCheck).toBeNull();
+		resume();
+		await running;
+		expect(controller.getState().lastCheck).toMatchObject({
+			passed: true,
+			message: 'Printed a custom message. Starter text is gone.'
+		});
+		onState()({
+			lastCheck: {
+				step: 0,
+				passed: false,
+				message: 'old fail',
+				at: '2026-09-08T15:29:00.000Z'
+			}
+		});
+		expect(controller.getState().lastCheck).toMatchObject({
+			passed: true,
+			message: 'Printed a custom message. Starter text is gone.'
+		});
+		controller.destroy();
+	});

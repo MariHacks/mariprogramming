@@ -4,6 +4,8 @@ import {
 	MAX_TEAM_NAME_CHARS,
 	MAX_TEAM_SIZE,
 	canAcceptMember,
+	isNewerLastCheck,
+	mergeRoomPreferringNewerLastCheck,
 	normalizeOpenedHints,
 	normalizeTeamName,
 	publicRoomView
@@ -66,7 +68,9 @@ describe('PBL room state', () => {
 			memberCount: 3,
 			version: 4,
 			joinable: true,
-			isDriver: false
+			isDriver: false,
+			yjsState: '',
+			awarenessState: ''
 		});
 		expect(
 			publicRoomView(
@@ -92,3 +96,46 @@ describe('PBL room state', () => {
 		expect(view.openedHints).toEqual({ '1': 2 });
 	});
 });
+
+	it('keeps a newer local lastCheck when merging server room state', () => {
+		expect(isNewerLastCheck(null, { at: '2026-09-08T15:00:00.000Z' })).toBe(false);
+		expect(isNewerLastCheck({ at: '2026-09-08T15:01:00.000Z' }, null)).toBe(true);
+		expect(
+			isNewerLastCheck(
+				{ at: '2026-09-08T15:01:00.000Z' },
+				{ at: '2026-09-08T15:00:00.000Z' }
+			)
+		).toBe(true);
+		expect(
+			isNewerLastCheck(
+				{ at: '2026-09-08T15:00:00.000Z' },
+				{ at: '2026-09-08T15:01:00.000Z' }
+			)
+		).toBe(false);
+		const merged = mergeRoomPreferringNewerLastCheck(
+			{
+				source: 'from-server',
+				version: 4,
+				unlockedStep: 0,
+				lastCheck: {
+					step: 0,
+					passed: false,
+					message: 'old fail',
+					at: '2026-09-08T15:00:00.000Z'
+				}
+			},
+			{
+				unlockedStep: 1,
+				lastCheck: {
+					step: 0,
+					passed: true,
+					message: 'Printed a custom message. Starter text is gone.',
+					at: '2026-09-08T15:01:00.000Z'
+				}
+			}
+		);
+		expect(merged.source).toBe('from-server');
+		expect(merged.version).toBe(4);
+		expect(merged.unlockedStep).toBe(1);
+		expect(merged.lastCheck).toMatchObject({ passed: true, at: '2026-09-08T15:01:00.000Z' });
+	});

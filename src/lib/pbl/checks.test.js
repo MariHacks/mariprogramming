@@ -26,21 +26,122 @@ describe('science step checks', () => {
 		).toBe(false);
 		expect(gradeScienceStep(0, [{ stdout: 'Lab table 3 is live\n' }])).toEqual({
 			passed: true,
-			message: 'The program printed your message.'
+			message: 'Printed a custom message. Starter text is gone.'
 		});
 	});
 
-	it('rejects hardcoded bounds by re-running with different reading values', () => {
+	it('grades step 1 by stored values and printed bounds, not fixed names', () => {
+		const missingVars = gradeScienceStep(1, [{ globals: {}, stdout: '11.9\n12.3\n' }]);
+		expect(missingVars.passed).toBe(false);
+		expect(missingVars.message).toMatch(/variable/i);
+
+		const customNames = gradeScienceStep(1, [
+			{
+				stdout: '11.9\n12.3\n',
+				globals: { value: 12.1, err: 0.2, low: 11.9, high: 12.3 }
+			}
+		]);
+		expect(customNames.passed).toBe(true);
+
 		expect(
 			gradeScienceStep(1, [
-				{ globals: { lower_bound: 11.9, upper_bound: 12.3 } },
-				{ globals: { lower_bound: 11.9, upper_bound: 12.3 } }
+				{
+					stdout: '11.9\n12.3\n',
+					globals: { reading: 12.1, uncertainty: 0.2, lower_bound: 11.9, upper_bound: 12.3 }
+				},
+				{
+					stdout: '11.9\n12.3\n',
+					globals: { reading: 20, uncertainty: 1, lower_bound: 11.9, upper_bound: 12.3 }
+				}
 			]).passed
 		).toBe(false);
+
 		expect(
 			gradeScienceStep(1, [
-				{ globals: { lower_bound: 11.9, upper_bound: 12.3 } },
-				{ globals: { lower_bound: 19, upper_bound: 21 } }
+				{
+					stdout: '11.9\n12.3\n',
+					globals: { reading: 12.1, uncertainty: 0.2, lower_bound: 11.9, upper_bound: 12.3 }
+				},
+				{
+					stdout: '19\n21\n',
+					globals: { reading: 20, uncertainty: 1, lower_bound: 19, upper_bound: 21 }
+				}
+			]).passed
+		).toBe(true);
+	});
+
+	it('accepts IEEE float noise on printed step 1 bounds', () => {
+		expect(
+			gradeScienceStep(1, [
+				{
+					stdout: '11.9\n12.299999999999999\n',
+					globals: {
+						reading: 12.1,
+						uncertainty: 0.2,
+						lower_bound: 11.9,
+						upper_bound: 12.299999999999999
+					}
+				},
+				{
+					stdout: '19\n21\n',
+					globals: { reading: 20, uncertainty: 1, lower_bound: 19, upper_bound: 21 }
+				}
+			])
+		).toMatchObject({ passed: true });
+	});
+
+
+	it('accepts student-chosen names for lists, filters, functions, and summaries', () => {
+		expect(
+			gradeScienceStep(2, [
+				{
+					stdout: '12.1\n11.9\n6\n',
+					globals: { data: [12.1, 11.8, 12.3, 48.7, 12.0, 11.9] }
+				}
+			]).passed
+		).toBe(true);
+		expect(
+			gradeScienceStep(5, [
+				{
+					stdout: '12.02\n',
+					globals: { kept: [12.1, 11.8, 12.3, 12.0, 11.9], mean: 12.02 }
+				}
+			]).passed
+		).toBe(true);
+		expect(
+			gradeScienceStep(6, [
+				{
+					globals: {
+						ok_reading: { kind: 'function' },
+						mean: { kind: 'function' },
+						is_valid_ok: true,
+						is_valid_outlier: false,
+						probed_average: SCIENCE_VALID_AVERAGE
+					}
+				}
+			]).passed
+		).toBe(true);
+		expect(
+			gradeScienceStep(9, [
+				{
+					stdout: '12.02\n',
+					globals: {
+						stats: { valid_count: 5, average: 12.02, standard_deviation: 0.19, unit: 'mm' }
+					}
+				}
+			]).passed
+		).toBe(true);
+		expect(
+			gradeScienceStep(11, [
+				{
+					stdout: `average=${SCIENCE_FINAL_AVERAGE}`,
+					inputCount: 1,
+					globals: {
+						kept: [12.4, 12.6, 12.5, 12.8, 12.3],
+						mean: SCIENCE_FINAL_AVERAGE,
+						report: { average: SCIENCE_FINAL_AVERAGE }
+					}
+				}
 			]).passed
 		).toBe(true);
 	});

@@ -1,4 +1,9 @@
-const POLL_MS = 1000;
+import {
+	isNewerLastCheck,
+	mergeRoomPreferringNewerLastCheck
+} from './room-state.js';
+
+const POLL_MS = 250;
 const PUSH_MS = 400;
 
 /**
@@ -56,11 +61,27 @@ export function createRoomSync(options) {
 		return { conflict: false, room: payload.room || payload };
 	}
 
-	async function applyRoom(payload) {
+	/**
+	 * @param {Record<string, unknown>} payload
+	 * @param {{ keepDirtyIfNewerCheck?: boolean }} [opts]
+	 */
+	async function applyRoom(payload, opts = {}) {
 		version = Number(payload.version) || 0;
-		local = payload;
+		const prior = local;
+		const merged = mergeRoomPreferringNewerLastCheck(payload, prior);
+		const keptNewerCheck = isNewerLastCheck(
+			/** @type {any} */ (merged.lastCheck),
+			/** @type {any} */ (payload.lastCheck)
+		);
+		local = merged;
+		if (opts.keepDirtyIfNewerCheck && keptNewerCheck) {
+			dirty = true;
+			options.onState(local);
+			schedulePush();
+			return;
+		}
 		dirty = false;
-		options.onState(payload);
+		options.onState(local);
 	}
 
 	async function pull() {
@@ -69,6 +90,26 @@ export function createRoomSync(options) {
 			headers: { accept: 'application/json' }
 		});
 		if (payload && !dirty) applyRoom(payload);
+	}
+
+	/** @param {Record<string, unknown>} base @param {Record<string, unknown>} server */
+	function outgoingWithServerProgress(base, server) {
+		const next = { ...base };
+		const serverUnlocked = Number(server.unlockedStep);
+		const localUnlocked = Number(base.unlockedStep);
+		if (Number.isFinite(serverUnlocked) && Number.isFinite(localUnlocked)) {
+			next.unlockedStep = Math.max(localUnlocked, serverUnlocked);
+		} else if (Number.isFinite(serverUnlocked)) {
+			next.unlockedStep = serverUnlocked;
+		}
+		if (isNewerLastCheck(/** @type {any} */ (server.lastCheck), /** @type {any} */ (base.lastCheck))) {
+			next.lastCheck = server.lastCheck;
+		} else if (
+			isNewerLastCheck(/** @type {any} */ (base.lastCheck), /** @type {any} */ (server.lastCheck))
+		) {
+			next.lastCheck = base.lastCheck;
+		}
+		return next;
 	}
 
 	async function flush() {
@@ -81,44 +122,26 @@ export function createRoomSync(options) {
 			currentStep: local.currentStep,
 			unlockedStep: local.unlockedStep,
 			openedHints: local.openedHints,
-			lastCheck: local.lastCheck
+			lastCheck: local.lastCheck,
+			source: local.source,
+			yjsState: local.yjsState,
+			awarenessState: local.awarenessState
 		};
-		if (local.takeDriver === true || local.isDriver !== false) {
-			outgoing.source = local.source;
-		}
-		if (local.takeDriver === true) outgoing.takeDriver = true;
 		let result = await putOnce({ ...outgoing, version });
 		if (result?.conflict && result.room) {
-			const retryTake = outgoing.takeDriver === true;
-			const keepDriverSource =
-				result.room.isDriver === true &&
-				typeof outgoing.source === 'string' &&
-				outgoing.source !== result.room.source;
-			if (keepDriverSource) {
-				result = await putOnce({
-					...outgoing,
-					version: Number(result.room.version) || version
-				});
-				if (result?.conflict && result.room) applyRoom(result.room);
-				else if (result?.room) applyRoom(result.room);
-				return;
-			}
-			applyRoom(result.room);
-			if (retryTake && result.room.isDriver !== true) {
-				result = await putOnce({
-					source: result.room.source,
-					currentStep: result.room.currentStep,
-					unlockedStep: result.room.unlockedStep,
-					openedHints: result.room.openedHints,
-					lastCheck: result.room.lastCheck,
-					takeDriver: true,
-					version: Number(result.room.version) || version
-				});
-				if (result?.room) applyRoom(result.room);
+			const retryBody = outgoingWithServerProgress(outgoing, result.room);
+			result = await putOnce({
+				...retryBody,
+				version: Number(result.room.version) || version
+			});
+			if (result?.conflict && result.room) {
+				await applyRoom(result.room, { keepDirtyIfNewerCheck: true });
+			} else if (result?.room) {
+				await applyRoom(result.room, { keepDirtyIfNewerCheck: true });
 			}
 			return;
 		}
-		if (result?.room) applyRoom(result.room);
+		if (result?.room) await applyRoom(result.room);
 	}
 
 	function schedulePush() {
@@ -143,7 +166,7 @@ export function createRoomSync(options) {
 			headers: { accept: 'application/json' }
 		});
 		if (!payload) return null;
-		applyRoom(payload);
+		await applyRoom(payload);
 		return payload;
 	}
 
