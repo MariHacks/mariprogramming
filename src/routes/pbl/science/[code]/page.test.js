@@ -1,12 +1,13 @@
-import { cleanup, render, screen, within } from '@testing-library/svelte';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { openHint, run, selectStep, setCollab, studio } = vi.hoisted(() => ({
+const { openHint, run, selectStep, setCollab, ejectMember, studio } = vi.hoisted(() => ({
 	openHint: vi.fn(),
 	run: vi.fn(),
 	selectStep: vi.fn(),
 	setCollab: vi.fn(),
+	ejectMember: vi.fn(async () => ({ memberCount: 1 })),
 	studio: { patch: /** @type {Record<string, unknown>} */ ({}) }
 }));
 
@@ -39,6 +40,19 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 					openedHints: { '0': 1 },
 					lastCheck: { passed: true, message: 'Printed a custom message. Starter text is gone.', step: 0 },
 					memberCount: 2,
+					driverMemberId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+					members: [
+						{
+							memberId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+							name: 'Lead',
+							email: 'lead@marihacks.com'
+						},
+						{
+							memberId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+							name: 'Teammate',
+							email: 'mate@marihacks.com'
+						}
+					],
 					stdinText: '',
 					output: 'hi\n',
 					files: { 'report.txt': 'ok' },
@@ -60,6 +74,7 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 			selectStep,
 			openHint,
 			setCollab,
+			ejectMember,
 			setSource: vi.fn(),
 			setStdin: vi.fn(),
 			run
@@ -69,16 +84,25 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 
 import StudioPage from './+page.svelte';
 
+async function renderReady(props) {
+	const view = render(StudioPage, props);
+	await waitFor(() => {
+		expect(screen.queryByText('Joining the team room…')).toBeNull();
+	});
+	return view;
+}
+
 afterEach(() => {
 	cleanup();
 	studio.patch = {};
 	selectStep.mockClear();
 	run.mockClear();
+	ejectMember.mockClear();
 });
 
 describe('PBL studio page', () => {
-	it('keeps team info once in the lesson footer with clear hierarchy', () => {
-		const { container } = render(StudioPage);
+	it('keeps team info once in the lesson footer with clear hierarchy', async () => {
+		const { container } = await renderReady();
 		const footer = container.querySelector('.lesson-footer');
 		const toolbar = container.querySelector('.toolbar');
 		expect(footer).not.toBeNull();
@@ -90,7 +114,7 @@ describe('PBL studio page', () => {
 		expect(codeChip).toBeVisible();
 		expect(codeChip).toHaveTextContent('AB23JK');
 		expect(team.queryByRole('button', { name: 'Copy link' })).toBeNull();
-		const countChip = team.getByLabelText('2 of 10 on this team');
+		const countChip = team.getByRole('button', { name: 'Open team roster, 2 of 10 on this team' });
 		expect(countChip).toBeVisible();
 		expect(countChip).toHaveTextContent('2/10');
 		expect(countChip.querySelector('svg.person-icon')).not.toBeNull();
@@ -107,7 +131,7 @@ describe('PBL studio page', () => {
 		expect(within(toolbar).queryByText(/\/10/)).toBeNull();
 		expect(screen.getAllByText('AB23JK')).toHaveLength(1);
 		expect(screen.getAllByText('Lab table 3')).toHaveLength(1);
-		expect(screen.getAllByLabelText(/of 10 on this team/)).toHaveLength(1);
+		expect(screen.getAllByRole('button', { name: /Open team roster/ })).toHaveLength(1);
 		expect(container.querySelector('.lesson-scroll .team-name')).toBeNull();
 	});
 
@@ -118,7 +142,7 @@ describe('PBL studio page', () => {
 			configurable: true,
 			value: { writeText }
 		});
-		render(StudioPage);
+		await renderReady();
 		const codeChip = screen.getByRole('button', { name: 'Copy share link AB23JK' });
 		await user.click(codeChip);
 		expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/pbl/science/AB23JK`);
@@ -127,7 +151,7 @@ describe('PBL studio page', () => {
 
 	it('shows the lesson and editor for a joined room', async () => {
 		const user = userEvent.setup();
-		render(StudioPage);
+		await renderReady();
 		expect(screen.getByRole('heading', { level: 1, name: 'Get something running' })).toBeVisible();
 		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveTextContent('print("hi")');
 		expect(screen.getByRole('status')).toHaveTextContent('Printed a custom message. Starter text is gone.');
@@ -152,7 +176,7 @@ describe('PBL studio page', () => {
 
 	it('keeps Lesson Code Output chips and opens output after Run', async () => {
 		const user = userEvent.setup();
-		const { container } = render(StudioPage);
+		const { container } = await renderReady();
 		const studio = container.querySelector('.studio');
 		const panes = screen.getByRole('navigation', { name: 'Studio sections' });
 		const paneButtons = within(panes);
@@ -168,7 +192,7 @@ describe('PBL studio page', () => {
 		expect(screen.queryByRole('link', { name: 'Facilitator view' })).toBeNull();
 	});
 
-	it('hides the editor when the team is full', () => {
+	it('hides the editor when the team is full', async () => {
 		studio.patch = {
 			blocked: 'full',
 			roomError: 'This team is full (10 people).',
@@ -179,13 +203,13 @@ describe('PBL studio page', () => {
 			nextAction: 'This team is full.',
 			files: {}
 		};
-		render(StudioPage);
+		await renderReady();
 		expect(screen.getByRole('alert')).toHaveTextContent('This team is full (10 people).');
 		expect(screen.queryByRole('textbox', { name: 'Python' })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
 	});
 
-	it('lets every teammate type', () => {
+	it('lets every teammate type', async () => {
 		studio.patch = {
 			isDriver: true,
 			readOnly: false,
@@ -193,7 +217,7 @@ describe('PBL studio page', () => {
 			lastCheck: null,
 			files: {}
 		};
-		render(StudioPage);
+		await renderReady();
 		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveAttribute(
 			'aria-readonly',
 			'false'
@@ -214,7 +238,7 @@ describe('PBL studio page', () => {
 			step: SCIENCE_STEPS[2],
 			files: {}
 		};
-		render(StudioPage);
+		await renderReady();
 		expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
 	});
 
@@ -229,7 +253,7 @@ describe('PBL studio page', () => {
 			step: last,
 			files: {}
 		};
-		render(StudioPage);
+		await renderReady();
 		expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
 		expect(screen.getByText('Finished')).toBeVisible();
 	});
@@ -245,18 +269,63 @@ describe('PBL studio page', () => {
 			step: SCIENCE_STEPS[1],
 			files: {}
 		};
-		render(StudioPage);
+		await renderReady();
 		expect(screen.queryByText('Accepted')).toBeNull();
 		expect(screen.queryByText('Printed a custom message. Starter text is gone.')).toBeNull();
 		expect(screen.queryByText('Open the next step.')).toBeNull();
 		expect(screen.queryByRole('status')).toBeNull();
 	});
 
-	it('renders python glossary chips in the lesson body', () => {
-		render(StudioPage);
+	it('renders python glossary chips in the lesson body', async () => {
+		await renderReady();
 		const printTerm = screen.getByRole('button', { name: /print: show beginner docs/i });
 		expect(printTerm).toBeVisible();
 		expect(printTerm).toHaveClass('python-term');
 	});
+
+
+	it('opens a member roster from the count chip and lets the leader eject others', async () => {
+		const user = userEvent.setup();
+		await renderReady();
+		await user.click(screen.getByRole('button', { name: 'Open team roster, 2 of 10 on this team' }));
+		const dialog = screen.getByRole('dialog', { name: 'Lab table 3' });
+		expect(dialog).toBeVisible();
+		expect(within(dialog).getByText('Lead')).toBeVisible();
+		expect(within(dialog).getByText('Leader')).toBeVisible();
+		expect(within(dialog).getByText('Teammate')).toBeVisible();
+		expect(within(dialog).queryByRole('button', { name: 'Remove' })).not.toBeNull();
+		// Leader row should not offer self-eject.
+		const removeButtons = within(dialog).getAllByRole('button', { name: 'Remove' });
+		expect(removeButtons).toHaveLength(1);
+		await user.click(removeButtons[0]);
+		expect(ejectMember).toHaveBeenCalledWith('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+	});
+
+	it('shows a read-only roster for non-leaders', async () => {
+		const user = userEvent.setup();
+		studio.patch = {
+			isDriver: false,
+			driverMemberId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+			members: [
+				{
+					memberId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+					name: 'Lead',
+					email: 'lead@marihacks.com'
+				},
+				{
+					memberId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+					name: 'Teammate',
+					email: 'mate@marihacks.com'
+				}
+			],
+			files: {}
+		};
+		await renderReady();
+		await user.click(screen.getByRole('button', { name: /Open team roster/ }));
+		const dialog = screen.getByRole('dialog', { name: 'Lab table 3' });
+		expect(within(dialog).queryByRole('button', { name: 'Remove' })).toBeNull();
+		expect(within(dialog).getByText('Only the team leader can remove teammates.')).toBeVisible();
+	});
+
 
 });

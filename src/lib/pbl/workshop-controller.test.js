@@ -238,6 +238,44 @@ describe('workshop controller', () => {
 		await inner.run();
 		inner.destroy();
 	});
+
+	it('ejects a teammate through DELETE and keeps isDriver from the room', async () => {
+		const fetchImpl = vi.fn(async () => ({
+			ok: true,
+			json: async () => ({
+				code: 'AB23JK',
+				memberCount: 1,
+				isDriver: true,
+				driverMemberId: 'a'.repeat(32),
+				members: [{ memberId: 'a'.repeat(32), name: 'Lead' }]
+			})
+		}));
+		const { controller, sync } = harness({ fetch: fetchImpl });
+		sync.join.mockResolvedValueOnce({
+			code: 'AB23JK',
+			teamName: 'Lab table 3',
+			source: 'print(1)',
+			unlockedStep: 0,
+			openedHints: {},
+			memberCount: 2,
+			version: 1,
+			isDriver: false,
+			driverMemberId: 'a'.repeat(32),
+			yjsState: '',
+			awarenessState: ''
+		});
+		await controller.join();
+		expect(controller.getState().isDriver).toBe(false);
+		const next = await controller.ejectMember('b'.repeat(32));
+		expect(fetchImpl).toHaveBeenCalledWith(
+			`/api/pbl/rooms/AB23JK/members/${'b'.repeat(32)}`,
+			expect.objectContaining({ method: 'DELETE' })
+		);
+		expect(next?.memberCount).toBe(1);
+		expect(controller.getState().isDriver).toBe(true);
+	});
+
+
 });
 
 	it('fail then pass updates the status message to Accepted', async () => {
