@@ -173,29 +173,43 @@
 		display: inline;
 	}
 
+	/* Light tactile key: pale sky fill, midnight bold mono, raised bottom edge. */
 	.python-term {
-		display: inline;
+		display: inline-block;
 		margin: 0;
-		padding: 0.05em 0.22em;
-		border: none;
-		border-radius: 0.3em;
-		border-bottom: 1.5px solid color-mix(in srgb, var(--mari-sky, #3b82c4) 70%, transparent);
-		background: color-mix(in srgb, var(--mari-sky, #3b82c4) 14%, transparent);
-		color: inherit;
-		font: inherit;
-		font-weight: 600;
-		line-height: inherit;
+		padding: 0.06em 0.34em 0.08em;
+		border: 1px solid rgb(var(--mari-sky-rgb, 59 130 196) / 42%);
+		border-bottom-width: 2.5px;
+		border-bottom-color: color-mix(in srgb, var(--mari-sky, #3b82c4) 72%, var(--midnight, #061431));
+		border-radius: var(--radius-md, 0.375rem);
+		background: color-mix(in srgb, var(--sky, #b9d1ff) 55%, var(--surface-raised, #fff));
+		color: var(--midnight, #061431);
+		font-family: var(--font-mono);
+		font-size: 0.92em;
+		font-weight: 700;
+		line-height: 1.2;
 		cursor: pointer;
 		text-decoration: none;
 		vertical-align: baseline;
 		white-space: normal;
+		box-shadow: 0 1px 0 rgb(var(--midnight-rgb, 6 20 49) / 6%);
 	}
 
-	.python-term:hover,
+	.python-term:hover {
+		background: color-mix(in srgb, var(--sky, #b9d1ff) 72%, var(--surface-raised, #fff));
+		border-color: rgb(var(--mari-sky-rgb, 59 130 196) / 58%);
+		border-bottom-color: color-mix(in srgb, var(--mari-sky, #3b82c4) 82%, var(--midnight, #061431));
+	}
+
 	.python-term:focus-visible {
-		background: color-mix(in srgb, var(--mari-sky, #3b82c4) 26%, transparent);
-		outline: 2px solid color-mix(in srgb, var(--mari-sky, #3b82c4) 55%, transparent);
-		outline-offset: 1px;
+		outline: 2px solid var(--mari-sky, var(--club-blue, #0b4cf4));
+		outline-offset: 2px;
+	}
+
+	.python-term[aria-expanded='true'] {
+		background: color-mix(in srgb, var(--sky, #b9d1ff) 78%, var(--surface-raised, #fff));
+		border-bottom-width: 1.5px;
+		transform: translateY(0.5px);
 	}
 
 	.popover {
@@ -206,11 +220,12 @@
 		width: max-content;
 		max-width: min(22rem, calc(100vw - 2rem));
 		padding: 0.75rem 0.85rem;
-		border: 1px solid color-mix(in srgb, var(--quiet-steel, #6b7280) 35%, transparent);
-		border-radius: 0.55rem;
-		background: var(--panel-bg, #12141a);
-		color: var(--ink, #f4f4f5);
-		box-shadow: 0 10px 28px rgb(0 0 0 / 28%);
+		border: var(--rule, 1px solid rgb(var(--midnight-rgb, 6 20 49) / 18%));
+		border-radius: var(--radius-lg, 0.5rem);
+		background: var(--surface-raised, #ffffff);
+		color: var(--graphite, var(--color-text, #17213a));
+		box-shadow: var(--shadow-md, 0 12px 32px rgb(var(--midnight-rgb, 6 20 49) / 14%));
+		font-family: var(--font-body, Inter, sans-serif);
 		font-size: 0.8125rem;
 		font-weight: 400;
 		line-height: 1.45;
@@ -224,8 +239,10 @@
 	.popover-name {
 		display: block;
 		margin-bottom: 0.45rem;
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		color: var(--midnight, #061431);
+		font-family: var(--font-mono);
 		font-size: 0.875rem;
+		font-weight: 700;
 		white-space: normal;
 	}
 
@@ -238,7 +255,7 @@
 	.popover-label {
 		display: block;
 		margin-bottom: 0.12rem;
-		color: var(--quiet-steel, #9ca3af);
+		color: var(--quiet-steel, #657087);
 		font-size: 0.68rem;
 		font-weight: 700;
 		letter-spacing: 0.05em;
@@ -250,9 +267,11 @@
 		padding: 0.45rem 0.55rem;
 		max-width: 100%;
 		overflow-x: auto;
-		border-radius: 0.35rem;
-		background: color-mix(in srgb, #000 35%, transparent);
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		border: var(--rule, 1px solid rgb(var(--midnight-rgb, 6 20 49) / 18%));
+		border-radius: var(--radius-sm, 0.25rem);
+		background: var(--mist, #edf1f6);
+		color: var(--midnight, #061431);
+		font-family: var(--font-mono);
 		font-size: 0.75rem;
 		line-height: 1.4;
 		white-space: pre-wrap;
@@ -263,6 +282,7 @@
 		.python-term,
 		.popover {
 			transition: none;
+			transform: none;
 		}
 	}
 </style>
