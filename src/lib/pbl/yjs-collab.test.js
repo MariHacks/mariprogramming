@@ -183,6 +183,40 @@ describe('yjs collab merge', () => {
 		viewDoc.destroy();
 	});
 
+	it('replaces prior remote carets so deduped snapshots cannot stack', () => {
+		const hostDoc = new Y.Doc();
+		const host = new Awareness(hostDoc);
+		host.setLocalStateField('user', { name: 'Host', color: '#111', userId: 'host' });
+
+		const aDoc = new Y.Doc();
+		const a = new Awareness(aDoc);
+		a.setLocalStateField('user', { name: 'Helen Chen', color: '#0b4cf4', userId: 'helen' });
+		applyRemoteAwareness(host, encodeLocalAwareness(a), 'remote', {
+			localUser: host.getLocalState()?.user
+		});
+		expect(
+			[...host.getStates().entries()].filter(([id]) => id !== host.clientID)
+		).toHaveLength(1);
+
+		const bDoc = new Y.Doc();
+		const b = new Awareness(bDoc);
+		b.setLocalStateField('user', { name: 'Helen Chen', color: '#0b4cf4', userId: 'helen' });
+		// Server snapshot with only Helen's newer client — old client must disappear.
+		applyRemoteAwareness(host, encodeLocalAwareness(b), 'remote', {
+			localUser: host.getLocalState()?.user
+		});
+		const remotes = [...host.getStates().entries()].filter(([id]) => id !== host.clientID);
+		expect(remotes).toHaveLength(1);
+		expect(remotes[0][1].user?.userId).toBe('helen');
+
+		host.destroy();
+		a.destroy();
+		b.destroy();
+		hostDoc.destroy();
+		aDoc.destroy();
+		bDoc.destroy();
+	});
+
 	it('does not re-apply the local user as a remote caret', () => {
 		const localDoc = new Y.Doc();
 		const local = new Awareness(localDoc);

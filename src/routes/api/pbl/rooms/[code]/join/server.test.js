@@ -72,6 +72,31 @@ describe('POST /api/pbl/rooms/[code]/join', () => {
 		expect(response.headers.get('set-cookie')).toContain('pbl_member=');
 	});
 
+
+	it('rebinds pbl_member to the canonical membership on rejoin', async () => {
+		const POST = _createPblJoinEndpoint({
+			ensureSchema: vi.fn(async () => undefined),
+			readEnvironment: () => ({ databaseUrl: 'postgresql://u:p@localhost/db' }),
+			withTransaction: async (operation) =>
+				operation({
+					joinRoom: async ({ code }) => ({ code, memberCount: 2, memberId: 'aabbccddeeff00112233445566778899' })
+				}),
+			createRepository: (transaction) => transaction,
+			createStore: (repository) => repository
+		});
+		const response = await POST({
+			locals: SESSION,
+			params: { code: 'AB23JK' },
+			request: new Request('https://club.example/api/pbl/rooms/AB23JK/join', {
+				method: 'POST',
+				headers: { cookie: 'pbl_member=ffffffffffffffffffffffffffffffff' }
+			}),
+			url: new URL('https://club.example/api/pbl/rooms/AB23JK/join')
+		});
+		expect(response.status).toBe(200);
+		expect(response.headers.get('set-cookie')).toContain('pbl_member=aabbccddeeff00112233445566778899');
+	});
+
 	it('maps join failures', async () => {
 		const POST = _createPblJoinEndpoint({
 			readEnvironment: () => ({ databaseUrl: 'postgresql://u:p@localhost/db' }),

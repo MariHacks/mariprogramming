@@ -500,9 +500,21 @@ export function createPblStore(repository, clock = {}) {
 			const row = await repository.findRoomByCode(room.code);
 			if (!row) throw new PblNotFoundError();
 			const byUser = await repository.findMemberByUser(row.id, input.userId);
-			if (byUser) return roomFromRow(row, input.memberId);
+			// Same Google user in a second tab: reuse the existing membership id so
+			// PUT /rooms/:code accepts their pbl_member cookie (and awareness syncs).
+			if (byUser) {
+				return {
+					...roomFromRow(row, byUser.memberId),
+					memberId: byUser.memberId
+				};
+			}
 			const existing = await repository.findMember(row.id, input.memberId);
-			if (existing) return roomFromRow(row, input.memberId);
+			if (existing) {
+				return {
+					...roomFromRow(row, input.memberId),
+					memberId: input.memberId
+				};
+			}
 			if (!canAcceptMember(row.memberCount)) throw new PblFullError();
 			const updated = await repository.updateRoom(row.code, row.version, {
 				memberCount: row.memberCount + 1,
@@ -515,7 +527,10 @@ export function createPblStore(repository, clock = {}) {
 				memberId: input.memberId,
 				userId: input.userId
 			});
-			return roomFromRow(updated, input.memberId);
+			return {
+				...roomFromRow(updated, input.memberId),
+				memberId: input.memberId
+			};
 		},
 
 		/**
