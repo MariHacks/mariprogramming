@@ -9,7 +9,7 @@ export const PAINT_WEEKDAYS = /** @type {const} */ (['Mon', 'Tue', 'Wed', 'Thu',
 
 const START_MINUTES = 6 * 60;
 const END_MINUTES = 24 * 60;
-const STEP_MINUTES = 30;
+const STEP_MINUTES = 15;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 
 /**
@@ -38,7 +38,9 @@ export function paintSlotTimes() {
  */
 export function paintSlotLabel(time) {
 	const [hours, minutes] = String(time).split(':').map(Number);
+	if (minutes === 15) return ':15';
 	if (minutes === 30) return ':30';
+	if (minutes === 45) return ':45';
 	if (hours === 0) return '12 AM';
 	if (hours === 12) return '12 PM';
 	return hours < 12 ? `${hours} AM` : `${hours - 12} PM`;

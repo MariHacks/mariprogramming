@@ -16,10 +16,12 @@ import {
 } from './freeTimeBoard.js';
 
 describe('paintSlotTimes', () => {
-	it('covers every half-hour block from 06:00 through 23:30', () => {
+	it('covers every quarter-hour block from 06:00 through 23:45', () => {
 		expect(paintSlotTimes()[0]).toBe('06:00');
-		expect(paintSlotTimes().at(-1)).toBe('23:30');
-		expect(paintSlotTimes()).toHaveLength(36);
+		expect(paintSlotTimes().at(-1)).toBe('23:45');
+		expect(paintSlotTimes()).toHaveLength(72);
+		expect(paintSlotTimes()).toContain('08:15');
+		expect(paintSlotTimes()).toContain('08:45');
 	});
 });
 
@@ -27,7 +29,9 @@ describe('paintSlotLabel', () => {
 	it('labels hour rows like the preview rail', () => {
 		expect(paintSlotLabel('00:00')).toBe('12 AM');
 		expect(paintSlotLabel('08:00')).toBe('8 AM');
+		expect(paintSlotLabel('08:15')).toBe(':15');
 		expect(paintSlotLabel('08:30')).toBe(':30');
+		expect(paintSlotLabel('08:45')).toBe(':45');
 		expect(paintSlotLabel('12:00')).toBe('12 PM');
 		expect(paintSlotLabel('13:00')).toBe('1 PM');
 	});
@@ -142,6 +146,7 @@ describe('freeCellsFromCourses', () => {
 		expect(cells.has(paintCellKey('Tue', '09:00'))).toBe(true);
 		expect(cells.has(paintCellKey('Mon', '06:00'))).toBe(true);
 		expect(cells.has(paintCellKey('Fri', '23:30'))).toBe(true);
+		expect(cells.has(paintCellKey('Fri', '23:45'))).toBe(true);
 	});
 
 	it('skips meetings without a weekday or clock times', () => {
