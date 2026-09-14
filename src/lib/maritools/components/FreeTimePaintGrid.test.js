@@ -51,10 +51,13 @@ describe('FreeTimePaintGrid', () => {
 		expect(screen.getByText('Mon 20')).toBeInTheDocument();
 		expect(screen.getByText('6 AM')).toBeInTheDocument();
 		expect(screen.getByText('8 AM')).toBeInTheDocument();
+		expect(screen.getAllByText(':15').length).toBeGreaterThan(0);
 		expect(screen.getAllByText(':30').length).toBeGreaterThan(0);
+		expect(screen.getAllByText(':45').length).toBeGreaterThan(0);
 		expect(screen.getByRole('button', { name: 'Mon 06:00' })).toBeInTheDocument();
-		expect(screen.queryByRole('button', { name: 'Mon 05:30' })).not.toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Fri 23:30' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Mon 08:15' })).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Mon 05:45' })).not.toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Fri 23:45' })).toBeInTheDocument();
 	});
 
 	it('grays college-closed days and ignores paint on them', () => {
