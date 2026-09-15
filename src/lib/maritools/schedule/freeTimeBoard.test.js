@@ -3,10 +3,12 @@ import { mondayOfWeek } from './academicWeekView.js';
 import {
 	availabilityFromFreeCells,
 	availabilityWithWeek,
+	cellAvailabilityByKey,
 	commonFreeCells,
 	filterPaintableCells,
 	freeCellsFromAvailability,
 	freeCellsFromCourses,
+	hasSavedBoardResponse,
 	paintCellKey,
 	paintDayColumnsForTermWeek,
 	paintSlotLabel,
@@ -167,6 +169,131 @@ describe('freeCellsFromCourses', () => {
 	});
 });
 
+describe('cellAvailabilityByKey', () => {
+	const weekA = '2026-08-24';
+	const weekB = '2026-08-31';
+	const mon = paintCellKey('Mon', '09:00');
+	const tue = paintCellKey('Tue', '10:00');
+
+	it('returns an empty map when there are no members', () => {
+		expect(cellAvailabilityByKey([], weekA)).toEqual({});
+		expect(cellAvailabilityByKey(null, weekA)).toEqual({});
+		expect(Reflect.apply(cellAvailabilityByKey, undefined, [undefined, weekA])).toEqual({});
+	});
+
+	it('names free and busy members per cell and computes the free ratio', () => {
+		const stats = cellAvailabilityByKey(
+			[
+				{
+					displayName: 'Ada',
+					availability: availabilityWithWeek(null, weekA, new Set([mon, tue]))
+				},
+				{
+					displayName: 'Blake',
+					availability: availabilityWithWeek(null, weekA, new Set([mon]))
+				}
+			],
+			weekA
+		);
+		expect(stats[mon]).toEqual({
+			free: ['Ada', 'Blake'],
+			busy: [],
+			freeCount: 2,
+			total: 2,
+			ratio: 1
+		});
+		expect(stats[tue]).toEqual({
+			free: ['Ada'],
+			busy: ['Blake'],
+			freeCount: 1,
+			total: 2,
+			ratio: 0.5
+		});
+		expect(stats[paintCellKey('Wed', '12:00')]).toEqual({
+			free: [],
+			busy: ['Ada', 'Blake'],
+			freeCount: 0,
+			total: 2,
+			ratio: 0
+		});
+		expect(Object.keys(stats)).toHaveLength(paintSlotTimes().length * 5);
+	});
+
+	it('treats missing names as Unnamed and ignores other weeks', () => {
+		const stats = cellAvailabilityByKey(
+			[
+				{ availability: availabilityWithWeek(null, weekA, new Set([mon])) },
+				{
+					displayName: '   ',
+					availability: availabilityWithWeek(null, weekB, new Set([mon]))
+				},
+				null
+			],
+			weekA
+		);
+		expect(stats[mon]).toMatchObject({
+			free: ['Unnamed'],
+			busy: ['Unnamed', 'Unnamed'],
+			freeCount: 1,
+			total: 3,
+			ratio: 1 / 3
+		});
+	});
+});
+
+describe('hasSavedBoardResponse', () => {
+	const board = {
+		members: [
+			{ displayName: 'Ada', shareToken: 'tok-ada', accountKind: 'guest' },
+			{
+				displayName: 'Zhicheng',
+				shareToken: 'tok-signed',
+				userId: 'user-1',
+				accountKind: 'signed_in'
+			}
+		]
+	};
+
+	it('detects a saved response from form success, form member, token, or signed-in match', () => {
+		expect(hasSavedBoardResponse(board, '', null, { saveSuccess: true })).toBe(true);
+		expect(hasSavedBoardResponse(board, '', null, { member: { shareToken: 'tok-ada' } })).toBe(
+			true
+		);
+		expect(hasSavedBoardResponse(board, 'tok-ada', null, null)).toBe(true);
+		expect(hasSavedBoardResponse(board, '', 'Zhicheng', null)).toBe(true);
+	});
+
+	it('does not treat guests, missing members, or malformed form payloads as saved', () => {
+		expect(hasSavedBoardResponse(board, '', 'Ada', null)).toBe(false);
+		expect(hasSavedBoardResponse(board, 'tok-missing', null, null)).toBe(false);
+		expect(hasSavedBoardResponse(board, '', 'Ada', { saveSuccess: false, member: null })).toBe(
+			false
+		);
+		expect(hasSavedBoardResponse({ members: [] }, '', 'Zhicheng', null)).toBe(false);
+		expect(hasSavedBoardResponse(null, 'tok-ada', 'Zhicheng', null)).toBe(false);
+		expect(hasSavedBoardResponse(board, '', null, { member: 'nope' })).toBe(false);
+		expect(Reflect.apply(hasSavedBoardResponse, undefined, [board, null, null, 4])).toBe(false);
+		expect(hasSavedBoardResponse({ members: 'bad' }, '', 'Zhicheng', undefined)).toBe(false);
+		expect(
+			hasSavedBoardResponse(
+				{ members: [null, { displayName: 'Ada', shareToken: 'tok-ada' }] },
+				'tok-ada',
+				null,
+				null
+			)
+		).toBe(true);
+		expect(
+			hasSavedBoardResponse(
+				{ members: [null, { displayName: 'Zhicheng', accountKind: 'signed_in' }] },
+				'',
+				'Zhicheng',
+				null
+			)
+		).toBe(true);
+		expect(hasSavedBoardResponse('bad', '', 'Zhicheng', {})).toBe(false);
+	});
+});
+
 describe('slugFromBoardTitle', () => {
 	it('builds a url-safe slug', () => {
 		expect(slugFromBoardTitle('Data Structures study group')).toBe('data-structures-study-group');
@@ -213,6 +340,75 @@ describe('restoreEditorState', () => {
 		expect(restored.shareToken).toBe('');
 		expect(restored.displayName).toBe('Nick');
 		expect(restored.freeCells.size).toBe(0);
+	});
+
+	it('restores a signed-in member by display name without a local token', () => {
+		const signedBoard = {
+			members: [
+				{
+					id: 'm2',
+					displayName: 'Blake',
+					shareToken: 'tok-blake',
+					userId: 'user-blake',
+					accountKind: 'signed_in',
+					availability: availabilityWithWeek(null, weekA, new Set([mon]))
+				},
+				{
+					id: 'm3',
+					displayName: 'Eve',
+					shareToken: 'tok-eve',
+					accountKind: 'executive',
+					availability: availabilityWithWeek(null, weekA, new Set([tue]))
+				},
+				{
+					id: 'm1',
+					displayName: 'Ada',
+					shareToken: 'tok-ada',
+					accountKind: 'guest',
+					availability: availabilityWithWeek(null, weekA, new Set([mon, tue]))
+				}
+			]
+		};
+		const blake = restoreEditorState(signedBoard, '', 'Blake', weekA);
+		expect(blake.shareToken).toBe('tok-blake');
+		expect(blake.displayName).toBe('Blake');
+		expect(blake.freeCells).toEqual(new Set([mon]));
+		const eve = restoreEditorState(signedBoard, '', 'Eve', weekA);
+		expect(eve.shareToken).toBe('tok-eve');
+		expect(eve.freeCells).toEqual(new Set([tue]));
+		expect(restoreEditorState(signedBoard, '', 'Ada', weekA).freeCells.size).toBe(0);
+		expect(restoreEditorState(signedBoard, 'tok-ada', 'Blake', weekA).displayName).toBe('Ada');
+	});
+
+	it('matches a signed-in member by user id even when accountKind is missing', () => {
+		const restored = restoreEditorState(
+			{
+				members: [
+					{
+						displayName: 'Sam',
+						shareToken: '',
+						userId: 'user-sam',
+						availability: availabilityWithWeek(null, weekA, new Set([mon]))
+					}
+				]
+			},
+			'',
+			'Sam',
+			weekA
+		);
+		expect(restored.displayName).toBe('Sam');
+		expect(restored.shareToken).toBe('');
+		expect(restored.freeCells).toEqual(new Set([mon]));
+		expect(
+			restoreEditorState(
+				{
+					members: [{ displayName: 'Sam', shareToken: null, userId: '   ', accountKind: 'guest' }]
+				},
+				'',
+				'Sam',
+				weekA
+			).freeCells.size
+		).toBe(0);
 	});
 
 	it('keeps a stale token but does not wipe the signed-in name when the member is gone', () => {

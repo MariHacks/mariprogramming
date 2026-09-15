@@ -146,8 +146,7 @@ function readAvailabilityShape(availability) {
  * @returns {Set<string>}
  */
 export function freeCellsFromAvailability(availability, weekStartIso) {
-	const week =
-		typeof weekStartIso === 'string' && ISO_DATE.test(weekStartIso) ? weekStartIso : '';
+	const week = typeof weekStartIso === 'string' && ISO_DATE.test(weekStartIso) ? weekStartIso : '';
 	if (!week) return new Set();
 	const { byWeek, legacyFree } = readAvailabilityShape(availability);
 	const free = Object.keys(byWeek).length > 0 ? (byWeek[week] ?? []) : (legacyFree ?? []);
@@ -174,8 +173,7 @@ export function availabilityFromFreeCells(cells) {
  * @param {Set<string>} cells
  */
 export function availabilityWithWeek(existing, weekStartIso, cells) {
-	const week =
-		typeof weekStartIso === 'string' && ISO_DATE.test(weekStartIso) ? weekStartIso : '';
+	const week = typeof weekStartIso === 'string' && ISO_DATE.test(weekStartIso) ? weekStartIso : '';
 	if (!week) {
 		return { version: 2, byWeek: {} };
 	}
@@ -257,9 +255,107 @@ export function slugFromBoardTitle(title) {
 }
 
 /**
+ * @param {{ displayName?: string, userId?: string | null, accountKind?: string }} member
+ */
+function isSignedInMember(member) {
+	if (typeof member.userId === 'string' && member.userId.trim()) return true;
+	return member.accountKind === 'signed_in' || member.accountKind === 'executive';
+}
+
+/**
+ * Find this visitor's saved member via share token, then signed-in name.
+ *
+ * @param {unknown} members
+ * @param {string | null | undefined} shareToken
+ * @param {string | null | undefined} signedInDisplayName
+ * @returns {{ shareToken?: string | null, displayName?: string, availability?: unknown, userId?: string | null, accountKind?: string } | null}
+ */
+function matchingSavedMember(members, shareToken, signedInDisplayName) {
+	const list = Array.isArray(members) ? members : [];
+	const token = typeof shareToken === 'string' ? shareToken : '';
+	if (token) {
+		const byToken = list.find((member) => member && member.shareToken === token);
+		if (byToken) return byToken;
+	}
+	const name = typeof signedInDisplayName === 'string' ? signedInDisplayName.trim() : '';
+	if (!name) return null;
+	return (
+		list.find((member) => {
+			if (!member || typeof member.displayName !== 'string' || member.displayName !== name) {
+				return false;
+			}
+			return isSignedInMember(member);
+		}) ?? null
+	);
+}
+
+/**
+ * Per-cell free/busy names among included members for one Monday-keyed week.
+ *
+ * @param {Array<{ displayName?: string, availability?: unknown }> | null | undefined} members
+ * @param {string} weekStartIso
+ * @returns {Record<string, { free: string[], busy: string[], freeCount: number, total: number, ratio: number }>}
+ */
+export function cellAvailabilityByKey(members, weekStartIso) {
+	const list = Array.isArray(members) ? members : [];
+	/** @type {Record<string, { free: string[], busy: string[], freeCount: number, total: number, ratio: number }>} */
+	const byKey = {};
+	const total = list.length;
+	if (total === 0) return byKey;
+
+	const named = list.map((member) => {
+		const name = typeof member?.displayName === 'string' ? member.displayName.trim() : '';
+		return {
+			name: name || 'Unnamed',
+			free: freeCellsFromAvailability(member?.availability, weekStartIso)
+		};
+	});
+
+	for (const weekday of PAINT_WEEKDAYS) {
+		for (const time of paintSlotTimes()) {
+			const key = paintCellKey(weekday, time);
+			/** @type {string[]} */
+			const free = [];
+			/** @type {string[]} */
+			const busy = [];
+			for (const member of named) {
+				if (member.free.has(key)) free.push(member.name);
+				else busy.push(member.name);
+			}
+			const freeCount = free.length;
+			byKey[key] = {
+				free,
+				busy,
+				freeCount,
+				total,
+				ratio: freeCount / total
+			};
+		}
+	}
+	return byKey;
+}
+
+/**
+ * True when this visitor already has a saved availability, so the board opens in view mode.
+ *
+ * @param {{ members?: unknown } | null | undefined} board
+ * @param {string | null | undefined} shareToken
+ * @param {string | null | undefined} signedInDisplayName
+ * @param {{ saveSuccess?: boolean, member?: unknown } | null | undefined} form
+ */
+export function hasSavedBoardResponse(board, shareToken, signedInDisplayName, form) {
+	if (form && typeof form === 'object') {
+		if (form.saveSuccess === true) return true;
+		if (form.member != null && typeof form.member === 'object') return true;
+	}
+	const members = board && typeof board === 'object' ? board.members : null;
+	return matchingSavedMember(members, shareToken, signedInDisplayName) != null;
+}
+
+/**
  * Rebuild paint + identity after reload from the local share token, or prefill a signed-in name.
  *
- * @param {{ members?: Array<{ shareToken?: string | null, displayName?: string, availability?: unknown }> } | null | undefined} board
+ * @param {{ members?: Array<{ shareToken?: string | null, displayName?: string, availability?: unknown, userId?: string | null, accountKind?: string }> } | null | undefined} board
  * @param {string | null | undefined} storedToken
  * @param {string | null | undefined} signedInDisplayName
  * @param {string} weekStartIso
@@ -268,18 +364,15 @@ export function slugFromBoardTitle(title) {
 export function restoreEditorState(board, storedToken, signedInDisplayName, weekStartIso) {
 	const shareToken = typeof storedToken === 'string' ? storedToken : '';
 	const members = Array.isArray(board?.members) ? board.members : [];
-	if (shareToken) {
-		const me = members.find((member) => member.shareToken === shareToken);
-		if (me) {
-			return {
-				shareToken,
-				displayName: typeof me.displayName === 'string' ? me.displayName : '',
-				freeCells: freeCellsFromAvailability(me.availability, weekStartIso)
-			};
-		}
+	const me = matchingSavedMember(members, shareToken, signedInDisplayName);
+	if (me) {
+		return {
+			shareToken: typeof me.shareToken === 'string' && me.shareToken ? me.shareToken : shareToken,
+			displayName: typeof me.displayName === 'string' ? me.displayName : '',
+			freeCells: freeCellsFromAvailability(me.availability, weekStartIso)
+		};
 	}
-	const signedIn =
-		typeof signedInDisplayName === 'string' ? signedInDisplayName.trim() : '';
+	const signedIn = typeof signedInDisplayName === 'string' ? signedInDisplayName.trim() : '';
 	return {
 		shareToken,
 		displayName: signedIn,
