@@ -19,7 +19,8 @@ export function _createHandlers(dependencies = {}) {
 	async function load(event) {
 		try {
 			const store = createStore();
-			const boards = await store.listBoards();
+			const userId = event.locals?.maritools?.userId ?? null;
+			const boards = await store.listBoards(20, userId);
 			return { boards };
 		} catch (error) {
 			if (error instanceof MariToolsUnavailableError) {

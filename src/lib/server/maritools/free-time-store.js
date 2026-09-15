@@ -227,26 +227,65 @@ export function createFreeTimeStore(databaseUrl, runTransaction = withDatabaseTr
 			}
 		},
 
-		/** @param {number} [limit] */
-		async listBoards(limit = 20) {
+		async listBoards(limit = 20, userId = null) {
 			const capped = Number.isFinite(limit) ? Math.min(Math.max(Math.trunc(limit), 1), 100) : 20;
+			const viewer =
+				typeof userId === 'string' && userId.trim().length > 0 && userId.trim().length <= 128
+					? userId.trim()
+					: null;
+			if (!viewer) return [];
 			try {
-				const boards = asRows(
+				const owned = asRows(
 					await transact((transaction) =>
 						transaction
 							.select()
 							.from(mtFreeTimeBoards)
+							.where(eq(mtFreeTimeBoards.ownerUserId, viewer))
 							.orderBy(desc(mtFreeTimeBoards.createdAt))
 							.limit(capped)
 					)
 				);
-				return boards.map((board) => publicBoardView({ ...board, members: [] }));
+				const memberRows = asRows(
+					await transact((transaction) =>
+						transaction
+							.select({ boardId: mtFreeTimeMembers.boardId })
+							.from(mtFreeTimeMembers)
+							.where(eq(mtFreeTimeMembers.userId, viewer))
+					)
+				);
+				const ownedIds = new Set(owned.map((board) => board.id));
+				const joinedIds = [
+					...new Set(
+						memberRows
+							.map((row) => (typeof row?.boardId === 'string' ? row.boardId : ''))
+							.filter((id) => id && !ownedIds.has(id))
+					)
+				];
+				/** @type {any[]} */
+				let joined = [];
+				if (joinedIds.length > 0) {
+					joined = asRows(
+						await transact((transaction) =>
+							transaction
+								.select()
+								.from(mtFreeTimeBoards)
+								.where(inArray(mtFreeTimeBoards.id, joinedIds))
+						)
+					);
+				}
+				const merged = [...owned, ...joined].sort((a, b) => {
+					const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
+					const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
+					return bTime - aTime;
+				});
+				return merged
+					.slice(0, capped)
+					.map((board) => publicBoardView({ ...board, members: [] }));
 			} catch (error) {
 				redactUnexpected(error);
 			}
 		},
 
-		/** @param {string} slug */
 		async getBoardBySlug(slug) {
 			const normalized = typeof slug === 'string' ? slug.trim() : '';
 			if (!normalized) return null;
@@ -274,6 +313,82 @@ export function createFreeTimeStore(databaseUrl, runTransaction = withDatabaseTr
 				const withKinds = await withAccountKinds(transact, members);
 				return publicBoardView({ ...board, members: withKinds });
 			} catch (error) {
+				redactUnexpected(error);
+			}
+		},
+
+		/**
+		 * Soft-join a signed-in account when they open a shared board link.
+		 * Empty availability until they save; enough to list under Your boards.
+		 * @param {{ boardId: unknown, userId: unknown, displayName?: unknown }} input
+		 */
+		async ensureBoardMembership(input) {
+			const boardId = requiredUuid(input.boardId);
+			const userId = optionalUserId(input.userId);
+			if (!userId) return invalid();
+			const displayName =
+				typeof input.displayName === 'string' && input.displayName.trim()
+					? requiredText(input.displayName, 120)
+					: 'Member';
+			try {
+				const boards = asRows(
+					await transact((transaction) =>
+						transaction
+							.select({ id: mtFreeTimeBoards.id })
+							.from(mtFreeTimeBoards)
+							.where(eq(mtFreeTimeBoards.id, boardId))
+							.limit(1)
+					)
+				);
+				if (!boards[0]) return notFound();
+
+				const existing = asRows(
+					await transact((transaction) =>
+						transaction
+							.select()
+							.from(mtFreeTimeMembers)
+							.where(
+								and(eq(mtFreeTimeMembers.boardId, boardId), eq(mtFreeTimeMembers.userId, userId))
+							)
+							.limit(1)
+					)
+				);
+				if (existing[0]) return publishMember(existing[0], userId);
+
+				const token = randomUUID();
+				const rows = asRows(
+					await transact((transaction) =>
+						transaction
+							.insert(mtFreeTimeMembers)
+							.values({
+								boardId,
+								displayName,
+								availability: {},
+								shareToken: token,
+								userId
+							})
+							.returning()
+					)
+				);
+				const created = rows[0];
+				if (!created) throw new MariToolsUnavailableError();
+				return publishMember(created, userId);
+			} catch (error) {
+				if (isUniqueViolation(error)) {
+					// concurrent join — re-read
+					const again = asRows(
+						await transact((transaction) =>
+							transaction
+								.select()
+								.from(mtFreeTimeMembers)
+								.where(
+									and(eq(mtFreeTimeMembers.boardId, boardId), eq(mtFreeTimeMembers.userId, userId))
+								)
+								.limit(1)
+						)
+					);
+					if (again[0]) return publishMember(again[0], userId);
+				}
 				redactUnexpected(error);
 			}
 		},

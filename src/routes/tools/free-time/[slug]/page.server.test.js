@@ -94,6 +94,25 @@ describe('free-time board page server', () => {
 		expect(current.store.getBoardBySlug).toHaveBeenCalledWith('study-group');
 	});
 
+	it('joins a signed-in viewer when they open a shared board link', async () => {
+		const ensureBoardMembership = vi.fn(async () => ({ id: 'm1', userId: 'user-1' }));
+		const current = handlers({
+			store: {
+				getBoardBySlug: vi.fn(async () => BOARD),
+				ensureBoardMembership
+			},
+			students: { getProfile: vi.fn(async () => ({ displayName: 'Zhicheng' })) }
+		});
+		await current.load(
+			event({ locals: { maritools: { userId: 'user-1', email: 'a@b.com' } } })
+		);
+		expect(ensureBoardMembership).toHaveBeenCalledWith({
+			boardId: BOARD.id,
+			userId: 'user-1',
+			displayName: 'Zhicheng'
+		});
+	});
+
 	it('loads the signed-in account schedule for Omnivox import', async () => {
 		const current = handlers({
 			students: {

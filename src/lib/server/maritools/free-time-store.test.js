@@ -204,20 +204,34 @@ describe('createFreeTimeStore', () => {
 		});
 	});
 
-	it('lists recent boards', async () => {
-		const finite = queuedStore([[BOARD_ROW]]);
-		await expect(finite.listBoards(5)).resolves.toEqual([
+	it('lists only boards for a signed-in viewer', async () => {
+		// owned boards query, then membership boardIds (none)
+		const finite = queuedStore([[BOARD_ROW], []]);
+		await expect(finite.listBoards(5, USER)).resolves.toEqual([
 			expect.objectContaining({ slug: 'study-group', members: [] })
 		]);
-		const fallback = queuedStore([[BOARD_ROW]]);
-		await expect(fallback.listBoards(Number.NaN)).resolves.toEqual([
+		const fallback = queuedStore([[BOARD_ROW], []]);
+		await expect(fallback.listBoards(Number.NaN, USER)).resolves.toEqual([
 			expect.objectContaining({ slug: 'study-group', members: [] })
 		]);
 	});
 
+	it('returns no boards for guests', async () => {
+		const store = queuedStore([]);
+		await expect(store.listBoards(20, null)).resolves.toEqual([]);
+		await expect(store.listBoards(20, '')).resolves.toEqual([]);
+	});
+
 	it('redacts unexpected list errors', async () => {
 		const store = queuedStore([new Error('db down')]);
-		await expect(store.listBoards()).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		await expect(store.listBoards(20, USER)).rejects.toBeInstanceOf(MariToolsUnavailableError);
+	});
+
+	it('ensures membership when opening a shared board while signed in', async () => {
+		const store = queuedStore([[{ id: BOARD }], [], [MEMBER_ROW]]);
+		await expect(
+			store.ensureBoardMembership({ boardId: BOARD, userId: USER, displayName: 'Ada' })
+		).resolves.toMatchObject({ displayName: 'Ada', userId: USER });
 	});
 
 	it('returns null for a missing slug', async () => {
