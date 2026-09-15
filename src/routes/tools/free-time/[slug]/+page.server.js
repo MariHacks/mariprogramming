@@ -1,7 +1,10 @@
 import { fail } from '@sveltejs/kit';
 import { mondayOfWeek } from '$lib/maritools/schedule/academicWeekView.js';
 import { availabilityWithWeek } from '$lib/maritools/schedule/freeTimeBoard.js';
-import { readRuntimeEnvironment, ServerConfigurationError } from '$lib/server/config/environment.js';
+import {
+	readRuntimeEnvironment,
+	ServerConfigurationError
+} from '$lib/server/config/environment.js';
 import {
 	MariToolsNotFoundError,
 	MariToolsUnavailableError,
@@ -30,8 +33,7 @@ export const prerender = false;
  * @param {{ displayName?: string | null } | null | undefined} profile
  */
 function signedInDisplayNameFrom(session, profile) {
-	const fromProfile =
-		typeof profile?.displayName === 'string' ? profile.displayName.trim() : '';
+	const fromProfile = typeof profile?.displayName === 'string' ? profile.displayName.trim() : '';
 	if (fromProfile) return fromProfile;
 	const email = typeof session?.email === 'string' ? session.email.trim() : '';
 	if (!email || !email.includes('@')) return null;
@@ -81,7 +83,12 @@ export function _createHandlers(dependencies = {}) {
 			};
 		} catch (error) {
 			if (error instanceof MariToolsUnavailableError || error instanceof ServerConfigurationError) {
-				return { board: null, unavailable: true, signedInDisplayName: null, savedSchedulePaste: '' };
+				return {
+					board: null,
+					unavailable: true,
+					signedInDisplayName: null,
+					savedSchedulePaste: ''
+				};
 			}
 			throw error;
 		}
@@ -90,8 +97,9 @@ export function _createHandlers(dependencies = {}) {
 	/** @param {any} event */
 	async function saveMember(event) {
 		const slug = event.params.slug;
+		const session = event.locals?.maritools ?? null;
 		const data = await event.request.formData();
-		const displayName = String(data.get('displayName') ?? '');
+		let displayName = String(data.get('displayName') ?? '');
 		const shareToken = String(data.get('shareToken') ?? '');
 		const weekStart = requiredMonday(data.get('weekStart'));
 		if (!weekStart) {
@@ -111,15 +119,32 @@ export function _createHandlers(dependencies = {}) {
 			const store = createStore();
 			const board = await store.getBoardBySlug(slug);
 			if (!board) return fail(404, { saveError: 'Board not found.' });
-			const existing =
-				shareToken && Array.isArray(board.members)
-					? board.members.find((member) => member.shareToken === shareToken)?.availability
+			const userId =
+				typeof session?.userId === 'string' && session.userId.trim() ? session.userId.trim() : null;
+			if (userId) {
+				let profile = null;
+				try {
+					const students = createStudentStore();
+					profile = await students.getProfile(userId);
+				} catch {
+					profile = null;
+				}
+				const preferred = signedInDisplayNameFrom(session, profile);
+				if (preferred) displayName = preferred;
+			}
+			/** @type {any[]} */
+			const members = Array.isArray(board.members) ? board.members : [];
+			const existing = userId
+				? members.find((member) => member.userId === userId)?.availability
+				: shareToken
+					? members.find((member) => member.shareToken === shareToken)?.availability
 					: null;
 			const member = await store.upsertMemberAvailability({
 				boardId: board.id,
 				displayName,
 				availability: availabilityWithWeek(existing, weekStart, new Set(free)),
-				shareToken: shareToken || null
+				shareToken: shareToken || null,
+				userId
 			});
 			return { member, saveSuccess: true };
 		} catch (error) {

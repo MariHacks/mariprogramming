@@ -19,8 +19,14 @@ import {
 	mergeYjsStates,
 	normalizeYjsState
 } from '$lib/pbl/yjs-collab.js';
-import { mtStudentProfiles, pblRoomMembers, pblRooms, pblStepSubmissions, user } from '../db/schema';
-import { isStaffAccount } from '../maritools/community.js';
+import {
+	mtStudentProfiles,
+	pblRoomMembers,
+	pblRooms,
+	pblStepSubmissions,
+	user
+} from '../db/schema';
+import { isExecutiveAccount } from '../maritools/community.js';
 import { generateRoomCode } from './ids.js';
 
 export class PblInputError extends Error {
@@ -63,8 +69,6 @@ function oneRow(rows) {
 	return Array.isArray(rows) && rows[0] ? rows[0] : null;
 }
 
-
-const EXECUTIVE_ROLES = new Set(['moderator', 'staff', 'executive']);
 const MAX_SCIENCE_UNLOCKED_STEP = SCIENCE_STEP_COUNT - 1;
 
 /**
@@ -74,10 +78,7 @@ const MAX_SCIENCE_UNLOCKED_STEP = SCIENCE_STEP_COUNT - 1;
  */
 export function isExecutiveOwner(actor) {
 	if (!actor) return false;
-	const role = typeof actor.role === 'string' ? actor.role : null;
-	const email = typeof actor.email === 'string' ? actor.email : null;
-	if (role && EXECUTIVE_ROLES.has(role)) return true;
-	return isStaffAccount(email, role);
+	return isExecutiveAccount(actor);
 }
 
 /** @param {any} row @param {string} [viewerMemberId] */
@@ -179,7 +180,10 @@ export function createDrizzlePblRepository(transaction) {
 			);
 		},
 		async listRooms() {
-			return transaction.select().from(pblRooms).orderBy(desc(pblRooms.updatedAt), desc(pblRooms.code));
+			return transaction
+				.select()
+				.from(pblRooms)
+				.orderBy(desc(pblRooms.updatedAt), desc(pblRooms.code));
 		},
 		/** @param {string[]} roomIds */
 		async listMembersWithUsers(roomIds) {
@@ -756,8 +760,7 @@ export function createPblStore(repository, clock = {}) {
 				throw new PblInputError('The program is too long to sync.');
 			}
 			if (typeof input.passed !== 'boolean') throw new PblInputError('Invalid check result.');
-			const message =
-				typeof input.message === 'string' ? input.message.slice(0, 2000) : null;
+			const message = typeof input.message === 'string' ? input.message.slice(0, 2000) : null;
 			const saved = await repository.insertSubmission({
 				roomId: row.id,
 				step: input.step,
@@ -890,8 +893,7 @@ export function createPblStore(repository, clock = {}) {
 			if (!normalized) throw new PblInputError('That room code is not valid.');
 			const row = await repository.findRoomByCode(normalized);
 			if (!row) throw new PblNotFoundError();
-			const nextDriver =
-				typeof input.newDriverMemberId === 'string' ? input.newDriverMemberId : '';
+			const nextDriver = typeof input.newDriverMemberId === 'string' ? input.newDriverMemberId : '';
 			if (!nextDriver) throw new PblInputError('Pick a new team leader.');
 			const target = await repository.findMember(row.id, nextDriver);
 			if (!target) throw new PblInputError('That teammate is not on this team.', 404);

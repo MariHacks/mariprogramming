@@ -422,13 +422,18 @@ export const mtFreeTimeMembers = pgTable(
 		displayName: varchar('display_name', { length: 120 }).notNull(),
 		availability: jsonb('availability').$type<Record<string, unknown>>().default({}).notNull(),
 		shareToken: varchar('share_token', { length: 64 }),
+		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
 		version: version(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt()
 	},
 	(table) => [
 		uniqueIndex('mt_free_time_members_share_token_unique_idx').on(table.shareToken),
+		uniqueIndex('mt_free_time_members_board_user_unique_idx')
+			.on(table.boardId, table.userId)
+			.where(sql`${table.userId} IS NOT NULL`),
 		index('mt_free_time_members_board_idx').on(table.boardId),
+		index('mt_free_time_members_user_idx').on(table.userId),
 		check('mt_free_time_members_version_positive', sql`${table.version} > 0`)
 	]
 );

@@ -2,7 +2,11 @@ const STAFF_EMAIL = 'team@marihacks.com';
 
 /** @param {string | null | undefined} email */
 export function isMariHacksTeamAccount(email) {
-	return String(email ?? '').trim().toLowerCase() === STAFF_EMAIL;
+	return (
+		String(email ?? '')
+			.trim()
+			.toLowerCase() === STAFF_EMAIL
+	);
 }
 
 /**
@@ -13,6 +17,18 @@ export function isMariHacksTeamAccount(email) {
 export function isStaffAccount(email, role = null) {
 	if (role === 'staff' || role === 'moderator') return true;
 	return isMariHacksTeamAccount(email);
+}
+
+const EXECUTIVE_ROLES = new Set(['moderator', 'staff', 'executive']);
+
+/**
+ * @param {{ role?: string | null, email?: string | null } | null | undefined} account
+ */
+export function isExecutiveAccount(account) {
+	if (!account) return false;
+	const role = typeof account.role === 'string' ? account.role : null;
+	const email = typeof account.email === 'string' ? account.email : null;
+	return (role != null && EXECUTIVE_ROLES.has(role)) || isStaffAccount(email, role);
 }
 
 /**

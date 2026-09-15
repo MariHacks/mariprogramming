@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { readRuntimeEnvironment } from '../config/environment.js';
-import { mtFreeTimeBoards, mtFreeTimeMembers } from '../db/schema';
+import { mtFreeTimeBoards, mtFreeTimeMembers, mtStudentProfiles, user } from '../db/schema';
 import { withDatabaseTransaction } from '../db/transaction.js';
+import { isExecutiveAccount } from './community.js';
 import {
 	MariToolsConflictError,
 	MariToolsNotFoundError,
@@ -71,6 +72,17 @@ function asRows(rows) {
 	return Array.isArray(rows) ? rows : [];
 }
 
+/**
+ * @param {string | null | undefined} userId
+ * @param {{ role?: string | null, email?: string | null } | null | undefined} [account]
+ * @returns {'guest' | 'signed_in' | 'executive'}
+ */
+export function freeTimeAccountKind(userId, account = null) {
+	if (!userId) return 'guest';
+	if (isExecutiveAccount(account)) return 'executive';
+	return 'signed_in';
+}
+
 /** @param {any} board */
 export function publicBoardView(board) {
 	if (!board || typeof board !== 'object') return null;
@@ -91,15 +103,73 @@ export function publicBoardView(board) {
 export function publicMemberView(member) {
 	if (!member || typeof member !== 'object') return null;
 	const availability =
-		member.availability && typeof member.availability === 'object' && !Array.isArray(member.availability)
+		member.availability &&
+		typeof member.availability === 'object' &&
+		!Array.isArray(member.availability)
 			? member.availability
 			: {};
+	const userId = typeof member.userId === 'string' && member.userId.trim() ? member.userId : null;
+	const accountKind =
+		member.accountKind === 'executive' ||
+		member.accountKind === 'signed_in' ||
+		member.accountKind === 'guest'
+			? member.accountKind
+			: freeTimeAccountKind(userId);
 	return {
 		id: member.id,
 		displayName: member.displayName,
 		availability,
-		shareToken: member.shareToken ?? null
+		shareToken: member.shareToken ?? null,
+		userId,
+		accountKind
 	};
+}
+
+/**
+ * @param {(operation: (transaction: any) => Promise<any>) => Promise<any>} transact
+ * @param {any[]} members
+ */
+async function withAccountKinds(transact, members) {
+	const userIds = [
+		...new Set(
+			members
+				.map((member) => (typeof member?.userId === 'string' ? member.userId.trim() : ''))
+				.filter(Boolean)
+		)
+	];
+	/** @type {Map<string, { email: string | null, role: string | null }>} */
+	const accounts = new Map();
+	if (userIds.length > 0) {
+		const rows = asRows(
+			await transact((transaction) =>
+				transaction
+					.select({
+						userId: user.id,
+						email: user.email,
+						role: mtStudentProfiles.role
+					})
+					.from(user)
+					.leftJoin(mtStudentProfiles, eq(mtStudentProfiles.userId, user.id))
+					.where(inArray(user.id, userIds))
+			)
+		);
+		for (const row of rows) {
+			if (!row?.userId) continue;
+			accounts.set(row.userId, {
+				email: typeof row.email === 'string' ? row.email : null,
+				role: typeof row.role === 'string' ? row.role : null
+			});
+		}
+	}
+	return members.map((member) => {
+		const userId =
+			typeof member?.userId === 'string' && member.userId.trim() ? member.userId : null;
+		return {
+			...member,
+			userId,
+			accountKind: freeTimeAccountKind(userId, userId ? (accounts.get(userId) ?? null) : null)
+		};
+	});
 }
 
 /**
@@ -116,6 +186,20 @@ export function createFreeTimeStore(databaseUrl, runTransaction = withDatabaseTr
 
 	/** @param {(transaction: any) => Promise<any>} operation */
 	const transact = (operation) => runTransaction(operation, { databaseUrl });
+
+	/**
+	 * @param {any} member
+	 * @param {string | null} [signedInUserId]
+	 */
+	async function publishMember(member, signedInUserId = null) {
+		const [enriched] = await withAccountKinds(transact, [
+			{
+				...member,
+				userId: member.userId ?? signedInUserId ?? null
+			}
+		]);
+		return publicMemberView(enriched);
+	}
 
 	return Object.freeze({
 		/** @param {{ slug: unknown, title: unknown, termId: unknown, ownerUserId?: unknown }} input */
@@ -187,7 +271,8 @@ export function createFreeTimeStore(databaseUrl, runTransaction = withDatabaseTr
 							.orderBy(asc(mtFreeTimeMembers.createdAt))
 					)
 				);
-				return publicBoardView({ ...board, members });
+				const withKinds = await withAccountKinds(transact, members);
+				return publicBoardView({ ...board, members: withKinds });
 			} catch (error) {
 				redactUnexpected(error);
 			}
@@ -198,7 +283,8 @@ export function createFreeTimeStore(databaseUrl, runTransaction = withDatabaseTr
 		 *   boardId: unknown,
 		 *   displayName: unknown,
 		 *   availability: unknown,
-		 *   shareToken?: unknown
+		 *   shareToken?: unknown,
+		 *   userId?: unknown
 		 * }} input
 		 */
 		async upsertMemberAvailability(input) {
@@ -209,6 +295,7 @@ export function createFreeTimeStore(databaseUrl, runTransaction = withDatabaseTr
 				input.shareToken == null || input.shareToken === ''
 					? null
 					: requiredText(input.shareToken, 64);
+			const userId = optionalUserId(input.userId);
 			try {
 				const boards = asRows(
 					await transact((transaction) =>
@@ -220,6 +307,40 @@ export function createFreeTimeStore(databaseUrl, runTransaction = withDatabaseTr
 					)
 				);
 				if (!boards[0]) return notFound();
+
+				if (userId) {
+					const byUser = asRows(
+						await transact((transaction) =>
+							transaction
+								.select()
+								.from(mtFreeTimeMembers)
+								.where(
+									and(eq(mtFreeTimeMembers.boardId, boardId), eq(mtFreeTimeMembers.userId, userId))
+								)
+								.limit(1)
+						)
+					);
+					const existingByUser = byUser[0];
+					if (existingByUser) {
+						const rows = asRows(
+							await transact((transaction) =>
+								transaction
+									.update(mtFreeTimeMembers)
+									.set({
+										displayName,
+										availability,
+										userId,
+										updatedAt: new Date()
+									})
+									.where(eq(mtFreeTimeMembers.id, existingByUser.id))
+									.returning()
+							)
+						);
+						const updated = rows[0];
+						if (!updated) throw new MariToolsUnavailableError();
+						return publishMember(updated, userId);
+					}
+				}
 
 				if (shareToken) {
 					const existing = asRows(
@@ -233,22 +354,25 @@ export function createFreeTimeStore(databaseUrl, runTransaction = withDatabaseTr
 					);
 					const member = existing[0];
 					if (!member || member.boardId !== boardId) return notFound();
+					/** @type {Record<string, unknown>} */
+					const patch = {
+						displayName,
+						availability,
+						updatedAt: new Date()
+					};
+					if (userId) patch.userId = userId;
 					const rows = asRows(
 						await transact((transaction) =>
 							transaction
 								.update(mtFreeTimeMembers)
-								.set({
-									displayName,
-									availability,
-									updatedAt: new Date()
-								})
+								.set(patch)
 								.where(eq(mtFreeTimeMembers.id, member.id))
 								.returning()
 						)
 					);
 					const updated = rows[0];
 					if (!updated) throw new MariToolsUnavailableError();
-					return publicMemberView(updated);
+					return publishMember(updated, userId);
 				}
 
 				const token = randomUUID();
@@ -260,14 +384,15 @@ export function createFreeTimeStore(databaseUrl, runTransaction = withDatabaseTr
 								boardId,
 								displayName,
 								availability,
-								shareToken: token
+								shareToken: token,
+								userId
 							})
 							.returning()
 					)
 				);
 				const created = rows[0];
 				if (!created) throw new MariToolsUnavailableError();
-				return publicMemberView(created);
+				return publishMember(created, userId);
 			} catch (error) {
 				if (isUniqueViolation(error)) throw new MariToolsConflictError();
 				redactUnexpected(error);
