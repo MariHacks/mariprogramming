@@ -297,9 +297,6 @@
 											aria-pressed={includedMemberIds.has(member.id)}
 											on:click={() => toggleMember(member.id)}
 										>
-											<span class="member-check" aria-hidden="true"
-												>{includedMemberIds.has(member.id) ? '✓' : ''}</span
-											>
 											<span
 												class="member-kind {member.accountKind ?? 'guest'}"
 												aria-label={member.accountKind === 'executive'
@@ -437,10 +434,11 @@
 	.member-toggle {
 		display: grid;
 		width: 100%;
-		grid-template-columns: 18px 22px minmax(0, 1fr);
+		grid-template-columns: 22px minmax(0, 1fr);
 		align-items: center;
 		gap: 8px;
-		padding: 6px 4px;
+		padding: 8px 4px;
+		border-radius: 6px;
 		border: 0;
 		background: transparent;
 		color: inherit;
@@ -458,18 +456,6 @@
 		opacity: 0.46;
 	}
 
-	.member-check {
-		display: grid;
-		width: 16px;
-		height: 16px;
-		place-items: center;
-		border: 1px solid #75849a;
-		border-radius: 3px;
-		background: white;
-		color: #173f88;
-		font-size: 11px;
-		line-height: 1;
-	}
 
 	.member-kind {
 		display: grid;
