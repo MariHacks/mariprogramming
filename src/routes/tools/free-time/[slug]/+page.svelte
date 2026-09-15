@@ -17,7 +17,7 @@
 	import { calendarDate } from '$lib/maritools/term/calendar.js';
 	import '$lib/maritools/styles/preview.css';
 
-	/** @type {{ board: { id: string, title: string, termId?: string, members: Array<{ id: string, displayName: string, availability?: unknown, shareToken?: string | null }> }, shareUrl: string, signedInDisplayName?: string | null, savedSchedulePaste?: string } | { board: null, notFound?: boolean, unavailable?: boolean, signedInDisplayName?: string | null, savedSchedulePaste?: string }} */
+	/** @type {{ board: { id: string, title: string, termId?: string, members: Array<{ id: string, displayName: string, availability?: unknown, shareToken?: string | null, userId?: string | null, accountKind?: 'guest' | 'signed_in' | 'executive' }> }, shareUrl: string, signedInDisplayName?: string | null, savedSchedulePaste?: string } | { board: null, notFound?: boolean, unavailable?: boolean, signedInDisplayName?: string | null, savedSchedulePaste?: string }} */
 	export let data;
 
 	/** @type {{ member?: { shareToken?: string | null }, saveError?: string, saveSuccess?: boolean } | null} */
@@ -34,10 +34,10 @@
 	let importError = '';
 	let weekStartIso = mondayOfWeek(calendarDate());
 	let restoredOnce = false;
+	/** @type {Set<string>} */
+	let includedMemberIds = new Set(data.board?.members?.map((member) => member.id) ?? []);
 	/** @type {Record<string, Set<string>>} */
 	let draftByWeek = {};
-
-	const MEMBER_DOTS = ['maya', 'alex', 'samira'];
 
 	$: board = data.board;
 	$: signedIn = Boolean(data.signedInDisplayName);
@@ -51,9 +51,12 @@
 		}
 		return null;
 	})();
+	$: includedMembers = board
+		? (board.members ?? []).filter((member) => includedMemberIds.has(member.id))
+		: [];
 	$: commonCells =
 		board && !('notFound' in data && data.notFound)
-			? filterPaintableCells(commonFreeCells(board.members ?? [], weekStartIso), dayColumns)
+			? filterPaintableCells(commonFreeCells(includedMembers, weekStartIso), dayColumns)
 			: new Set();
 	$: heading = weekTitle(weekStartIso);
 	$: dayColumns = paintDayColumnsForTermWeek(
@@ -102,6 +105,23 @@
 	function applyRestoredState() {
 		if (!browser || !board || restoredOnce) return;
 		restoredOnce = true;
+		const inclusionKey = `maritools.free-time.${board.id}.included-members`;
+		const savedInclusion = sessionStorage.getItem(inclusionKey);
+		if (savedInclusion === null) {
+			includedMemberIds = new Set(board.members.map((member) => member.id));
+		} else {
+			try {
+				const parsed = JSON.parse(savedInclusion);
+				const available = new Set(board.members.map((member) => member.id));
+				includedMemberIds = new Set(
+					Array.isArray(parsed)
+						? parsed.filter((id) => typeof id === 'string' && available.has(id))
+						: []
+				);
+			} catch {
+				includedMemberIds = new Set(board.members.map((member) => member.id));
+			}
+		}
 		const stored = localStorage.getItem(`maritools.free-time.${board.id}.token`);
 		const restored = restoreEditorState(
 			board,
@@ -121,6 +141,20 @@
 	onMount(() => {
 		applyRestoredState();
 	});
+
+	/** @param {string} memberId */
+	function toggleMember(memberId) {
+		const next = new Set(includedMemberIds);
+		if (next.has(memberId)) next.delete(memberId);
+		else next.add(memberId);
+		includedMemberIds = next;
+		if (browser && board) {
+			sessionStorage.setItem(
+				`maritools.free-time.${board.id}.included-members`,
+				JSON.stringify([...next])
+			);
+		}
+	}
 
 	$: if (browser && board && form?.member?.shareToken) {
 		localStorage.setItem(`maritools.free-time.${board.id}.token`, form.member.shareToken);
@@ -245,30 +279,65 @@
 						{#if board.members.length === 0}
 							<p class="members-empty">
 								{#if signedIn}
-									No one has saved yet. Paint free slots, then Save so the group can see
-									overlaps.
+									No one has saved yet. Paint free slots, then Save so the group can see overlaps.
 								{:else}
-									No one has saved yet. Paint free slots, add a display name, then Save so the
-									group can see overlaps.
+									No one has saved yet. Paint free slots, add a display name, then Save so the group
+									can see overlaps.
 								{/if}
 							</p>
 						{:else}
 							<ul>
-								{#each board.members as member, index (member.id)}
+								{#each board.members as member (member.id)}
 									<li>
-										<i class="member-dot {MEMBER_DOTS[index % MEMBER_DOTS.length]}"></i>
-										<span>
-											{member.displayName}
-											{#if
-												data.signedInDisplayName &&
-												member.displayName === data.signedInDisplayName
-											}
-												<small>Account</small>
-											{/if}
-											{#if displayName && member.displayName === displayName}
-												<small>You, editing</small>
-											{/if}
-										</span>
+										<button
+											type="button"
+											class="member-toggle"
+											class:excluded={!includedMemberIds.has(member.id)}
+											aria-label={`${includedMemberIds.has(member.id) ? 'Exclude' : 'Include'} ${member.displayName} from common free`}
+											aria-pressed={includedMemberIds.has(member.id)}
+											on:click={() => toggleMember(member.id)}
+										>
+											<span class="member-check" aria-hidden="true"
+												>{includedMemberIds.has(member.id) ? '✓' : ''}</span
+											>
+											<span
+												class="member-kind {member.accountKind ?? 'guest'}"
+												aria-label={member.accountKind === 'executive'
+													? 'Executive'
+													: member.accountKind === 'signed_in'
+														? 'Signed in'
+														: 'Guest'}
+												role="img"
+											>
+												{#if member.accountKind === 'executive'}
+													<svg viewBox="0 0 24 24" aria-hidden="true"
+														><path d="M4 18h16l-1.5-9-4 4L12 6l-2.5 7-4-4L4 18Z" /></svg
+													>
+												{:else if member.accountKind === 'signed_in'}
+													<svg viewBox="0 0 24 24" aria-hidden="true"
+														><path
+															d="M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm-7 16c0-3.3 3.1-6 7-6s7 2.7 7 6v1H5v-1Z"
+														/></svg
+													>
+												{:else}
+													<svg viewBox="0 0 24 24" aria-hidden="true"
+														><path
+															d="M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm-7 16c0-3.3 3.1-6 7-6s7 2.7 7 6v1H5v-1Z"
+														/><path class="guest-mark" d="M17 4h4M19 2v4" /></svg
+													>
+												{/if}
+											</span>
+											<span class="member-name">
+												{member.displayName}
+												<small
+													>{member.accountKind === 'executive'
+														? 'Executive'
+														: member.accountKind === 'signed_in'
+															? 'Signed in'
+															: 'Guest'}</small
+												>
+											</span>
+										</button>
 									</li>
 								{/each}
 							</ul>
@@ -319,7 +388,11 @@
 						{/if}
 						<input type="hidden" name="shareToken" value={shareToken} />
 						<input type="hidden" name="weekStart" value={weekStartIso} />
-						<input type="hidden" name="freeJson" value={JSON.stringify([...filterPaintableCells(freeCells, dayColumns)])} />
+						<input
+							type="hidden"
+							name="freeJson"
+							value={JSON.stringify([...filterPaintableCells(freeCells, dayColumns)])}
+						/>
 						<button type="submit" class="primary-button wide">Save availability</button>
 					</form>
 
@@ -329,9 +402,16 @@
 					{#if importOpen}
 						<label class="guest-field">
 							<span>Omnivox course list</span>
-							<textarea bind:value={omnivoxPaste} rows="8" spellcheck="false" aria-label="Omnivox course list"></textarea>
+							<textarea
+								bind:value={omnivoxPaste}
+								rows="8"
+								spellcheck="false"
+								aria-label="Omnivox course list"
+							></textarea>
 						</label>
-						<button class="panel-button" type="button" on:click={() => importOmnivox()}>Read schedule</button>
+						<button class="panel-button" type="button" on:click={() => importOmnivox()}
+							>Read schedule</button
+						>
 						{#if importError}
 							<p class="field-error" role="alert">{importError}</p>
 						{/if}
@@ -352,3 +432,82 @@
 		</section>
 	{/if}
 </div>
+
+<style>
+	.member-toggle {
+		display: grid;
+		width: 100%;
+		grid-template-columns: 18px 22px minmax(0, 1fr);
+		align-items: center;
+		gap: 8px;
+		padding: 6px 4px;
+		border: 0;
+		background: transparent;
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.member-toggle:hover,
+	.member-toggle:focus-visible {
+		background: #f1f5fb;
+		outline: none;
+	}
+
+	.member-toggle.excluded {
+		opacity: 0.46;
+	}
+
+	.member-check {
+		display: grid;
+		width: 16px;
+		height: 16px;
+		place-items: center;
+		border: 1px solid #75849a;
+		border-radius: 3px;
+		background: white;
+		color: #173f88;
+		font-size: 11px;
+		line-height: 1;
+	}
+
+	.member-kind {
+		display: grid;
+		width: 21px;
+		height: 21px;
+		place-items: center;
+		border-radius: 50%;
+		background: #eef2f7;
+		color: #52647b;
+	}
+
+	.member-kind.signed_in {
+		background: #e2edff;
+		color: #2456a6;
+	}
+
+	.member-kind.executive {
+		background: #fff0c7;
+		color: #8a5b00;
+	}
+
+	.member-kind svg {
+		width: 13px;
+		height: 13px;
+		fill: currentColor;
+	}
+
+	.member-kind .guest-mark {
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+	}
+
+	.member-name {
+		display: grid;
+		min-width: 0;
+		font-size: 11px;
+		font-weight: 600;
+	}
+</style>

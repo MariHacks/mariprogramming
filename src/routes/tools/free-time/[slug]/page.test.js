@@ -18,7 +18,16 @@ const BOARD = {
 	slug: 'study-group',
 	title: 'Study group',
 	termId: 'fall-2026',
-	members: [{ id: 'm1', displayName: 'Ada', availability: {}, shareToken: null }]
+	members: [
+		{
+			id: 'm1',
+			displayName: 'Ada',
+			availability: {},
+			shareToken: null,
+			userId: null,
+			accountKind: /** @type {'guest'} */ ('guest')
+		}
+	]
 };
 
 afterEach(() => {
@@ -29,6 +38,11 @@ afterEach(() => {
 describe('free-time board page', () => {
 	beforeEach(() => {
 		vi.stubGlobal('localStorage', {
+			getItem: vi.fn(() => null),
+			setItem: vi.fn(),
+			removeItem: vi.fn()
+		});
+		vi.stubGlobal('sessionStorage', {
 			getItem: vi.fn(() => null),
 			setItem: vi.fn(),
 			removeItem: vi.fn()
@@ -50,6 +64,59 @@ describe('free-time board page', () => {
 		expect(screen.getByText('Ada')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Save availability' })).toBeInTheDocument();
 		expect(screen.getByText(/Availability is saved per week/i)).toBeInTheDocument();
+	});
+
+	it('shows distinct account-kind icons and toggles members in the common-free overlap', async () => {
+		const members = [
+			{
+				id: 'guest',
+				displayName: 'Guest Ada',
+				accountKind: /** @type {'guest'} */ ('guest'),
+				availability: {
+					version: 2,
+					byWeek: { [THIS_WEEK]: ['Mon-09:00', 'Tue-11:00'] }
+				}
+			},
+			{
+				id: 'account',
+				displayName: 'Signed Sam',
+				accountKind: /** @type {'signed_in'} */ ('signed_in'),
+				availability: { version: 2, byWeek: { [THIS_WEEK]: ['Mon-09:00'] } }
+			},
+			{
+				id: 'exec',
+				displayName: 'Exec Eve',
+				accountKind: /** @type {'executive'} */ ('executive'),
+				availability: { version: 2, byWeek: { [THIS_WEEK]: ['Mon-09:00'] } }
+			}
+		];
+		render(BoardPage, {
+			props: {
+				data: {
+					board: { ...BOARD, members },
+					shareUrl: 'https://example.com/tools/free-time/study-group',
+					signedInDisplayName: null
+				}
+			}
+		});
+
+		expect(screen.getByLabelText('Guest')).toBeInTheDocument();
+		expect(screen.getByLabelText('Signed in')).toBeInTheDocument();
+		expect(screen.getByLabelText('Executive')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveClass('common');
+		expect(screen.getByRole('button', { name: 'Tue 11:00' })).not.toHaveClass('common');
+
+		await fireEvent.click(
+			screen.getByRole('button', { name: 'Exclude Signed Sam from common free' })
+		);
+		await fireEvent.click(
+			screen.getByRole('button', { name: 'Exclude Exec Eve from common free' })
+		);
+		expect(screen.getByRole('button', { name: 'Tue 11:00' })).toHaveClass('common');
+		expect(sessionStorage.setItem).toHaveBeenCalledWith(
+			`maritools.free-time.${BOARD.id}.included-members`,
+			JSON.stringify(['guest'])
+		);
 	});
 
 	it('restores painted cells and display name from the local share token', () => {
@@ -81,8 +148,14 @@ describe('free-time board page', () => {
 			}
 		});
 		expect(screen.getByPlaceholderText('How others will see you')).toHaveValue('Ada');
-		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute('aria-pressed', 'true');
-		expect(screen.getByRole('button', { name: 'Tue 11:00' })).toHaveAttribute('aria-pressed', 'true');
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute(
+			'aria-pressed',
+			'true'
+		);
+		expect(screen.getByRole('button', { name: 'Tue 11:00' })).toHaveAttribute(
+			'aria-pressed',
+			'true'
+		);
 		expect(screen.getByText(/editing as Guest, Ada/i)).toBeInTheDocument();
 	});
 
@@ -117,12 +190,21 @@ describe('free-time board page', () => {
 				}
 			}
 		});
-		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute('aria-pressed', 'true');
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute(
+			'aria-pressed',
+			'true'
+		);
 		const before = screen.getByRole('heading', { level: 1 }).textContent;
 		fireEvent.click(screen.getByRole('button', { name: 'Next week' }));
 		expect(screen.getByRole('heading', { level: 1 }).textContent).not.toBe(before);
-		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute('aria-pressed', 'false');
-		expect(screen.getByRole('button', { name: 'Wed 14:00' })).toHaveAttribute('aria-pressed', 'true');
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute(
+			'aria-pressed',
+			'false'
+		);
+		expect(screen.getByRole('button', { name: 'Wed 14:00' })).toHaveAttribute(
+			'aria-pressed',
+			'true'
+		);
 	});
 
 	it('labels signed-in editors differently from guests', () => {
@@ -132,8 +214,20 @@ describe('free-time board page', () => {
 					board: {
 						...BOARD,
 						members: [
-							{ id: 'm1', displayName: 'MayaGuest', availability: {}, shareToken: null },
-							{ id: 'm2', displayName: 'Zhicheng', availability: {}, shareToken: null }
+							{
+								id: 'm1',
+								displayName: 'MayaGuest',
+								availability: {},
+								shareToken: null,
+								accountKind: /** @type {'guest'} */ ('guest')
+							},
+							{
+								id: 'm2',
+								displayName: 'Zhicheng',
+								availability: {},
+								shareToken: null,
+								accountKind: /** @type {'signed_in'} */ ('signed_in')
+							}
 						]
 					},
 					shareUrl: 'https://example.com/tools/free-time/study-group',
@@ -146,7 +240,8 @@ describe('free-time board page', () => {
 		expect(screen.getByText(/editing as Zhicheng \(signed in\)/i)).toBeInTheDocument();
 		expect(screen.getByText('MayaGuest')).toBeInTheDocument();
 		expect(screen.getAllByText('Zhicheng').length).toBeGreaterThan(0);
-		expect(screen.getByText('Account')).toBeInTheDocument();
+		expect(screen.getByLabelText('Signed in')).toBeInTheDocument();
+		expect(screen.queryByText('Account')).not.toBeInTheDocument();
 		expect(screen.queryByText(/editing as Guest/i)).not.toBeInTheDocument();
 	});
 

@@ -10,6 +10,7 @@ import {
 } from './repository.js';
 import {
 	createFreeTimeStore,
+	freeTimeAccountKind,
 	openFreeTimeStore,
 	publicBoardView,
 	publicMemberView
@@ -37,6 +38,7 @@ function queuedStore(queue) {
 		const chain = {
 			select: () => chain,
 			from: () => chain,
+			leftJoin: () => chain,
 			where: () => chain,
 			orderBy: () => chain,
 			limit: () => chain,
@@ -71,6 +73,7 @@ const MEMBER_ROW = {
 	displayName: 'Ada',
 	availability: { mon: { '08:00': true } },
 	shareToken: TOKEN,
+	userId: null,
 	createdAt: new Date('2026-01-01T00:00:00.000Z'),
 	updatedAt: new Date('2026-01-01T00:00:00.000Z')
 };
@@ -85,10 +88,28 @@ describe('public views', () => {
 			members: [MEMBER_ROW, null]
 		});
 		expect(board).toMatchObject({ slug: 'study-group', title: 'Study group', termId: TERM });
-		expect(board.members[0]).toMatchObject({ displayName: 'Ada', shareToken: TOKEN });
+		expect(board.members[0]).toMatchObject({
+			displayName: 'Ada',
+			shareToken: TOKEN,
+			userId: null,
+			accountKind: 'guest'
+		});
 		expect(board.members[0]).not.toHaveProperty('boardId');
 		expect(publicMemberView({ ...MEMBER_ROW, availability: 'nope' }).availability).toEqual({});
 		expect(publicMemberView({ ...MEMBER_ROW, shareToken: undefined }).shareToken).toBeNull();
+	});
+
+	it('classifies guest, signed-in, and executive accounts', () => {
+		expect(freeTimeAccountKind(null)).toBe('guest');
+		expect(freeTimeAccountKind('u1', { role: 'student', email: 'student@example.com' })).toBe(
+			'signed_in'
+		);
+		expect(freeTimeAccountKind('u1', { role: 'moderator', email: 'mod@example.com' })).toBe(
+			'executive'
+		);
+		expect(freeTimeAccountKind('u1', { role: 'student', email: 'team@marihacks.com' })).toBe(
+			'executive'
+		);
 	});
 });
 
@@ -101,7 +122,12 @@ describe('createFreeTimeStore', () => {
 	it('creates a board', async () => {
 		const store = queuedStore([[BOARD_ROW]]);
 		await expect(
-			store.createBoard({ slug: 'study-group', title: 'Study group', termId: TERM, ownerUserId: USER })
+			store.createBoard({
+				slug: 'study-group',
+				title: 'Study group',
+				termId: TERM,
+				ownerUserId: USER
+			})
 		).resolves.toMatchObject({ slug: 'study-group', title: 'Study group' });
 		await expect(
 			queuedStore([
@@ -145,9 +171,9 @@ describe('createFreeTimeStore', () => {
 		await expect(
 			store.createBoard({ slug: 'study-group', title: 'x', termId: '   ' })
 		).rejects.toBeInstanceOf(MariToolsValidationError);
-		await expect(
-			store.createBoard({ slug: 123, title: 'x', termId: TERM })
-		).rejects.toBeInstanceOf(MariToolsValidationError);
+		await expect(store.createBoard({ slug: 123, title: 'x', termId: TERM })).rejects.toBeInstanceOf(
+			MariToolsValidationError
+		);
 		await expect(store.getBoardBySlug(/** @type {any} */ (null))).resolves.toBeNull();
 	});
 
@@ -163,6 +189,18 @@ describe('createFreeTimeStore', () => {
 		await expect(store.getBoardBySlug('study-group')).resolves.toMatchObject({
 			slug: 'study-group',
 			members: [{ displayName: 'Ada', shareToken: TOKEN }]
+		});
+	});
+
+	it('loads account kinds in one batched identity lookup', async () => {
+		const signed = { ...MEMBER_ROW, userId: USER };
+		const store = queuedStore([
+			[BOARD_ROW],
+			[signed],
+			[{ userId: USER, email: 'team@marihacks.com', role: 'student' }]
+		]);
+		await expect(store.getBoardBySlug('study-group')).resolves.toMatchObject({
+			members: [{ userId: USER, accountKind: 'executive' }]
 		});
 	});
 
@@ -197,6 +235,30 @@ describe('createFreeTimeStore', () => {
 				availability: { mon: { '08:00': true } }
 			})
 		).resolves.toMatchObject({ displayName: 'Ada', shareToken: expect.any(String) });
+	});
+
+	it('prefers and updates an existing signed-in member by board user id', async () => {
+		const signed = { ...MEMBER_ROW, userId: USER };
+		const updated = { ...signed, displayName: 'Ada Account' };
+		const store = queuedStore([
+			[{ id: BOARD }],
+			[signed],
+			[updated],
+			[{ userId: USER, email: 'ada@example.com', role: 'student' }]
+		]);
+		await expect(
+			store.upsertMemberAvailability({
+				boardId: BOARD,
+				displayName: 'Ada Account',
+				availability: {},
+				shareToken: 'stale-token',
+				userId: USER
+			})
+		).resolves.toMatchObject({
+			displayName: 'Ada Account',
+			userId: USER,
+			accountKind: 'signed_in'
+		});
 	});
 
 	it('updates an existing member by share token', async () => {
@@ -287,10 +349,10 @@ describe('createFreeTimeStore', () => {
 	});
 
 	it('maps unexpected database errors to unavailable', async () => {
-		const store = queuedStore([
-			new Error('connection failed')
-		]);
-		await expect(store.getBoardBySlug('study-group')).rejects.toBeInstanceOf(MariToolsUnavailableError);
+		const store = queuedStore([new Error('connection failed')]);
+		await expect(store.getBoardBySlug('study-group')).rejects.toBeInstanceOf(
+			MariToolsUnavailableError
+		);
 		const nonArray = queuedStore([null]);
 		await expect(nonArray.getBoardBySlug('study-group')).resolves.toBeNull();
 	});

@@ -2,7 +2,11 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { ServerConfigurationError } from '$lib/server/config/environment.js';
-import { MariToolsNotFoundError, MariToolsUnavailableError, MariToolsValidationError } from '$lib/server/maritools/repository.js';
+import {
+	MariToolsNotFoundError,
+	MariToolsUnavailableError,
+	MariToolsValidationError
+} from '$lib/server/maritools/repository.js';
 import { prerender, _createHandlers } from './+page.server.js';
 
 const BOARD = {
@@ -57,9 +61,10 @@ function event({ params = { slug: 'study-group' }, locals = { maritools: null } 
  * @param {any} [params]
  * @returns {any}
  */
-function saveEvent(fields, params = { slug: 'study-group' }) {
+function saveEvent(fields, params = { slug: 'study-group' }, locals = { maritools: null }) {
 	return {
 		params,
+		locals,
 		request: {
 			formData: async () => {
 				const data = new FormData();
@@ -226,6 +231,23 @@ describe('free-time board page server', () => {
 		);
 	});
 
+	it('passes the session user id and preferred profile display name when signed in', async () => {
+		const current = handlers();
+		await current.actions.saveMember(
+			saveEvent(
+				{
+					displayName: 'Untrusted form name',
+					freeJson: '[]'
+				},
+				{ slug: 'study-group' },
+				{ maritools: { userId: 'user-1', email: 'ada@example.com' } }
+			)
+		);
+		expect(current.store.upsertMemberAvailability).toHaveBeenCalledWith(
+			expect.objectContaining({ userId: 'user-1', displayName: 'Zhicheng' })
+		);
+	});
+
 	it('merges the saved week into existing per-week availability', async () => {
 		const current = handlers({
 			store: {
@@ -318,9 +340,7 @@ describe('free-time board page server', () => {
 	it('returns not found when saving to a missing board', async () => {
 		const missing = handlers({ store: { getBoardBySlug: vi.fn(async () => null) } });
 		await expect(
-			missing.actions.saveMember(
-				saveEvent({ displayName: 'Ada', shareToken: '', freeJson: '[]' })
-			)
+			missing.actions.saveMember(saveEvent({ displayName: 'Ada', shareToken: '', freeJson: '[]' }))
 		).resolves.toMatchObject({ status: 404 });
 	});
 
@@ -334,9 +354,7 @@ describe('free-time board page server', () => {
 			}
 		});
 		await expect(
-			invalid.actions.saveMember(
-				saveEvent({ displayName: '   ', shareToken: '', freeJson: '[]' })
-			)
+			invalid.actions.saveMember(saveEvent({ displayName: '   ', shareToken: '', freeJson: '[]' }))
 		).resolves.toMatchObject({ status: 400 });
 	});
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	accountPageView,
 	isCompleteStudentId,
+	isExecutiveAccount,
 	isStaffAccount,
 	publicCommunityView,
 	semesterPageView
@@ -26,6 +27,14 @@ describe('community identity', () => {
 		expect(isStaffAccount('someone@gmail.com', 'staff')).toBe(true);
 		expect(isStaffAccount('someone@gmail.com', 'moderator')).toBe(true);
 		expect(isStaffAccount(null)).toBe(false);
+	});
+
+	it('recognizes executive roles and the staff mailbox', () => {
+		expect(isExecutiveAccount({ role: 'executive', email: 'legacy@example.com' })).toBe(true);
+		expect(isExecutiveAccount({ role: 'moderator', email: 'mod@example.com' })).toBe(true);
+		expect(isExecutiveAccount({ role: 'student', email: 'team@marihacks.com' })).toBe(true);
+		expect(isExecutiveAccount({ role: 'student', email: 'student@example.com' })).toBe(false);
+		expect(isExecutiveAccount(null)).toBe(false);
 	});
 
 	it('omits student ID from the public view', () => {

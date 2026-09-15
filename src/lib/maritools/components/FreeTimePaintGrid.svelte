@@ -119,7 +119,7 @@
 	<div class="paint-toolbar">
 		<div>
 			<strong>Drag to paint your free time</strong>
-			<span>Click or drag cells. Green bands show where everyone overlaps.</span>
+			<span>Click or drag cells. Green bands show where selected members overlap.</span>
 		</div>
 		<div class="paint-legend">
 			<span><i class="legend-you"></i>Your free time</span>
@@ -143,7 +143,10 @@
 		{#each slotTimes as time (time)}
 			<span class="paint-time">{paintSlotLabel(time)}</span>
 			{#each columns as column (column.weekday + time)}
-				{@const key = paintCellKey(/** @type {'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri'} */ (column.weekday), time)}
+				{@const key = paintCellKey(
+					/** @type {'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri'} */ (column.weekday),
+					time
+				)}
 				<button
 					type="button"
 					class="paint-cell"
