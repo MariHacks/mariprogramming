@@ -47,13 +47,8 @@
 	font: inherit;
 }
 
-.mt-preview input:not(
-		[type='checkbox'],
-		[type='radio'],
-		[type='range'],
-		[type='file'],
-		[type='hidden']
-	),
+.mt-preview
+	input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='hidden']),
 .mt-preview select {
 	min-height: var(--control-h);
 	height: var(--control-h);
@@ -123,8 +118,7 @@
 	padding: clamp(2rem, 6vh, 4rem) 2rem;
 	border-bottom: 1px solid var(--line);
 	background:
-		radial-gradient(ellipse 70% 55% at 50% 42%, rgb(126 166 255 / 10%), transparent 70%),
-		white;
+		radial-gradient(ellipse 70% 55% at 50% 42%, rgb(126 166 255 / 10%), transparent 70%), white;
 	gap: 1.25rem;
 	text-align: center;
 }
@@ -155,14 +149,68 @@
 	font-size: 0.75rem;
 }
 
-.mt-preview .paint-empty-hint {
-	margin: 0 0 0.85rem;
-	padding: 0.65rem 0.75rem;
-	border: 1px dashed var(--line-dark);
-	background: #f7f9fc;
-	color: #516278;
-	font-size: 0.6875rem;
-	line-height: 1.45;
+.mt-preview .paint-cell.heat {
+	background: color-mix(in srgb, var(--green) calc(var(--heat-ratio, 0) * 78%), white);
+	box-shadow: none;
+	cursor: default;
+}
+
+.mt-preview .paint-cell.heat:hover {
+	background: color-mix(in srgb, var(--green) calc(var(--heat-ratio, 0) * 88%), #eef6f2);
+}
+
+.mt-preview .paint-legend.heat-legend {
+	align-items: center;
+}
+
+.mt-preview .paint-legend .heat-scale {
+	display: inline-block;
+	width: 72px;
+	height: 10px;
+	border: 1px solid var(--line-dark);
+	background: linear-gradient(
+		to right,
+		white,
+		color-mix(in srgb, var(--green) 40%, white),
+		var(--green)
+	);
+}
+
+.mt-preview .paint-tooltip {
+	position: fixed;
+	z-index: 20;
+	min-width: 10rem;
+	max-width: 16rem;
+	padding: 0.6rem 0.7rem;
+	border: 1px solid var(--line-dark);
+	background: white;
+	box-shadow: 0 8px 24px rgb(11 29 52 / 12%);
+	color: var(--ink);
+	font-size: 10px;
+	line-height: 1.4;
+	transform: translateX(-50%);
+	pointer-events: none;
+}
+
+.mt-preview .paint-tooltip strong {
+	display: block;
+	margin-bottom: 0.2rem;
+	color: var(--steel);
+	font-size: 8px;
+	font-weight: 650;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.mt-preview .paint-tooltip ul {
+	margin: 0 0 0.55rem;
+	padding: 0;
+	list-style: none;
+}
+
+.mt-preview .paint-tooltip p {
+	margin: 0 0 0.55rem;
+	color: var(--steel);
 }
 
 .mt-preview .members-empty {

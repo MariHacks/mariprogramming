@@ -147,6 +147,19 @@ describe('free-time board page', () => {
 				}
 			}
 		});
+		expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Save availability' })).not.toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveClass('heat');
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute(
+			'data-free-count',
+			'1'
+		);
+		expect(screen.getByRole('button', { name: 'Tue 11:00' })).toHaveAttribute(
+			'data-free-count',
+			'1'
+		);
+		expect(screen.getByText(/editing as Guest, Ada/i)).toBeInTheDocument();
+		fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
 		expect(screen.getByPlaceholderText('How others will see you')).toHaveValue('Ada');
 		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute(
 			'aria-pressed',
@@ -156,7 +169,8 @@ describe('free-time board page', () => {
 			'aria-pressed',
 			'true'
 		);
-		expect(screen.getByText(/editing as Guest, Ada/i)).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Save availability' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Import Omnivox' })).toBeInTheDocument();
 	});
 
 	it('loads a different week when switching away from a painted week', () => {
@@ -191,19 +205,32 @@ describe('free-time board page', () => {
 			}
 		});
 		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute(
-			'aria-pressed',
-			'true'
+			'data-free-count',
+			'1'
+		);
+		expect(screen.getByRole('button', { name: 'Wed 14:00' })).toHaveAttribute(
+			'data-free-count',
+			'0'
 		);
 		const before = screen.getByRole('heading', { level: 1 }).textContent;
 		fireEvent.click(screen.getByRole('button', { name: 'Next week' }));
 		expect(screen.getByRole('heading', { level: 1 }).textContent).not.toBe(before);
 		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute(
-			'aria-pressed',
-			'false'
+			'data-free-count',
+			'0'
 		);
+		expect(screen.getByRole('button', { name: 'Wed 14:00' })).toHaveAttribute(
+			'data-free-count',
+			'1'
+		);
+		fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
 		expect(screen.getByRole('button', { name: 'Wed 14:00' })).toHaveAttribute(
 			'aria-pressed',
 			'true'
+		);
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute(
+			'aria-pressed',
+			'false'
 		);
 	});
 
@@ -236,13 +263,16 @@ describe('free-time board page', () => {
 			}
 		});
 		expect(screen.queryByPlaceholderText('How others will see you')).not.toBeInTheDocument();
-		expect(document.querySelector('input[name="displayName"][type="hidden"]')).not.toBeNull();
+		expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
 		expect(screen.getByText(/editing as Zhicheng \(signed in\)/i)).toBeInTheDocument();
 		expect(screen.getByText('MayaGuest')).toBeInTheDocument();
 		expect(screen.getAllByText('Zhicheng').length).toBeGreaterThan(0);
 		expect(screen.getByLabelText('Signed in')).toBeInTheDocument();
 		expect(screen.queryByText('Account')).not.toBeInTheDocument();
 		expect(screen.queryByText(/editing as Guest/i)).not.toBeInTheDocument();
+		fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+		expect(document.querySelector('input[name="displayName"][type="hidden"]')).not.toBeNull();
+		expect(screen.getByRole('button', { name: 'Save availability' })).toBeInTheDocument();
 	});
 
 	it('keeps the display name field for guests', () => {
@@ -346,7 +376,87 @@ describe('free-time board page', () => {
 			}
 		});
 		expect(screen.getByText('Availability saved.')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Save availability' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Import Omnivox' })).not.toBeInTheDocument();
+		fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
 		expect(screen.getAllByRole('button', { name: 'Save availability' })).toHaveLength(1);
+		expect(screen.getByRole('button', { name: 'Import Omnivox' })).toBeInTheDocument();
+	});
+
+	it('starts in edit mode when this visitor has never saved', () => {
+		render(BoardPage, {
+			props: {
+				data: {
+					board: BOARD,
+					shareUrl: 'https://example.com/tools/free-time/study-group',
+					signedInDisplayName: null
+				}
+			}
+		});
+		expect(screen.getByRole('button', { name: 'Save availability' })).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Import Omnivox' })).toBeInTheDocument();
+		expect(screen.getByText('Drag to paint your free time')).toBeInTheDocument();
+	});
+
+	it('recomputes the heat map when included members change in view mode', async () => {
+		const members = [
+			{
+				id: 'guest',
+				displayName: 'Guest Ada',
+				accountKind: /** @type {'guest'} */ ('guest'),
+				shareToken: 'tok-ada',
+				availability: {
+					version: 2,
+					byWeek: { [THIS_WEEK]: ['Mon-09:00', 'Tue-11:00'] }
+				}
+			},
+			{
+				id: 'account',
+				displayName: 'Signed Sam',
+				accountKind: /** @type {'signed_in'} */ ('signed_in'),
+				availability: { version: 2, byWeek: { [THIS_WEEK]: ['Mon-09:00'] } }
+			}
+		];
+		vi.stubGlobal('localStorage', {
+			getItem: vi.fn(() => 'tok-ada'),
+			setItem: vi.fn(),
+			removeItem: vi.fn()
+		});
+		render(BoardPage, {
+			props: {
+				data: {
+					board: { ...BOARD, members },
+					shareUrl: 'https://example.com/tools/free-time/study-group',
+					signedInDisplayName: null
+				}
+			}
+		});
+		expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute(
+			'data-free-count',
+			'2'
+		);
+		expect(screen.getByRole('button', { name: 'Tue 11:00' })).toHaveAttribute(
+			'data-free-count',
+			'1'
+		);
+		await fireEvent.click(
+			screen.getByRole('button', { name: 'Exclude Signed Sam from common free' })
+		);
+		expect(screen.getByRole('button', { name: 'Mon 09:00' })).toHaveAttribute(
+			'data-free-count',
+			'1'
+		);
+		expect(screen.getByRole('button', { name: 'Tue 11:00' })).toHaveAttribute(
+			'data-free-count',
+			'1'
+		);
+		fireEvent.pointerEnter(screen.getByRole('button', { name: 'Mon 09:00' }));
+		expect(screen.getByRole('tooltip')).toHaveTextContent('Available');
+		expect(screen.getByRole('tooltip')).toHaveTextContent('Guest Ada');
+		expect(screen.queryByRole('tooltip')?.textContent).not.toMatch(/Signed Sam/);
 	});
 
 	it('explains missing boards', () => {

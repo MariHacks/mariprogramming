@@ -5,10 +5,12 @@
 	import { MARITOOLS_NAME } from '$lib/maritools/brand.js';
 	import FreeTimePaintGrid from '$lib/maritools/components/FreeTimePaintGrid.svelte';
 	import {
+		cellAvailabilityByKey,
 		commonFreeCells,
 		filterPaintableCells,
 		freeCellsFromAvailability,
 		freeCellsFromCourses,
+		hasSavedBoardResponse,
 		paintDayColumnsForTermWeek,
 		restoreEditorState
 	} from '$lib/maritools/schedule/freeTimeBoard.js';
@@ -38,6 +40,12 @@
 	let includedMemberIds = new Set(data.board?.members?.map((member) => member.id) ?? []);
 	/** @type {Record<string, Set<string>>} */
 	let draftByWeek = {};
+	const initialBoard =
+		data?.board && typeof data.board === 'object' && 'members' in data.board ? data.board : null;
+	/** @type {'edit' | 'view'} */
+	let boardMode = hasSavedBoardResponse(initialBoard, '', data?.signedInDisplayName ?? null, form)
+		? 'view'
+		: 'edit';
 
 	$: board = data.board;
 	$: signedIn = Boolean(data.signedInDisplayName);
@@ -58,6 +66,7 @@
 		board && !('notFound' in data && data.notFound)
 			? filterPaintableCells(commonFreeCells(includedMembers, weekStartIso), dayColumns)
 			: new Set();
+	$: cellStats = cellAvailabilityByKey(includedMembers, weekStartIso);
 	$: heading = weekTitle(weekStartIso);
 	$: dayColumns = paintDayColumnsForTermWeek(
 		weekStartIso,
@@ -136,6 +145,9 @@
 			restored.freeCells,
 			paintDayColumnsForTermWeek(weekStartIso, board.termId)
 		);
+		if (hasSavedBoardResponse(board, restored.shareToken, data.signedInDisplayName ?? null, form)) {
+			boardMode = 'view';
+		}
 	}
 
 	onMount(() => {
@@ -241,7 +253,14 @@
 			</div>
 
 			<div class="free-stage">
-				<FreeTimePaintGrid bind:freeCells {commonCells} {dayHeaders} {dayColumns} />
+				<FreeTimePaintGrid
+					bind:freeCells
+					{commonCells}
+					{dayHeaders}
+					{dayColumns}
+					mode={boardMode}
+					{cellStats}
+				/>
 
 				<aside class="board-panel">
 					<div class="board-heading">
@@ -341,77 +360,89 @@
 						{/if}
 					</div>
 
-					<form
-						id="save-availability"
-						method="POST"
-						action="?/saveMember"
-						use:enhance={({ formData }) => {
-							const paintable = filterPaintableCells(freeCells, dayColumns);
-							freeCells = paintable;
-							formData.set('freeJson', JSON.stringify([...paintable]));
-							formData.set('shareToken', shareToken);
-							formData.set('displayName', displayName);
-							formData.set('weekStart', weekStartIso);
-							return async ({ result, update }) => {
-								if (result.type === 'failure') {
-									saveMessage = String(result.data?.saveError ?? 'Could not save.');
-									return;
-								}
-								const member =
-									result.type === 'success' && result.data && typeof result.data === 'object'
-										? /** @type {{ member?: { displayName?: string, shareToken?: string | null, availability?: unknown } }} */ (
-												result.data
-											).member
-										: undefined;
-								applySavedMember(member);
-								await update({ reset: false });
-								saveMessage = 'Availability saved.';
-							};
-						}}
-					>
-						{#if signedIn}
-							<input type="hidden" name="displayName" value={displayName} />
-						{:else}
-							<label class="guest-field">
-								<span>Display name</span>
-								<input
-									name="displayName"
-									bind:value={displayName}
-									placeholder="How others will see you"
-									required
-								/>
-								<small>Shown when you are not signed in.</small>
-							</label>
-						{/if}
-						<input type="hidden" name="shareToken" value={shareToken} />
-						<input type="hidden" name="weekStart" value={weekStartIso} />
-						<input
-							type="hidden"
-							name="freeJson"
-							value={JSON.stringify([...filterPaintableCells(freeCells, dayColumns)])}
-						/>
-						<button type="submit" class="primary-button wide">Save availability</button>
-					</form>
-
-					<button class="panel-button" type="button" on:click={handleImportOmnivox}>
-						Import Omnivox
-					</button>
-					{#if importOpen}
-						<label class="guest-field">
-							<span>Omnivox course list</span>
-							<textarea
-								bind:value={omnivoxPaste}
-								rows="8"
-								spellcheck="false"
-								aria-label="Omnivox course list"
-							></textarea>
-						</label>
-						<button class="panel-button" type="button" on:click={() => importOmnivox()}
-							>Read schedule</button
+					{#if boardMode === 'edit'}
+						<form
+							id="save-availability"
+							method="POST"
+							action="?/saveMember"
+							use:enhance={({ formData }) => {
+								const paintable = filterPaintableCells(freeCells, dayColumns);
+								freeCells = paintable;
+								formData.set('freeJson', JSON.stringify([...paintable]));
+								formData.set('shareToken', shareToken);
+								formData.set('displayName', displayName);
+								formData.set('weekStart', weekStartIso);
+								return async ({ result, update }) => {
+									if (result.type === 'failure') {
+										saveMessage = String(result.data?.saveError ?? 'Could not save.');
+										return;
+									}
+									const member =
+										result.type === 'success' && result.data && typeof result.data === 'object'
+											? /** @type {{ member?: { displayName?: string, shareToken?: string | null, availability?: unknown } }} */ (
+													result.data
+												).member
+											: undefined;
+									applySavedMember(member);
+									boardMode = 'view';
+									importOpen = false;
+									await update({ reset: false });
+									saveMessage = 'Availability saved.';
+								};
+							}}
 						>
-						{#if importError}
-							<p class="field-error" role="alert">{importError}</p>
+							{#if signedIn}
+								<input type="hidden" name="displayName" value={displayName} />
+							{:else}
+								<label class="guest-field">
+									<span>Display name</span>
+									<input
+										name="displayName"
+										bind:value={displayName}
+										placeholder="How others will see you"
+										required
+									/>
+									<small>Shown when you are not signed in.</small>
+								</label>
+							{/if}
+							<input type="hidden" name="shareToken" value={shareToken} />
+							<input type="hidden" name="weekStart" value={weekStartIso} />
+							<input
+								type="hidden"
+								name="freeJson"
+								value={JSON.stringify([...filterPaintableCells(freeCells, dayColumns)])}
+							/>
+							<button type="submit" class="primary-button wide">Save availability</button>
+						</form>
+
+						<button class="panel-button" type="button" on:click={handleImportOmnivox}>
+							Import Omnivox
+						</button>
+						{#if importOpen}
+							<label class="guest-field">
+								<span>Omnivox course list</span>
+								<textarea
+									bind:value={omnivoxPaste}
+									rows="8"
+									spellcheck="false"
+									aria-label="Omnivox course list"
+								></textarea>
+							</label>
+							<button class="panel-button" type="button" on:click={() => importOmnivox()}
+								>Read schedule</button
+							>
+							{#if importError}
+								<p class="field-error" role="alert">{importError}</p>
+							{/if}
 						{/if}
+					{:else}
+						<button
+							type="button"
+							class="primary-button wide"
+							on:click={() => {
+								boardMode = 'edit';
+							}}>Edit</button
+						>
 					{/if}
 
 					{#if saveMessage}
@@ -455,7 +486,6 @@
 	.member-toggle.excluded {
 		opacity: 0.46;
 	}
-
 
 	.member-kind {
 		display: grid;
