@@ -49,12 +49,22 @@ describe('free-time index page server', () => {
 		expect(prerender).toBe(false);
 	});
 
-	it('loads recent boards', async () => {
+	it('loads boards for the signed-in account only', async () => {
 		const current = handlers();
-		await expect(current.load({})).resolves.toMatchObject({
+		await expect(
+			current.load({ locals: { maritools: { userId: 'user-1' } } })
+		).resolves.toMatchObject({
 			boards: [{ slug: 'study-group' }]
 		});
-		expect(current.store.listBoards).toHaveBeenCalled();
+		expect(current.store.listBoards).toHaveBeenCalledWith(20, 'user-1');
+	});
+
+	it('loads an empty list for guests', async () => {
+		const current = handlers({
+			store: { listBoards: vi.fn(async () => []) }
+		});
+		await expect(current.load({ locals: {} })).resolves.toMatchObject({ boards: [] });
+		expect(current.store.listBoards).toHaveBeenCalledWith(20, null);
 	});
 
 	it('returns empty boards when unavailable', async () => {

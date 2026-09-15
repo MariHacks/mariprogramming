@@ -53,7 +53,7 @@ export function _createHandlers(dependencies = {}) {
 		try {
 			const { appOrigin } = readEnvironment();
 			const store = createStore();
-			const board = await store.getBoardBySlug(slug);
+			let board = await store.getBoardBySlug(slug);
 			if (!board) {
 				return { board: null, notFound: true, signedInDisplayName: null, savedSchedulePaste: '' };
 			}
@@ -73,6 +73,20 @@ export function _createHandlers(dependencies = {}) {
 						scheduleResult.status === 'fulfilled' ? String(scheduleResult.value ?? '') : '';
 				} catch {
 					profile = null;
+				}
+				const displayName = signedInDisplayNameFrom(session, profile) ?? 'Member';
+				try {
+					if (typeof store.ensureBoardMembership === 'function') {
+						await store.ensureBoardMembership({
+							boardId: board.id,
+							userId: session.userId,
+							displayName
+						});
+						const refreshed = await store.getBoardBySlug(slug);
+						if (refreshed) board = refreshed;
+					}
+				} catch {
+					/* join is best-effort; board still loads */
 				}
 			}
 			return {
