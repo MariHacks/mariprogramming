@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { clubContent } from '$lib/content/club';
 	import PythonEditor from '$lib/pbl/PythonEditor.svelte';
+	import { SCIENCE_PBL_ID, getPblById, getPblByPath } from '$lib/pbl/catalog.js';
 	import { collabUserFromProfile } from '$lib/pbl/yjs-collab.js';
 	import LessonRichText from '$lib/pbl/LessonRichText.svelte';
 	import {
@@ -41,7 +42,9 @@
 	const CONSOLE_MAX = 480;
 
 	$: code = $page.params.code;
-	$: sharePath = `/pbl/science/${code}`;
+	// The gamejam route reuses this studio, so the workshop comes from the URL.
+	$: pbl = getPblByPath($page.url.pathname) ?? getPblById(SCIENCE_PBL_ID);
+	$: sharePath = `${pbl.href}/${code}`;
 
 	/** @type {any} */
 	let state = null;
@@ -95,7 +98,7 @@
 
 		editorTheme = readStoredEditorTheme();
 
-		controller = createWorkshopController({ code });
+		controller = createWorkshopController({ code, pblId: pbl.id });
 		const stop = controller.subscribe((next) => {
 			state = next;
 		});
@@ -242,9 +245,9 @@
 <svelte:window on:keydown={onRosterKeydown} />
 
 <svelte:head>
-	<title>PBL 1 studio | {clubContent.name}</title>
+	<title>{pbl.series} studio | {clubContent.name}</title>
 	<meta name="robots" content="noindex, nofollow" />
-	<meta name="description" content="Team Python studio for Speedrun Programming in Science." />
+	<meta name="description" content="Team Python studio for {pbl.title}." />
 </svelte:head>
 
 {#if ready && state}
@@ -336,7 +339,7 @@
 			</div>
 			<div class="lesson-footer">
 				<header class="team-footer" aria-label="Team">
-					<p class="series-label">PBL 1</p>
+					<p class="series-label">{pbl.series}</p>
 					<div class="team-row">
 						<p class="team-name">{state.teamName || 'Team room'}</p>
 						<div class="team-chips">
@@ -439,7 +442,7 @@
 			{#if state.blocked === 'full'}
 				<p class="error" role="alert">{state.roomError || 'This team is full (10 people).'}</p>
 				<p class="body">10 people already. Create or join another team.</p>
-				<a class="button-primary" href={resolve('/pbl/science', {})}>Join another team</a>
+				<a class="button-primary" href={resolve(pbl.href, {})}>Join another team</a>
 			{:else}
 				{#if state.roomError}
 					<p class="error" role="alert">{state.roomError}</p>
@@ -540,7 +543,7 @@
 {:else}
 	{#if state?.roomError}
 		<p class="loading error" role="alert">{state.roomError}</p>
-		<p class="loading"><a class="quiet-link" href={resolve('/pbl/science', {})}>Back to join</a></p>
+		<p class="loading"><a class="quiet-link" href={resolve(pbl.href, {})}>Back to join</a></p>
 	{:else}
 		<p class="loading">Joining the team room…</p>
 	{/if}

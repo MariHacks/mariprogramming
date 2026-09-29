@@ -23,7 +23,10 @@
 		<div class="set">
 			<div class="set-head">
 				<p class="set-kicker">Problem set</p>
-				<p class="set-count">{PBL_CATALOG.length} workshop</p>
+				<p class="set-count">
+					{PBL_CATALOG.length}
+					{PBL_CATALOG.length === 1 ? 'workshop' : 'workshops'}
+				</p>
 			</div>
 			<table class="set-table">
 				<caption class="visually-hidden">Current workshops</caption>

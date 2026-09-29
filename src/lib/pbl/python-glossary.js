@@ -1,5 +1,5 @@
 /**
- * Beginner glossary for Science PBL lesson prose.
+ * Beginner glossary for PBL lesson prose (Science and Game Jam).
  * Keep examples generic (no checker spoilers).
  *
  * Chips are author-marked only: wrap a glossary alias in backticks in the
@@ -275,6 +275,42 @@ export const PYTHON_GLOSSARY = Object.freeze({
 		params: 'Expressions inside { } inside the f-string.',
 		returns: 'A regular str after the values are filled in.'
 	}),
+	'random.randint': Object.freeze({
+		name: 'random.randint',
+		summary: 'Picks a random whole number between two values, including both ends. Needs import random first.',
+		usefulFor: 'Dice rolls, surprise outcomes, and secret numbers in games.',
+		example: 'import random\nroll = random.randint(1, 6)\nprint(1 <= roll <= 6)',
+		exampleOutput: 'True',
+		params: 'A low and a high whole number, both allowed as results.',
+		returns: 'An int. It can be different every time the program runs.'
+	}),
+	exit: Object.freeze({
+		name: 'exit()',
+		summary: 'Stops the program right where it is. Nothing after it runs.',
+		usefulFor: 'Game over screens: print the ending, then stop.',
+		example: 'print("YOU DIED.")\nexit()\nprint("never shown")',
+		exampleOutput: 'YOU DIED.',
+		params: 'None needed.',
+		returns: 'Nothing. The program ends.'
+	}),
+	break: Object.freeze({
+		name: 'break',
+		summary: 'Leaves the nearest loop immediately and continues with the code after it.',
+		usefulFor: 'Ending a while loop early, such as when a guess is right.',
+		example: 'n = 0\nwhile n < 10:\n    n = n + 1\n    if n == 3:\n        break\nprint(n)',
+		exampleOutput: '3',
+		params: 'Written on its own line inside a loop.',
+		returns: 'Nothing. It just exits the loop.'
+	}),
+	'triple-quote': Object.freeze({
+		name: 'triple quotes',
+		summary: 'A string wrapped in three quotes on each side can span several lines and keeps its line breaks.',
+		usefulFor: 'Scene headers, menus, and long narration laid out like a script.',
+		example: 'print("""\nline one\nline two\n""")',
+		exampleOutput: '\nline one\nline two\n',
+		params: 'Text between opening and closing triple quotes.',
+		returns: 'A regular str that includes the new lines you typed.'
+	}),
 	open: Object.freeze({
 		name: 'open / files',
 		summary: 'Opens a file so you can read or write text. In this workshop the disk is virtual.',
@@ -316,6 +352,13 @@ export const GLOSSARY_ALIASES = Object.freeze([
 	Object.freeze({ match: 'list', key: 'list', caseSensitive: false }),
 	Object.freeze({ match: 'files', key: 'open', caseSensitive: false }),
 	Object.freeze({ match: 'file', key: 'open', caseSensitive: false }),
+	Object.freeze({ match: 'random.randint', key: 'random.randint', caseSensitive: true }),
+	Object.freeze({ match: 'triple quotes', key: 'triple-quote', caseSensitive: false }),
+	Object.freeze({ match: 'multi-line string', key: 'triple-quote', caseSensitive: false }),
+	Object.freeze({ match: 'exit()', key: 'exit', caseSensitive: true }),
+	Object.freeze({ match: 'exit', key: 'exit', caseSensitive: true }),
+	Object.freeze({ match: 'break', key: 'break', caseSensitive: true }),
+	Object.freeze({ match: 'int()', key: 'int', caseSensitive: true }),
 	Object.freeze({ match: 'float()', key: 'float', caseSensitive: true }),
 	Object.freeze({ match: 'input()', key: 'input', caseSensitive: true }),
 	Object.freeze({ match: 'len()', key: 'len', caseSensitive: true }),

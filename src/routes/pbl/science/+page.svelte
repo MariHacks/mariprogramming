@@ -4,13 +4,19 @@
 	import { page } from '$app/stores';
 	import SectionIntro from '$lib/components/site/SectionIntro.svelte';
 	import { clubContent } from '$lib/content/club';
-	import { SCIENCE_PBL_ID } from '$lib/pbl/catalog.js';
+	import { SCIENCE_PBL_ID, getPblById, getPblByPath } from '$lib/pbl/catalog.js';
 	import { normalizeRoomCode } from '$lib/pbl/room-code.js';
 	import { requestStudentAuthorization } from '$lib/auth/student-sign-in.js';
 
 	/** @type {{ signedIn?: boolean, email?: string | null }} */
 	export let data;
 
+	// The gamejam route reuses this page, so the workshop comes from the URL.
+	$: pbl = getPblByPath($page.url.pathname) ?? getPblById(SCIENCE_PBL_ID);
+	$: description =
+		pbl.id === SCIENCE_PBL_ID
+			? 'Little or no Python needed — build one scientific data analyzer that grows step by step.'
+			: pbl.summary;
 	$: signedIn = Boolean(data?.signedIn);
 	$: accountHref = resolve('/tools/account', {});
 
@@ -47,14 +53,14 @@
 			const response = await fetch('/api/pbl/rooms', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json', accept: 'application/json' },
-				body: JSON.stringify({ pblId: SCIENCE_PBL_ID, teamName })
+				body: JSON.stringify({ pblId: pbl.id, teamName })
 			});
 			const payload = await response.json().catch(() => ({}));
 			if (!response.ok) {
 				error = typeof payload.error === 'string' ? payload.error : 'Could not create the team.';
 				return;
 			}
-			await goto(resolve(`/pbl/science/${payload.code}`, {}));
+			await goto(resolve(`${pbl.href}/${payload.code}`, {}));
 		} catch {
 			error = 'Could not create the team.';
 		} finally {
@@ -84,7 +90,7 @@
 				error = typeof payload.error === 'string' ? payload.error : 'Could not join that team.';
 				return;
 			}
-			await goto(resolve(`/pbl/science/${payload.code}`, {}));
+			await goto(resolve(`${pbl.href}/${payload.code}`, {}));
 		} catch {
 			error = 'Could not join that team.';
 		} finally {
@@ -94,20 +100,20 @@
 </script>
 
 <svelte:head>
-	<title>PBL 1 | {clubContent.name}</title>
+	<title>{pbl.series} | {clubContent.name}</title>
 	<meta
 		name="description"
-		content="Little or no Python needed — build one scientific data analyzer that grows step by step."
+		content={description}
 	/>
 </svelte:head>
 
 <section class="join-page surface-paper editorial-page">
 	<div class="page-container join-frame editorial-frame">
 		<div class="problem">
-			<p class="series-label">PBL 1</p>
+			<p class="series-label">{pbl.series}</p>
 			<SectionIntro
-				title="Speedrun Programming in Science"
-				summary="Little or no Python needed — your team builds one scientific data analyzer that grows step by step from a first print to a short report."
+				title={pbl.title}
+				summary={pbl.summary}
 			/>
 		</div>
 

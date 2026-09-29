@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { getPblById } from '$lib/pbl/catalog.js';
-	import { SCIENCE_STEPS } from '$lib/pbl/science-workshop.js';
+	import { getWorkshop } from '$lib/pbl/workshops.js';
 
 	/** @type {{ room?: any, unavailable?: boolean }} */
 	export let data;
@@ -49,7 +49,7 @@
 
 	/** @param {number} stepId */
 	function stepTitle(stepId) {
-		const step = SCIENCE_STEPS.find((item) => item.id === stepId);
+		const step = getWorkshop(room?.pblId).steps.find((item) => item.id === stepId);
 		return step?.title ? `Step ${stepId + 1}: ${step.title}` : `Step ${stepId + 1}`;
 	}
 
