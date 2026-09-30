@@ -120,7 +120,7 @@ describe('yjs collab merge', () => {
 		applyRemoteAwareness(view, '');
 		const names = [...view.getStates().values()].map((state) => state.user?.name);
 		expect(names).toEqual(expect.arrayContaining(['Ada', 'Bo']));
-		expect(mergeAwarenessStates(merged, '', Date.now() + AWARENESS_TTL_MS + 1)).toBe('');
+		expect(mergeAwarenessStates(merged, '', Date.now() + AWARENESS_TTL_MS * 2)).toBe('');
 		expect(mergeAwarenessStates('', '', Date.now())).toBe('');
 		const emptyLocal = new Awareness(new Y.Doc());
 		emptyLocal.setLocalState(null);

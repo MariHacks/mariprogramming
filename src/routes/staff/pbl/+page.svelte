@@ -1,7 +1,7 @@
 <script>
 	import { resolve } from '$app/paths';
-	import { getPblById, SCIENCE_PBL_ID } from '$lib/pbl/catalog.js';
-	import { SCIENCE_STEP_COUNT } from '$lib/pbl/science-workshop.js';
+	import { getPblById } from '$lib/pbl/catalog.js';
+	import { getWorkshop } from '$lib/pbl/workshops.js';
 
 	/** @type {{ rooms?: any[], unavailable?: boolean }} */
 	export let data;
@@ -62,8 +62,8 @@
 	/** @param {any} room */
 	function unlockDisplay(room) {
 		const unlocked = (room.unlockedStep ?? 0) + 1;
-		if (room.pblId === SCIENCE_PBL_ID) {
-			return `${unlocked} / ${SCIENCE_STEP_COUNT}`;
+		if (getPblById(room.pblId)) {
+			return `${unlocked} / ${getWorkshop(room.pblId).stepCount}`;
 		}
 		return String(unlocked);
 	}

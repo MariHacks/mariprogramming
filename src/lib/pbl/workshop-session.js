@@ -1,11 +1,9 @@
 import { MAX_HINT_LEVEL } from './room-state.js';
 import { SCIENCE_STEP_COUNT } from './science-workshop.js';
 
-/** @param {number} stepId @param {number} unlockedStep */
-export function canOpenStep(stepId, unlockedStep) {
-	return (
-		Number.isInteger(stepId) && stepId >= 0 && stepId <= unlockedStep && stepId < SCIENCE_STEP_COUNT
-	);
+/** @param {number} stepId @param {number} unlockedStep @param {number} [stepCount] */
+export function canOpenStep(stepId, unlockedStep, stepCount = SCIENCE_STEP_COUNT) {
+	return Number.isInteger(stepId) && stepId >= 0 && stepId <= unlockedStep && stepId < stepCount;
 }
 
 /** @param {Record<string, number>} openedHints @param {number} stepId @param {number} level */
@@ -24,13 +22,19 @@ export function withOpenedHint(openedHints, stepId, level) {
  * @param {number} unlockedStep
  * @param {boolean} passed
  * @param {number} [completedStepId] step that was just checked (defaults to frontier)
+ * @param {number} [stepCount] steps in the workshop (defaults to Science)
  */
-export function nextUnlockedStep(unlockedStep, passed, completedStepId = unlockedStep) {
+export function nextUnlockedStep(
+	unlockedStep,
+	passed,
+	completedStepId = unlockedStep,
+	stepCount = SCIENCE_STEP_COUNT
+) {
 	if (!passed) return unlockedStep;
 	const frontier = Number(unlockedStep) || 0;
 	const completed = Number(completedStepId);
 	if (!Number.isInteger(completed) || completed !== frontier) return frontier;
-	return Math.min(SCIENCE_STEP_COUNT - 1, frontier + 1);
+	return Math.min(stepCount - 1, frontier + 1);
 }
 
 /** @param {string} iso @param {number} nowMs */
@@ -70,7 +74,8 @@ export function teamPace(step, lastCheck, stepEnteredAt, nowMs) {
  * @param {{
  *   blocked?: string,
  *   lastCheck?: { step?: number, passed?: boolean, message?: string } | null,
- *   currentStep?: number
+ *   currentStep?: number,
+ *   stepCount?: number
  * }} state
  */
 export function studioNextAction(state) {
@@ -83,7 +88,7 @@ export function studioNextAction(state) {
 	if (check.passed === false) {
 		return (check.message ?? '').trim();
 	}
-	if (check.passed && current < SCIENCE_STEP_COUNT - 1) {
+	if (check.passed && current < (state.stepCount ?? SCIENCE_STEP_COUNT) - 1) {
 		return 'Open the next step.';
 	}
 	return '';

@@ -14,7 +14,10 @@ function getPyodide(indexURL) {
 
 const RUNNER = `
 import ast
+import builtins
 import json
+import random
+import sys
 from pathlib import Path
 
 def apply_overrides(source, mapping):
@@ -43,7 +46,7 @@ def apply_overrides(source, mapping):
 
 def export_namespace(ns):
     out = {}
-    skip = {"apply_overrides", "export_namespace", "json", "Path", "ast"}
+    skip = {"apply_overrides", "export_namespace", "install_rolls", "json", "Path", "ast", "builtins", "random", "sys"}
     for key, value in ns.items():
         if key.startswith("_") or key in skip:
             continue
@@ -80,13 +83,41 @@ def list_text_files():
                 continue
     return files
 
+# Scripted dice: a trial may queue the values random.randint hands out, so a
+# game with dice is deterministic. Without a queue randint stays random.
+roll_state = {"count": 0}
+
+def install_rolls(values):
+    original = getattr(random, "_pbl_randint", random.randint)
+    random._pbl_randint = original
+    random.randint = original
+    queue = [int(value) for value in values or []]
+    if not queue:
+        return
+    def scripted(low, high):
+        roll_state["count"] += 1
+        if queue:
+            return max(low, min(high, queue.pop(0)))
+        return original(low, high)
+    random.randint = scripted
+
+# exit() must end the student program without closing stdin for later trials.
+builtins.exit = sys.exit
+builtins.quit = sys.exit
+
 ns = {}
 error = None
+exited = False
 try:
+    install_rolls(json.loads(ROLLS_JSON))
     compiled = apply_overrides(STUDENT_SOURCE, json.loads(OVERRIDES_JSON))
     exec(compiled, ns, ns)
+except SystemExit:
+    exited = True
 except Exception as exc:
     error = str(exc)
+finally:
+    install_rolls([])
 
 if PROBE == "functions" and error is None:
     try:
@@ -135,6 +166,8 @@ if PROBE == "functions" and error is None:
 
 RESULT = {
     "error": error,
+    "exited": exited,
+    "rollCount": roll_state["count"],
     "globals": export_namespace(ns),
     "files": list_text_files(),
 }
@@ -167,12 +200,15 @@ self.onmessage = async (event) => {
 				if (stdin.length === 0) return null;
 				inputCount += 1;
 				const line = stdin.shift();
+				// Opt-in terminal echo so a typed answer shows up in Output like a real console.
+				if (data.echo === true && line != null) stdoutOut.text += `${line}\n`;
 				return line == null ? null : `${line}\n`;
 			}
 		});
 		pyodide.globals.set('STUDENT_SOURCE', String(data.code ?? ''));
 		pyodide.globals.set('OVERRIDES_JSON', JSON.stringify(data.overrides ?? {}));
 		pyodide.globals.set('PROBE', data.probe ?? '');
+		pyodide.globals.set('ROLLS_JSON', JSON.stringify(Array.isArray(data.rolls) ? data.rolls : []));
 		await pyodide.runPythonAsync(RUNNER);
 		const resultProxy = pyodide.globals.get('RESULT');
 		const result = resultProxy.toJs({ dict_converter: Object.fromEntries });
@@ -186,7 +222,9 @@ self.onmessage = async (event) => {
 				error: result.error ?? null,
 				globals: result.globals ?? {},
 				files: result.files ?? {},
-				inputCount
+				inputCount,
+				exited: result.exited === true,
+				rollCount: typeof result.rollCount === 'number' ? result.rollCount : 0
 			}
 		});
 	} catch (caught) {

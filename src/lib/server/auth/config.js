@@ -99,6 +99,10 @@ function allowedSignInDestinations(canonicalOrigin) {
 		{
 			callbackURL: `${canonicalOrigin}/pbl/science`,
 			errorCallbackURL: `${canonicalOrigin}/tools/account?state=unavailable`
+		},
+		{
+			callbackURL: `${canonicalOrigin}/pbl/gamejam`,
+			errorCallbackURL: `${canonicalOrigin}/tools/account?state=unavailable`
 		}
 	];
 }

@@ -11,7 +11,9 @@ const WORKER_URL = '/pbl/python-worker.js';
  *   error: string | null,
  *   globals: Record<string, unknown>,
  *   files: Record<string, string>,
- *   inputCount: number
+ *   inputCount: number,
+ *   exited?: boolean,
+ *   rollCount?: number
  * }} PythonRunResult
  */
 
@@ -110,7 +112,7 @@ export function createPythonHost(options = {}) {
 
 	/**
 	 * @param {string} code
-	 * @param {{ stdin?: string[], overrides?: Record<string, number>, probe?: string }} [trial]
+	 * @param {{ stdin?: string[], overrides?: Record<string, number>, probe?: string, rolls?: number[], echo?: boolean }} [trial]
 	 * @returns {Promise<PythonRunResult>}
 	 */
 	async function run(code, trial = {}) {
@@ -140,6 +142,8 @@ export function createPythonHost(options = {}) {
 					stdin: trial.stdin ?? [],
 					overrides: trial.overrides ?? {},
 					probe: trial.probe ?? null,
+					...(trial.rolls ? { rolls: trial.rolls } : {}),
+					...(trial.echo === true ? { echo: true } : {}),
 					indexURL
 				});
 			});

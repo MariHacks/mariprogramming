@@ -4,8 +4,6 @@ import {
 	normalizeStepSources,
 	normalizeStepYjs
 } from './room-state.js';
-import { runScienceCheck } from './run-checks.js';
-import { SCIENCE_STARTER_SOURCE, SCIENCE_STEPS, getScienceStep } from './science-workshop.js';
 import { createRoomSync } from './sync-client.js';
 import {
 	canOpenStep,
@@ -14,18 +12,23 @@ import {
 	withOpenedHint
 } from './workshop-session.js';
 import { encodeSourceAsYjs } from './yjs-collab.js';
+import { getWorkshop } from './workshops.js';
 
 /**
  * @param {{
  *   code: string,
+ *   pblId?: string,
  *   createHost?: typeof createPythonHost,
  *   createSync?: typeof createRoomSync,
- *   runCheck?: typeof runScienceCheck,
+ *   runCheck?: import('./workshops.js').Workshop['runCheck'],
  *   now?: () => string,
  *   fetch?: typeof fetch
  * }} options
  */
 export function createWorkshopController(options) {
+	const workshop = getWorkshop(options.pblId);
+	const STARTER_SOURCE = workshop.starter;
+	const STEPS = workshop.steps;
 	const now = options.now ?? (() => new Date().toISOString());
 	const fetchImpl = options.fetch ?? fetch;
 	const host = (options.createHost ?? createPythonHost)();
@@ -51,7 +54,7 @@ export function createWorkshopController(options) {
 	let room = {
 		code: options.code,
 		teamName: '',
-		source: SCIENCE_STARTER_SOURCE,
+		source: STARTER_SOURCE,
 		unlockedStep: 0,
 		openedHints: {},
 		lastCheck: null,
@@ -62,7 +65,7 @@ export function createWorkshopController(options) {
 		joinable: true,
 		yjsState: '',
 		awarenessState: '',
-		stepSources: { '0': SCIENCE_STARTER_SOURCE },
+		stepSources: { '0': STARTER_SOURCE },
 		stepYjs: {},
 		editingStep: 0
 	};
@@ -83,8 +86,8 @@ export function createWorkshopController(options) {
 			viewStep,
 			editorEpoch,
 			currentStep: viewStep,
-			step: getScienceStep(viewStep) ?? SCIENCE_STEPS[0],
-			steps: SCIENCE_STEPS,
+			step: STEPS[viewStep] ?? STEPS[0],
+			steps: STEPS,
 			stdinText,
 			output,
 			files,
@@ -97,7 +100,8 @@ export function createWorkshopController(options) {
 			nextAction: studioNextAction({
 				blocked,
 				lastCheck: room.lastCheck,
-				currentStep: viewStep
+				currentStep: viewStep,
+				stepCount: STEPS.length
 			})
 		};
 	}
@@ -146,7 +150,7 @@ export function createWorkshopController(options) {
 			typeof storedSource === 'string'
 				? storedSource
 				: stepId === 0
-					? SCIENCE_STARTER_SOURCE
+					? STARTER_SOURCE
 					: '';
 		// Always re-encode from the text map on hop. Trusting a stale stepYjs slot is what
 		// made hop-backs show another step's buffer while stepSources stayed correct.
@@ -346,7 +350,7 @@ export function createWorkshopController(options) {
 			...room,
 			...joined,
 			stepSources: normalizeStepSources({
-				'0': SCIENCE_STARTER_SOURCE,
+				'0': STARTER_SOURCE,
 				...normalizeStepSources(joined.stepSources),
 				...(joined.source && !normalizeStepSources(joined.stepSources)['0']
 					? { '0': joined.source }
@@ -355,7 +359,7 @@ export function createWorkshopController(options) {
 			stepYjs: normalizeStepYjs(joined.stepYjs)
 		};
 		const unlocked = Number(joined.unlockedStep);
-		viewStep = Number.isInteger(unlocked) && unlocked >= 0 ? Math.min(unlocked, SCIENCE_STEPS.length - 1) : 0;
+		viewStep = Number.isInteger(unlocked) && unlocked >= 0 ? Math.min(unlocked, STEPS.length - 1) : 0;
 		// Start on the latest unlocked step with that step's saved code when present.
 		if (!room.stepSources['0'] && room.source) {
 			room.stepSources = { ...room.stepSources, '0': room.source };
@@ -445,7 +449,7 @@ export function createWorkshopController(options) {
 	/** @param {number} stepId */
 	function selectStep(stepId) {
 		if (blocked) return;
-		if (!canOpenStep(stepId, room.unlockedStep)) return;
+		if (!canOpenStep(stepId, room.unlockedStep, STEPS.length)) return;
 		if (stepId === viewStep) return;
 		// Gate setCollab before mutating viewStep so a late onCollab from the
 		// outbound editor cannot write the old buffer into the new step slot.
@@ -517,7 +521,10 @@ export function createWorkshopController(options) {
 			.split('\n')
 			.map((line) => line.replace(/\r$/u, '').replace(/\u00a0/gu, ' '))
 			.filter((line, index, lines) => line.length > 0 || index < lines.length - 1);
-		const result = await host.run(sourceSnapshot, { stdin });
+		const result = await host.run(
+			sourceSnapshot,
+			workshop.echoInput ? { stdin, echo: true } : { stdin }
+		);
 		const finishedRun = {
 			output: `${result.stdout ?? ''}${result.stderr ?? ''}`,
 			error: result.error ? String(result.error) : '',
@@ -529,7 +536,8 @@ export function createWorkshopController(options) {
 		applySharedLastRun(finishedRun);
 		sync.update({ lastRun: finishedRun });
 		publish();
-		if (!result.error) await checkCurrent(sourceSnapshot, stepSnapshot);
+		const ranOutOfInput = workshop.gradeWhenInputRunsOut && /EOF/iu.test(String(result.error ?? ''));
+		if (!result.error || ranOutOfInput) await checkCurrent(sourceSnapshot, stepSnapshot);
 		else runClearedAt = null;
 		await sync.flush();
 		return snapshot();
@@ -558,9 +566,9 @@ export function createWorkshopController(options) {
 	 * @param {number} [stepId]
 	 */
 	async function checkCurrent(source = room.source, stepId = viewStep) {
-		const result = await (options.runCheck ?? runScienceCheck)(host, stepId, source);
+		const result = await (options.runCheck ?? workshop.runCheck)(host, stepId, source);
 		const previousUnlocked = Number(room.unlockedStep) || 0;
-		const unlockedStep = nextUnlockedStep(previousUnlocked, result.passed, stepId);
+		const unlockedStep = nextUnlockedStep(previousUnlocked, result.passed, stepId, STEPS.length);
 		const lastCheck = {
 			step: stepId,
 			passed: result.passed,

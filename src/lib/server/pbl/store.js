@@ -12,7 +12,7 @@ import {
 	normalizeTeamName,
 	publicRoomView
 } from '$lib/pbl/room-state.js';
-import { SCIENCE_STARTER_SOURCE, SCIENCE_STEP_COUNT } from '$lib/pbl/science-workshop.js';
+import { getWorkshop } from '$lib/pbl/workshops.js';
 import {
 	encodeSourceAsYjs,
 	mergeAwarenessStates,
@@ -69,10 +69,13 @@ function oneRow(rows) {
 	return Array.isArray(rows) && rows[0] ? rows[0] : null;
 }
 
-const MAX_SCIENCE_UNLOCKED_STEP = SCIENCE_STEP_COUNT - 1;
+/** Highest step index of the workshop a room belongs to. @param {unknown} pblId */
+function maxUnlockedStep(pblId) {
+	return getWorkshop(pblId).stepCount - 1;
+}
 
 /**
- * Club owners who should get every Science workshop step unlocked.
+ * Club owners who should get every workshop step unlocked.
  * UI “Executive” maps to MariTools `moderator`; also staff, legacy executive, and staff emails.
  * @param {{ role?: string | null, email?: string | null } | null | undefined} actor
  */
@@ -413,11 +416,11 @@ export function createPblStore(repository, clock = {}) {
 	}
 
 	/**
-	 * Persist full Science unlock when the room driver is an executive owner.
+	 * Persist full workshop unlock when the room driver is an executive owner.
 	 * @param {any} row
 	 */
 	async function elevateExecutiveUnlock(row) {
-		if (!row || Number(row.unlockedStep) >= MAX_SCIENCE_UNLOCKED_STEP) return row;
+		if (!row || Number(row.unlockedStep) >= maxUnlockedStep(row.pblId)) return row;
 		const driverMemberId = row.driverMemberId;
 		if (typeof driverMemberId !== 'string' || driverMemberId.length === 0) return row;
 		const driver = await repository.findMember(row.id, driverMemberId);
@@ -426,7 +429,7 @@ export function createPblStore(repository, clock = {}) {
 		const actor = await resolveClubActor(driverUserId);
 		if (!isExecutiveOwner(actor)) return row;
 		const updated = await repository.updateRoom(row.code, row.version, {
-			unlockedStep: MAX_SCIENCE_UNLOCKED_STEP,
+			unlockedStep: maxUnlockedStep(row.pblId),
 			version: row.version + 1,
 			updatedAt: now()
 		});
@@ -455,13 +458,14 @@ export function createPblStore(repository, clock = {}) {
 				throw new PblInputError('Sign in with your club Google account to create a team.', 401);
 			}
 			const creator = await resolveClubActor(input.userId);
-			const unlockedStep = isExecutiveOwner(creator) ? MAX_SCIENCE_UNLOCKED_STEP : 0;
+			const workshop = getWorkshop(catalogEntry.id);
+			const unlockedStep = isExecutiveOwner(creator) ? workshop.stepCount - 1 : 0;
 			const enteredAt = now();
 			const row = await repository.insertRoom({
 				code: await uniqueCode(),
 				pblId: catalogEntry.id,
 				teamName,
-				source: SCIENCE_STARTER_SOURCE,
+				source: workshop.starter,
 				currentStep: 0,
 				unlockedStep,
 				lastCheck: null,
@@ -473,7 +477,7 @@ export function createPblStore(repository, clock = {}) {
 				driverMemberId: input.memberId,
 				yjsState: '',
 				awarenessState: '',
-				stepSources: { '0': SCIENCE_STARTER_SOURCE },
+				stepSources: { '0': workshop.starter },
 				stepYjs: {}
 			});
 			if (!row) throw new PblInputError('Could not create the team room.', 503);
@@ -645,7 +649,7 @@ export function createPblStore(repository, clock = {}) {
 
 			const editingStep = Number.isInteger(input.editingStep) ? input.editingStep : null;
 			if (editingStep !== null) {
-				if (editingStep < 0 || editingStep >= SCIENCE_STEP_COUNT) {
+				if (editingStep < 0 || editingStep > maxUnlockedStep(row.pblId)) {
 					throw new PblInputError('Invalid step.');
 				}
 				const unlockedGate = Number(input.unlockedStep ?? row.unlockedStep);
@@ -718,7 +722,7 @@ export function createPblStore(repository, clock = {}) {
 				if (!Number.isInteger(input.unlockedStep) || input.unlockedStep < row.unlockedStep) {
 					throw new PblInputError('Invalid step.');
 				}
-				patch.unlockedStep = Math.min(SCIENCE_STEP_COUNT - 1, input.unlockedStep);
+				patch.unlockedStep = Math.min(maxUnlockedStep(row.pblId), input.unlockedStep);
 			}
 
 			patch.stepSources = stepSources;
@@ -753,7 +757,7 @@ export function createPblStore(repository, clock = {}) {
 			if (!row) throw new PblNotFoundError();
 			const member = await repository.findMember(row.id, input.memberId);
 			if (!member) throw new PblInputError('Join this team before editing.', 403);
-			if (!Number.isInteger(input.step) || input.step < 0 || input.step >= SCIENCE_STEP_COUNT) {
+			if (!Number.isInteger(input.step) || input.step < 0 || input.step > maxUnlockedStep(row.pblId)) {
 				throw new PblInputError('Invalid step.');
 			}
 			if (typeof input.source !== 'string' || input.source.length > MAX_SOURCE_CHARS) {
