@@ -172,9 +172,82 @@ function crashMessage(trial, fallback) {
 	if (!crashed(trial)) return null;
 	const error = String(trial.error);
 	if (ranOutOfInput(trial)) {
-		return 'The game asked for more input() answers than the Program input holds. Keep the ENTER pauses exactly as the step lists them.';
+		return 'The game asked for more input() answers than the Program input holds. Keep the ENTER pauses exactly as the step lists them. A blank line in Program input is one ENTER. An extra input() with no line left looks like a crash.';
+	}
+	if (/name 'random' is not defined/iu.test(error)) {
+		return `${fallback} import random is missing. Add import random at the top of the file, before any scene. Python said: ${error}`;
+	}
+	if (/name 'attempts' is not defined/iu.test(error)) {
+		return `${fallback} attempts is used before it exists. Put attempts = 3 at the very top of the file, above every scene. Python said: ${error}`;
+	}
+	if (/NameError|is not defined/iu.test(error)) {
+		return `${fallback} A name in the program is not defined yet. Check the spelling. excuse, choice, attempts, activity, roll, answer, and guess have to be those exact words. Python said: ${error}`;
+	}
+	if (/SyntaxError|invalid syntax|unexpected indent|expected an indented/iu.test(error)) {
+		return `${fallback} The program has a syntax error. Check quotes, the colon at the end of if and while, and indentation inside the branch. Python said: ${error}`;
+	}
+	if (/not supported between instances of 'str' and 'int'/iu.test(error)) {
+		return `${fallback} A comparison is mixing text from input() with a number. Wrap the answer in int(), as in guess = int(input("Your answer: ")). Python said: ${error}`;
 	}
 	return `${fallback} Python said: ${error}`;
+}
+
+/**
+ * Why a required ----- time | place ----- line is absent.
+ * Call only after hasHeader is false.
+ * @param {string} stdout
+ * @param {string} time
+ * @param {string} place
+ * @param {boolean} [keep]
+ */
+function headerIssue(stdout, time, place, keep = false) {
+	const lines = String(stdout).split('\n');
+	const lead = keep ? 'Keep the header' : 'Print the header';
+	const example = `----- ${time} | ${place} -----`;
+	const dashed = lines.filter((line) => /^\s*-{3,}/u.test(line));
+	if (dashed.some((line) => has(line, time) && !has(line, place))) {
+		return `${lead}: the ${time} line is missing the place ${place}. Use ${example}.`;
+	}
+	if (dashed.some((line) => has(line, place) && !has(line, time))) {
+		return `${lead}: the place ${place} is there, but the time must be ${time}. Use ${example}.`;
+	}
+	if (lines.some((line) => has(line, time) && has(line, place))) {
+		return `${lead}: ${time} and ${place} must be on a header line that starts and ends with dashes and has a | bar. Use ${example}.`;
+	}
+	if (lines.some((line) => has(line, time))) {
+		return `${lead}: a line mentions ${time}, but the header also needs dashes, a | bar, and ${place}. Use ${example}.`;
+	}
+	const sample = lines.map((line) => line.trim()).find(Boolean);
+	if (sample) {
+		return `${lead}: dashes, ${time}, a | bar, then ${place}. Use ${example}. The program printed "${sample.slice(0, 80)}" instead.`;
+	}
+	return `${lead}: dashes, ${time}, a | bar, then ${place}. Use ${example}.`;
+}
+
+/**
+ * @param {string} stdout
+ * @param {string} time
+ * @param {string} place
+ * @returns {string | null}
+ */
+function missingScene(stdout, time, place) {
+	if (hasHeader(stdout, time, place)) return null;
+	return `The ${time} | ${place} scene is missing. Keep that header in the program. Add the new scene after it. Do not start a new file.`;
+}
+
+/**
+ * @param {string} stdout
+ * @param {number} needed
+ * @returns {string | null}
+ */
+function continuePauseMessage(stdout, needed) {
+	const have = countOf(stdout, 'press enter to continue');
+	if (have >= needed) return null;
+	const phrase = 'Press ENTER to continue...';
+	if (have === 0) {
+		return `Add a pause whose prompt is ${phrase} at the end of this scene. The program has none. Earlier scenes use that same pause, so a different sentence does not count.`;
+	}
+	return `This step needs ${needed} pauses that say ${phrase}. The program has ${have}. The email scene uses one, the 10:15 AM scene uses one, and the dice scene uses one. Add the missing pause at the end of the new scene, and keep the earlier ones.`;
 }
 
 /** @param {PythonRunResult | undefined} trial */
@@ -211,12 +284,12 @@ function gradeStep0(trials, context) {
 		return fail('Still printing "Game loaded". Replace it with the scene header, then Run again.');
 	}
 	if (!hasHeader(output, '8:00 AM', 'GETTING TO SCHOOL')) {
-		return fail(
-			'Print the header: dashes, 8:00 AM, a | bar, then GETTING TO SCHOOL, closed by dashes.'
-		);
+		return fail(headerIssue(output, '8:00 AM', 'GETTING TO SCHOOL'));
 	}
 	if (output.split('\n').filter((line) => line.trim()).length !== 1) {
-		return fail('Print exactly one line: the scene header.');
+		return fail(
+			'Print exactly one line: the scene header. Anything besides ----- 8:00 AM | GETTING TO SCHOOL ----- has to go. This step is only that header.'
+		);
 	}
 	return pass('The first scene header prints and the starter text is gone.');
 }
@@ -244,7 +317,15 @@ function gradeStep1(trials, context) {
 		(line) => /^\s*-{3,}/u.test(line) && has(line, '8:00 AM') && has(line, 'GETTING TO SCHOOL')
 	);
 	if (headerAt === -1) {
-		return fail('Keep the header: dashes, 8:00 AM, a | bar, then GETTING TO SCHOOL.');
+		return fail(headerIssue(output, '8:00 AM', 'GETTING TO SCHOOL', true));
+	}
+	const headerLines = lines.filter(
+		(line) => has(line, '8:00 AM') && has(line, 'GETTING TO SCHOOL') && /-{3,}/u.test(line)
+	);
+	if ((headerAt === 0 || lines[headerAt - 1].trim() !== '') && headerLines.length > 1) {
+		return fail(
+			'The one-line print from the previous step is still first, so that header has no blank line above it. Delete the old print and keep the triple-quoted block.'
+		);
 	}
 	if (headerAt === 0 || lines[headerAt - 1].trim() !== '') {
 		return fail(
@@ -283,7 +364,12 @@ function gradeStep2(trials) {
 		}
 	}
 	if (globalsOf(trials[0]).excuse !== EXCUSE_A) {
-		return fail('Name the variable excuse so later steps can use it.');
+		const foundName = Object.entries(globalsOf(trials[0])).find(
+			([, value]) => value === EXCUSE_A
+		)[0];
+		return fail(
+			`Name the variable excuse so later steps can use it. It is stored in ${foundName} instead. Python names are case-sensitive, so Excuse does not count.`
+		);
 	}
 	return pass('The typed excuse is stored in excuse.');
 }
@@ -341,16 +427,17 @@ function gradeStep4(trials) {
 	const outcomes = [];
 	for (const trial of trials) {
 		const output = stdoutOf(trial);
+		const morning = missingScene(output, '8:00 AM', 'GETTING TO SCHOOL');
+		if (morning) return fail(morning);
 		if (!hasHeader(output, '10:15 AM', 'NEXT CLASS')) {
-			return fail('Print the scene header: dashes, 10:15 AM, a | bar, then NEXT CLASS.');
+			return fail(headerIssue(output, '10:15 AM', 'NEXT CLASS'));
 		}
 		for (const option of ['1. Lock in', '2. Play Wordle', '3. Take a quick nap']) {
 			if (!has(output, option)) return fail(`The menu is missing the option "${option}".`);
 		}
 		if (!has(output, 'choose:')) return fail('End the menu with the prompt Choose: .');
-		if (countOf(output, 'press enter to continue') < 2) {
-			return fail('End the scene with a Press ENTER to continue... pause.');
-		}
+		const pause = continuePauseMessage(output, 2);
+		if (pause) return fail(pause);
 		outcomes.push(storyAfter(output, 'choose:'));
 	}
 	if (outcomes.some((text) => !text)) {
@@ -371,7 +458,9 @@ function gradeStep5(trials) {
 	if (crash) return fail(crash);
 	const [lockIn, wordle, nap] = trials;
 	if (asNumber(globalsOf(wordle).attempts) === null) {
-		return fail('Create a variable named attempts equal to 3 at the very top of the file.');
+		return fail(
+			'Create a variable named attempts equal to 3 at the very top of the file. Setting it only inside the Lock in branch leaves Wordle and the nap without it. Other names, such as score or lives, do not count.'
+		);
 	}
 	if (asNumber(globalsOf(wordle).attempts) !== 3 || asNumber(globalsOf(nap).attempts) !== 3) {
 		return fail('attempts should stay at 3 unless the player locks in.');
@@ -397,7 +486,9 @@ function gradeStep6(trials) {
 	if (crash) return fail(crash);
 	const [lockIn, wordle, nap] = trials;
 	if (!nap.exited) {
-		return fail('Choosing 3 (nap) should end the program with exit() right after YOU DIED.');
+		return fail(
+			'Choosing 3 (nap) should end the program with exit() right after YOU DIED. exit() at the bottom of the file also stops Lock in and Wordle, so it belongs inside the nap branch only.'
+		);
 	}
 	if (!has(stdoutOf(nap), 'you died.')) {
 		return fail('Print YOU DIED. in the nap branch before you call exit().');
@@ -409,8 +500,11 @@ function gradeStep6(trials) {
 		if (survivor.exited || has(stdoutOf(survivor), 'you died')) {
 			return fail('Only the nap should end the game. Choices 1 and 2 must keep going.');
 		}
-		if (countOf(stdoutOf(survivor), 'press enter to continue') < 2) {
-			return fail('Choices 1 and 2 should still reach the Press ENTER to continue... pause.');
+		const pause = continuePauseMessage(stdoutOf(survivor), 2);
+		if (pause) {
+			return fail(
+				`Choices 1 and 2 should still reach the Press ENTER to continue... pause. ${pause}`
+			);
 		}
 	}
 	return pass('The nap ends the game. The other choices carry on.');
@@ -429,8 +523,12 @@ function gradeStep7(trials) {
 	];
 	for (const { trial, activity, roll } of scenarios) {
 		const output = stdoutOf(trial);
+		const morning = missingScene(output, '8:00 AM', 'GETTING TO SCHOOL');
+		if (morning) return fail(morning);
+		const nextClass = missingScene(output, '10:15 AM', 'NEXT CLASS');
+		if (nextClass) return fail(nextClass);
 		if (!hasHeader(output, '12:45 PM', 'AP')) {
-			return fail('Print the scene header: dashes, 12:45 PM, a | bar, then AP.');
+			return fail(headerIssue(output, '12:45 PM', 'AP'));
 		}
 		if (!has(output, 'library') || !has(output, 'food')) {
 			return fail('The menu should offer the library and food with friends as options 1 and 2.');
@@ -474,6 +572,14 @@ function gradeStep8(trials) {
 		const output = stdoutOf(trial);
 		const marker = `you rolled a ${roll}.`;
 		const where = `${activity}, roll ${roll}`;
+		for (const [time, place] of [
+			['8:00 AM', 'GETTING TO SCHOOL'],
+			['10:15 AM', 'NEXT CLASS'],
+			['12:45 PM', 'AP']
+		]) {
+			const gone = missingScene(output, time, place);
+			if (gone) return fail(gone);
+		}
 		if (!has(output, marker))
 			return fail(`The roll line is missing (${where}). Keep printing You rolled a ${roll}.`);
 		const story = storyAfter(output, marker);
@@ -501,9 +607,8 @@ function gradeStep8(trials) {
 				`Rolls 4 to 6 print BONUS: +1 chance for later. and add 1 to attempts (${where}).`
 			);
 		}
-		if (countOf(output, 'press enter to continue') < 3) {
-			return fail(`End the scene with a Press ENTER to continue... pause (${where}).`);
-		}
+		const pause = continuePauseMessage(output, 3);
+		if (pause) return fail(`${pause} (${where}).`);
 		stories[`${activity}${roll}`] = story;
 	}
 	for (const roll of [1, 3, 5]) {
@@ -515,14 +620,23 @@ function gradeStep8(trials) {
 }
 
 /** @param {PythonRunResult[]} trials */
-function gradeStep9(trials) {
+/** @param {PythonRunResult[]} trials @param {{ source?: string }} [context] */
+function gradeStep9(trials, context = {}) {
 	const [win, lose] = trials;
+	const source = String(context.source ?? '');
 	// Running out of scripted guesses means the loop did not stop when it should have.
 	if (ranOutOfInput(win) && has(stdoutOf(win), 'correct!')) {
 		return fail('After Correct! use break so the loop stops as soon as the guess is right.');
 	}
+	if (ranOutOfInput(lose) && /while\s+True\b/u.test(source)) {
+		return fail(
+			'The loop is while True, so it never stops on its own. Use while attempts > 0, and lower attempts by 1 on each miss.'
+		);
+	}
 	if (ranOutOfInput(lose)) {
-		return fail('Every wrong guess must lower attempts by 1, or the loop never ends.');
+		return fail(
+			'Every wrong guess must lower attempts by 1, or the loop never ends. Use while attempts > 0, then attempts = attempts - 1 inside the miss branch.'
+		);
 	}
 	const crash = firstCrash(
 		trials,
@@ -530,8 +644,16 @@ function gradeStep9(trials) {
 	);
 	if (crash) return fail(crash);
 	const output = stdoutOf(win);
+	for (const [time, place] of [
+		['8:00 AM', 'GETTING TO SCHOOL'],
+		['10:15 AM', 'NEXT CLASS'],
+		['12:45 PM', 'AP']
+	]) {
+		const gone = missingScene(output, time, place);
+		if (gone) return fail(gone);
+	}
 	if (!hasHeader(output, '4:15 PM', 'LAST PERIOD')) {
-		return fail('Print the scene header: dashes, 4:15 PM, a | bar, then LAST PERIOD.');
+		return fail(headerIssue(output, '4:15 PM', 'LAST PERIOD'));
 	}
 	if (!has(output, 'press enter to try your best')) {
 		return fail('Add the pause Press ENTER to try your best... before the quiz.');
@@ -595,15 +717,29 @@ function gradeStep10(trials) {
 		}
 	}
 	const won = after(stdoutOf(win), 'end of the day');
-	if (!has(won, 'you passed the quiz') || has(won, 'you failed') || !has(won, 'see you tomorrow')) {
-		return fail('A right guess should print the passed-the-quiz ending and See you tomorrow.');
+	if (has(won, 'you failed')) {
+		return fail(
+			'A right guess should print the passed-the-quiz ending and See you tomorrow. This ending also says you failed. Save the failed ending for the else branch.'
+		);
+	}
+	if (!has(won, 'you passed the quiz') || !has(won, 'see you tomorrow')) {
+		return fail(
+			'A right guess should print the passed-the-quiz ending and See you tomorrow. The line is YOU SURVIVED THE DAY. You passed the quiz. See you tomorrow.'
+		);
 	}
 	const lost = after(stdoutOf(lose), 'end of the day');
 	if (!has(lost, `the answer was ${ANSWER}`)) {
 		return fail('A wrong last guess should print The answer was and the answer.');
 	}
-	if (!has(lost, 'you failed the quiz') || has(lost, 'you passed')) {
-		return fail('A wrong last guess should print the failed-the-quiz ending.');
+	if (has(lost, 'you passed')) {
+		return fail(
+			'A wrong last guess should print the failed-the-quiz ending. This branch also says you passed. Use YOU SURVIVED THE DAY. You failed the quiz. Don\'t check Omnivox tonight... only in the else.'
+		);
+	}
+	if (!has(lost, 'you failed the quiz')) {
+		return fail(
+			'A wrong last guess should print the failed-the-quiz ending: YOU SURVIVED THE DAY. You failed the quiz. Don\'t check Omnivox tonight...'
+		);
 	}
 	return pass('Both endings print from the state the loop left behind.');
 }

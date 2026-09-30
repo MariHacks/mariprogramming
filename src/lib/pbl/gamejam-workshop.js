@@ -50,12 +50,20 @@ A \`triple quotes\` string keeps every line break exactly where you typed it, so
 			'The narration mentions 8:07 AM, the 8:15 AM class and emailing your prof'
 		]),
 		notes: Object.freeze([
-			'A line that starts with # is a comment. Python ignores it, so use one to label each scene, for example #1 : WAKING UP LATE'
+			'A line that starts with # is a comment. Python ignores it, so use one to label each scene, for example #1 : WAKING UP LATE',
+			'Partial code replaces the one-line print from the previous step. Delete that print. Do not keep both.'
 		]),
 		hints: Object.freeze([
 			'Wrap the header and the narration in triple quotes so the line breaks stay where you typed them.',
 			'print("""\nfirst line\nsecond line\n""")',
-			'print("""\n----- 8:00 AM | GETTING TO SCHOOL -----\n""")\n\nprint("""Oops, it\'s 8:07 AM. You wake up and realize you have an 8:15 AM class... You\'re NOT making it.\n...""")'
+			`#1 : WAKING UP LATE
+
+print("""
+----- 8:00 AM | GETTING TO SCHOOL -----
+""")
+
+print("""Oops, it's 8:07 AM. You wake up and realize you have an 8:15 AM class... You're NOT making it.
+Time to email your prof.""")`
 		])
 	}),
 	Object.freeze({
@@ -95,14 +103,19 @@ An \`f-string\` fills live values into your text, so the email changes with what
 		hints: Object.freeze([
 			'Put an f before the opening quote and drop the excuse variable inside curly braces.',
 			'print(f"... because {excuse}.")\ninput("\\nPress ENTER to send...")',
-			'print(f"\\nHi Professor, I can\'t make it to class today because {excuse}.")\n\ninput("\\nPress ENTER to send...")\nprint("Sent.")\n\ninput(...)'
+			`print(f"\\nHi Professor, I can't make it to class today because {excuse}.")
+
+input("\\nPress ENTER to send...")
+print("Sent.")
+
+input("\\nPress ENTER to continue...")`
 		])
 	}),
 	Object.freeze({
 		id: 4,
 		title: 'Make a choice',
 		minutes: 8,
-		body: `You made it to school! Halfway through class, your brain starts buffering. Add the 10:15 AM scene: a header, a line about losing focus, then a menu of three options (Lock in, Play Wordle, Take a quick nap). Read the choice with \`input()\` and give each option its own outcome using \`if\`, \`elif\` and \`else\`. Finish with a Press ENTER to continue... pause.
+		body: `You made it to school! Halfway through class, your brain starts buffering. Add this header, ----- 10:15 AM | NEXT CLASS -----, then a line about losing focus. The menu lines are 1. Lock in, 2. Play Wordle, and 3. Take a quick nap, then Choose:. Read the choice with \`input()\` and give each option its own outcome using \`if\`, \`elif\` and \`else\`. Finish with a Press ENTER to continue... pause.
 
 Only one branch runs each time, which is what makes a choice feel real. \`input()\` gives back text, so compare the answer with "1" in quotes using \`==\`.`,
 		outputNotes: Object.freeze([
@@ -117,7 +130,31 @@ Only one branch runs each time, which is what makes a choice feel real. \`input(
 		hints: Object.freeze([
 			'Read the choice once, then let a chain of conditions pick exactly one outcome to print.',
 			'`if` choice == "1":\n    ...\n`elif` choice == "2":\n    ...\n`else`:\n    ...',
-			'choice = input("""\nWhat do you do?\n\n1. Lock in\n2. Play Wordle\n3. Take a quick nap\n\nChoose: """)\n\nif choice == "1":\n    print("\\nYou actually listen and learn something.")\nelif choice == "2":\n    ...\nelse:\n    ...'
+			`#2: NEXT CLASS
+
+print("""
+----- 10:15 AM | NEXT CLASS -----
+""")
+
+print("You eventually make it to school. Halfway through class, you start losing focus.")
+
+choice = input("""
+What do you do?
+
+1. Lock in
+2. Play Wordle
+3. Take a quick nap
+
+Choose: """)
+
+if choice == "1":
+    print("\\nYou actually listen and learn something.")
+elif choice == "2":
+    print("\\nYou open Wordle with your brightness at minimum. You understand 5% of the lecture.")
+else:
+    print("\\nYou close your eyes for 5 minutes. You wake up and everyone is gone. A ceiling tile falls on your head.")
+
+input("\\nPress ENTER to continue...")`
 		])
 	}),
 	Object.freeze({
@@ -132,11 +169,19 @@ A \`variable\` can be updated from its own old value, as in attempts = attempts 
 			'Choices 2 and 3 print no BONUS line',
 			'attempts goes up by 1 only when the player locks in'
 		]),
-		notes: Object.freeze(['Same Program input as before. Try each choice and watch the output.']),
+		notes: Object.freeze([
+			'Same Program input as before. Try each choice and watch the output.',
+			'Partial code starts with attempts = 3. Put that line at the top of the file, above every scene. Then replace your Lock in branch with the if choice == "1" block.'
+		]),
 		hints: Object.freeze([
 			'Update a variable by assigning it to itself plus one, inside the branch that earns the bonus.',
 			'attempts = attempts + 1',
-			'attempts = 3\n\n...\n\nif choice == "1":\n    print("\\nYou actually listen and learn something.")\n    print("BONUS: +1 chance for later.")\n    attempts = ...'
+			`attempts = 3
+
+if choice == "1":
+    print("\\nYou actually listen and learn something.")
+    print("BONUS: +1 chance for later.")
+    attempts = attempts + 1`
 		])
 	}),
 	Object.freeze({
@@ -151,18 +196,24 @@ A \`variable\` can be updated from its own old value, as in attempts = attempts 
 			'No Press ENTER prompt after YOU DIED.',
 			'Choices 1 and 2 still continue as before'
 		]),
-		notes: Object.freeze(['Program input to test the nap: your excuse, two blank lines, then 3.']),
+		notes: Object.freeze([
+			'Program input to test the nap: your excuse, two blank lines, then 3.',
+			'Partial code replaces your else branch. Leave the Press ENTER to continue... line after the whole if, elif, else.'
+		]),
 		hints: Object.freeze([
 			'Print the death message at the end of the nap branch, then stop the whole program right there.',
-			'print("YOU DIED.")\n`exit`()',
-			'else:\n    print("\\nYou close your eyes for 5 minutes. You wake up and everyone is gone. A ceiling tile falls on your head.")\n    print("YOU DIED.")\n    ...'
+			'print("YOU DIED.")\nexit()',
+			`else:
+    print("\\nYou close your eyes for 5 minutes. You wake up and everyone is gone. A ceiling tile falls on your head.")
+    print("YOU DIED.")
+    exit()`
 		])
 	}),
 	Object.freeze({
 		id: 7,
 		title: 'Roll the dice',
 		minutes: 8,
-		body: `Lunchtime! You have 1 hour of AP and your fate is in the hands of a die. Add \`import\` random at the very top, then the 12:45 PM AP scene: a header, a line about your 1 hour of AP, and a menu of two options (the library, or food with friends) read into activity. Ask the player to press ENTER to roll, roll with \`random.randint\`(1, 6) into roll, and print You rolled a and the number.
+		body: `Lunchtime! You have 1 hour of AP and your fate is in the hands of a die. Add \`import\` random at the very top, then the header ----- 12:45 PM | AP -----. Add a line about your 1 hour of AP, and this menu, stored in activity: 1. Larp as a productive student at the library and 2. Get food with friends. Ask the player to press ENTER to roll with the prompt Your fate is up to the dice. Press ENTER to roll..., roll with \`random.randint\`(1, 6) into roll, and print You rolled a and the number.
 
 While you test, you may set roll = 4 by hand to dodge bad luck, but switch back to \`random.randint\` before you Run the step for real.`,
 		outputNotes: Object.freeze([
@@ -178,7 +229,29 @@ While you test, you may set roll = 4 by hand to dodge bad luck, but switch back 
 		hints: Object.freeze([
 			'Import random once at the top, then call its randint function to pick a whole number from 1 to 6.',
 			'import random\nroll = `random.randint`(1, 6)',
-			'import random\n\nactivity = input("""\nWhat do you do?\n\n1. Larp as a productive student at the library\n2. Get food with friends\n\nChoose: """)\n\ninput("\\nYour fate is up to the dice. Press ENTER to roll...")\n\nroll = ...\n\nprint(f"You rolled a {roll}.")'
+			`import random
+
+#3: AP
+
+print("""
+----- 12:45 PM | AP -----
+""")
+
+print("You have 1 hour of AP.")
+
+activity = input("""
+What do you do?
+
+1. Larp as a productive student at the library
+2. Get food with friends
+
+Choose: """)
+
+input("\\nYour fate is up to the dice. Press ENTER to roll...")
+
+roll = random.randint(1, 6)
+
+print(f"You rolled a {roll}.")`
 		])
 	}),
 	Object.freeze({
@@ -200,7 +273,37 @@ Put an \`if\` inside another \`if\`: the outer one picks the place, the inner on
 		hints: Object.freeze([
 			'Check the place first, then nest a second set of conditions for the roll inside each place.',
 			'if activity == "1":\n    if roll == 1:\n        ...\n    `elif` roll <= 3:\n        ...\n    else:\n        ...',
-			'if activity == "1":\n\n    if roll == 1:\n        print("\\nYou pull a book off the shelf. The entire shelf tips over and somehow takes the library with it.")\n        print("YOU DIED.")\n        exit()\n\n    elif roll <= 3:\n        ...\n\n    else:\n        ...\n\nelse:\n    ...'
+			`if activity == "1":
+
+    if roll == 1:
+        print("\\nYou pull a book off the shelf. The entire shelf tips over and somehow takes the library with it.")
+        print("YOU DIED.")
+        exit()
+
+    elif roll <= 3:
+        print("\\nYou start doomscrolling. You look up and AP is already over.")
+
+    else:
+        print("\\nYou somehow actually study.")
+        print("BONUS: +1 chance for later.")
+        attempts = attempts + 1
+
+else:
+
+    if roll == 1:
+        print("\\nYou take one bite. You forgot you're severely allergic.")
+        print("YOU DIED.")
+        exit()
+
+    elif roll <= 3:
+        print("\\nYour friend says they know a shortcut. You end up nowhere near the restaurant and you're now hangry.")
+
+    else:
+        print("\\nThe food was actually worth it. You come back fueled.")
+        print("BONUS: +1 chance for later.")
+        attempts = attempts + 1
+
+input("\\nPress ENTER to continue...")`
 		])
 	}),
 	Object.freeze({
@@ -224,7 +327,40 @@ This is where those bonus chances from earlier finally pay off. \`while\` repeat
 		hints: Object.freeze([
 			'Keep asking while attempts remain, compare each guess to the answer, and leave the loop early when it is right.',
 			'while attempts > 0:\n    guess = int(input("\\nYour answer: "))\n    if guess == answer:\n        ...\n        `break`',
-			'answer = random.randint(1, 10)\n\nwhile attempts > 0:\n\n    guess = int(input("\\nYour answer: "))\n\n    if guess == answer:\n        print("Correct!")\n        break\n\n    elif guess < answer:\n        print("Too low.")\n\n    else:\n        ...\n\n    attempts = ...\n    print(f"Chances left: {attempts}")'
+			`print("""
+----- 4:15 PM | LAST PERIOD -----
+""")
+
+print('Your teacher says, "Put everything away. Surprise quiz." Help, you forgot you had a quiz.')
+
+input("\\nPress ENTER to try your best...")
+
+answer = random.randint(1, 10)
+
+print("""
+----- SURPRISE QUIZ -----
+""")
+
+print(f"You have {attempts} chances to pass.")
+print("Turns out some of your decisions today actually mattered!")
+print("Guess the correct answer from 1 to 10.")
+
+while attempts > 0:
+
+    guess = int(input("\\nYour answer: "))
+
+    if guess == answer:
+        print("Correct!")
+        break
+
+    elif guess < answer:
+        print("Too low.")
+
+    else:
+        print("Too high.")
+
+    attempts = attempts - 1
+    print(f"Chances left: {attempts}")`
 		])
 	}),
 	Object.freeze({
@@ -246,7 +382,18 @@ After a \`while\` loop ends, your \`variable\`s still remember their last values
 		hints: Object.freeze([
 			'The loop leaves guess and answer behind, so one comparison after it tells you which ending to show.',
 			'if guess == answer:\n    ...\n`else`:\n    print(f"The answer was {answer}.")',
-			'input("\\nPress ENTER to see how your day ends...")\n\nprint("""\n----- END OF THE DAY -----\n""")\n\nif guess == answer:\n    print("YOU SURVIVED THE DAY. You passed the quiz. See you tomorrow.")\n\nelse:\n    ...'
+			`input("\\nPress ENTER to see how your day ends...")
+
+print("""
+----- END OF THE DAY -----
+""")
+
+if guess == answer:
+    print("YOU SURVIVED THE DAY. You passed the quiz. See you tomorrow.")
+
+else:
+    print(f"The answer was {answer}.")
+    print("YOU SURVIVED THE DAY. You failed the quiz. Don't check Omnivox tonight...")`
 		])
 	}),
 	Object.freeze({
@@ -269,7 +416,38 @@ This is the game jam part. Keep every earlier scene working, then add your own j
 		hints: Object.freeze([
 			'Copy the shape of an earlier scene: header, story line, menu, outcomes, pause. Change the story, keep the structure.',
 			'print("""\n----- 2:30 PM | CHEM LAB -----\n""")\nlab_choice = input("...")',
-			'#3.5: CHEM LAB\n\nprint("""\n----- 2:30 PM | CHEM LAB -----\n""")\n\nlab_choice = input("""\nWhat do you do?\n\n1. Smell it\n2. Ask the TA\n\nChoose: """)\n\nif lab_choice == "2":\n    print("\\nThe TA sighs, but helps you.")\n    attempts = attempts + 1\n\nelse:\n    ...\n\ninput("\\nPress ENTER to continue...")'
+			`#3.5: CHEM LAB
+
+print("""
+----- 2:30 PM | CHEM LAB -----
+""")
+
+print("Your lab partner slides you an unlabeled beaker and says it's \\"probably fine.\\"")
+
+lab_choice = input("""
+What do you do?
+
+1. Smell it
+2. Ask the TA
+
+Choose: """)
+
+if lab_choice == "2":
+    print("\\nThe TA sighs, but helps you. You finish the lab early.")
+    print("BONUS: +1 chance for later.")
+    attempts = attempts + 1
+
+else:
+    input("\\nYour fate is up to the dice. Press ENTER to roll...")
+    roll = random.randint(1, 6)
+    print(f"You rolled a {roll}.")
+
+    if roll <= 2:
+        print("\\nIt was vinegar. Your eyes water for the rest of the period.")
+    else:
+        print("\\nIt was just water. Nothing happens. You feel slightly silly.")
+
+input("\\nPress ENTER to continue...")`
 		])
 	})
 ]);
