@@ -172,7 +172,7 @@ function crashMessage(trial, fallback) {
 	if (!crashed(trial)) return null;
 	const error = String(trial.error);
 	if (ranOutOfInput(trial)) {
-		return 'The game asked for more input() answers than the Program input holds. Keep the ENTER pauses exactly as the step lists them. A blank line in Program input is one ENTER. An extra input() with no line left looks like a crash.';
+		return 'The game asked for more input() answers than the console holds. Keep the ENTER pauses exactly as the step lists them. A blank line in the console is one ENTER. An extra input() with no line left looks like a crash.';
 	}
 	if (/name 'random' is not defined/iu.test(error)) {
 		return `${fallback} import random is missing. Add import random at the top of the file, before any scene. Python said: ${error}`;

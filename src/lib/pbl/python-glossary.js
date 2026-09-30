@@ -224,7 +224,7 @@ export const PYTHON_GLOSSARY = Object.freeze({
 	}),
 	input: Object.freeze({
 		name: 'input',
-		summary: 'Reads a line of text from Program input (or the keyboard in a normal terminal).',
+		summary: 'Reads a line of text from the console.',
 		usefulFor: 'Asking for a threshold or other value before you filter data.',
 		example: 'name = input("Name: ")\nprint(name)',
 		exampleOutput: 'Name: Ada\nAda',

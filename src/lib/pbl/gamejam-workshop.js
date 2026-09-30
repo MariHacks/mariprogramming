@@ -7,14 +7,21 @@ export const GAMEJAM_QUIZ_MAX = 10;
  *   id: number,
  *   title: string,
  *   minutes: number,
+ *   scene?: string,
  *   body: string,
  *   starter?: string,
  *   notes?: readonly string[],
  *   outputNotes?: readonly string[],
+ *   requiredStrings?: readonly { label: string, strings: readonly string[] }[],
  *   hints: readonly string[],
  *   stretch?: string
  * }} GamejamStep
  */
+
+/** @param {string} label @param {...string} strings */
+function requiredGroup(label, ...strings) {
+	return Object.freeze({ label, strings: Object.freeze(strings) });
+}
 
 /** @type {readonly GamejamStep[]} */
 export const GAMEJAM_STEPS = Object.freeze([
@@ -22,17 +29,21 @@ export const GAMEJAM_STEPS = Object.freeze([
 		id: 0,
 		title: 'Get something running',
 		minutes: 3,
-		body: `Welcome to your game jam! Today your team builds a tiny text adventure about surviving one very chaotic school day, and every step adds a new scene on top of the last one. Press Run once to see the starter \`print\`, then swap its text for the first scene header, ----- 8:00 AM | GETTING TO SCHOOL -----, and Run again.
+		scene: '----- 8:00 AM | GETTING TO SCHOOL -----',
+		body: `Press Run once. The starter line says Game loaded. Replace that text with the scene header, then Run again.
 
-This step just makes sure the shared editor and Run button work for your whole team. Your code carries into every next step, so by the end you will have a real game you can play (and maybe die in).`,
+The code stays in the file. Every later step adds another scene on top of this one.`,
 		starter: GAMEJAM_STARTER_SOURCE,
 		outputNotes: Object.freeze([
 			'Exactly one line',
 			'The scene header: dashes, the time 8:00 AM, a | bar, then GETTING TO SCHOOL',
 			'Not the starter text'
 		]),
+		requiredStrings: Object.freeze([
+			requiredGroup('Header', '----- 8:00 AM | GETTING TO SCHOOL -----')
+		]),
 		hints: Object.freeze([
-			'Swap the starter sentence for the scene header, then Run. Leaving the starter text does not move you on.',
+			'Replace the starter sentence with the scene header, then Run. If Game loaded is still there, this step stays where it is.',
 			'The header is just text inside the quotes: `print`("----- TIME | PLACE -----")',
 			'print("----- 8:00 AM | GETTING TO SCHOOL -----")'
 		])
@@ -41,20 +52,30 @@ This step just makes sure the shared editor and Run button work for your whole t
 		id: 1,
 		title: 'Set the scene',
 		minutes: 5,
-		body: `It is 8:07 AM. You just woke up. Class started in 8 minutes. Time to set the scene! Turn your header into a block with \`triple quotes\` so it gets breathing room (a blank line above and below), then add a second \`print\` with the wake-up narration: it is 8:07 AM, you have an 8:15 AM class, you are NOT making it, so it is time to email your prof.
+		scene: `Oops, it's 8:07 AM. You wake up and realize you have an 8:15 AM class... You're NOT making it.
+Time to email your prof.`,
+		body: `Turn the header into a \`triple quotes\` block with a blank line above it and a blank line below it. Add a second \`print\` for the two narration lines in Required strings.
 
-A \`triple quotes\` string keeps every line break exactly where you typed it, so you can lay a scene out like a movie script. Split the narration over two lines for extra drama.`,
+A \`triple quotes\` string keeps the line breaks where you typed them.`,
 		outputNotes: Object.freeze([
 			'A blank line, then the scene header, then a blank line',
 			'Then two lines of narration',
 			'The narration mentions 8:07 AM, the 8:15 AM class and emailing your prof'
 		]),
+		requiredStrings: Object.freeze([
+			requiredGroup('Header', '----- 8:00 AM | GETTING TO SCHOOL -----'),
+			requiredGroup(
+				'Narration',
+				"Oops, it's 8:07 AM. You wake up and realize you have an 8:15 AM class... You're NOT making it.",
+				'Time to email your prof.'
+			)
+		]),
 		notes: Object.freeze([
-			'A line that starts with # is a comment. Python ignores it, so use one to label each scene, for example #1 : WAKING UP LATE',
-			'Partial code replaces the one-line print from the previous step. Delete that print. Do not keep both.'
+			'A line that starts with # is a comment. Python skips it. Label the scene with one, for example #1 : WAKING UP LATE.',
+			'Partial code replaces the one-line print from the last step. Delete that print. Do not keep both.'
 		]),
 		hints: Object.freeze([
-			'Wrap the header and the narration in triple quotes so the line breaks stay where you typed them.',
+			'Put the header and the narration in triple quotes so the line breaks stay where you typed them.',
 			'print("""\nfirst line\nsecond line\n""")',
 			`#1 : WAKING UP LATE
 
@@ -70,16 +91,18 @@ Time to email your prof.""")`
 		id: 2,
 		title: 'Ask the player',
 		minutes: 5,
-		body: `Every good game gives the player a say. Before you email your prof, ask for their most ridiculous excuse for missing class with \`input()\` and store the answer in a \`variable\` named excuse. Use the prompt Enter your goofy excuse: so they know what to type.
+		scene: 'Enter your goofy excuse:',
+		body: `Ask for the excuse with \`input()\` and store the answer in a \`variable\` named excuse. Use the prompt in Required strings.
 
-\`input()\` pauses the game, waits for a line of text, and hands it back as a \`str\`. Put your answers in Program input before you Run, one line per question. Cat ate the alarm? Aliens? Go wild.`,
+\`input()\` waits for one line and hands it back as a \`str\`. Type that line in the console before you Run.`,
 		outputNotes: Object.freeze([
 			'The scene from before, then the prompt Enter your goofy excuse:',
 			'Whatever the player types is stored in excuse'
 		]),
-		notes: Object.freeze(['Program input for this step: one line, your excuse.']),
+		requiredStrings: Object.freeze([requiredGroup('Prompt', 'Enter your goofy excuse:')]),
+		notes: Object.freeze(['In the console: one line, your excuse.']),
 		hints: Object.freeze([
-			'Call input with the question as its prompt and store the answer in a variable on the left of the equals sign.',
+			'Call input with the question as its prompt. Put the answer in a variable on the left of the equals sign.',
 			'excuse = `input`("your question here")',
 			'excuse = input("Enter your goofy excuse: ")'
 		])
@@ -88,20 +111,27 @@ Time to email your prof.""")`
 		id: 3,
 		title: 'Write the email',
 		minutes: 6,
-		body: `Time to actually write that email. Use an \`f-string\` to drop the player's excuse right into the message: Hi Professor, I can't make it to class today because {excuse}. Then add two dramatic pauses: Press ENTER to send... followed by a Sent. line, and Press ENTER to continue...
+		scene: `Hi Professor, I can't make it to class today because {excuse}.
+Press ENTER to send...
+Sent.`,
+		body: `Use an \`f-string\` so the email contains whatever is stored in excuse. Then add the two pauses in Required strings: Press ENTER to send..., the line Sent., and Press ENTER to continue...
 
-An \`f-string\` fills live values into your text, so the email changes with whatever the player typed. A pause is just \`input()\` whose answer you ignore, like a game waiting for you to press start.`,
+An \`f-string\` puts a live value into the text. A pause is an \`input()\` call. You can ignore what it returns.`,
 		outputNotes: Object.freeze([
 			"A blank line, then Hi Professor, I can't make it to class today because plus the excuse",
 			'The prompt Press ENTER to send... then the line Sent.',
 			'The prompt Press ENTER to continue...'
 		]),
+		requiredStrings: Object.freeze([
+			requiredGroup('Email', "Hi Professor, I can't make it to class today because {excuse}."),
+			requiredGroup('Pauses', 'Press ENTER to send...', 'Sent.', 'Press ENTER to continue...')
+		]),
 		notes: Object.freeze([
 			'Inside a string, \\n means a new line. Start a prompt with \\n to leave a blank line above it.',
-			'Program input for this step: your excuse, then two blank lines (one per ENTER pause).'
+			'In the console: your excuse, then two blank lines (one per ENTER pause).'
 		]),
 		hints: Object.freeze([
-			'Put an f before the opening quote and drop the excuse variable inside curly braces.',
+			'Put an f before the opening quote and put the excuse variable inside curly braces.',
 			'print(f"... because {excuse}.")\ninput("\\nPress ENTER to send...")',
 			`print(f"\\nHi Professor, I can't make it to class today because {excuse}.")
 
@@ -115,20 +145,39 @@ input("\\nPress ENTER to continue...")`
 		id: 4,
 		title: 'Make a choice',
 		minutes: 8,
-		body: `You made it to school! Halfway through class, your brain starts buffering. Add this header, ----- 10:15 AM | NEXT CLASS -----, then a line about losing focus. The menu lines are 1. Lock in, 2. Play Wordle, and 3. Take a quick nap, then Choose:. Read the choice with \`input()\` and give each option its own outcome using \`if\`, \`elif\` and \`else\`. Finish with a Press ENTER to continue... pause.
+		scene: `You eventually make it to school. Halfway through class, you start losing focus.
+You actually listen and learn something.
+You open Wordle with your brightness at minimum. You understand 5% of the lecture.
+You close your eyes for 5 minutes. You wake up and everyone is gone. A ceiling tile falls on your head.`,
+		body: `Add the 10:15 AM header and one line about losing focus. Print the menu lines from Required strings, then Choose:. Read the choice with \`input()\`. Use \`if\`, \`elif\`, and \`else\` so each option prints a different outcome. End with Press ENTER to continue...
 
-Only one branch runs each time, which is what makes a choice feel real. \`input()\` gives back text, so compare the answer with "1" in quotes using \`==\`.`,
+Only one branch runs. \`input()\` gives back text, so compare the answer with "1" using \`==\`.`,
 		outputNotes: Object.freeze([
 			'Scene header with 10:15 AM and NEXT CLASS',
 			'A menu numbered 1 to 3: Lock in, Play Wordle, Take a quick nap',
 			'A different outcome line for each choice',
 			'A final Press ENTER to continue... pause'
 		]),
+		requiredStrings: Object.freeze([
+			requiredGroup(
+				'Headers',
+				'----- 8:00 AM | GETTING TO SCHOOL -----',
+				'----- 10:15 AM | NEXT CLASS -----'
+			),
+			requiredGroup(
+				'Menu',
+				'1. Lock in',
+				'2. Play Wordle',
+				'3. Take a quick nap',
+				'Choose:'
+			),
+			requiredGroup('Pause', 'Press ENTER to continue...')
+		]),
 		notes: Object.freeze([
-			'Program input for this step: your excuse, two blank lines, your choice (1, 2 or 3), then one blank line.'
+			'In the console: your excuse, two blank lines, your choice (1, 2 or 3), then one blank line.'
 		]),
 		hints: Object.freeze([
-			'Read the choice once, then let a chain of conditions pick exactly one outcome to print.',
+			'Read the choice once. A chain of conditions then prints exactly one outcome.',
 			'`if` choice == "1":\n    ...\n`elif` choice == "2":\n    ...\n`else`:\n    ...',
 			`#2: NEXT CLASS
 
@@ -161,20 +210,25 @@ input("\\nPress ENTER to continue...")`
 		id: 5,
 		title: 'Keep score',
 		minutes: 5,
-		body: `Choices should matter! Add attempts = 3 at the very top of your file, above everything else. Those are your chances for the quiz waiting at the end of the day. Locking in is a smart move, so it now earns a reward: print BONUS: +1 chance for later. and raise attempts by 1.
+		scene: `You actually listen and learn something.
+BONUS: +1 chance for later.`,
+		body: `Put attempts = 3 at the top of the file, above every scene. That number is how many chances the quiz at the end of the day starts with. In the Lock in branch, print BONUS: +1 chance for later. and add 1 to attempts.
 
-A \`variable\` can be updated from its own old value, as in attempts = attempts + 1. Keep an eye on it, because future you will want every chance they can get.`,
+A \`variable\` can be set from its own old value: attempts = attempts + 1.`,
 		outputNotes: Object.freeze([
 			'Choosing 1 prints the outcome and then the BONUS line',
 			'Choices 2 and 3 print no BONUS line',
 			'attempts goes up by 1 only when the player locks in'
 		]),
+		requiredStrings: Object.freeze([
+			requiredGroup('Bonus', 'BONUS: +1 chance for later.')
+		]),
 		notes: Object.freeze([
-			'Same Program input as before. Try each choice and watch the output.',
+			'Same lines in the console as before. Try each choice and watch the output.',
 			'Partial code starts with attempts = 3. Put that line at the top of the file, above every scene. Then replace your Lock in branch with the if choice == "1" block.'
 		]),
 		hints: Object.freeze([
-			'Update a variable by assigning it to itself plus one, inside the branch that earns the bonus.',
+			'Inside the branch that earns the bonus, set the variable to itself plus one.',
 			'attempts = attempts + 1',
 			`attempts = 3
 
@@ -188,20 +242,23 @@ if choice == "1":
 		id: 6,
 		title: 'Game over',
 		minutes: 4,
-		body: `Napping in class is a bold strategy. Let's see how it plays out. After the nap outcome line, print YOU DIED. and stop the whole program with \`exit()\`. Nothing after that should run, not even the ENTER pause.
+		scene: `You close your eyes for 5 minutes. You wake up and everyone is gone. A ceiling tile falls on your head.
+YOU DIED.`,
+		body: `After the nap outcome, print YOU DIED. and call \`exit()\` so nothing after that line runs, including the ENTER pause.
 
-\`exit()\` ends the program on the spot, which is how a game says game over. Try the nap, then try the other options to make sure the story keeps going for everyone who stays awake.`,
+\`exit()\` stops the program immediately. Run choice 3, then run choices 1 and 2 and check that those still continue.`,
 		outputNotes: Object.freeze([
 			'Choice 3: the outcome line, then YOU DIED. and the game ends',
 			'No Press ENTER prompt after YOU DIED.',
 			'Choices 1 and 2 still continue as before'
 		]),
+		requiredStrings: Object.freeze([requiredGroup('Death', 'YOU DIED.')]),
 		notes: Object.freeze([
-			'Program input to test the nap: your excuse, two blank lines, then 3.',
+			'In the console, to test the nap: your excuse, two blank lines, then 3.',
 			'Partial code replaces your else branch. Leave the Press ENTER to continue... line after the whole if, elif, else.'
 		]),
 		hints: Object.freeze([
-			'Print the death message at the end of the nap branch, then stop the whole program right there.',
+			'Print the death message at the end of the nap branch, then stop the program on the next line.',
 			'print("YOU DIED.")\nexit()',
 			`else:
     print("\\nYou close your eyes for 5 minutes. You wake up and everyone is gone. A ceiling tile falls on your head.")
@@ -213,21 +270,39 @@ if choice == "1":
 		id: 7,
 		title: 'Roll the dice',
 		minutes: 8,
-		body: `Lunchtime! You have 1 hour of AP and your fate is in the hands of a die. Add \`import\` random at the very top, then the header ----- 12:45 PM | AP -----. Add a line about your 1 hour of AP, and this menu, stored in activity: 1. Larp as a productive student at the library and 2. Get food with friends. Ask the player to press ENTER to roll with the prompt Your fate is up to the dice. Press ENTER to roll..., roll with \`random.randint\`(1, 6) into roll, and print You rolled a and the number.
+		scene: `You have 1 hour of AP.
+1. Larp as a productive student at the library
+2. Get food with friends
+Your fate is up to the dice. Press ENTER to roll...`,
+		body: `Add \`import\` random at the top of the file. Add the 12:45 PM header, a line about the AP hour, and the menu from Required strings. Store the answer in activity. Ask for ENTER with the roll prompt, set roll with \`random.randint\`(1, 6), and print You rolled a followed by the number.
 
-While you test, you may set roll = 4 by hand to dodge bad luck, but switch back to \`random.randint\` before you Run the step for real.`,
+You can set roll = 4 by hand while you test. Put \`random.randint\` back before you Run this step for real.`,
 		outputNotes: Object.freeze([
 			'Scene header with 12:45 PM and AP',
 			'A menu numbered 1 and 2: the library, or food with friends',
 			'A Your fate is up to the dice. Press ENTER to roll... prompt',
 			'One line: You rolled a, then the number'
 		]),
+		requiredStrings: Object.freeze([
+			requiredGroup(
+				'Headers',
+				'----- 8:00 AM | GETTING TO SCHOOL -----',
+				'----- 10:15 AM | NEXT CLASS -----',
+				'----- 12:45 PM | AP -----'
+			),
+			requiredGroup(
+				'Menu',
+				'1. Larp as a productive student at the library',
+				'2. Get food with friends'
+			),
+			requiredGroup('Roll', 'Your fate is up to the dice. Press ENTER to roll...', 'You rolled a {roll}.')
+		]),
 		notes: Object.freeze([
-			'Your own Run uses real random rolls. Team checks use fixed rolls so the results repeat.',
-			'Program input for this step: your excuse, two blank lines, a scene 2 choice (1 or 2), a blank line, your activity (1 or 2), then a blank line for the roll.'
+			'Your own Run uses real random rolls. The team check uses fixed rolls so the results repeat.',
+			'In the console: your excuse, two blank lines, a scene 2 choice (1 or 2), a blank line, your activity (1 or 2), then a blank line for the roll.'
 		]),
 		hints: Object.freeze([
-			'Import random once at the top, then call its randint function to pick a whole number from 1 to 6.',
+			'Import random once at the top, then call randint to pick a whole number from 1 to 6.',
 			'import random\nroll = `random.randint`(1, 6)',
 			`import random
 
@@ -258,20 +333,31 @@ print(f"You rolled a {roll}.")`
 		id: 8,
 		title: 'Fate branches',
 		minutes: 10,
-		body: `Now the dice decide your fate. At the library or with friends: roll 1 is death (YOU DIED. and \`exit()\`), rolls 2 to 3 are meh, and rolls 4 to 6 print BONUS: +1 chance for later. and add 1 to attempts. Give each place its own story (a bookshelf disaster? a suspicious shortcut?). End with a Press ENTER to continue... pause.
+		scene: `You pull a book off the shelf. The entire shelf tips over and somehow takes the library with it.
+You start doomscrolling. You look up and AP is already over.
+You somehow actually study.
+You take one bite. You forgot you're severely allergic.
+Your friend says they know a shortcut. You end up nowhere near the restaurant and you're now hangry.
+The food was actually worth it. You come back fueled.`,
+		body: `Roll 1 prints YOU DIED. and calls \`exit()\`. Rolls 2 and 3 print a story line and no bonus. Rolls 4 to 6 print BONUS: +1 chance for later. and add 1 to attempts. Write a different story line for the library and for food. End with Press ENTER to continue...
 
-Put an \`if\` inside another \`if\`: the outer one picks the place, the inner ones pick the fate. Tip: set roll = 4 by hand to test the good path, then switch back.`,
+Use an \`if\` inside another \`if\`. The outer one is the place. The inner ones are the roll. You can set roll = 4 by hand to try the good path, then switch it back.`,
 		outputNotes: Object.freeze([
 			'Roll 1: a story line, YOU DIED. and the game ends',
 			'Rolls 2 and 3: a story line and no bonus',
 			'Rolls 4 to 6: a story line, the BONUS line, and one more attempt',
 			'The library and the food option use different story lines'
 		]),
+		requiredStrings: Object.freeze([
+			requiredGroup('Death', 'YOU DIED.'),
+			requiredGroup('Bonus', 'BONUS: +1 chance for later.'),
+			requiredGroup('Pause', 'Press ENTER to continue...')
+		]),
 		notes: Object.freeze([
-			'Program input for this step: your excuse, two blank lines, a scene 2 choice, a blank line, your activity, a blank line for the roll, then a blank line for the last pause.'
+			'In the console: your excuse, two blank lines, a scene 2 choice, a blank line, your activity, a blank line for the roll, then a blank line for the last pause.'
 		]),
 		hints: Object.freeze([
-			'Check the place first, then nest a second set of conditions for the roll inside each place.',
+			'Check the place first. Inside each place, check the roll with a second set of conditions.',
 			'if activity == "1":\n    if roll == 1:\n        ...\n    `elif` roll <= 3:\n        ...\n    else:\n        ...',
 			`if activity == "1":
 
@@ -310,9 +396,12 @@ input("\\nPress ENTER to continue...")`
 		id: 9,
 		title: 'The quiz loop',
 		minutes: 12,
-		body: `It is 4:15 PM and your teacher says to put everything away. Surprise quiz! Add the scene: a header, the teacher's line, and a Press ENTER to try your best... pause. Then pick answer with \`random.randint\`(1, 10), print SURPRISE QUIZ and how many chances the player has. Loop with \`while\` attempts > 0, reading guess with \`int\`(\`input()\`). Right: Correct! and \`break\`. Lower: Too low. Higher: Too high. Each miss lowers attempts by 1 and prints Chances left: and the number.
+		scene: `Your teacher says, "Put everything away. Surprise quiz." Help, you forgot you had a quiz.
+Turns out some of your decisions today actually mattered!
+Guess the correct answer from 1 to 10.`,
+		body: `Add the last-period header, the teacher's line, and the pause Press ENTER to try your best.... Set answer with \`random.randint\`(1, 10). Print the SURPRISE QUIZ header and how many chances are left. Loop with \`while\` attempts > 0. Read guess with \`int\`(\`input()\`). Print Correct! and \`break\` on a match, Too low. when the guess is smaller, and Too high. when it is bigger. Each miss does attempts = attempts - 1 and prints Chances left: plus the number.
 
-This is where those bonus chances from earlier finally pay off. \`while\` repeats until its condition fails or \`break\` jumps out early.`,
+\`while\` keeps going while its condition is true. \`break\` leaves the loop early.`,
 		outputNotes: Object.freeze([
 			'Scene header with 4:15 PM and LAST PERIOD, then the SURPRISE QUIZ header',
 			'You have, then the attempts number, then chances to pass.',
@@ -320,12 +409,32 @@ This is where those bonus chances from earlier finally pay off. \`while\` repeat
 			'After each miss: Chances left: and the new number',
 			'A correct guess stops the loop right away'
 		]),
+		requiredStrings: Object.freeze([
+			requiredGroup(
+				'Headers',
+				'----- 8:00 AM | GETTING TO SCHOOL -----',
+				'----- 10:15 AM | NEXT CLASS -----',
+				'----- 12:45 PM | AP -----',
+				'----- 4:15 PM | LAST PERIOD -----',
+				'----- SURPRISE QUIZ -----'
+			),
+			requiredGroup('Pause', 'Press ENTER to try your best...'),
+			requiredGroup(
+				'Quiz',
+				'You have {attempts} chances to pass.',
+				'Your answer:',
+				'Too low.',
+				'Too high.',
+				'Correct!',
+				'Chances left: {attempts}'
+			)
+		]),
 		notes: Object.freeze([
-			'Your own Run uses a real random answer. Team checks fix the dice so the answer repeats.',
-			'Program input for this step: everything from before, a blank line for the last pause, a blank line to try your best, then at least six guesses, one per line. Extra lines are ignored. Running out of guesses shows an error in Output, but the step is still graded.'
+			'Your own Run uses a real random answer. The team check fixes the dice so the answer repeats.',
+			'In the console: everything from before, a blank line for the last pause, a blank line to try your best, then at least six guesses, one per line. Extra lines are ignored. If you run out of guesses, the console shows an error. The step is still graded.'
 		]),
 		hints: Object.freeze([
-			'Keep asking while attempts remain, compare each guess to the answer, and leave the loop early when it is right.',
+			'Keep asking while attempts remain. Compare each guess with the answer, and leave the loop when the guess is right.',
 			'while attempts > 0:\n    guess = int(input("\\nYour answer: "))\n    if guess == answer:\n        ...\n        `break`',
 			`print("""
 ----- 4:15 PM | LAST PERIOD -----
@@ -367,20 +476,33 @@ while attempts > 0:
 		id: 10,
 		title: 'How your day ends',
 		minutes: 6,
-		body: `The bell rings. The day is almost over and you survived (probably). After the loop, wait for a Press ENTER to see how your day ends... pause, print the END OF THE DAY header, and check whether the last guess was right. If guess == answer print YOU SURVIVED THE DAY. You passed the quiz. See you tomorrow. Otherwise print The answer was and the answer, then YOU SURVIVED THE DAY. You failed the quiz. Don't check Omnivox tonight...
+		scene: `YOU SURVIVED THE DAY. You passed the quiz. See you tomorrow.
+The answer was {answer}.
+YOU SURVIVED THE DAY. You failed the quiz. Don't check Omnivox tonight...`,
+		body: `After the loop, add the pause Press ENTER to see how your day ends.... Print the END OF THE DAY header. If guess == answer, print the passed ending from Required strings. Otherwise print The answer was and the answer, then the failed ending.
 
-After a \`while\` loop ends, your \`variable\`s still remember their last values, so guess and answer tell you which ending to show. This step finishes the whole game!`,
+A \`while\` loop leaves guess and answer with their last values, so you can still check them. This is the last scene of the written game.`,
 		outputNotes: Object.freeze([
 			'The END OF THE DAY header',
 			'Right guess: the passed-the-quiz ending',
 			'Wrong guesses: The answer was and the number, then the failed-the-quiz ending',
-			'Either way the day is survived'
+			'Both endings still say the day was survived'
+		]),
+		requiredStrings: Object.freeze([
+			requiredGroup('Header', '----- END OF THE DAY -----'),
+			requiredGroup('Pause', 'Press ENTER to see how your day ends...'),
+			requiredGroup('Passed', 'YOU SURVIVED THE DAY. You passed the quiz. See you tomorrow.'),
+			requiredGroup(
+				'Failed',
+				'The answer was {answer}.',
+				"YOU SURVIVED THE DAY. You failed the quiz. Don't check Omnivox tonight..."
+			)
 		]),
 		notes: Object.freeze([
-			'Program input for this step: everything from before, at least six guesses, then one more blank line for the ending pause. Extra lines are ignored.'
+			'In the console: everything from before, at least six guesses, then one more blank line for the ending pause. Extra lines are ignored.'
 		]),
 		hints: Object.freeze([
-			'The loop leaves guess and answer behind, so one comparison after it tells you which ending to show.',
+			'The loop leaves guess and answer behind. One comparison after it picks the ending.',
 			'if guess == answer:\n    ...\n`else`:\n    print(f"The answer was {answer}.")',
 			`input("\\nPress ENTER to see how your day ends...")
 
@@ -400,21 +522,37 @@ else:
 		id: 11,
 		title: 'Make it yours',
 		minutes: 12,
-		body: `You built a whole game. Now make it yours! No recipe this time: add one original scene of your own, for example a 2:30 PM chem lab between AP and the quiz (mystery beaker, anyone?). Give it a header in the same style and use at least one idea from earlier: a menu with \`if\`, a dice roll, a bonus attempt, or a death with \`exit()\`.
+		scene: `Your lab partner slides you an unlabeled beaker and says it's "probably fine."
+The TA sighs, but helps you. You finish the lab early.
+It was vinegar. Your eyes water for the rest of the period.
+It was just water. Nothing happens. You feel slightly silly.`,
+		body: `Add one new scene. A 2:30 PM chem lab between AP and the quiz is a shape that already fits. Give it a header like ----- TIME | PLACE -----. Use at least one thing from an earlier step: a menu with \`if\`, a dice roll, a bonus attempt, or \`exit()\` after a death.
 
-This is the game jam part. Keep every earlier scene working, then add your own jokes, your own teachers, your own chaos.`,
+Leave the earlier scenes working.`,
 		outputNotes: Object.freeze([
 			'Every earlier scene still runs in order',
 			'Your new scene has a header like ----- TIME | PLACE -----',
 			'The day still ends with one of the two endings'
 		]),
+		requiredStrings: Object.freeze([
+			requiredGroup(
+				'Keep',
+				'----- 8:00 AM | GETTING TO SCHOOL -----',
+				'----- 10:15 AM | NEXT CLASS -----',
+				'----- 12:45 PM | AP -----',
+				'----- 4:15 PM | LAST PERIOD -----',
+				'----- END OF THE DAY -----',
+				'YOU SURVIVED THE DAY'
+			),
+			requiredGroup('New scene', '----- TIME | PLACE -----')
+		]),
 		notes: Object.freeze([
-			'Program input: everything from before, plus one line for each input() in your new scene.'
+			'In the console: everything from before, plus one line for each input() in your new scene.'
 		]),
 		stretch:
-			'Optional stretch: fix the known bugs. Any choice other than 1, 2 or 3 in scene 2 counts as the nap, anything other than 1 in scene 3 counts as food, and a guess that is not a number crashes `int()`. Loop with `while` until the player types something valid. More scenes, more dice and a longer quiz are also fair stretch work.',
+			'Optional: fix the known bugs. Any choice other than 1, 2, or 3 in scene 2 is treated as the nap. Anything other than 1 in scene 3 is treated as food. A guess that is not a number crashes `int()`. A `while` loop can keep asking until the player types something the program can use. More scenes, more dice, or a longer quiz also count.',
 		hints: Object.freeze([
-			'Copy the shape of an earlier scene: header, story line, menu, outcomes, pause. Change the story, keep the structure.',
+			'Copy the shape of an earlier scene: header, story line, menu, outcomes, pause. Change the story and keep that shape.',
 			'print("""\n----- 2:30 PM | CHEM LAB -----\n""")\nlab_choice = input("...")',
 			`#3.5: CHEM LAB
 

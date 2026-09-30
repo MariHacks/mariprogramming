@@ -44,6 +44,8 @@ describe('PBL 2 game jam workshop', () => {
 			expect(step.hints[0]).not.toMatch(/^\s*(?:def |print\(|import |for |while )/u);
 			expect(step.hints[1].length).toBeGreaterThan(0);
 			expect(step.hints[2]).toMatch(/print\(|input\(|import |=|if |while /u);
+			expect(step.scene?.length).toBeGreaterThan(20);
+			expect(step.scene).not.toMatch(/`|\bprint\(|\binput\(/u);
 			expect(step.body.length).toBeLessThan(900);
 		}
 		expect(GAMEJAM_STEPS[11].stretch).toMatch(/bugs/i);
@@ -57,9 +59,11 @@ describe('PBL 2 game jam workshop', () => {
 			expect(step.body).not.toMatch(/\bchecker\b|\bgrader\b|to pass\b/i);
 			const blob = [
 				step.title,
+				step.scene ?? '',
 				step.body,
 				...(step.notes ?? []),
 				...(step.outputNotes ?? []),
+				...(step.requiredStrings ?? []).flatMap((group) => [group.label, ...group.strings]),
 				...step.hints,
 				step.stretch ?? ''
 			].join('\n');
@@ -70,9 +74,11 @@ describe('PBL 2 game jam workshop', () => {
 	it('only backticks terms the glossary knows, so no stray backticks reach students', () => {
 		for (const step of GAMEJAM_STEPS) {
 			const prose = [
+				step.scene ?? '',
 				step.body,
 				...(step.notes ?? []),
 				...(step.outputNotes ?? []),
+				...(step.requiredStrings ?? []).flatMap((group) => group.strings),
 				step.stretch ?? ''
 			];
 			for (const text of prose) {
@@ -88,6 +94,35 @@ describe('PBL 2 game jam workshop', () => {
 				expect(literal).toEqual([]);
 			}
 		}
+	});
+
+	it('groups every exact string a step requires', () => {
+		expect(GAMEJAM_STEPS[0].requiredStrings).toEqual([
+			{ label: 'Header', strings: ['----- 8:00 AM | GETTING TO SCHOOL -----'] }
+		]);
+		for (const step of GAMEJAM_STEPS) {
+			expect(step.requiredStrings?.length).toBeGreaterThan(0);
+			const labels = step.requiredStrings.map((group) => group.label);
+			expect(new Set(labels).size).toBe(labels.length);
+			for (const group of step.requiredStrings) {
+				expect(group.strings.length).toBeGreaterThan(0);
+				for (const line of group.strings) {
+					expect(line).toBe(line.trim());
+					expect(line.length).toBeGreaterThan(0);
+				}
+			}
+		}
+		const listed = GAMEJAM_STEPS.flatMap((step) =>
+			step.requiredStrings.flatMap((group) => group.strings)
+		).join('\n');
+		expect(listed).toContain('Enter your goofy excuse:');
+		expect(listed).toContain('Press ENTER to send...');
+		expect(listed).toContain('1. Lock in');
+		expect(listed).toContain('BONUS: +1 chance for later.');
+		expect(listed).toContain('YOU DIED.');
+		expect(listed).toContain('----- SURPRISE QUIZ -----');
+		expect(listed).toContain('YOU SURVIVED THE DAY. You passed the quiz. See you tomorrow.');
+		expect(listed).toContain("YOU SURVIVED THE DAY. You failed the quiz. Don't check Omnivox tonight...");
 	});
 
 	it('teaches each step from the previous step code, ending at the finished game', () => {

@@ -1,12 +1,13 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { openHint, run, selectStep, setCollab, ejectMember, studio } = vi.hoisted(() => ({
+const { openHint, run, selectStep, setCollab, setStdin, ejectMember, studio } = vi.hoisted(() => ({
 	openHint: vi.fn(),
 	run: vi.fn(),
 	selectStep: vi.fn(),
 	setCollab: vi.fn(),
+	setStdin: vi.fn(),
 	ejectMember: vi.fn(async () => ({ memberCount: 1 })),
 	studio: { patch: /** @type {Record<string, unknown>} */ ({}) }
 }));
@@ -76,7 +77,7 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 			setCollab,
 			ejectMember,
 			setSource: vi.fn(),
-			setStdin: vi.fn(),
+			setStdin,
 			run
 		})
 	};
@@ -104,6 +105,7 @@ afterEach(() => {
 	studio.patch = {};
 	selectStep.mockClear();
 	run.mockClear();
+	setStdin.mockClear();
 	ejectMember.mockClear();
 });
 
@@ -158,10 +160,27 @@ describe('PBL studio page', () => {
 
 	it('shows the lesson and editor for a joined room', async () => {
 		const user = userEvent.setup();
-		await renderReady();
+		const { container } = await renderReady();
 		expect(screen.getByRole('heading', { level: 1, name: 'Get something running' })).toBeVisible();
 		expect(screen.getByRole('textbox', { name: 'Python' })).toHaveTextContent('print("hi")');
-		expect(screen.getByRole('status')).toHaveTextContent('Printed a custom message. Starter text is gone.');
+		const lesson = container.querySelector('.lesson');
+		const consolePanel = container.querySelector('.console');
+		const studioStyle = container.querySelector('.studio')?.getAttribute('style') ?? '';
+		expect(studioStyle).toContain('--lesson-width: 440px');
+		expect(studioStyle).toContain('--console-height: 320px');
+		expect(within(consolePanel).getByRole('status')).toHaveTextContent(
+			'Printed a custom message. Starter text is gone.'
+		);
+		expect(within(consolePanel).getByText('Accepted')).toBeVisible();
+		expect(within(lesson).queryByText('Accepted')).toBeNull();
+		expect(within(lesson).queryByText('Wrong Answer')).toBeNull();
+		expect(lesson.querySelector('.scene')).toBeNull();
+		expect(screen.queryByRole('region', { name: 'Required strings' })).toBeNull();
+		expect(screen.queryByRole('tab', { name: 'Testcase' })).toBeNull();
+		expect(screen.queryByRole('tab', { name: 'Output' })).toBeNull();
+		expect(within(consolePanel).queryByRole('textbox', { name: 'Console input' })).toBeNull();
+		expect(consolePanel.querySelector('.stdin-line')).toBeNull();
+		expect(within(consolePanel).getByLabelText('Program output')).toBeVisible();
 		expect(screen.getByRole('heading', { name: 'report.txt' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Syntax' })).toBeEnabled();
 		expect(screen.getByRole('button', { name: 'Partial code' })).toBeDisabled();
@@ -233,6 +252,87 @@ describe('PBL studio page', () => {
 		expect(screen.queryByRole('button', { name: 'Take keyboard' })).toBeNull();
 		expect(screen.queryByText('Press Run.')).toBeNull();
 		expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+	});
+
+	it('lists required strings by category when the step has them', async () => {
+		const { SCIENCE_STEPS } = await import('$lib/pbl/science-workshop.js');
+		studio.patch = {
+			step: {
+				...SCIENCE_STEPS[0],
+				scene: '8:07 AM. You just woke up, and you are not going to make it.',
+				requiredStrings: [
+					{ label: 'Header', strings: ['----- 8:00 AM | GETTING TO SCHOOL -----'] },
+					{ label: 'Pause', strings: ['Press ENTER to continue...'] }
+				]
+			},
+			files: {}
+		};
+		await renderReady();
+		const section = screen.getByRole('region', { name: 'Required strings' });
+		expect(section).toBeVisible();
+		expect(within(section).getByRole('heading', { name: 'Required strings' })).toBeVisible();
+		expect(within(section).getByRole('heading', { name: 'Header' })).toBeVisible();
+		expect(within(section).getByRole('heading', { name: 'Pause' })).toBeVisible();
+		expect(within(section).getByText('----- 8:00 AM | GETTING TO SCHOOL -----')).toBeVisible();
+		expect(within(section).getByText('Press ENTER to continue...')).toBeVisible();
+		expect(screen.getByText('8:07 AM. You just woke up, and you are not going to make it.')).toHaveClass(
+			'scene'
+		);
+	});
+
+	it('puts a failed check in the console instead of the lesson', async () => {
+		studio.patch = {
+			lastCheck: {
+				passed: false,
+				message:
+					'Still printing "Game loaded". Replace it with the scene header, then Run again.',
+				step: 0
+			},
+			nextAction:
+				'Still printing "Game loaded". Replace it with the scene header, then Run again.',
+			files: {}
+		};
+		const { container } = await renderReady();
+		const lesson = container.querySelector('.lesson');
+		const consolePanel = container.querySelector('.console');
+		const result = within(consolePanel).getByRole('status');
+		expect(result).toHaveTextContent('Wrong Answer');
+		expect(result).toHaveTextContent('Still printing "Game loaded"');
+		expect(consolePanel.textContent.match(/Still printing "Game loaded"/g)).toHaveLength(1);
+		expect(lesson.textContent).not.toMatch(/Wrong Answer/);
+		expect(lesson.textContent).not.toMatch(/Still printing "Game loaded"/);
+		expect(within(consolePanel).queryByRole('textbox', { name: 'Console input' })).toBeNull();
+	});
+
+	it('types on the last console line when the program reads input', async () => {
+		studio.patch = {
+			source: 'name = input("Name: ")\nprint(name)\n',
+			output: 'Name: \n',
+			stdinText: 'Ada\n',
+			files: {}
+		};
+		const { container } = await renderReady();
+		const output = /** @type {HTMLElement} */ (container.querySelector('pre.output'));
+		const input = within(output).getByRole('textbox', { name: 'Console input' });
+		expect(container.querySelector('.stdin-line')).toBeNull();
+		expect(input).toHaveClass('term-input');
+		expect(output).toHaveTextContent('Ada');
+		await fireEvent.input(input, { target: { value: 'Lovelace' } });
+		expect(setStdin).toHaveBeenCalledWith('Ada\nLovelace');
+		cleanup();
+		studio.patch = {
+			source: 'name = input("Name: ")\nprint(name)\n',
+			output: '',
+			stdinText: 'Ada\nLovelace',
+			files: {}
+		};
+		const again = await renderReady();
+		const next = within(/** @type {HTMLElement} */ (again.container.querySelector('pre.output'))).getByRole(
+			'textbox',
+			{ name: 'Console input' }
+		);
+		await fireEvent.keyDown(next, { key: 'Enter' });
+		expect(setStdin).toHaveBeenCalledWith('Ada\nLovelace\n');
 	});
 
 	it('keeps Next disabled until the step check passes', async () => {
