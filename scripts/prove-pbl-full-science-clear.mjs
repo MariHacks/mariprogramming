@@ -398,14 +398,9 @@ async function waitForEditor(page, pred, timeoutMs = 12000) {
 
 /** @param {import('@playwright/test').Page} page @param {string} text */
 async function fillStdin(page, text) {
-	// Program input lives on the Testcase tab (hidden while Output is selected).
-	await page.getByRole('tab', { name: 'Testcase' }).click();
-	await sleep(200);
-	const box = page.locator('textarea.stdin');
+	const box = page.locator('input.term-input');
 	await box.waitFor({ state: 'visible', timeout: 10000 });
 	await box.fill(text);
-	await page.getByRole('tab', { name: 'Output' }).click();
-	await sleep(150);
 }
 
 /**

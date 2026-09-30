@@ -157,7 +157,7 @@ Filter before you aggregate. Averaging a \`list\` that still holds 48.7 silently
 		id: 7,
 		title: 'input(), type conversion, while',
 		minutes: 8,
-		body: `Ask for a maximum accepted value with \`input()\`. \`input()\` always returns a string, so convert with \`float()\`. Keep asking in a \`while\` loop while that number is not greater than zero. Put each answer on its own line in Program input before you Run. Try thresholds like 20, then 5, and a bad -1 followed by 20 so the retry path runs.
+		body: `Ask for a maximum accepted value with \`input()\`. \`input()\` always returns a string, so convert with \`float()\`. Keep asking in a \`while\` loop while that number is not greater than zero. Put each answer on its own line in the console before you Run. Try thresholds like 20, then 5, and a bad -1 followed by 20 so the retry path runs.
 
 Validate input before you trust it. A \`while\` loop lets you re-prompt until the threshold is usable, then use that value in the filter.`,
 		outputNotes: Object.freeze([

@@ -34,10 +34,10 @@
 		}
 	}
 
-	const LESSON_WIDTH_KEY = 'pbl-studio-lesson-width';
-	const CONSOLE_HEIGHT_KEY = 'pbl-studio-console-height';
+	const LESSON_WIDTH_KEY = 'pbl-studio-lesson-width-v4';
+	const CONSOLE_HEIGHT_KEY = 'pbl-studio-console-height-v2';
 	const LESSON_MIN = 280;
-	const LESSON_MAX = 640;
+	const LESSON_MAX = 760;
 	const CONSOLE_MIN = 140;
 	const CONSOLE_MAX = 480;
 
@@ -58,10 +58,8 @@
 	let rosterError = '';
 	/** @type {'lesson' | 'code' | 'output'} */
 	let pane = 'lesson';
-	/** @type {'testcase' | 'output'} */
-	let consoleTab = 'output';
-	let lessonWidth = 400;
-	let consoleHeight = 220;
+	let lessonWidth = 440;
+	let consoleHeight = 320;
 	/** @type {'dark' | 'light'} */
 	let editorTheme = typeof window !== 'undefined' ? readStoredEditorTheme() : 'light';
 	let ready = false;
@@ -79,16 +77,51 @@
 		state.currentStep >= state.steps.length - 1 &&
 		state.lastCheck?.passed === true &&
 		state.lastCheck.step === state.currentStep;
+	$: currentCheck =
+		state?.lastCheck && state.lastCheck.step === state.currentStep ? state.lastCheck : null;
+	$: consoleHint =
+		state?.nextAction && state.nextAction !== (currentCheck?.message ?? '').trim()
+			? state.nextAction
+			: '';
+	$: inputApplies = /\binput\s*\(/u.test(String(state?.source ?? ''));
+	$: stdinParts = String(state?.stdinText ?? '').split('\n');
+	$: stdinDraft = stdinParts[stdinParts.length - 1] ?? '';
+	$: stdinCommitted = stdinParts.slice(0, -1);
+	$: pendingStdin = pendingInputLines(String(state?.output ?? ''), stdinCommitted);
+
+	/** @param {string} output @param {string[]} committed */
+	function pendingInputLines(output, committed) {
+		/** @type {Map<string, number>} */
+		const seen = new Map();
+		for (const line of output.split('\n')) seen.set(line, (seen.get(line) ?? 0) + 1);
+		return committed.filter((line) => {
+			const left = seen.get(line) ?? 0;
+			if (left > 0) {
+				seen.set(line, left - 1);
+				return false;
+			}
+			return true;
+		});
+	}
+
+	/** @param {string} draft */
+	function writeStdin(draft) {
+		if (!canEdit) return;
+		const prefix = stdinCommitted.length ? `${stdinCommitted.join('\n')}\n` : '';
+		controller?.setStdin(`${prefix}${draft.replace(/\r?\n/gu, '')}`);
+	}
 
 	onMount(() => {
 		document.documentElement.classList.add('pbl-studio');
 		document.body.classList.add('pbl-studio');
 		try {
-			const storedLesson = Number(sessionStorage.getItem(LESSON_WIDTH_KEY));
+			const storedLessonRaw = sessionStorage.getItem(LESSON_WIDTH_KEY);
+			const storedLesson = storedLessonRaw === null ? Number.NaN : Number(storedLessonRaw);
 			if (Number.isFinite(storedLesson)) {
 				lessonWidth = Math.min(LESSON_MAX, Math.max(LESSON_MIN, storedLesson));
 			}
-			const storedConsole = Number(sessionStorage.getItem(CONSOLE_HEIGHT_KEY));
+			const storedConsoleRaw = sessionStorage.getItem(CONSOLE_HEIGHT_KEY);
+			const storedConsole = storedConsoleRaw === null ? Number.NaN : Number(storedConsoleRaw);
 			if (Number.isFinite(storedConsole)) {
 				consoleHeight = Math.min(CONSOLE_MAX, Math.max(CONSOLE_MIN, storedConsole));
 			}
@@ -173,7 +206,6 @@
 
 	function runProgram() {
 		if (!canEdit) return;
-		consoleTab = 'output';
 		pane = 'output';
 		void controller?.run();
 	}
@@ -275,7 +307,23 @@
 					<h1>{state.step.title}</h1>
 					<p class="minutes">{state.step.minutes} min</p>
 				</div>
+				{#if state.step.scene}
+					<p class="scene">{state.step.scene}</p>
+				{/if}
 				<p class="body"><LessonRichText text={state.step.body} /></p>
+				{#if state.step.requiredStrings?.length}
+					<section class="examples required-strings" aria-label="Required strings">
+						<h2>Required strings</h2>
+						{#each state.step.requiredStrings as group (group.label)}
+							<h3>{group.label}</h3>
+							<ul class="string-list">
+								{#each group.strings as line (line)}
+									<li><code>{line}</code></li>
+								{/each}
+							</ul>
+						{/each}
+					</section>
+				{/if}
 				{#if state.step.outputNotes}
 					<section class="examples" aria-label="Output">
 						<h2>Output</h2>
@@ -322,17 +370,6 @@
 						<pre class="hint"><LessonRichText text={state.step.hints[2]} className="hint-rich" /></pre>
 					{/if}
 				</div>
-				{#if state.lastCheck && state.lastCheck.step === state.currentStep}
-					<p
-						class="check"
-						class:pass={state.lastCheck.passed}
-						class:fail={!state.lastCheck.passed}
-						role="status"
-					>
-						<span class="verdict">{state.lastCheck.passed ? 'Accepted' : 'Wrong Answer'}</span>
-						{state.lastCheck.message}
-					</p>
-				{/if}
 				{#if state.step.stretch && state.currentStep === 11}
 					<p class="stretch"><LessonRichText text={state.step.stretch} /></p>
 				{/if}
@@ -483,46 +520,57 @@
 					on:pointerdown={startConsoleResize}
 				></div>
 				<div class="work-bottom">
-					<div class="console" data-tab={consoleTab}>
-						<div class="console-tabs" role="tablist" aria-label="Program console">
-							<button
-								type="button"
-								role="tab"
-								aria-selected={consoleTab === 'testcase'}
-								on:click={() => (consoleTab = 'testcase')}
-							>
-								Testcase
-							</button>
-							<button
-								type="button"
-								role="tab"
-								aria-selected={consoleTab === 'output'}
-								on:click={() => (consoleTab = 'output')}
-							>
-								Output
-							</button>
-							{#if state.nextAction}
-								<span class="console-status">{state.nextAction}</span>
-							{/if}
-						</div>
+					<div class="console">
 						<div class="console-body">
-							<label class="stdin-label">
-								Program input, one line per input()
-								<textarea
-									class="stdin"
-									value={state.stdinText}
-									disabled={!canEdit}
-									on:input={(event) => {
-										if (!canEdit) return;
-										controller?.setStdin(event.currentTarget.value);
-									}}
-								></textarea>
-							</label>
+							{#if currentCheck}
+								<p
+									class="console-result"
+									class:pass={currentCheck.passed}
+									class:fail={!currentCheck.passed}
+									role="status"
+								>
+									<span class="verdict">{currentCheck.passed ? 'Accepted' : 'Wrong Answer'}</span>
+									{currentCheck.message}
+								</p>
+							{/if}
+							{#if consoleHint}
+								<p class="console-hint">{consoleHint}</p>
+							{/if}
 							{#if state.pythonError}
 								<p class="error" role="status">{state.pythonError}</p>
 							{/if}
 							<pre class="output" aria-label="Program output">{state.output ||
-									'Output appears here.'}</pre>
+									(inputApplies ? '' : 'Output appears here.')}{#if inputApplies}{state.output &&
+								!String(state.output).endsWith('\n')
+									? '\n'
+									: ''}{#each pendingStdin as line, index (`${index}:${line}`)}{line}{'\n'}{/each}								<span class="term-row">{#if canEdit}<input
+										class="term-input"
+										type="text"
+										aria-label="Console input"
+										autocomplete="off"
+										autocapitalize="off"
+										spellcheck="false"
+										value={stdinDraft}
+										on:input={(event) => writeStdin(event.currentTarget.value)}
+										on:keydown={(event) => {
+											if (event.key === 'Enter') {
+												event.preventDefault();
+												const prefix = stdinCommitted.length
+													? `${stdinCommitted.join('\n')}\n`
+													: '';
+												controller?.setStdin(`${prefix}${stdinDraft}\n`);
+											} else if (
+												event.key === 'Backspace' &&
+												stdinDraft === '' &&
+												stdinCommitted.length > 0
+											) {
+												event.preventDefault();
+												const restored = stdinCommitted.slice(0, -1);
+												const prefix = restored.length ? `${restored.join('\n')}\n` : '';
+												controller?.setStdin(`${prefix}${stdinCommitted.at(-1) ?? ''}`);
+											}
+										}}
+									/>{/if}</span>{/if}</pre>
 						</div>
 					</div>
 					{#if Object.keys(state.files).length}
@@ -861,6 +909,18 @@
 		line-height: 1.15;
 	}
 
+	.scene {
+		margin: 0;
+		max-width: 42rem;
+		padding-inline-start: 0.75rem;
+		border-inline-start: 2px solid rgb(var(--midnight-rgb) / 22%);
+		color: var(--quiet-steel);
+		font-size: 0.9375rem;
+		font-style: italic;
+		line-height: 1.45;
+		white-space: pre-line;
+	}
+
 	.body,
 	.stretch {
 		max-width: 42rem;
@@ -886,6 +946,37 @@
 		padding-inline-start: 1.1rem;
 		color: var(--quiet-steel);
 		font-size: 0.875rem;
+	}
+
+	.required-strings {
+		display: grid;
+		gap: 0.35rem;
+	}
+
+	.required-strings h3 {
+		margin: 0.45rem 0 0;
+		font-size: 0.8125rem;
+		font-weight: 650;
+	}
+
+	.string-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: grid;
+		gap: 0.3rem;
+	}
+
+	.string-list code {
+		display: block;
+		padding: 0.35rem 0.5rem;
+		border: 1px solid rgb(var(--midnight-rgb) / 12%);
+		border-radius: 0.3rem;
+		background: var(--mist);
+		font-family: var(--font-mono);
+		font-size: 0.78rem;
+		line-height: 1.4;
+		white-space: pre-wrap;
 	}
 
 	.hints {
@@ -915,8 +1006,7 @@
 
 	.hint,
 	.output,
-	.files pre,
-	.stdin {
+	.files pre {
 		width: 100%;
 		margin: 0;
 		padding: 0.75rem;
@@ -929,29 +1019,31 @@
 		white-space: pre-wrap;
 	}
 
-	.check {
-		padding: 0.7rem 0.8rem;
-		border-radius: 0.35rem;
-		font-size: 0.875rem;
-		font-weight: 650;
+	.console-result,
+	.console-hint {
+		margin: 0;
+		padding: 0.55rem 0.85rem 0;
+		font-family: var(--font-mono);
+		font-size: 0.8125rem;
+		line-height: 1.45;
+		white-space: pre-wrap;
 	}
 
-	.verdict {
-		display: block;
-		margin-bottom: 0.15rem;
-		font-size: 0.72rem;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
+	.console-result .verdict {
+		margin-inline-end: 0.45rem;
+		font-weight: 700;
 	}
 
-	.check.pass {
-		background: #ecf8ef;
-		color: #157347;
+	.console-result.pass {
+		color: #a9dc76;
 	}
 
-	.check.fail {
-		background: #fdecec;
-		color: var(--danger);
+	.console-result.fail {
+		color: var(--pbl-editor-red, #ff6188);
+	}
+
+	.console-hint {
+		color: var(--pbl-editor-muted, #c8c4c6);
 	}
 
 	.pane-switch {
@@ -1082,18 +1174,6 @@
 		overflow: hidden;
 	}
 
-	.stdin-label {
-		display: grid;
-		padding: 0.65rem 0.85rem 0;
-		gap: 0.35rem;
-		color: var(--pbl-editor-muted, #c8c4c6);
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-	}
-
-	.stdin,
 	.output,
 	.files pre {
 		border-color: var(--pbl-editor-rule, #3e3b3f);
@@ -1101,9 +1181,39 @@
 		color: var(--pbl-editor-ink, #fcfcfa);
 	}
 
-	.stdin {
-		min-height: 4.2rem;
-		resize: vertical;
+	.term-row {
+		display: flex;
+		width: 100%;
+		cursor: text;
+	}
+
+	.term-input {
+		flex: 1 1 auto;
+		min-width: 0;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		border-radius: 0;
+		outline: none;
+		box-shadow: none;
+		background: transparent;
+		color: inherit;
+		font: inherit;
+		line-height: inherit;
+		letter-spacing: inherit;
+		caret-color: currentColor;
+		cursor: text;
+		appearance: none;
+	}
+
+	.term-input:hover,
+	.term-input:focus,
+	.term-input:focus-visible {
+		outline: none !important;
+		box-shadow: none !important;
+		border: 0 !important;
+		background: transparent !important;
+		cursor: text;
 	}
 
 	.console {
@@ -1123,53 +1233,6 @@
 		overflow: auto;
 		display: flex;
 		flex-direction: column;
-	}
-
-	.console-tabs {
-		display: flex;
-		flex: 0 0 auto;
-		align-items: center;
-		align-self: stretch;
-		width: 100%;
-		gap: 0.35rem;
-		padding: 0.28rem 0.55rem;
-		height: auto;
-		border-block-end: 1px solid var(--pbl-editor-rule, #3e3b3f);
-		background: var(--pbl-editor-panel-deep, #1e1b1e);
-	}
-
-	.console-status {
-		margin: 0;
-		margin-left: auto;
-		color: var(--pbl-editor-muted, #8b8789);
-		font-size: 0.8125rem;
-		font-weight: 500;
-		line-height: 1.35;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-width: min(28rem, 55%);
-	}
-
-	.console-tabs button {
-		flex: 0 0 auto;
-		align-self: center;
-		height: auto;
-		min-height: 0;
-		padding: 0.18rem 0.55rem;
-		border: 0;
-		border-radius: 0.25rem;
-		background: transparent;
-		color: var(--pbl-editor-muted, #8b8789);
-		font-size: 0.8125rem;
-		font-weight: 500;
-		line-height: 1.35;
-		cursor: pointer;
-	}
-
-	.console-tabs button[aria-selected='true'] {
-		background: var(--pbl-editor-bg, #2d2a2e);
-		color: var(--pbl-editor-ink, #fcfcfa);
 	}
 
 	.output {
@@ -1206,14 +1269,6 @@
 	.work > .button-primary {
 		align-self: start;
 		margin: 0.75rem 1rem;
-	}
-
-	.console[data-tab='testcase'] .output {
-		display: none;
-	}
-
-	.console[data-tab='output'] .stdin-label {
-		display: none;
 	}
 
 	@media (max-width: 63.99rem) {
@@ -1307,7 +1362,7 @@
 
 	@media (min-width: 64rem) {
 		.studio {
-			grid-template-columns: var(--lesson-width, 25rem) 1px minmax(0, 1fr);
+			grid-template-columns: var(--lesson-width, 27.5rem) 1px minmax(0, 1fr);
 			overflow: hidden;
 		}
 
@@ -1367,8 +1422,8 @@
 		}
 
 		.work-bottom {
-			flex: 0 0 var(--console-height, 14rem);
-			max-height: var(--console-height, 14rem);
+			flex: 0 0 var(--console-height, 20rem);
+			max-height: var(--console-height, 20rem);
 			overflow: hidden;
 		}
 
