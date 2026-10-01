@@ -27,6 +27,11 @@ vi.mock('$lib/pbl/PythonEditor.svelte', async () => {
 	return { default: Stub };
 });
 
+vi.mock('$lib/pbl/StoryGraph.svelte', async () => {
+	const { default: Stub } = await import('./StoryGraph.stub.svelte');
+	return { default: Stub };
+});
+
 vi.mock('$lib/pbl/workshop-controller.js', async () => {
 	const { SCIENCE_STEPS } = await import('$lib/pbl/science-workshop.js');
 	return {
@@ -166,7 +171,7 @@ describe('PBL studio page', () => {
 		const lesson = container.querySelector('.lesson');
 		const consolePanel = container.querySelector('.console');
 		const studioStyle = container.querySelector('.studio')?.getAttribute('style') ?? '';
-		expect(studioStyle).toContain('--lesson-width: 440px');
+		expect(studioStyle).toContain('--lesson-width: 400px');
 		expect(studioStyle).toContain('--console-height: 320px');
 		expect(within(consolePanel).getByRole('status')).toHaveTextContent(
 			'Printed a custom message. Starter text is gone.'
@@ -175,6 +180,7 @@ describe('PBL studio page', () => {
 		expect(within(lesson).queryByText('Accepted')).toBeNull();
 		expect(within(lesson).queryByText('Wrong Answer')).toBeNull();
 		expect(lesson.querySelector('.scene')).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Situation diagram' })).toBeNull();
 		expect(screen.queryByRole('region', { name: 'Required strings' })).toBeNull();
 		expect(screen.queryByRole('tab', { name: 'Testcase' })).toBeNull();
 		expect(screen.queryByRole('tab', { name: 'Output' })).toBeNull();
@@ -207,7 +213,7 @@ describe('PBL studio page', () => {
 		const panes = screen.getByRole('navigation', { name: 'Studio sections' });
 		const paneButtons = within(panes);
 		expect(studio).toHaveAttribute('data-pane', 'lesson');
-		expect(paneButtons.getAllByRole('button')).toHaveLength(3);
+		expect(paneButtons.getAllByRole('button')).toHaveLength(4);
 		await user.click(paneButtons.getByRole('button', { name: 'Code' }));
 		expect(studio).toHaveAttribute('data-pane', 'code');
 		await user.click(screen.getByRole('button', { name: 'Run' }));
@@ -252,6 +258,49 @@ describe('PBL studio page', () => {
 		expect(screen.queryByRole('button', { name: 'Take keyboard' })).toBeNull();
 		expect(screen.queryByText('Press Run.')).toBeNull();
 		expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+	});
+
+	it('opens the story as a tab beside Code, with this step marked', async () => {
+		const user = userEvent.setup();
+		const { SCIENCE_STEPS } = await import('$lib/pbl/science-workshop.js');
+		studio.patch = {
+			currentStep: 1,
+			step: {
+				...SCIENCE_STEPS[1],
+				scene: "Oops, it's 8:07 AM. You wake up and realize you have an 8:15 AM class... You're NOT making it.\nTime to email your prof."
+			},
+			steps: [
+				{
+					id: 0,
+					title: 'Get something running',
+					scene: '----- 8:00 AM | GETTING TO SCHOOL -----'
+				},
+				{
+					id: 1,
+					title: 'Set the scene',
+					scene: "Oops, it's 8:07 AM. You wake up and realize you have an 8:15 AM class... You're NOT making it.\nTime to email your prof."
+				}
+			],
+			files: {}
+		};
+		const { container } = await renderReady();
+		expect(screen.queryByRole('region', { name: 'Situation diagram' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Situation diagram' })).toBeNull();
+		await user.click(screen.getByRole('tab', { name: 'Story' }));
+		expect(container.querySelector('.studio')).toHaveAttribute('data-pane', 'story');
+		const diagram = await waitFor(() => screen.getByRole('region', { name: 'Situation diagram' }));
+		expect(diagram).toBeVisible();
+		expect(within(diagram).getByText('----- 8:00 AM | GETTING TO SCHOOL -----')).toBeVisible();
+		expect(within(diagram).getByText(/NOT making it/)).toBeVisible();
+		expect(within(diagram).getByText('Time to email your prof.')).toBeVisible();
+		expect(diagram.querySelectorAll('.flow-edge')).toHaveLength(1);
+		const boxes = diagram.querySelectorAll('article');
+		expect(boxes[0]).not.toHaveClass('current');
+		expect(boxes[1]).toHaveClass('current');
+		expect(within(boxes[1]).getByText('This step')).toBeVisible();
+		await user.click(screen.getByRole('tab', { name: 'Code' }));
+		expect(container.querySelector('.studio')).toHaveAttribute('data-pane', 'code');
+		expect(screen.queryByRole('region', { name: 'Situation diagram' })).toBeNull();
 	});
 
 	it('lists required strings by category when the step has them', async () => {
