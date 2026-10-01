@@ -1,9 +1,5 @@
 import { createPythonHost } from './python-host.js';
-import {
-	isNewerLastCheck,
-	normalizeStepSources,
-	normalizeStepYjs
-} from './room-state.js';
+import { isNewerLastCheck, normalizeStepSources, normalizeStepYjs } from './room-state.js';
 import { createRoomSync } from './sync-client.js';
 import {
 	canOpenStep,
@@ -139,6 +135,28 @@ export function createWorkshopController(options) {
 	}
 
 	/**
+	 * Step slots filled by carrying code forward, keyed by step, holding the text carried.
+	 * A slot still equal to its carried text has not been edited, so a later hop may refresh it.
+	 * @type {Record<string, string>}
+	 */
+	const carriedSlots = {};
+
+	/**
+	 * Start the next step from the code in the editor. Only fills a slot that is empty
+	 * or still an untouched carry, so a step the team has started editing is never clobbered.
+	 * @param {number} stepId
+	 */
+	function carryIntoNextStep(stepId) {
+		const key = String(stepId);
+		const existing = room.stepSources[key];
+		const untouched = !existing || existing === carriedSlots[key];
+		if (!untouched) return;
+		const source = String(room.source ?? '');
+		carriedSlots[key] = source;
+		room.stepSources = { ...room.stepSources, [key]: source };
+	}
+
+	/**
 	 * Load editor buffers from a step slot (source + optional yjs).
 	 * @param {number} stepId
 	 */
@@ -147,11 +165,7 @@ export function createWorkshopController(options) {
 		const key = String(stepId);
 		const storedSource = room.stepSources[key];
 		let source =
-			typeof storedSource === 'string'
-				? storedSource
-				: stepId === 0
-					? STARTER_SOURCE
-					: '';
+			typeof storedSource === 'string' ? storedSource : stepId === 0 ? STARTER_SOURCE : '';
 		// Always re-encode from the text map on hop. Trusting a stale stepYjs slot is what
 		// made hop-backs show another step's buffer while stepSources stayed correct.
 		let yjsState = '';
@@ -213,7 +227,7 @@ export function createWorkshopController(options) {
 			}
 		}
 
-		const incomingRun = next.lastRun;
+		const incomingRun = /** @type {any} */ (next.lastRun);
 		const keepLocalRun = !isNewerLastCheck(
 			/** @type {any} */ (incomingRun),
 			/** @type {any} */ (room.lastRun)
@@ -240,8 +254,7 @@ export function createWorkshopController(options) {
 			const mapSource = merged.stepSources[key];
 			const mapYjs = merged.stepYjs[key];
 			merged.source = typeof mapSource === 'string' ? mapSource : prevSource;
-			merged.yjsState =
-				typeof mapYjs === 'string' && mapYjs ? mapYjs : prevYjs;
+			merged.yjsState = typeof mapYjs === 'string' && mapYjs ? mapYjs : prevYjs;
 			merged.awarenessState = prevAwareness;
 			// Do not clear replacePending here — selectStep/setCollab flush.finally owns that.
 		} else if (remoteOnOtherStep || holdLocalEditor) {
@@ -250,8 +263,7 @@ export function createWorkshopController(options) {
 			const mapSource = merged.stepSources[key];
 			const mapYjs = merged.stepYjs[key];
 			merged.source = typeof mapSource === 'string' ? mapSource : prevSource;
-			merged.yjsState =
-				typeof mapYjs === 'string' && mapYjs ? mapYjs : prevYjs;
+			merged.yjsState = typeof mapYjs === 'string' && mapYjs ? mapYjs : prevYjs;
 			merged.awarenessState =
 				typeof next.awarenessState === 'string' ? next.awarenessState : prevAwareness;
 		} else if (remoteOnSameStep) {
@@ -274,16 +286,13 @@ export function createWorkshopController(options) {
 			// Legacy / poll without editingStep: apply live CRDT for collab. When the
 			// payload also includes step maps and they disagree with live source, the
 			// live field is another step's buffer — keep our per-step slot instead.
-			const remoteHasStepMaps =
-				next.stepSources !== undefined || next.stepYjs !== undefined;
+			const remoteHasStepMaps = next.stepSources !== undefined || next.stepYjs !== undefined;
 			const mapSource = merged.stepSources[key];
 			const mapYjs = merged.stepYjs[key];
 			const liveSource = typeof next.source === 'string' ? next.source : null;
 			const liveYjs = typeof next.yjsState === 'string' ? next.yjsState : null;
 			const mapMatchesLive =
-				liveSource === null ||
-				typeof mapSource !== 'string' ||
-				mapSource === liveSource;
+				liveSource === null || typeof mapSource !== 'string' || mapSource === liveSource;
 			if (!remoteHasStepMaps || mapMatchesLive) {
 				if (liveSource !== null) {
 					merged.source = liveSource;
@@ -359,7 +368,8 @@ export function createWorkshopController(options) {
 			stepYjs: normalizeStepYjs(joined.stepYjs)
 		};
 		const unlocked = Number(joined.unlockedStep);
-		viewStep = Number.isInteger(unlocked) && unlocked >= 0 ? Math.min(unlocked, STEPS.length - 1) : 0;
+		viewStep =
+			Number.isInteger(unlocked) && unlocked >= 0 ? Math.min(unlocked, STEPS.length - 1) : 0;
 		// Start on the latest unlocked step with that step's saved code when present.
 		if (!room.stepSources['0'] && room.source) {
 			room.stepSources = { ...room.stepSources, '0': room.source };
@@ -395,11 +405,7 @@ export function createWorkshopController(options) {
 		// Hop pin: polls reuse pinnedYjs. Remount onCollab echoes (other step's buffer)
 		// are dropped during pinUntil; real edits clear the pin and apply.
 		if (!replaceEditor) {
-			if (
-				pinnedStepSource !== null &&
-				Date.now() < pinUntil &&
-				source !== pinnedStepSource
-			) {
+			if (pinnedStepSource !== null && Date.now() < pinUntil && source !== pinnedStepSource) {
 				const looksLikeOtherStep = Object.entries(room.stepSources || {}).some(
 					([k, v]) => Number(k) !== viewStep && v === source
 				);
@@ -455,6 +461,7 @@ export function createWorkshopController(options) {
 		// outbound editor cannot write the old buffer into the new step slot.
 		replacePending = true;
 		persistViewStep();
+		if (stepId === viewStep + 1) carryIntoNextStep(stepId);
 		viewStep = stepId;
 		loadViewStep(stepId); // bumps editorEpoch + pins stable yjs
 		sync.update({
@@ -536,7 +543,8 @@ export function createWorkshopController(options) {
 		applySharedLastRun(finishedRun);
 		sync.update({ lastRun: finishedRun });
 		publish();
-		const ranOutOfInput = workshop.gradeWhenInputRunsOut && /EOF/iu.test(String(result.error ?? ''));
+		const ranOutOfInput =
+			workshop.gradeWhenInputRunsOut && /EOF/iu.test(String(result.error ?? ''));
 		if (!result.error || ranOutOfInput) await checkCurrent(sourceSnapshot, stepSnapshot);
 		else runClearedAt = null;
 		await sync.flush();
@@ -600,6 +608,7 @@ export function createWorkshopController(options) {
 		if (result.passed && unlockedStep > previousUnlocked) {
 			const nextKey = String(unlockedStep);
 			stepSources = { ...stepSources, [nextKey]: sourceText };
+			carriedSlots[nextKey] = sourceText;
 			stepYjs = { ...stepYjs, [nextKey]: stepYjs[stepKey] };
 		}
 
