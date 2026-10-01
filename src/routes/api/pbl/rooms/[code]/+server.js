@@ -31,20 +31,6 @@ export function _createPblRoomEndpoint(dependencies = {}) {
 	async function GET(event) {
 		try {
 			const known = knownVersionFrom(event.request.headers);
-			if (known !== null && Number.isInteger(known)) {
-				const current = await runtime.withStore((store) => store.getRoomVersion(event.params.code));
-				if (current === known) {
-					return new Response(null, {
-						status: 304,
-						headers: {
-							'cache-control': 'no-store',
-							etag: `"${current}"`,
-							'x-pbl-version': String(current)
-						}
-					});
-				}
-			}
-
 			const viewer = readMemberId(event.request.headers.get('cookie'));
 			const userId = event.locals?.maritools?.userId;
 			const room = await runtime.withStore((store) =>
@@ -54,6 +40,17 @@ export function _createPblRoomEndpoint(dependencies = {}) {
 					typeof userId === 'string' && userId ? userId : undefined
 				)
 			);
+			const version = room && typeof room === 'object' ? Number(room.version) : NaN;
+			if (known !== null && Number.isInteger(known) && version === known) {
+				return new Response(null, {
+					status: 304,
+					headers: {
+						'cache-control': 'no-store',
+						etag: `"${version}"`,
+						'x-pbl-version': String(version)
+					}
+				});
+			}
 			/** @type {Record<string, string>} */
 			const headers = {};
 			const rebound =

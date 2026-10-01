@@ -54,6 +54,27 @@ describe('PBL 2 rooms', () => {
 		expect(room.unlockedStep).toBe(GAMEJAM_STEP_COUNT - 1);
 	});
 
+	it('unlocks every step when the signed-in viewer is the staff account', async () => {
+		const repo = createMemoryPblRepository();
+		const actors = {
+			[USER]: { role: 'student', email: 'nick.zhicheng@gmail.com' },
+			'team-user': { role: 'staff', email: 'team@marihacks.com' }
+		};
+		const pbl = createPblStore(repo, {
+			now: () => NOW,
+			createCode: () => 'GJ23JK',
+			findClubActor: async (userId) => actors[userId] ?? null
+		});
+		await pbl.createRoom({
+			pblId: 'gamejam',
+			teamName: 'test',
+			memberId: MEMBER,
+			userId: USER
+		});
+		const room = await pbl.getRoom('GJ23JK', MEMBER, 'team-user');
+		expect(room.unlockedStep).toBe(GAMEJAM_STEP_COUNT - 1);
+	});
+
 	it('elevates an executive driver on read using the game jam step count', async () => {
 		const { store: pbl, who } = await createGameRoom();
 		who.actor = { role: 'moderator', email: 'exec@marihacks.com' };
