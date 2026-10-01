@@ -416,18 +416,39 @@ export function createPblStore(repository, clock = {}) {
 	}
 
 	/**
-	 * Persist full workshop unlock when the room driver is an executive owner.
+	 * Persist full workshop unlock when the signed-in viewer or the room driver
+	 * is an executive owner. The header session can be team@marihacks.com while
+	 * the room was created under a different Google account.
 	 * @param {any} row
+	 * @param {string | null} [viewerUserId]
 	 */
-	async function elevateExecutiveUnlock(row) {
+	async function elevateExecutiveUnlock(row, viewerUserId) {
 		if (!row || Number(row.unlockedStep) >= maxUnlockedStep(row.pblId)) return row;
+		/** @type {string[]} */
+		const userIds = [];
+		if (typeof viewerUserId === 'string' && viewerUserId.length > 0) userIds.push(viewerUserId);
 		const driverMemberId = row.driverMemberId;
-		if (typeof driverMemberId !== 'string' || driverMemberId.length === 0) return row;
-		const driver = await repository.findMember(row.id, driverMemberId);
-		const driverUserId = driver?.userId;
-		if (typeof driverUserId !== 'string' || driverUserId.length === 0) return row;
-		const actor = await resolveClubActor(driverUserId);
-		if (!isExecutiveOwner(actor)) return row;
+		if (typeof driverMemberId === 'string' && driverMemberId.length > 0) {
+			const driver = await repository.findMember(row.id, driverMemberId);
+			const driverUserId = driver?.userId;
+			if (
+				typeof driverUserId === 'string' &&
+				driverUserId.length > 0 &&
+				!userIds.includes(driverUserId)
+			) {
+				userIds.push(driverUserId);
+			}
+		}
+		if (userIds.length === 0) return row;
+		let executive = false;
+		for (const userId of userIds) {
+			const actor = await resolveClubActor(userId);
+			if (isExecutiveOwner(actor)) {
+				executive = true;
+				break;
+			}
+		}
+		if (!executive) return row;
 		const updated = await repository.updateRoom(row.code, row.version, {
 			unlockedStep: maxUnlockedStep(row.pblId),
 			version: row.version + 1,
@@ -512,7 +533,8 @@ export function createPblStore(repository, clock = {}) {
 			if (!normalized) throw new PblInputError('That room code is not valid.');
 			let row = await repository.findRoomByCode(normalized);
 			if (!row) throw new PblNotFoundError();
-			row = await elevateExecutiveUnlock(row);
+			const signedIn = typeof userId === 'string' && userId.length > 0 ? userId : null;
+			row = await elevateExecutiveUnlock(row, signedIn);
 
 			/** @param {string} memberId */
 			const memberView = async (memberId) => {
@@ -528,8 +550,6 @@ export function createPblStore(repository, clock = {}) {
 					memberId
 				};
 			};
-
-			const signedIn = typeof userId === 'string' && userId.length > 0 ? userId : null;
 
 			if (viewerMemberId) {
 				const membership = await repository.findMember(row.id, viewerMemberId);
@@ -560,7 +580,7 @@ export function createPblStore(repository, clock = {}) {
 			if (typeof input.userId !== 'string' || input.userId.length === 0) {
 				throw new PblInputError('Sign in with your club Google account to join a team.', 401);
 			}
-			const room = await this.getRoom(input.code);
+			const room = await this.getRoom(input.code, undefined, input.userId);
 			const row = await repository.findRoomByCode(room.code);
 			if (!row) throw new PblNotFoundError();
 			const byUser = await repository.findMemberByUser(row.id, input.userId);

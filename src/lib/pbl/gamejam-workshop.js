@@ -30,7 +30,9 @@ export const GAMEJAM_STEPS = Object.freeze([
 		title: 'Get something running',
 		minutes: 3,
 		scene: '----- 8:00 AM | GETTING TO SCHOOL -----',
-		body: `Press Run once. The starter line says Game loaded. Replace that text with the scene header, then Run again.
+		body: `Open the Story tab next to Code. That diagram is the story game you will implement, one scene at a time.
+
+Press Run once. The starter line says Game loaded. Replace that text with the scene header, then Run again.
 
 The code stays in the file. Every later step adds another scene on top of this one.`,
 		starter: GAMEJAM_STARTER_SOURCE,

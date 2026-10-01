@@ -29,10 +29,9 @@ describe('PBL room poll and push', () => {
 		expect(await response.json()).toMatchObject({ code: 'AB23JK', version: 2 });
 	});
 
-	it('returns 304 when x-pbl-version matches', async () => {
-		const getRoomVersion = vi.fn(async () => 2);
+	it('returns 304 when x-pbl-version matches after the room is read', async () => {
 		const getRoom = vi.fn(async () => ({ code: 'AB23JK', version: 2 }));
-		const { GET } = runtime({ getRoomVersion, getRoom });
+		const { GET } = runtime({ getRoom });
 		const response = await GET({
 			params: { code: 'AB23JK' },
 			request: new Request('https://club.example/api/pbl/rooms/AB23JK', {
@@ -41,8 +40,7 @@ describe('PBL room poll and push', () => {
 			url: new URL('https://club.example/api/pbl/rooms/AB23JK')
 		});
 		expect(response.status).toBe(304);
-		expect(getRoomVersion).toHaveBeenCalled();
-		expect(getRoom).not.toHaveBeenCalled();
+		expect(getRoom).toHaveBeenCalled();
 	});
 
 	it('maps a missing room to 404', async () => {

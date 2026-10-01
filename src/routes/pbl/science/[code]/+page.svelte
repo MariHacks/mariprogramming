@@ -12,6 +12,7 @@
 		readStoredEditorTheme,
 		storeEditorTheme
 	} from '$lib/pbl/python-editor.js';
+	import { storyGraph } from '$lib/pbl/story-flow.js';
 	import { createWorkshopController } from '$lib/pbl/workshop-controller.js';
 	import { requestStudentAuthorization } from '$lib/auth/student-sign-in.js';
 
@@ -34,7 +35,7 @@
 		}
 	}
 
-	const LESSON_WIDTH_KEY = 'pbl-studio-lesson-width-v4';
+	const LESSON_WIDTH_KEY = 'pbl-studio-lesson-width-v5';
 	const CONSOLE_HEIGHT_KEY = 'pbl-studio-console-height-v2';
 	const LESSON_MIN = 280;
 	const LESSON_MAX = 760;
@@ -56,9 +57,23 @@
 	let rosterOpen = false;
 	let ejectingMemberId = '';
 	let rosterError = '';
-	/** @type {'lesson' | 'code' | 'output'} */
+
+	$: graph = storyGraph(state?.steps ?? [], state?.currentStep ?? -1);
+	/** @type {'lesson' | 'code' | 'story' | 'output'} */
 	let pane = 'lesson';
-	let lessonWidth = 440;
+	/** @type {import('svelte').Component<any> | null} */
+	let StoryView = null;
+	let storyLoading = false;
+
+	async function showStory() {
+		pane = 'story';
+		if (StoryView || storyLoading) return;
+		storyLoading = true;
+		const mod = await import('$lib/pbl/StoryGraph.svelte');
+		StoryView = mod.default;
+		storyLoading = false;
+	}
+	let lessonWidth = 400;
 	let consoleHeight = 320;
 	/** @type {'dark' | 'light'} */
 	let editorTheme = typeof window !== 'undefined' ? readStoredEditorTheme() : 'light';
@@ -296,6 +311,9 @@
 			<button type="button" class:current={pane === 'code'} on:click={() => (pane = 'code')}>
 				Code
 			</button>
+			<button type="button" class:current={pane === 'story'} on:click={showStory}>
+				Story
+			</button>
 			<button type="button" class:current={pane === 'output'} on:click={() => (pane = 'output')}>
 				Output
 			</button>
@@ -454,6 +472,26 @@
 			style="--pbl-editor-bg: {editorPalette.bg}; --pbl-editor-gutter: {editorPalette.bgGutter}; --pbl-editor-ink: {editorPalette.ink}; --pbl-editor-comment: {editorPalette.comment}; --pbl-editor-yellow: {editorPalette.yellow}; --pbl-editor-cyan: {editorPalette.cyan}; --pbl-editor-red: {editorPalette.red}; --pbl-editor-panel: {editorPalette.panel}; --pbl-editor-panel-deep: {editorPalette.panelDeep}; --pbl-editor-muted: {editorPalette.muted}; --pbl-editor-rule: {editorPalette.rule}; --pbl-editor-line: {editorPalette.line}"
 		>
 			<div class="toolbar">
+				<div class="work-tabs" role="tablist" aria-label="Code or story">
+					<button
+						type="button"
+						role="tab"
+						class:current={pane !== 'story'}
+						aria-selected={pane !== 'story'}
+						on:click={() => (pane = 'code')}
+					>
+						Code
+					</button>
+					<button
+						type="button"
+						role="tab"
+						class:current={pane === 'story'}
+						aria-selected={pane === 'story'}
+						on:click={showStory}
+					>
+						Story
+					</button>
+				</div>
 				<div class="toolbar-actions">
 					<button
 						type="button"
@@ -495,6 +533,13 @@
 						</div>
 					</div>
 				{/if}
+				{#if pane === 'story'}
+					<div class="story-pane">
+						{#if StoryView}
+							<StoryView nodes={graph.nodes} edges={graph.edges} />
+						{/if}
+					</div>
+				{:else}
 				<div class="editor-shell" class:guest-locked={!canEdit}>
 					{#key `${state.viewStep ?? state.currentStep}:${state.editorEpoch ?? 0}`}
 						<PythonEditor
@@ -512,6 +557,7 @@
 						/>
 					{/key}
 				</div>
+				{/if}
 				<div
 					class="split-y"
 					role="separator"
@@ -1072,13 +1118,41 @@
 		flex-wrap: wrap;
 		align-items: center;
 		align-self: stretch;
-		justify-content: flex-end;
+		justify-content: space-between;
 		height: auto;
 		padding: 0.45rem 0.85rem;
 		gap: 0.65rem;
 		background: var(--pbl-editor-panel, #221f22);
 		border-block-end: 1px solid var(--pbl-editor-rule, #3e3b3f);
 		font-size: 0.8125rem;
+	}
+
+	.work-tabs {
+		display: flex;
+		gap: 0.2rem;
+	}
+
+	.work-tabs button {
+		padding: 0.35rem 0.7rem;
+		border-radius: 0.35rem;
+		color: var(--pbl-editor-muted, #c8c4c6);
+	}
+
+	.toolbar .work-tabs button.current {
+		background: var(--pbl-editor-line, #3e3b3f);
+		color: var(--pbl-editor-ink, #fcfcfa);
+	}
+
+	.story-pane {
+		position: relative;
+		flex: 1 1 auto;
+		min-height: 0;
+		min-width: 0;
+	}
+
+	.studio[data-pane='story'] .split-y,
+	.studio[data-pane='story'] .work-bottom {
+		display: none;
 	}
 
 	.toolbar-actions {
@@ -1324,7 +1398,9 @@
 		}
 
 		.studio[data-pane='code'] .lesson,
-		.studio[data-pane='code'] .work-bottom {
+		.studio[data-pane='code'] .work-bottom,
+		.studio[data-pane='story'] .lesson,
+		.studio[data-pane='story'] .work-bottom {
 			display: none;
 		}
 
@@ -1362,7 +1438,7 @@
 
 	@media (min-width: 64rem) {
 		.studio {
-			grid-template-columns: var(--lesson-width, 27.5rem) 1px minmax(0, 1fr);
+			grid-template-columns: var(--lesson-width, 25rem) 1px minmax(0, 1fr);
 			overflow: hidden;
 		}
 

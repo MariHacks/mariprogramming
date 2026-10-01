@@ -30,6 +30,8 @@ describe('PBL 2 game jam workshop', () => {
 		]);
 		for (const step of GAMEJAM_STEPS) expect(step.minutes).toBeGreaterThan(0);
 		expect(getGamejamStep(0)?.title).toBe('Get something running');
+		expect(GAMEJAM_STEPS[0].body).toMatch(/Story tab/);
+		expect(GAMEJAM_STEPS[0].body).toMatch(/story game you will implement/);
 		expect(getGamejamStep(11)?.title).toBe('Make it yours');
 		expect(getGamejamStep(-1)).toBeNull();
 		expect(getGamejamStep(1.5)).toBeNull();
