@@ -567,7 +567,18 @@
 				></div>
 				<div class="work-bottom">
 					<div class="console">
-						<div class="console-body">
+						<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+						<div
+							class="console-body"
+							role="presentation"
+							on:click={() => {
+								if (!canEdit) return;
+								const input = /** @type {HTMLInputElement | null} */ (
+									document.querySelector('pre.output .term-input')
+								);
+								input?.focus();
+							}}
+						>
 							{#if currentCheck}
 								<p
 									class="console-result"
@@ -604,7 +615,13 @@
 												const prefix = stdinCommitted.length
 													? `${stdinCommitted.join('\n')}\n`
 													: '';
-												controller?.setStdin(`${prefix}${stdinDraft}\n`);
+												const line = stdinDraft;
+												if (state?.awaitingStdinLine) {
+													controller?.setStdin(`${prefix}${line}\n`);
+													controller?.commitStdinLine(line);
+													return;
+												}
+												controller?.setStdin(`${prefix}${line}\n`);
 											} else if (
 												event.key === 'Backspace' &&
 												stdinDraft === '' &&

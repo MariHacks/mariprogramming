@@ -67,3 +67,16 @@ export function applyPblCspHeader(response) {
 		headers
 	});
 }
+
+/** @param {Response} response @param {unknown} pathname */
+export function applyPblStudioIsolationHeaders(response, pathname) {
+	if (!isPblStudioPath(pathname)) return response;
+	const headers = new Headers(response.headers);
+	headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+	headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
+	return new Response(response.body, {
+		status: response.status,
+		statusText: response.statusText,
+		headers
+	});
+}

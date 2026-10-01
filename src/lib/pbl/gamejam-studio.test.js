@@ -86,14 +86,21 @@ describe('game jam studio', () => {
 		await game.controller.join();
 		game.controller.setStdin('my excuse\n\n');
 		await game.controller.run();
-		expect(game.host.run).toHaveBeenCalledWith(GAMEJAM_STARTER_SOURCE, {
-			stdin: ['my excuse', ''],
-			echo: true
-		});
+		expect(game.host.run).toHaveBeenCalledWith(
+			GAMEJAM_STARTER_SOURCE,
+			expect.objectContaining({
+				stdin: ['my excuse', ''],
+				echo: true,
+				interactive: true
+			})
+		);
 		const science = studio({ runCheck: async () => ({ passed: false, message: 'no' }) });
 		await science.controller.join();
 		await science.controller.run();
-		expect(science.host.run).toHaveBeenCalledWith(SCIENCE_STARTER_SOURCE, { stdin: [] });
+		expect(science.host.run).toHaveBeenCalledWith(
+			SCIENCE_STARTER_SOURCE,
+			expect.objectContaining({ stdin: [], interactive: true })
+		);
 	});
 
 	it('shows a typed answer right after its prompt in the Output panel', async () => {

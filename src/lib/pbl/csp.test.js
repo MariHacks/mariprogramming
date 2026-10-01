@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	PYODIDE_INDEX_URL,
 	applyPblCspHeader,
+	applyPblStudioIsolationHeaders,
 	expandPblCsp,
 	expandPblCspInHtml,
 	isPblDocumentPath,
@@ -50,5 +51,14 @@ describe('PBL Python CSP', () => {
 		expect(await updated.text()).toBe('ok');
 		const plain = new Response('plain');
 		expect(applyPblCspHeader(plain)).toBe(plain);
+	});
+
+	it('adds cross-origin isolation on team studio pages only', async () => {
+		const original = new Response('ok', { headers: { 'x-test': 'kept' } });
+		const studio = applyPblStudioIsolationHeaders(original, '/pbl/science/AB23JK');
+		expect(studio.headers.get('Cross-Origin-Opener-Policy')).toBe('same-origin');
+		expect(studio.headers.get('Cross-Origin-Embedder-Policy')).toBe('credentialless');
+		expect(studio.headers.get('x-test')).toBe('kept');
+		expect(applyPblStudioIsolationHeaders(original, '/pbl/science')).toBe(original);
 	});
 });
