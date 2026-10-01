@@ -141,6 +141,51 @@ describe('game jam studio', () => {
 		120000
 	);
 
+	it('opens an already-unlocked next step with the code from the step before', async () => {
+		// Executive owners get every step unlocked up front, so no pass ever "newly unlocks" a step.
+		const { controller } = studio({ pblId: 'gamejam', unlockedStep: 11 });
+		await controller.join();
+		controller.selectStep(0);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		controller.setSource(REF[0]);
+		controller.selectStep(1);
+		expect(controller.getState().viewStep).toBe(1);
+		expect(controller.getState().source).toBe(REF[0]);
+		controller.destroy();
+	});
+
+	it('carries code edited after a pass into the next step', async () => {
+		const { controller } = studio({
+			pblId: 'gamejam',
+			runCheck: async () => ({ passed: true, message: 'ok' })
+		});
+		await controller.join();
+		controller.setSource(REF[0]);
+		await controller.run();
+		expect(controller.getState().unlockedStep).toBe(1);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		controller.setSource(`${REF[0]}print("tweak")\n`);
+		controller.selectStep(1);
+		expect(controller.getState().source).toBe(`${REF[0]}print("tweak")\n`);
+		controller.destroy();
+	});
+
+	it('keeps what the team already wrote in the next step when hopping back and forward', async () => {
+		const { controller } = studio({ pblId: 'gamejam', unlockedStep: 11 });
+		await controller.join();
+		controller.selectStep(0);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		controller.setSource(REF[0]);
+		controller.selectStep(1);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		controller.setSource(REF[1]);
+		controller.selectStep(0);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		controller.selectStep(1);
+		expect(controller.getState().source).toBe(REF[1]);
+		controller.destroy();
+	});
+
 	it.skipIf(!pythonAvailable)(
 		'does not unlock the next step for code that misses the step',
 		async () => {
