@@ -51,6 +51,36 @@ function harness(overrides = {}) {
 }
 
 describe('workshop controller', () => {
+	it('streams stdout and accepts commitStdinLine while Python waits for input', async () => {
+		const host = {
+			run: vi.fn(async (_source, trial) => {
+				trial.onStdout?.('Name: ');
+				await trial.waitStdinLine?.();
+				return {
+					stdout: 'Name: Ada\n',
+					stderr: '',
+					error: null,
+					globals: {},
+					files: {},
+					inputCount: 1
+				};
+			}),
+			destroy: vi.fn()
+		};
+		const { controller } = harness({ createHost: () => host });
+		await controller.join();
+		const running = controller.run();
+		await vi.waitFor(() => expect(controller.getState().awaitingStdinLine).toBe(true));
+		expect(controller.getState().output).toBe('Name: ');
+		controller.commitStdinLine('Ada');
+		await running;
+		expect(host.run).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.objectContaining({ interactive: true, waitStdinLine: expect.any(Function) })
+		);
+		controller.destroy();
+	});
+
 	it('joins a room, runs Python, and unlocks the next step after a passing check', async () => {
 		const { controller, host, sync } = harness();
 		const states = [];
@@ -63,7 +93,10 @@ describe('workshop controller', () => {
 		expect(sync.flush).toHaveBeenCalled();
 		await controller.run();
 		expect(sync.flush).toHaveBeenCalledTimes(2);
-		expect(host.run).toHaveBeenCalled();
+		expect(host.run).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.objectContaining({ interactive: true })
+		);
 		expect(controller.getState().unlockedStep).toBe(1);
 		expect(controller.getState().lastCheck?.passed).toBe(true);
 		controller.selectStep(1);

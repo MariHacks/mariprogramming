@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { deliverInteractiveStdinLine } from './interactive-stdin-buffer.js';
 import { createPythonHost } from './python-host.js';
 
 /** @param {(worker: FakeWorker, data: any) => void} onPost */
@@ -115,6 +116,45 @@ describe('python host', () => {
 		const host = createPythonHost({ Worker: /** @type {any} */ (WorkerImpl) });
 		expect((await host.run('print(1)')).stdout).toBe('ok\n');
 		expect((await host.run('print(2)')).stdout).toBe('ok\n');
+		host.destroy();
+	});
+
+	it('streams stdout and resolves interactive stdin without finishing the run early', async () => {
+		const backing = new SharedArrayBuffer(8200);
+		const WorkerImpl = fakeWorkerClass((worker, data) => {
+			if (data.interactive) {
+				worker.messageHandler?.({
+					data: { id: data.id, type: 'stdin-request', stdout: 'Name: ' }
+				});
+				const line = 'Ada';
+				deliverInteractiveStdinLine(backing, line);
+				worker.messageHandler?.({
+					data: {
+						id: data.id,
+						type: 'result',
+						result: {
+							stdout: `Name: ${line}\n`,
+							stderr: '',
+							error: null,
+							globals: {},
+							files: {},
+							inputCount: 1
+						}
+					}
+				});
+				return;
+			}
+		});
+		const chunks = [];
+		const host = createPythonHost({ Worker: /** @type {any} */ (WorkerImpl), timeoutMs: 1000 });
+		const result = await host.run('name = input("Name: ")\n', {
+			interactive: true,
+			onStdout: (stdout) => chunks.push(stdout),
+			waitStdinLine: async () => 'Ada'
+		});
+		expect(chunks).toEqual(['Name: ']);
+		expect(result.stdout).toBe('Name: Ada\n');
+		expect(result.inputCount).toBe(1);
 		host.destroy();
 	});
 

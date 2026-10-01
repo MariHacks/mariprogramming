@@ -69,6 +69,9 @@ export function createWorkshopController(options) {
 	let output = '';
 	let files = /** @type {Record<string, string>} */ ({});
 	let running = false;
+	let awaitingStdinLine = false;
+	/** @type {((line: string) => void) | null} */
+	let fulfillStdinLine = null;
 	let pythonError = '';
 	let roomError = '';
 	let readOnly = false;
@@ -88,6 +91,7 @@ export function createWorkshopController(options) {
 			output,
 			files,
 			running,
+			awaitingStdinLine,
 			pythonError,
 			roomError,
 			readOnly,
@@ -452,6 +456,16 @@ export function createWorkshopController(options) {
 		publish();
 	}
 
+	/** @param {string} line */
+	function commitStdinLine(line) {
+		if (!fulfillStdinLine) return;
+		const resolve = fulfillStdinLine;
+		fulfillStdinLine = null;
+		awaitingStdinLine = false;
+		resolve(String(line ?? '').replace(/\r?\n/gu, ''));
+		publish();
+	}
+
 	/** @param {number} stepId */
 	function selectStep(stepId) {
 		if (blocked) return;
@@ -528,10 +542,36 @@ export function createWorkshopController(options) {
 			.split('\n')
 			.map((line) => line.replace(/\r$/u, '').replace(/\u00a0/gu, ' '))
 			.filter((line, index, lines) => line.length > 0 || index < lines.length - 1);
-		const result = await host.run(
-			sourceSnapshot,
-			workshop.echoInput ? { stdin, echo: true } : { stdin }
-		);
+		const interactive = !readOnly;
+		const result = await host.run(sourceSnapshot, {
+			stdin,
+			...(workshop.echoInput ? { echo: true } : {}),
+			...(interactive
+				? {
+						interactive: true,
+						onStdout: (partial) => {
+							output = partial;
+							const liveRun = {
+								output: partial,
+								error: '',
+								step: stepSnapshot,
+								at: runClearedAt ?? now(),
+								running: true
+							};
+							applySharedLastRun(liveRun);
+							publish();
+						},
+						waitStdinLine: () =>
+							new Promise((resolve) => {
+								awaitingStdinLine = true;
+								fulfillStdinLine = resolve;
+								publish();
+							})
+					}
+				: {})
+		});
+		awaitingStdinLine = false;
+		fulfillStdinLine = null;
 		const finishedRun = {
 			output: `${result.stdout ?? ''}${result.stderr ?? ''}`,
 			error: result.error ? String(result.error) : '',
@@ -667,6 +707,7 @@ export function createWorkshopController(options) {
 		setSource,
 		setCollab,
 		setStdin,
+		commitStdinLine,
 		selectStep,
 		openHint,
 		run,

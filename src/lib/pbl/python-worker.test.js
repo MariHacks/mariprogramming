@@ -30,7 +30,11 @@ async function loadWorker(runPythonAsync) {
 	const self = { postMessage: (message) => posted.push(message) };
 	new Function('self', 'importScripts', 'loadPyodide', WORKER_SOURCE)(
 		self,
-		() => {},
+		(url) => {
+			if (String(url).includes('interactive-stdin-buffer')) {
+				self.readInteractiveStdinLine = () => 'typed live';
+			}
+		},
 		async () => pyodide
 	);
 	return { self, posted, globals };
@@ -84,6 +88,28 @@ describe('python worker messages', () => {
 		expect((await run(true)).inputCount).toBe(1);
 		expect((await run(false)).stdout).toBe('Name: done\n');
 		expect((await run(undefined)).stdout).toBe('Name: done\n');
+	});
+
+	it('waits for interactive stdin when the queue is empty and interactive is enabled', async () => {
+		const { self, posted } = await loadWorker((store, hooks) => {
+			hooks.out('Name: ');
+			const line = hooks.stdin();
+			hooks.out(`hi ${line}\n`);
+			store.set('RESULT', RESULT());
+		});
+		await self.onmessage({
+			data: {
+				id: 3,
+				code: '',
+				stdin: [],
+				interactive: true,
+				stdinBuffer: new SharedArrayBuffer(8200),
+				indexURL: 'x'
+			}
+		});
+		expect(posted.some((message) => message.type === 'stdin-request')).toBe(true);
+		expect(posted.at(-1).result.stdout).toBe('Name: hi typed live\n\n');
+		expect(posted.at(-1).result.inputCount).toBe(1);
 	});
 
 	it('does not echo when the input queue is empty', async () => {

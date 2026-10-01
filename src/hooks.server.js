@@ -1,6 +1,11 @@
 import { building } from '$app/environment';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
-import { applyPblCspHeader, expandPblCspInHtml, isPblDocumentPath } from '$lib/pbl/csp.js';
+import {
+	applyPblCspHeader,
+	applyPblStudioIsolationHeaders,
+	expandPblCspInHtml,
+	isPblDocumentPath
+} from '$lib/pbl/csp.js';
 import { isMaritoolsSession, isStaffSession } from '$lib/server/auth/authorization.js';
 import { withRequestAuth } from '$lib/server/auth/runtime.js';
 import { ensureMariToolsBootstrap } from '$lib/server/maritools/bootstrap.js';
@@ -107,7 +112,10 @@ export function createHandle({
 			const response = await resolve(current, {
 				transformPageChunk: ({ html }) => expandPblCspInHtml(html)
 			});
-			return applyPblCspHeader(response);
+			return applyPblStudioIsolationHeaders(
+				applyPblCspHeader(response),
+				current.url.pathname
+			);
 		}
 		/** @param {Response} response */
 		const finalize = (response) => applyRoutePolicy(response, event.url.pathname);

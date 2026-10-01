@@ -1,4 +1,8 @@
 import { PYODIDE_INDEX_URL } from './csp.js';
+import {
+	deliverInteractiveStdinLine,
+	tryCreateInteractiveStdinBuffer
+} from './interactive-stdin-buffer.js';
 
 const DEFAULT_TIMEOUT_MS = 12000;
 const LOAD_TIMEOUT_MS = 120000;
@@ -40,7 +44,14 @@ export function createPythonHost(options = {}) {
 	/** @type {Worker | null} */
 	let worker = null;
 	let nextId = 1;
-	/** @type {Map<number, { resolve: (value: PythonRunResult) => void, reject: (error: Error) => void, timer: ReturnType<typeof setTimeout> }>} */
+	/** @type {Map<number, {
+	 *   resolve: (value: PythonRunResult) => void,
+	 *   reject: (error: Error) => void,
+	 *   timer: ReturnType<typeof setTimeout>,
+	 *   onStdout?: (stdout: string) => void,
+	 *   waitStdinLine?: () => Promise<string>,
+	 *   stdinBuffer?: import('./interactive-stdin-buffer.js').StdinSharedBacking
+	 * }>} */
 	const pending = new Map();
 
 	function clearPending(id) {
@@ -72,6 +83,20 @@ export function createPythonHost(options = {}) {
 			if (typeof id !== 'number') return;
 			const request = pending.get(id);
 			if (!request) return;
+			if (data.type === 'stdin-request') {
+				if (typeof data.stdout === 'string') request.onStdout?.(data.stdout);
+				if (request.stdinBuffer && request.waitStdinLine) {
+					void request.waitStdinLine().then(
+						(line) => {
+							deliverInteractiveStdinLine(request.stdinBuffer, line);
+						},
+						() => {
+							deliverInteractiveStdinLine(request.stdinBuffer, '');
+						}
+					);
+				}
+				return;
+			}
 			clearPending(id);
 			if (data.type === 'result' && data.result && typeof data.result === 'object') {
 				runtimeReady = true;
@@ -112,7 +137,7 @@ export function createPythonHost(options = {}) {
 
 	/**
 	 * @param {string} code
-	 * @param {{ stdin?: string[], overrides?: Record<string, number>, probe?: string, rolls?: number[], echo?: boolean }} [trial]
+	 * @param {{ stdin?: string[], overrides?: Record<string, number>, probe?: string, rolls?: number[], echo?: boolean, interactive?: boolean, onStdout?: (stdout: string) => void, waitStdinLine?: () => Promise<string> }} [trial]
 	 * @returns {Promise<PythonRunResult>}
 	 */
 	async function run(code, trial = {}) {
@@ -121,6 +146,9 @@ export function createPythonHost(options = {}) {
 			const id = nextId;
 			nextId += 1;
 			const waitMs = timeoutMs ?? (runtimeReady ? DEFAULT_TIMEOUT_MS : LOAD_TIMEOUT_MS);
+			const stdinBuffer =
+				trial.interactive === true ? tryCreateInteractiveStdinBuffer() : null;
+			const interactive = trial.interactive === true && stdinBuffer != null;
 			return await new Promise((resolve, reject) => {
 				const timer = setTimeout(() => {
 					pending.delete(id);
@@ -134,7 +162,14 @@ export function createPythonHost(options = {}) {
 						inputCount: 0
 					});
 				}, waitMs);
-				pending.set(id, { resolve, reject, timer });
+				pending.set(id, {
+					resolve,
+					reject,
+					timer,
+					onStdout: trial.onStdout,
+					waitStdinLine: trial.waitStdinLine,
+					stdinBuffer: stdinBuffer ?? undefined
+				});
 				current.postMessage({
 					id,
 					type: 'run',
@@ -144,6 +179,7 @@ export function createPythonHost(options = {}) {
 					probe: trial.probe ?? null,
 					...(trial.rolls ? { rolls: trial.rolls } : {}),
 					...(trial.echo === true ? { echo: true } : {}),
+					...(interactive ? { interactive: true, stdinBuffer } : {}),
 					indexURL
 				});
 			});

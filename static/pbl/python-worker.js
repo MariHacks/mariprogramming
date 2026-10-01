@@ -1,5 +1,6 @@
-/* global importScripts, loadPyodide */
+/* global importScripts, loadPyodide, readInteractiveStdinLine */
 importScripts('https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js');
+importScripts('/pbl/interactive-stdin-buffer.js');
 
 /** @type {Promise<any> | null} */
 let pyodidePromise = null;
@@ -197,12 +198,21 @@ self.onmessage = async (event) => {
 		});
 		pyodide.setStdin({
 			stdin: () => {
-				if (stdin.length === 0) return null;
-				inputCount += 1;
-				const line = stdin.shift();
-				// Opt-in terminal echo so a typed answer shows up in Output like a real console.
-				if (data.echo === true && line != null) stdoutOut.text += `${line}\n`;
-				return line == null ? null : `${line}\n`;
+				if (stdin.length > 0) {
+					inputCount += 1;
+					const line = stdin.shift();
+					// Opt-in terminal echo so a typed answer shows up in Output like a real console.
+					if (data.echo === true && line != null) stdoutOut.text += `${line}\n`;
+					return line == null ? null : `${line}\n`;
+				}
+				if (data.interactive === true && data.stdinBuffer) {
+					inputCount += 1;
+					self.postMessage({ id, type: 'stdin-request', stdout: stdoutOut.text });
+					const line = self.readInteractiveStdinLine(data.stdinBuffer, pyodide);
+					if (data.echo === true) stdoutOut.text += `${line}\n`;
+					return `${line}\n`;
+				}
+				return null;
 			}
 		});
 		pyodide.globals.set('STUDENT_SOURCE', String(data.code ?? ''));
