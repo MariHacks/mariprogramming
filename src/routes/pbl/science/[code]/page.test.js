@@ -405,6 +405,65 @@ describe('PBL studio page', () => {
 		expect(run).toHaveBeenCalled();
 	});
 
+	it('focuses the console input when clicking the empty Output pane', async () => {
+		studio.patch = {
+			source: 'name = input("Name: ")\nprint(name)\n',
+			output: 'Name: ',
+			stdinText: '',
+			awaitingInput: true,
+			files: {}
+		};
+		const { container } = await renderReady();
+		const consolePanel = /** @type {HTMLElement} */ (container.querySelector('.console'));
+		const output = /** @type {HTMLElement} */ (container.querySelector('pre.output'));
+		const input = within(consolePanel).getByRole('textbox', { name: 'Console input' });
+		expect(consolePanel).toHaveClass('console-live');
+		const focus = vi.spyOn(input, 'focus');
+		await fireEvent.pointerDown(output, { clientX: 24, clientY: 120 });
+		await fireEvent.pointerUp(output, { clientX: 24, clientY: 120 });
+		expect(focus).toHaveBeenCalled();
+		focus.mockClear();
+		await fireEvent.pointerDown(output, { clientX: 10, clientY: 10 });
+		await fireEvent.pointerUp(output, { clientX: 80, clientY: 10 });
+		expect(focus).not.toHaveBeenCalled();
+		focus.mockClear();
+		await fireEvent.pointerDown(input, { clientX: 4, clientY: 4 });
+		await fireEvent.pointerUp(input, { clientX: 4, clientY: 4 });
+		expect(focus).not.toHaveBeenCalled();
+		cleanup();
+
+		studio.patch = {
+			source: 'name = input("Name: ")\nprint(name)\n',
+			output: '',
+			stdinText: '',
+			files: {}
+		};
+		const idle = await renderReady();
+		const idleConsole = /** @type {HTMLElement} */ (idle.container.querySelector('.console'));
+		const idleOutput = /** @type {HTMLElement} */ (idle.container.querySelector('pre.output'));
+		const idleInput = within(idleConsole).getByRole('textbox', { name: 'Console input' });
+		const idleFocus = vi.spyOn(idleInput, 'focus');
+		await fireEvent.pointerDown(idleOutput, { clientX: 24, clientY: 160 });
+		await fireEvent.pointerUp(idleOutput, { clientX: 24, clientY: 160 });
+		expect(idleFocus).toHaveBeenCalled();
+	});
+
+	it('keeps guests from typing stdin even if they click the Output pane', async () => {
+		studio.patch = {
+			source: 'name = input("Name: ")\nprint(name)\n',
+			output: 'Name: ',
+			awaitingInput: true,
+			files: {}
+		};
+		await renderReady({ data: { collabUser: null } });
+		expect(screen.queryByRole('textbox', { name: 'Console input' })).toBeNull();
+		const output = screen.getByLabelText('Program output');
+		await fireEvent.pointerDown(output, { clientX: 24, clientY: 120 });
+		await fireEvent.pointerUp(output, { clientX: 24, clientY: 120 });
+		expect(screen.queryByRole('textbox', { name: 'Console input' })).toBeNull();
+		expect(screen.getByRole('button', { name: 'Run' })).toBeDisabled();
+	});
+
 	it('keeps Next disabled until the step check passes', async () => {
 		const { SCIENCE_STEPS } = await import('$lib/pbl/science-workshop.js');
 		studio.patch = {

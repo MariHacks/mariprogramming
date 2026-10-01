@@ -149,11 +149,54 @@
 		});
 	}
 
+	$: showConsoleInput = Boolean(inputApplies && canEdit);
+
 	/** @param {string} draft */
 	function writeStdin(draft) {
 		if (!canEdit) return;
 		const prefix = stdinCommitted.length ? `${stdinCommitted.join('\n')}\n` : '';
 		controller?.setStdin(`${prefix}${draft.replace(/\r?\n/gu, '')}`);
+	}
+
+	function focusConsoleInput() {
+		if (!showConsoleInput) return;
+		termInput?.focus();
+	}
+
+	let consoleClickX = 0;
+	let consoleClickY = 0;
+
+	/** @param {PointerEvent} event */
+	function onConsolePointerDown(event) {
+		if (!showConsoleInput) return;
+		consoleClickX = event.clientX;
+		consoleClickY = event.clientY;
+	}
+
+	/** @param {PointerEvent} event */
+	function onConsolePointerUp(event) {
+		if (!showConsoleInput) return;
+		if (event.target instanceof HTMLInputElement) return;
+		const moved = Math.hypot(event.clientX - consoleClickX, event.clientY - consoleClickY);
+		if (moved > 4) return;
+		focusConsoleInput();
+	}
+
+	/** @param {KeyboardEvent} event */
+	function onConsoleInputKeydown(event) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			const prefix = stdinCommitted.length ? `${stdinCommitted.join('\n')}\n` : '';
+			controller?.setStdin(`${prefix}${stdinDraft}\n`);
+			if (state?.awaitingInput) void controller?.run();
+			return;
+		}
+		if (event.key === 'Backspace' && stdinDraft === '' && stdinCommitted.length > 0) {
+			event.preventDefault();
+			const restored = stdinCommitted.slice(0, -1);
+			const prefix = restored.length ? `${restored.join('\n')}\n` : '';
+			controller?.setStdin(`${prefix}${stdinCommitted.at(-1) ?? ''}`);
+		}
 	}
 
 	afterUpdate(() => {
@@ -618,7 +661,13 @@
 					on:pointerdown={startConsoleResize}
 				></div>
 				<div class="work-bottom">
-					<div class="console">
+					<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+					<div
+						class="console"
+						class:console-live={showConsoleInput}
+						on:pointerdown={onConsolePointerDown}
+						on:pointerup={onConsolePointerUp}
+					>
 						<div class="console-body">
 							{#if currentCheck}
 								<p
@@ -639,36 +688,21 @@
 							{/if}
 							<pre
 								class="output"
-								aria-label="Program output">{shownOutput}{#if inputApplies && canEdit}<input
-										bind:this={termInput}
-										class="term-input"
-										type="text"
-										aria-label="Console input"
-										autocomplete="off"
-										autocapitalize="off"
-										spellcheck="false"
-										value={stdinDraft}
-										on:input={(event) => writeStdin(event.currentTarget.value)}
-										on:keydown={(event) => {
-											if (event.key === 'Enter') {
-												event.preventDefault();
-												const prefix = stdinCommitted.length
-													? `${stdinCommitted.join('\n')}\n`
-													: '';
-												controller?.setStdin(`${prefix}${stdinDraft}\n`);
-												if (state?.awaitingInput) void controller?.run();
-											} else if (
-												event.key === 'Backspace' &&
-												stdinDraft === '' &&
-												stdinCommitted.length > 0
-											) {
-												event.preventDefault();
-												const restored = stdinCommitted.slice(0, -1);
-												const prefix = restored.length ? `${restored.join('\n')}\n` : '';
-												controller?.setStdin(`${prefix}${stdinCommitted.at(-1) ?? ''}`);
-											}
-										}}
-									/>{/if}</pre>
+								aria-label="Program output">{shownOutput}{#if showConsoleInput}<span
+										class="term-row"
+										><input
+											bind:this={termInput}
+											class="term-input"
+											type="text"
+											aria-label="Console input"
+											autocomplete="off"
+											autocapitalize="off"
+											spellcheck="false"
+											value={stdinDraft}
+											on:input={(event) => writeStdin(event.currentTarget.value)}
+											on:keydown={onConsoleInputKeydown}
+										/></span
+									>{/if}</pre>
 						</div>
 					</div>
 					{#if Object.keys(state.files).length}
@@ -1309,10 +1343,19 @@
 		color: var(--pbl-editor-ink, #fcfcfa);
 	}
 
+	.term-row {
+		display: inline-flex;
+		min-width: 12ch;
+		max-width: 100%;
+		vertical-align: baseline;
+		cursor: text;
+	}
+
 	.term-input {
+		flex: 1 1 auto;
 		display: inline-block;
-		width: 12rem;
-		min-width: 4rem;
+		width: 100%;
+		min-width: 12ch;
 		margin: 0;
 		padding: 0;
 		border: 0;
@@ -1356,6 +1399,12 @@
 		overflow: auto;
 		display: flex;
 		flex-direction: column;
+		cursor: default;
+	}
+
+	.console-live .console-body,
+	.console-live .output {
+		cursor: text;
 	}
 
 	.output {
@@ -1365,6 +1414,8 @@
 		border-radius: 0;
 		letter-spacing: 0;
 		text-transform: none;
+		white-space: pre-wrap;
+		word-break: break-word;
 	}
 
 	.files {
