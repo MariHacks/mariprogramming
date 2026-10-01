@@ -70,6 +70,7 @@ export function createWorkshopController(options) {
 	let files = /** @type {Record<string, string>} */ ({});
 	let running = false;
 	let pythonError = '';
+	let awaitingInput = false;
 	let roomError = '';
 	let readOnly = false;
 	let blocked = '';
@@ -89,6 +90,7 @@ export function createWorkshopController(options) {
 			files,
 			running,
 			pythonError,
+			awaitingInput,
 			roomError,
 			readOnly,
 			blocked,
@@ -104,6 +106,16 @@ export function createWorkshopController(options) {
 
 	function publish() {
 		emit(snapshot());
+	}
+
+	/** @param {unknown} error */
+	function isInputEOF(error) {
+		return /EOF when reading a line/i.test(String(error ?? ''));
+	}
+
+	/** @param {string} text */
+	function stripInputEOF(text) {
+		return text.replace(/(?:\r?\n|\s)*EOF when reading a line\s*$/iu, '');
 	}
 
 	/**
@@ -532,9 +544,13 @@ export function createWorkshopController(options) {
 			sourceSnapshot,
 			workshop.echoInput ? { stdin, echo: true } : { stdin }
 		);
+		const waitingForLine = isInputEOF(result.error);
+		const stdout = String(result.stdout ?? '');
+		const stderr = String(result.stderr ?? '');
+		awaitingInput = waitingForLine;
 		const finishedRun = {
-			output: `${result.stdout ?? ''}${result.stderr ?? ''}`,
-			error: result.error ? String(result.error) : '',
+			output: waitingForLine ? stripInputEOF(stdout) : `${stdout}${stderr}`,
+			error: waitingForLine ? '' : result.error ? String(result.error) : '',
 			step: stepSnapshot,
 			at: now(),
 			running: false

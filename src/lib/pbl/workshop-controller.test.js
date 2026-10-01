@@ -44,7 +44,10 @@ function harness(overrides = {}) {
 			options.onError?.('keep going');
 			return sync;
 		},
-		runCheck: async () => ({ passed: true, message: 'Printed a custom message. Starter text is gone.' }),
+		runCheck: async () => ({
+			passed: true,
+			message: 'Printed a custom message. Starter text is gone.'
+		}),
 		...overrides
 	});
 	return { controller, host, sync, onState: () => onState };
@@ -73,6 +76,23 @@ describe('workshop controller', () => {
 		controller.destroy();
 		stop();
 		expect(sync.stop).toHaveBeenCalled();
+	});
+
+	it('waits on the prompt when input() runs out of lines', async () => {
+		const { controller, host } = harness({ pblId: 'gamejam' });
+		host.run.mockResolvedValueOnce({
+			stdout: 'Enter your goofy excuse: ',
+			stderr: 'EOF when reading a line',
+			error: 'EOF when reading a line',
+			globals: {},
+			files: {},
+			inputCount: 0
+		});
+		await controller.run();
+		expect(controller.getState().pythonError).toBe('');
+		expect(controller.getState().output).toBe('Enter your goofy excuse: ');
+		expect(controller.getState().awaitingInput).toBe(true);
+		expect(controller.getState().output).not.toMatch(/EOF/);
 	});
 
 	it('keeps the page usable when Python returns an error and when the team is full', async () => {
@@ -125,7 +145,6 @@ describe('workshop controller', () => {
 		expect(fullSync.start).not.toHaveBeenCalled();
 		full.controller.destroy();
 	});
-
 
 	it('keeps viewStep local and copies code forward on unlock', async () => {
 		const { controller, sync } = harness({
@@ -275,7 +294,6 @@ describe('workshop controller', () => {
 		expect(next?.memberCount).toBe(1);
 		expect(controller.getState().isDriver).toBe(true);
 	});
-
 
 	it('fail then pass updates the status message to Accepted', async () => {
 		let tick = 0;
