@@ -1,5 +1,5 @@
 <script>
-	import { onDestroy, onMount } from 'svelte';
+	import { afterUpdate, onDestroy, onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { resolve } from '$app/paths';
 	import { clubContent } from '$lib/content/club';
@@ -78,6 +78,10 @@
 	/** @type {'dark' | 'light'} */
 	let editorTheme = typeof window !== 'undefined' ? readStoredEditorTheme() : 'light';
 	let ready = false;
+	/** @type {HTMLInputElement | undefined} */
+	let termInput;
+	let focusTermInput = false;
+	let sawAwaitingInput = false;
 
 	$: editorPalette = monokaiPalette(editorTheme);
 
@@ -98,11 +102,37 @@
 		state?.nextAction && state.nextAction !== (currentCheck?.message ?? '').trim()
 			? state.nextAction
 			: '';
-	$: inputApplies = /\binput\s*\(/u.test(String(state?.source ?? ''));
+	$: inputApplies =
+		/\binput\s*\(/u.test(String(state?.source ?? '')) || Boolean(state?.awaitingInput);
+	$: {
+		const waiting = Boolean(state?.awaitingInput) && !state?.running;
+		if (waiting && !sawAwaitingInput) focusTermInput = true;
+		sawAwaitingInput = waiting;
+	}
 	$: stdinParts = String(state?.stdinText ?? '').split('\n');
 	$: stdinDraft = stdinParts[stdinParts.length - 1] ?? '';
 	$: stdinCommitted = stdinParts.slice(0, -1);
 	$: pendingStdin = pendingInputLines(String(state?.output ?? ''), stdinCommitted);
+	$: shownOutput = formatConsole(
+		state?.output,
+		inputApplies,
+		Boolean(state?.awaitingInput),
+		pendingStdin
+	);
+
+	/**
+	 * @param {unknown} output
+	 * @param {boolean} applies
+	 * @param {boolean} awaiting
+	 * @param {string[]} pending
+	 */
+	function formatConsole(output, applies, awaiting, pending) {
+		const raw = String(output ?? '');
+		if (!applies) return raw || 'Output appears here.';
+		if (awaiting) return raw;
+		const lead = raw && !raw.endsWith('\n') ? `${raw}\n` : raw;
+		return `${lead}${pending.map((line) => `${line}\n`).join('')}`;
+	}
 
 	/** @param {string} output @param {string[]} committed */
 	function pendingInputLines(output, committed) {
@@ -125,6 +155,12 @@
 		const prefix = stdinCommitted.length ? `${stdinCommitted.join('\n')}\n` : '';
 		controller?.setStdin(`${prefix}${draft.replace(/\r?\n/gu, '')}`);
 	}
+
+	afterUpdate(() => {
+		if (!focusTermInput || !termInput) return;
+		focusTermInput = false;
+		termInput.focus();
+	});
 
 	onMount(() => {
 		document.documentElement.classList.add('pbl-studio');
@@ -311,9 +347,7 @@
 			<button type="button" class:current={pane === 'code'} on:click={() => (pane = 'code')}>
 				Code
 			</button>
-			<button type="button" class:current={pane === 'story'} on:click={showStory}>
-				Story
-			</button>
+			<button type="button" class:current={pane === 'story'} on:click={showStory}> Story </button>
 			<button type="button" class:current={pane === 'output'} on:click={() => (pane = 'output')}>
 				Output
 			</button>
@@ -379,13 +413,22 @@
 						</button>
 					{/each}
 					{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 1}
-						<pre class="hint"><LessonRichText text={state.step.hints[0]} className="hint-rich" /></pre>
+						<pre class="hint"><LessonRichText
+								text={state.step.hints[0]}
+								className="hint-rich"
+							/></pre>
 					{/if}
 					{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 2}
-						<pre class="hint"><LessonRichText text={state.step.hints[1]} className="hint-rich" /></pre>
+						<pre class="hint"><LessonRichText
+								text={state.step.hints[1]}
+								className="hint-rich"
+							/></pre>
 					{/if}
 					{#if (state.openedHints?.[String(state.currentStep)] ?? 0) >= 3}
-						<pre class="hint"><LessonRichText text={state.step.hints[2]} className="hint-rich" /></pre>
+						<pre class="hint"><LessonRichText
+								text={state.step.hints[2]}
+								className="hint-rich"
+							/></pre>
 					{/if}
 				</div>
 				{#if state.step.stretch && state.currentStep === 11}
@@ -497,7 +540,9 @@
 						type="button"
 						class="theme-toggle"
 						aria-pressed={editorTheme === 'light'}
-						aria-label={editorTheme === 'light' ? 'Switch to dark editor colors' : 'Switch to light editor colors'}
+						aria-label={editorTheme === 'light'
+							? 'Switch to dark editor colors'
+							: 'Switch to light editor colors'}
 						on:click={toggleEditorTheme}
 					>
 						{editorTheme === 'light' ? 'Dark colors' : 'Light colors'}
@@ -526,10 +571,17 @@
 					<div class="guest-banner" role="region" aria-label="Sign in required">
 						<p>Sign in with your club Google account to edit and run this team studio.</p>
 						<div class="guest-actions">
-							<button class="button-primary" type="button" disabled={signingIn} on:click={startSignIn}>
+							<button
+								class="button-primary"
+								type="button"
+								disabled={signingIn}
+								on:click={startSignIn}
+							>
 								{signingIn ? 'Opening Google…' : 'Sign in with Google'}
 							</button>
-							<a class="quiet-link" href={accountHref}>Club account <span aria-hidden="true">→</span></a>
+							<a class="quiet-link" href={accountHref}
+								>Club account <span aria-hidden="true">→</span></a
+							>
 						</div>
 					</div>
 				{/if}
@@ -540,23 +592,23 @@
 						{/if}
 					</div>
 				{:else}
-				<div class="editor-shell" class:guest-locked={!canEdit}>
-					{#key `${state.viewStep ?? state.currentStep}:${state.editorEpoch ?? 0}`}
-						<PythonEditor
-							source={state.source}
-							yjsState={state.yjsState ?? ''}
-							awarenessState={state.awarenessState ?? ''}
-							editable={canEdit}
-							theme={editorTheme}
-							user={collabUserFromProfile(data?.collabUser)}
-							editorEpoch={state.editorEpoch ?? 0}
-							onCollab={(payload) => {
-								if (!canEdit) return;
-								controller?.setCollab(payload);
-							}}
-						/>
-					{/key}
-				</div>
+					<div class="editor-shell" class:guest-locked={!canEdit}>
+						{#key `${state.viewStep ?? state.currentStep}:${state.editorEpoch ?? 0}`}
+							<PythonEditor
+								source={state.source}
+								yjsState={state.yjsState ?? ''}
+								awarenessState={state.awarenessState ?? ''}
+								editable={canEdit}
+								theme={editorTheme}
+								user={collabUserFromProfile(data?.collabUser)}
+								editorEpoch={state.editorEpoch ?? 0}
+								onCollab={(payload) => {
+									if (!canEdit) return;
+									controller?.setCollab(payload);
+								}}
+							/>
+						{/key}
+					</div>
 				{/if}
 				<div
 					class="split-y"
@@ -585,11 +637,10 @@
 							{#if state.pythonError}
 								<p class="error" role="status">{state.pythonError}</p>
 							{/if}
-							<pre class="output" aria-label="Program output">{state.output ||
-									(inputApplies ? '' : 'Output appears here.')}{#if inputApplies}{state.output &&
-								!String(state.output).endsWith('\n')
-									? '\n'
-									: ''}{#each pendingStdin as line, index (`${index}:${line}`)}{line}{'\n'}{/each}								<span class="term-row">{#if canEdit}<input
+							<pre
+								class="output"
+								aria-label="Program output">{shownOutput}{#if inputApplies && canEdit}<input
+										bind:this={termInput}
 										class="term-input"
 										type="text"
 										aria-label="Console input"
@@ -605,6 +656,7 @@
 													? `${stdinCommitted.join('\n')}\n`
 													: '';
 												controller?.setStdin(`${prefix}${stdinDraft}\n`);
+												if (state?.awaitingInput) void controller?.run();
 											} else if (
 												event.key === 'Backspace' &&
 												stdinDraft === '' &&
@@ -616,7 +668,7 @@
 												controller?.setStdin(`${prefix}${stdinCommitted.at(-1) ?? ''}`);
 											}
 										}}
-									/>{/if}</span>{/if}</pre>
+									/>{/if}</pre>
 						</div>
 					</div>
 					{#if Object.keys(state.files).length}
@@ -634,13 +686,11 @@
 			{/if}
 		</section>
 	</section>
+{:else if state?.roomError}
+	<p class="loading error" role="alert">{state.roomError}</p>
+	<p class="loading"><a class="quiet-link" href={resolve(pbl.href, {})}>Back to join</a></p>
 {:else}
-	{#if state?.roomError}
-		<p class="loading error" role="alert">{state.roomError}</p>
-		<p class="loading"><a class="quiet-link" href={resolve(pbl.href, {})}>Back to join</a></p>
-	{:else}
-		<p class="loading">Joining the team room…</p>
-	{/if}
+	<p class="loading">Joining the team room…</p>
 {/if}
 
 {#if rosterOpen && state}
@@ -660,7 +710,12 @@
 					<h2 id="roster-title">{state.teamName || 'Team room'}</h2>
 					<p class="roster-meta">{state.memberCount}/10 members</p>
 				</div>
-				<button type="button" class="roster-close" aria-label="Close team roster" on:click={closeRoster}>
+				<button
+					type="button"
+					class="roster-close"
+					aria-label="Close team roster"
+					on:click={closeRoster}
+				>
 					Close
 				</button>
 			</header>
@@ -700,7 +755,6 @@
 	</div>
 {/if}
 
-
 <style>
 	:global(html.pbl-studio),
 	:global(body.pbl-studio) {
@@ -715,7 +769,7 @@
 		flex-direction: column;
 		height: 100dvh;
 		max-height: 100dvh;
-	\min-height: 0;
+		\min-height: 0;
 		overflow: hidden;
 	}
 
@@ -763,8 +817,8 @@
 		display: grid;
 		flex: 1 1 auto;
 		height: 100%;
-	\min-height: 0;
-	\max-height: none;
+		\min-height: 0;
+		\max-height: none;
 		overflow: hidden;
 		background: #f4f5f7;
 	}
@@ -1255,15 +1309,10 @@
 		color: var(--pbl-editor-ink, #fcfcfa);
 	}
 
-	.term-row {
-		display: flex;
-		width: 100%;
-		cursor: text;
-	}
-
 	.term-input {
-		flex: 1 1 auto;
-		min-width: 0;
+		display: inline-block;
+		width: 12rem;
+		min-width: 4rem;
 		margin: 0;
 		padding: 0;
 		border: 0;
@@ -1508,7 +1557,6 @@
 			min-height: 0;
 			overflow: hidden;
 		}
-
 	}
 
 	.roster-backdrop {
@@ -1652,5 +1700,4 @@
 		color: var(--quiet-steel);
 		font-size: 0.8rem;
 	}
-
 </style>

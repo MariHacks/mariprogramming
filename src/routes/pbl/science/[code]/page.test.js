@@ -44,7 +44,11 @@ vi.mock('$lib/pbl/workshop-controller.js', async () => {
 					currentStep: 0,
 					unlockedStep: 0,
 					openedHints: { '0': 1 },
-					lastCheck: { passed: true, message: 'Printed a custom message. Starter text is gone.', step: 0 },
+					lastCheck: {
+						passed: true,
+						message: 'Printed a custom message. Starter text is gone.',
+						step: 0
+					},
 					memberCount: 2,
 					driverMemberId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
 					members: [
@@ -267,7 +271,8 @@ describe('PBL studio page', () => {
 			currentStep: 1,
 			step: {
 				...SCIENCE_STEPS[1],
-				scene: "Oops, it's 8:07 AM. You wake up and realize you have an 8:15 AM class... You're NOT making it.\nTime to email your prof."
+				scene:
+					"Oops, it's 8:07 AM. You wake up and realize you have an 8:15 AM class... You're NOT making it.\nTime to email your prof."
 			},
 			steps: [
 				{
@@ -278,7 +283,8 @@ describe('PBL studio page', () => {
 				{
 					id: 1,
 					title: 'Set the scene',
-					scene: "Oops, it's 8:07 AM. You wake up and realize you have an 8:15 AM class... You're NOT making it.\nTime to email your prof."
+					scene:
+						"Oops, it's 8:07 AM. You wake up and realize you have an 8:15 AM class... You're NOT making it.\nTime to email your prof."
 				}
 			],
 			files: {}
@@ -324,21 +330,19 @@ describe('PBL studio page', () => {
 		expect(within(section).getByRole('heading', { name: 'Pause' })).toBeVisible();
 		expect(within(section).getByText('----- 8:00 AM | GETTING TO SCHOOL -----')).toBeVisible();
 		expect(within(section).getByText('Press ENTER to continue...')).toBeVisible();
-		expect(screen.getByText('8:07 AM. You just woke up, and you are not going to make it.')).toHaveClass(
-			'scene'
-		);
+		expect(
+			screen.getByText('8:07 AM. You just woke up, and you are not going to make it.')
+		).toHaveClass('scene');
 	});
 
 	it('puts a failed check in the console instead of the lesson', async () => {
 		studio.patch = {
 			lastCheck: {
 				passed: false,
-				message:
-					'Still printing "Game loaded". Replace it with the scene header, then Run again.',
+				message: 'Still printing "Game loaded". Replace it with the scene header, then Run again.',
 				step: 0
 			},
-			nextAction:
-				'Still printing "Game loaded". Replace it with the scene header, then Run again.',
+			nextAction: 'Still printing "Game loaded". Replace it with the scene header, then Run again.',
 			files: {}
 		};
 		const { container } = await renderReady();
@@ -376,12 +380,29 @@ describe('PBL studio page', () => {
 			files: {}
 		};
 		const again = await renderReady();
-		const next = within(/** @type {HTMLElement} */ (again.container.querySelector('pre.output'))).getByRole(
-			'textbox',
-			{ name: 'Console input' }
-		);
+		const next = within(
+			/** @type {HTMLElement} */ (again.container.querySelector('pre.output'))
+		).getByRole('textbox', { name: 'Console input' });
 		await fireEvent.keyDown(next, { key: 'Enter' });
 		expect(setStdin).toHaveBeenCalledWith('Ada\nLovelace\n');
+	});
+
+	it('keeps the input caret on the prompt when the program is waiting for a line', async () => {
+		studio.patch = {
+			source: 'excuse = input("Enter your goofy excuse: ")\n',
+			output: 'Enter your goofy excuse: ',
+			stdinText: '',
+			awaitingInput: true,
+			pythonError: '',
+			files: {}
+		};
+		const { container } = await renderReady();
+		const output = /** @type {HTMLElement} */ (container.querySelector('pre.output'));
+		const input = within(output).getByRole('textbox', { name: 'Console input' });
+		expect(output.textContent).toBe('Enter your goofy excuse: ');
+		expect(output.textContent).not.toMatch(/EOF/);
+		await fireEvent.keyDown(input, { key: 'Enter' });
+		expect(run).toHaveBeenCalled();
 	});
 
 	it('keeps Next disabled until the step check passes', async () => {
@@ -420,7 +441,11 @@ describe('PBL studio page', () => {
 			currentStep: 1,
 			unlockedStep: 1,
 			openedHints: {},
-			lastCheck: { passed: true, message: 'Printed a custom message. Starter text is gone.', step: 0 },
+			lastCheck: {
+				passed: true,
+				message: 'Printed a custom message. Starter text is gone.',
+				step: 0
+			},
 			nextAction: '',
 			step: SCIENCE_STEPS[1],
 			files: {}
@@ -439,11 +464,12 @@ describe('PBL studio page', () => {
 		expect(printTerm).toHaveClass('python-term');
 	});
 
-
 	it('opens a member roster from the count chip and lets the leader eject others', async () => {
 		const user = userEvent.setup();
 		await renderReady();
-		await user.click(screen.getByRole('button', { name: 'Open team roster, 2 of 10 on this team' }));
+		await user.click(
+			screen.getByRole('button', { name: 'Open team roster, 2 of 10 on this team' })
+		);
 		const dialog = screen.getByRole('dialog', { name: 'Lab table 3' });
 		expect(dialog).toBeVisible();
 		expect(within(dialog).getByText('Lead')).toBeVisible();
@@ -483,8 +509,6 @@ describe('PBL studio page', () => {
 		expect(within(dialog).getByText('Only the team leader can remove teammates.')).toBeVisible();
 	});
 
-
-
 	it('keeps the editor read-only for unsigned visitors', async () => {
 		await renderReady({ data: { collabUser: null } });
 		const editor = screen.getByRole('textbox', { name: 'Python' });
@@ -495,6 +519,4 @@ describe('PBL studio page', () => {
 		).toBeVisible();
 		expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
 	});
-
-
 });
